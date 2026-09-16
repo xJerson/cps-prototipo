@@ -609,7 +609,8 @@ Object.assign(ACC, {
   verWoEnCel: d => { const w=W(+d.id); if(!w||!w.tec) return;
     S.phTec=w.tec; S.phRol="tecnico"; S.phWO=w.id; S.phView="wo"; S.phone=true; S.gRep=null; render(); },
   /* Saltar de una WO a la agenda semanal, en la semana que le toca */
-  verEnAgenda: d => { const w=W(+d.id); S.mod="calendario"; S.semCal=w?w.semana:S.semana; S.sub=null; S.tab=null; render(); },
+  verEnAgenda: d => { const w=W(+d.id); S.mod="calendario";
+    S.periodoCal.tipo="semana"; S.periodoCal.sem=w?w.semana:S.semana; S.sub=null; S.tab=null; render(); },
 
   woCorrobora: d => {
     const w=W(+d.id);

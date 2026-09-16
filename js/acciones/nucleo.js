@@ -28,6 +28,18 @@ Object.assign(ACC, {
   perMes:   () => { S.periodo.mes = +document.querySelector('[data-a="perMes"]').value; render(); },
   perAnio:  () => { S.periodo.anio = +document.querySelector('[data-a="perAnio"]').value; render(); },
 
+  /* ── Selector de período (Calendario) — mismo mecanismo, estado propio
+     (S.periodoCal) para no pisarle el período a Nómina/Facturación.
+     Nombres en minúscula ("calper...") porque renderSelectorPeriodo arma
+     el data-a pegando el prefijo directo antes de "perTipo", etc. ── */
+  calperTipo:  () => { S.periodoCal.tipo = document.querySelector('[data-a="calperTipo"]').value; render(); },
+  calperNav:   d => { S.periodoCal.sem = +d.s; render(); },
+  calperDia:   () => { S.periodoCal.dia = document.querySelector('[data-a="calperDia"]').value; render(); },
+  calperDesde: () => { S.periodoCal.desde = document.querySelector('[data-a="calperDesde"]').value; render(); },
+  calperHasta: () => { S.periodoCal.hasta = document.querySelector('[data-a="calperHasta"]').value; render(); },
+  calperMes:   () => { S.periodoCal.mes = +document.querySelector('[data-a="calperMes"]').value; render(); },
+  calperAnio:  () => { S.periodoCal.anio = +document.querySelector('[data-a="calperAnio"]').value; render(); },
+
   /* ---- UC-02: Lydia pasa la solicitud a Thalia sin llamada ---- */
   transferir: d => {
     if(!expedienteOK(d.id)){ toast("🚫 Expediente incompleto","Faltan campos obligatorios.","r"); return; }

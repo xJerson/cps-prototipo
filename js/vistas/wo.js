@@ -275,8 +275,22 @@ function trazaWO(w){
    los técnicos en filas y de LUNES a SÁBADO en columnas. En la celda va la
    propiedad con su dirección y la unidad, como lo escriben ellos.
    La diferencia es que acá se arma sola al agendar. */
-VIEWS.calendario = () => {
-  const sem  = S.semCal || S.semana;
+/* Punto 9 del feedback: Weekly View (grilla técnico×día, de siempre) y
+   Daily View (lista de lo agendado ese día) — más el mismo selector de
+   período de Nómina/Facturación (Día, Semana, Rango, Mes), así se puede
+   pedir por ejemplo September 1–30 y ver todas las WO de ese período. */
+function filaWOAgenda(w){
+  const pr=P(w.prop), un=U(w.unidad);
+  return `<tr class="cl" data-a="woVer" data-id="${w.id}">
+    <td class="mono">${esc(w.horaProg||"9:00")}</td>
+    <td>${esc(pr.nombre)} · ${esc(un.num)}</td>
+    <td>${esc(w.serv)}</td>
+    <td>${w.tec?esc(tecN(w.tec)):'<span class="pill w">sin asignar</span>'}</td>
+    <td><span class="pill ${estP(w.estado)}"><span class="dot"></span>${w.estado}</span></td>
+    <td class="mono">WO-${w.id}</td></tr>`;
+}
+
+function vistaSemanal(sem){
   const dias = diasDeSemana(sem);
   const anio = dias[0].slice(0, 4);
   /* Su hoja lista a todos, incluido Gustavo, tengan o no trabajo esa semana. */
@@ -285,15 +299,6 @@ VIEWS.calendario = () => {
   const enSemana = S.wos.filter(w => w.estado !== "Canceled" && dias.includes(w.fecha)).length;
 
   return `
-  <div class="ph"><div><h2>Agenda semanal — Work Orders</h2>
-    <p>Es su pestaña <code>Calendar</code>, con las mismas columnas. Hoy se rearma a mano cada semana;
-    acá se llena sola al agendar.</p></div>
-    <div class="act">
-      <button class="btn sm" data-a="calSem" data-s="${sem - 1}">‹ Semana ${sem - 1}</button>
-      <button class="btn sm" data-a="calSem" data-s="${sem + 1}">Semana ${sem + 1} ›</button>
-      ${sem !== S.semana ? `<button class="btn sm p" data-a="calSem" data-s="${S.semana}">Volver a la ${S.semana}</button>` : ""}
-    </div></div>
-
   <div class="card">
     <div class="chd"><h3>Año ${anio} · Semana ${sem}</h3>
       <span class="s">${dias[0]} al ${dias[5]}</span>
@@ -341,6 +346,45 @@ VIEWS.calendario = () => {
   <div class="tr">Capacidad: <b>${CAP} propiedades por técnico y día</b> — Claudia: «cada técnico puede hacer
     dos propiedades; si ya tenemos diez, se debería pasar al otro día».<br>
     Al acordar una fecha nueva con el cliente, la orden <b>se mueve sola</b> a la semana que corresponda.</div>`;
+}
+
+function vistaDiaria(dia){
+  const ws = S.wos.filter(w=>w.fecha===dia && w.estado!=="Canceled").sort((a,b)=>(a.horaProg||"9:00").localeCompare(b.horaProg||"9:00"));
+  return `
+  <div class="card">
+    <div class="chd"><h3>${dia||"— elegí un día —"}</h3>
+      <span class="r"><span class="pill ${ws.length?"a":"g"}">${ws.length} trabajo(s)</span></span></div>
+    ${ws.length?`<table><thead><tr><th>Hora</th><th>Propiedad · Unidad</th><th>Servicio</th><th>Técnico</th><th>Estado</th><th>WO</th></tr></thead>
+      <tbody>${ws.map(filaWOAgenda).join("")}</tbody></table>`
+      :`<div class="cp" style="color:var(--faint);font-size:12px">${dia?"Nada agendado para este día.":"Elegí una fecha arriba para ver qué está agendado."}</div>`}
+  </div>`;
+}
+
+function vistaRango(per){
+  const ws = S.wos.filter(w=>w.estado!=="Canceled" && enPeriodo(w.fecha, per)).sort((a,b)=>a.fecha.localeCompare(b.fecha)||(a.horaProg||"9:00").localeCompare(b.horaProg||"9:00"));
+  const porFecha = {};
+  ws.forEach(w=>{ (porFecha[w.fecha]=porFecha[w.fecha]||[]).push(w); });
+  const fechas = Object.keys(porFecha).sort();
+  return `
+  <div class="card">
+    <div class="chd"><h3>${periodoTexto(per)}</h3>
+      <span class="r"><span class="pill ${ws.length?"a":"g"}">${ws.length} trabajo(s)</span></span></div>
+    ${fechas.length?fechas.map(f=>`<div class="cp" style="border-top:1px solid var(--line)">
+      <div class="dl" style="margin:0 0 6px">${f}</div>
+      <table><tbody>${porFecha[f].map(filaWOAgenda).join("")}</tbody></table></div>`).join("")
+      :`<div class="cp" style="color:var(--faint);font-size:12px">Nada agendado en este período.</div>`}
+  </div>`;
+}
+
+VIEWS.calendario = () => {
+  const per = S.periodoCal;
+  return `
+  <div class="ph"><div><h2>Agenda — Work Orders</h2>
+    <p>Es su pestaña <code>Calendar</code>. <b>Semana</b> es la Weekly View (planificación general, técnico por día);
+    <b>Día</b> es la Daily View (qué está agendado exactamente ese día). Rango y Mes muestran lo agendado en ese período.</p></div>
+  </div>
+  <div class="card" style="margin-bottom:14px"><div class="cp">${renderSelectorPeriodo(per, "cal")}</div></div>
+  ${per.tipo==="semana"?vistaSemanal(per.sem):per.tipo==="dia"?vistaDiaria(per.dia):vistaRango(per)}`;
 };
 
 /* ── DISPONIBILIDAD ──

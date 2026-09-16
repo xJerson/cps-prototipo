@@ -131,9 +131,12 @@ function ayudaContexto(){
     return null;
   }
 
-  /* F2 · Agenda: si hay órdenes con fecha pero sin técnico, señalá la primera */
+  /* F2 · Agenda: si hay órdenes con fecha pero sin técnico, señalá la primera.
+     Solo tiene sentido en la Vista semanal — la grilla de "Sin asignar" que
+     este tip señala no existe en Vista diaria ni en rango/mes. */
   if(S.mod==="calendario"){
-    const sw = S.wos.find(w=>!w.tec && w.estado!=="Canceled" && w.semana===(S.semCal||S.semana));
+    if(S.periodoCal.tipo!=="semana") return null;
+    const sw = S.wos.find(w=>!w.tec && w.estado!=="Canceled" && w.semana===S.periodoCal.sem);
     if(sw) return {sel:`[data-a="woVer"][data-id="${sw.id}"]`,
       txt:`La WO-${sw.id} tiene fecha pero no técnico (fila «Sin asignar»). Tocala para asignarlo.`};
     return null;
@@ -207,8 +210,8 @@ const AYUDA_VISTA = {
     tips:["La lista «Lo que necesita tu atención» ordena los pendientes por urgencia — tocá «Ir →» en cualquiera para ir a resolverlo."]},
   wo:{t:"Work Orders", d:"Las órdenes de trabajo: una unidad, un servicio, una fecha, un técnico. Es la hoja Schedule del Excel.",
     tips:["Hacé clic en cualquier fila para abrir el detalle de esa orden.","«+ Nueva Work Order» crea una a mano.","Las pestañas de arriba filtran: sin técnico, en curso, de la semana…"]},
-  calendario:{t:"Agenda semanal", d:"Todas las Work Orders de la semana, ubicadas en el día y el técnico que les toca. Se llena sola: cada orden que creás con fecha aparece acá.",
-    tips:["Una orden aparece en la fila de su técnico y la columna de su día.","Las que todavía no tienen técnico salen arriba, en la fila «Sin asignar» — tocalas para asignar.","Hacé clic en cualquier orden para abrir su detalle.","Los botones de arriba te mueven a otra semana."]},
+  calendario:{t:"Agenda", d:"Todas las Work Orders ubicadas en su fecha y técnico. Se llena sola: cada orden que creás con fecha aparece acá. Elegí Día, Semana, Rango de fechas o Mes arriba para mirar el período que necesites.",
+    tips:["Semana es la vista de siempre: técnico por fila, día por columna.","Día muestra en una lista exactamente lo agendado ese día puntual.","Rango de fechas y Mes agrupan por fecha lo agendado en ese período — por ejemplo, del 1 al 30 de septiembre.","Las que todavía no tienen técnico salen arriba, en la fila «Sin asignar» (vista Semana) — tocalas para asignar.","Hacé clic en cualquier orden para abrir su detalle."]},
   despacho:{t:"Disponibilidad del equipo", d:"Un solo objetivo: antes de prometerle una fecha a un cliente, ver si el equipo tiene lugar ese día. La regla de la que sale todo: 2 trabajos por técnico y por día.",
     tips:["<b>Cupo del equipo</b> de un día = técnicos disponibles ese día × 2. Un técnico con permiso aprobado no cuenta.","<b>Trabajos del día</b> = todas las Work Orders con esa fecha. Si pasan el cupo, la fila se pone roja: hay que mover alguna a otro día.","La barra muestra cuánto del cupo ya está en uso (con técnico) y cuánto queda libre.","<b>Cerrar el día</b>: cuando ya no se juntan más trabajos y se empiezan a repartir a los técnicos.","«+ Registrar permiso» marca a un técnico como no disponible unos días — Gustavo lo aprueba, y esos días le baja el cupo al equipo."]},
   supervision:{t:"Supervisión", d:"La jornada de Gustavo: a dónde ir, qué revisar, las devoluciones y lo que quedó acordado con cada propiedad.",

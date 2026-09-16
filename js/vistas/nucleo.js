@@ -95,21 +95,24 @@ function periodoTexto(per){
   if(per.tipo==="mes")   return per.mes   ? `${MESES[per.mes-1]} de ${per.anio}`        : "\u2014 elige un mes \u2014";
   return `semana ${per.sem}`;
 }
-function renderSelectorPeriodo(){
-  const per = S.periodo;
+/* pref permite tener m\u00e1s de un selector de per\u00edodo en pantallas distintas
+   sin que se pisen \u2014 cada uno con su propio S.periodo* y sus propias
+   acciones ("perTipo" para N\u00f3mina/Facturaci\u00f3n, "calPerTipo" para el
+   Calendario), sin acoplar un m\u00f3dulo al per\u00edodo que est\u00e9 mirando el otro. */
+function renderSelectorPeriodo(per=S.periodo, pref=""){
   const camposTipo = {
-    semana: `<button class="btn sm" data-a="perNav" data-s="${per.sem-1}">\u2039</button>
+    semana: `<button class="btn sm" data-a="${pref}perNav" data-s="${per.sem-1}">\u2039</button>
       <span class="mono" style="padding:0 4px">Semana ${per.sem}</span>
-      <button class="btn sm" data-a="perNav" data-s="${per.sem+1}">\u203a</button>`,
-    dia:    `<input type="date" data-a="perDia" value="${esc(per.dia||"")}">`,
-    rango:  `<input type="date" data-a="perDesde" value="${esc(per.desde||"")}">
+      <button class="btn sm" data-a="${pref}perNav" data-s="${per.sem+1}">\u203a</button>`,
+    dia:    `<input type="date" data-a="${pref}perDia" value="${esc(per.dia||"")}">`,
+    rango:  `<input type="date" data-a="${pref}perDesde" value="${esc(per.desde||"")}">
       <span style="color:var(--faint)">al</span>
-      <input type="date" data-a="perHasta" value="${esc(per.hasta||"")}">`,
-    mes:    `<select data-a="perMes">${MESES.map((m,i)=>`<option value="${i+1}" ${per.mes===i+1?"selected":""}>${m}</option>`).join("")}</select>
-      <input type="number" data-a="perAnio" value="${per.anio}" class="mono" style="width:70px">`
+      <input type="date" data-a="${pref}perHasta" value="${esc(per.hasta||"")}">`,
+    mes:    `<select data-a="${pref}perMes">${MESES.map((m,i)=>`<option value="${i+1}" ${per.mes===i+1?"selected":""}>${m}</option>`).join("")}</select>
+      <input type="number" data-a="${pref}perAnio" value="${per.anio}" class="mono" style="width:70px">`
   };
   return `<div class="act" style="align-items:center;gap:7px;flex-wrap:wrap">
-    <select data-a="perTipo">
+    <select data-a="${pref}perTipo">
       <option value="semana" ${per.tipo==="semana"?"selected":""}>Semana</option>
       <option value="dia" ${per.tipo==="dia"?"selected":""}>D\u00eda</option>
       <option value="rango" ${per.tipo==="rango"?"selected":""}>Rango de fechas</option>

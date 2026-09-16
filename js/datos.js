@@ -11,6 +11,9 @@ let S = {
   // quedar pegadas a "la semana actual" nada más — hace falta poder mirar
   // otra semana, un día puntual, un rango, o un mes completo.
   periodo:{tipo:"semana", sem:33, dia:"2026-08-12", desde:"2026-08-01", hasta:"2026-08-15", anio:2026, mes:8},
+  // Punto 9 del feedback: el Calendario necesita el mismo Día/Semana/Rango/Mes
+  // que Nómina y Facturación, pero sin pisarles el período — estado propio.
+  periodoCal:{tipo:"semana", sem:33, dia:"2026-08-12", desde:"2026-08-01", hasta:"2026-08-15", anio:2026, mes:8},
   sub:null, tab:null, phone:false, phTec:"T1", phView:"agenda", phWO:null, notis:[],
   coach:true,   // asistente "¿qué hago ahora?" — se puede apagar desde su tarjeta
   /* El celular tiene dos dueños distintos: el técnico ejecuta, el supervisor reporta.
