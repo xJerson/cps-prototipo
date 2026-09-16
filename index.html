@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cordova Ops — Prototipo del sistema web</title>
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<div class="flag">Prototipo · datos de demostración</div>
+<div class="app">
+  <div class="top">
+    <div class="brand"><div class="m">CPS</div><div>Cordova Ops<small>Sistema de operaciones</small></div></div>
+    <div class="sp"></div>
+    <div class="chip" id="wkChip"></div>
+    <button class="camp" data-a="campana" title="Avisos">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 1 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/></svg>
+      <span class="pt" id="campBadge" style="display:none"></span></button>
+    <div class="panel-avisos" id="panelAvisos"></div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="av" id="av"></div>
+      <div><select class="usr" id="usel"></select><div class="rol" id="rtag"></div></div>
+    </div>
+  </div>
+  <div class="body"><nav class="side" id="side"></nav><main class="main" id="main"></main></div>
+</div>
+<aside class="drw"><div class="drwi">
+  <div class="drwh"><div class="av" style="background:var(--verde-cl);color:var(--verde)" id="favi">DR</div>
+    <div style="min-width:0"><div class="t" id="fanm">Celular del técnico</div><div class="s" id="fasu">PWA en campo</div></div>
+    <div class="celsel" id="celsel"></div>
+    <button class="x" data-a="pcl">×</button></div>
+  <div class="drws"><div class="fon"><div class="fsc">
+    <div class="notch"></div>
+    <div class="sb"><span id="fclk">9:41</span><span>▮▮▮ ▓</span></div>
+    <div class="fb" id="fbody"></div><div class="fn" id="fnav"></div>
+    <div id="fsheet"></div>
+  </div></div></div>
+  <div class="drwf">Lo que se toca aquí cambia la web al instante →</div>
+</div></aside>
+<button class="ptab" data-a="pop">
+  <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M11 18.5h2"/></svg>
+  <span class="vt">Celular del técnico</span></button>
+<div class="toasts" id="toasts"></div><div id="mroot"></div><div id="coachBox"></div><div id="ayudaVBox"></div>
+
+<script src="catalogos.js"></script>
+<script src="datos.js"></script>
+<script src="helpers.js"></script>
+<script src="render-core.js"></script>
+<script src="celular-tecnico.js"></script>
+<script src="celular-supervisor.js"></script>
+<script src="vistas.js"></script>
+<script src="acciones.js"></script>
+<script src="bootstrap.js"></script>
+</body>
+</html>

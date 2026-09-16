@@ -1,0 +1,15 @@
+{
+  "name": "Cordova Ops — Gustavo",
+  "short_name": "Gustavo",
+  "description": "Celular de Gustavo (Supervisor de campo) — reportes, ruta, devoluciones.",
+  "start_url": "index.html?gustavo=1",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0c0f13",
+  "theme_color": "#1f4e79",
+  "icons": [
+    { "src": "icon-gustavo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "icon-gustavo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "maskable" }
+  ]
+}
