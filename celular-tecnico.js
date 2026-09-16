@@ -75,8 +75,11 @@ function renderFon(){
 
     ${["Repair","Cabinet","Resurface"].includes(w.cat)?`<div class="dc">
       <div class="dl" style="margin:0 0 6px">Fotos de referencia</div>
-      <div style="display:flex;gap:5px"><div class="dph s" style="flex:1;margin:0">📷 antes</div><div class="dph s" style="flex:1;margin:0">📷 detalle</div></div>
-      <div class="ds" style="margin-top:6px">Lo que hay que hacer, en foto — no en texto.</div></div>`:""}
+      ${(w.fotosPrevias||[]).length?`<div style="display:flex;gap:5px;flex-wrap:wrap">${w.fotosPrevias.map(f=>
+          `<img src="${f.url}" style="width:60px;height:45px;object-fit:cover;border-radius:7px">`).join("")}</div>`
+        :`<div class="ds">Todavía no hay fotos de referencia.</div>`}
+      <button type="button" class="db g" style="margin-top:7px" data-a="fotoVer" data-tipo="woPrevia" data-id="${w.id}">📷 ${(w.fotosPrevias||[]).length?"Ver / agregar":"Agregar foto"}</button>
+      <div class="ds" style="margin-top:2px">Lo que hay que hacer, en foto — no en texto.</div></div>`:""}
     ${sols.map(s=>{
       const e=solEstado(s), cl={Pendiente:"#8a5a00",Aprobado:"#1e5c3a",Rechazado:"#9b2226",Parcial:"#8a5a00"}[e];
       const oks=s.lineas.filter(l=>l.estado==="Aprobado"), nos=s.lineas.filter(l=>l.estado==="Rechazado");
@@ -88,15 +91,17 @@ function renderFon(){
       ${s.lineas.map(l=>`<div style="display:flex;justify-content:space-between;gap:7px;font-size:11.5px;padding:3px 0">
         <span>${l.estado==="Aprobado"?"✓":l.estado==="Rechazado"?"✗":"○"} ${esc(l.concepto)}${(l.cant||1)>1?` ×${l.cant}`:""}</span>
         <span style="color:var(--faint)">${l.estado==="Pendiente"?"esperando":l.estado.toLowerCase()}</span></div>`).join("")}
-      ${s.fotosRef?`<div class="dph s" style="margin-top:7px">📷 ${s.fotosRef} foto(s) de referencia — mirá antes de empezar</div>`:""}
-      ${s.fotosEvid?`<div class="dph s" style="margin-top:4px">📷 ${s.fotosEvid} foto(s) de evidencia</div>`:""}
+      ${(s.lineas.some(l=>l.fotosRefArr&&l.fotosRefArr.length))?`<div class="dph s" style="margin-top:7px">📷 ${s.lineas.reduce((t,l)=>t+((l.fotosRefArr||[]).length),0)} foto(s) de referencia — mirá antes de empezar</div>`:""}
+      ${(s.lineas.some(l=>l.fotosEvidArr&&l.fotosEvidArr.length))?`<div class="dph s" style="margin-top:4px">📷 ${s.lineas.reduce((t,l)=>t+((l.fotosEvidArr||[]).length),0)} foto(s) de evidencia</div>`:""}
       ${e==="Aprobado"?`<div class="ds" style="margin-top:5px;color:var(--verde)"><b>✓ Autorizado</b> — ya puedes hacerlo</div>`:""}
       ${e==="Rechazado"?`<div class="ds" style="margin-top:5px;color:var(--rojo)"><b>No autorizado</b> — no lo ejecutes</div>`:""}
       ${e==="Parcial"?`<div class="ds" style="margin-top:5px;color:var(--ambar)"><b>Haz solo ${esc(oks.map(l=>l.concepto).join(", "))}.</b> ${esc(nos.map(l=>l.concepto).join(", "))} no te lo autorizaron.</div>`:""}</div>`;
     }).join("")}
     ${w.evid?`<div class="dc"><div class="dl" style="margin:0 0 6px">Evidencia del trabajo (${w.evid})</div>
-      <div style="display:flex;gap:5px">${Array.from({length:w.evid}).map(()=>`<div class="dph s" style="flex:1;margin:0">📷</div>`).join("")}</div></div>`
-      :(w.estado!=="Scheduled"?`<div class="dc" style="border-style:dashed"><div class="ds" style="text-align:center">Todavía sin evidencia del trabajo${ads.some(a=>a.fotosRef||a.fotosEvid)?"<br><span style='font-size:10px'>(la foto de la Sub-Work Order no cuenta para cerrar)</span>":""}</div></div>`:"")}`;
+      <div style="display:flex;gap:5px;flex-wrap:wrap">${fotosConRelleno(w.evidFotos,w.evid).map(f=>f.url
+          ?`<img src="${f.url}" style="width:60px;height:45px;object-fit:cover;border-radius:7px">`
+          :`<div class="dph s" style="width:60px;flex:none;margin:0">📷</div>`).join("")}</div></div>`
+      :(w.estado!=="Scheduled"?`<div class="dc" style="border-style:dashed"><div class="ds" style="text-align:center">Todavía sin evidencia del trabajo${ads.some(a=>(a.fotosRefArr&&a.fotosRefArr.length)||(a.fotosEvidArr&&a.fotosEvidArr.length))?"<br><span style='font-size:10px'>(la foto de la Sub-Work Order no cuenta para cerrar)</span>":""}</div></div>`:"")}`;
 
     /* Los 4 botones de "mientras trabajas" se veían todos iguales — mismo
        gris, solo texto, sin ícono — y había que leer cada uno para saber

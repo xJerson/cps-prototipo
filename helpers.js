@@ -114,7 +114,17 @@ function tarifaWO(w){ const u=U(w.unidad); return tarifa(w.prop,w.cat,w.serv,u.r
    precio del Item que el cliente vio y aceptó), ese manda — no se vuelve a resolver
    por Rooms+Pisos, que puede no calzar con los items estilo vCita y facturar "sin tarifa"
    algo que el cliente ya aprobó a un precio especifico. */
-function ingresoWO(w){ if(w.precio!=null) return w.precio*(w.cant||1); const t=tarifaWO(w); return t? t.precio*(w.cant||1) : null; }
+/* Reunión Claudia (feedback prototipo): lo que se aprueba de un Sub-Work
+   Order y se marca "cobrar al cliente" (ver medioOK) se suma acá encima de
+   la tarifa normal — w.extraFacturable. Si no hay tarifa base pero sí hay
+   extra aprobado para cobrar, igual es facturable (es un cargo aparte, no
+   depende de que la WO en sí tenga precio). */
+function ingresoWO(w){
+  const extra = w.extraFacturable||0;
+  const base = w.precio!=null ? w.precio*(w.cant||1) : (tarifaWO(w) ? tarifaWO(w).precio*(w.cant||1) : null);
+  if(base===null && !extra) return null;
+  return (base||0) + extra;
+}
 /* Si el touch-up lo hace el mismo tecnico que se equivoco, no se le paga:
    esta rehaciendo su propio trabajo. Si va otro, se paga normal. */
 function egresoWO(w){
@@ -158,8 +168,8 @@ function solTodas(){
   S.adicionales.forEach(a=>{
     let s=g.find(x=>x.sol===a.sol);
     if(!s) g.push(s={sol:a.sol, wo:a.wo, desc:a.desc, ubic:a.ubic, origen:a.origen, lineas:[]});
-    s.fotosRef=(s.fotosRef||0)+(a.fotosRef||0);
-    s.fotosEvid=(s.fotosEvid||0)+(a.fotosEvid||0);
+    s.fotosRef=(s.fotosRef||0)+((a.fotosRefArr||[]).length);
+    s.fotosEvid=(s.fotosEvid||0)+((a.fotosEvidArr||[]).length);
     s.lineas.push(a);
   });
   return g;

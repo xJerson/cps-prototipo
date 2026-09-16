@@ -1311,17 +1311,31 @@ const ACC = {
       <div class="fg c2">
         <div class="fld"><label>Prioridad</label><select id="dvP">${PRIOR_DEV.map(p=>`<option ${p==="Alta"?"selected":""}>${esc(p)}</option>`).join("")}</select></div>
         <div class="fld"><label>Fecha límite</label><input type="date" id="dvL" value="2026-08-14"></div></div>
-      <div class="fld"><label>Foto de la observación</label>
-        <div class="dph" style="height:96px;margin:0">📷 foto tomada en sitio · se adjunta sola</div></div>
+      <div class="fld"><label>Foto de la observación <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label>
+        ${S._dvFoto?`<img src="${S._dvFoto}" style="width:100%;height:96px;object-fit:cover;border-radius:9px;margin:0 0 6px">`:""}
+        <button type="button" class="btn" style="width:100%" data-a="devFoto" data-id="${w.id}">📷 ${S._dvFoto?"Cambiar foto":"Adjuntar foto"}</button></div>
       <div class="note w">Le llega a <b>Thalia</b> para corrección o reagendamiento, y queda contado como devolución de <b>${esc(tecN(w.tec))}</b>.</div>
     </div>
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
       <button class="btn" style="border-color:var(--rojo);color:var(--rojo)" data-a="devolverOK" data-id="${w.id}">Devolver el trabajo</button></div>`);
   },
+  devFoto: d => {
+    // Adjuntar la foto reabre el modal (para mostrarla), así que primero
+    // hay que rescatar lo que ya se tecleó — si no, se pierde al reabrir.
+    const previo = {m:val("dvM"), a:val("dvA"), c:val("dvC"), p:val("dvP"), l:val("dvL")};
+    capturarFoto(url=>{
+      S._dvFoto=url; ACC.devolverModal({id:d.id});
+      const set=(id,v)=>{ const e=document.getElementById(id); if(e && v) e.value=v; };
+      set("dvM",previo.m); set("dvA",previo.a); set("dvC",previo.c); set("dvP",previo.p); set("dvL",previo.l);
+      ACC.devCausaRef();
+    });
+  },
   devolverOK: d => {
     const w=W(+d.id), m=val("dvM"), area=val("dvA"), causa=val("dvC");
     if(!m){ marcaFalta(["dvM"]); toast("Falta el motivo","Sin decir qué está mal, el técnico no sabe qué corregir.","r"); return; }
-    w.estado="Returned"; w.devuelta=(w.devuelta||0)+1; w.motivoDev=m; w.evid++; flash("wo:"+w.id);
+    w.estado="Returned"; w.devuelta=(w.devuelta||0)+1; w.motivoDev=m;
+    (w.evidFotos=w.evidFotos||[]).push(fotoNueva(S._dvFoto||null, S.usuario));
+    w.evid=w.evidFotos.length; S._dvFoto=null; flash("wo:"+w.id);
     w.hist.push([hora(),`Devuelta por supervisión: ${m}`,S.usuario]);
     // El registro real — el mismo que crea gDevOK desde el celular — para que
     // el descuento, el bloqueo de facturación y el touch-up sí se disparen.
@@ -1590,9 +1604,39 @@ const ACC = {
     const marc = new Set(chks.filter(c=>c.checked).map(c=>+c.dataset.lid));
     const ok = chks.length ? pend.filter(l=>marc.has(l.id)) : pend;
     const no = chks.length ? pend.filter(l=>!marc.has(l.id)) : [];
-    const sello = ip => ({medio:d.medio, quien:S.usuario, hora:hora(), ip});
+    // Reunión Claudia (feedback prototipo): "¿cómo se refleja en nómina y
+    // facturación?" — antes no se reflejaba en ninguna de las dos.
+    //   · Nómina: automático siempre que la línea tenga precio — se genera
+    //     y se aprueba sola una excepción "Pago adicional al técnico" (la
+    //     decisión de aprobarlo YA se tomó acá mismo, no hace falta otra).
+    //   · Facturación: NO es automático — cada línea trae su propio
+    //     casillero "Cobrar al cliente" (a veces se hace de cortesía), así
+    //     que cubre los dos casos sin asumir ninguno por defecto.
+    const cobraChks = Array.from(document.querySelectorAll(".adcobra"));
+    const cobraSet = new Set(cobraChks.filter(c=>c.checked).map(c=>+c.dataset.lid));
+    // Punto 7 del feedback: "cuando Claudia aprueba o rechaza un adicional,
+    // no queda ninguna foto asociada a esa decisión" — el comprobante (si se
+    // adjuntó desde el botón del modal) queda pegado a CADA línea que se
+    // decide acá, apruebe o rechace.
+    const fotoAprob = S._aprobFoto||null; S._aprobFoto=null;
+    const sello = ip => ({medio:d.medio, quien:S.usuario, hora:hora(), ip, foto:fotoAprob});
+    let pagoTec = 0, cobroCliente = 0;
     ok.forEach(l=>{ l.estado="Aprobado"; l.aprob=sello(d.medio==="Enlace digital"?"72.14.201.38":null);
-      (l.hist=l.hist||[]).push([hora(), `Aprobada por ${d.medio.toLowerCase()}`, S.usuario]); });
+      (l.hist=l.hist||[]).push([hora(), `Aprobada por ${d.medio.toLowerCase()}`, S.usuario]);
+      const monto = (l.precio||0)*(l.cant||1);
+      if(monto>0){
+        pagoTec += monto;
+        S.excepciones.push({id:"X"+Date.now()+"_"+l.id, tipo:"Pago adicional al técnico", wo:w.id,
+          motivo:`Sub-Work Order aprobada · ${l.concepto}${l.ubic?" · "+l.ubic:""}`, monto,
+          pide:tecN(w.tec), aprueba:S.usuario, estado:"Aprobada",
+          fecha:w.fecha, creada:{quien:tecN(w.tec),hora:hora()}, resol:{quien:S.usuario,hora:hora()}});
+        if(cobraSet.has(l.id)){
+          cobroCliente += monto;
+          w.extraFacturable = (w.extraFacturable||0) + monto;
+          (l.hist=l.hist||[]).push([hora(), `Se suma ${money(monto)} a lo que se le factura a la propiedad`, S.usuario]);
+        }
+      }
+    });
     no.forEach(l=>{ l.estado="Rechazado"; l.aprob=sello(null);
       (l.hist=l.hist||[]).push([hora(), "Rechazada", S.usuario]); });
     // Se destraba solo si NO queda ninguna otra solicitud sin decidir: si el
@@ -1603,21 +1647,38 @@ const ACC = {
     const nom = a => a.map(l=>l.concepto).join(", ");
     if(ok.length) w.hist.push([hora(), `Adicional aprobado por ${d.medio.toLowerCase()} · ${nom(ok)}`, S.usuario]);
     if(no.length) w.hist.push([hora(), `Adicional NO aprobado · ${nom(no)}`, S.usuario]);
+    if(pagoTec>0) w.hist.push([hora(), `Nómina: ${money(pagoTec)} de pago adicional para ${tecN(w.tec)}`, S.usuario]);
     cm();
     const sustento = d.medio==="Enlace digital"
       ? "Queda el clic real del cliente con hora e IP."
       : `Registrado como <b>${esc(d.medio)}</b>: queda quién y cuándo, pero sin clic del cliente.`;
+    const plata = pagoTec>0
+      ? `<br><br>💰 Se le suma a la nómina de ${esc(tecN(w.tec))}: <b>${money(pagoTec)}</b>.`
+        + (cobroCliente>0 ? ` Se le agrega a lo que se le factura a la propiedad: <b>${money(cobroCliente)}</b>.`
+                          : ` No se le factura nada a la propiedad por esto — queda como costo interno.`)
+      : "";
     toast(no.length ? (ok.length?"Adicional aprobado en parte":"Adicional no aprobado") : "✓ Adicional aprobado",
-      `${ok.length?`Sí: <b>${esc(nom(ok))}</b>. `:""}${no.length?`No: <b>${esc(nom(no))}</b>. `:""}${sustento} `
+      `${ok.length?`Sí: <b>${esc(nom(ok))}</b>. `:""}${no.length?`No: <b>${esc(nom(no))}</b>. `:""}${sustento}${plata} `
       + (quedan
-          ? `<b>Ojo: WO-${w.id} sigue frenada</b> — hay otra solicitud del técnico sin decidir.`
-          : `<b>${esc(tecN(w.tec))}</b> ya fue avisado y puede seguir.`),
+          ? `<br><br><b>Ojo: WO-${w.id} sigue frenada</b> — hay otra solicitud del técnico sin decidir.`
+          : `<br><br><b>${esc(tecN(w.tec))}</b> ya fue avisado y puede seguir.`),
       (no.length||quedan)?"w":"v");
     noti(no.length ? (ok.length?"Adicional aprobado en parte":"Adicional NO aprobado") : "Adicional aprobado",
       `${ok.length?`Haz: ${nom(ok)}. `:""}${no.length?`NO hagas: ${nom(no)}. `:""}Lo decidió ${S.usuario} (${d.medio.toLowerCase()}).`, false);
     if(!quedan) avisar("Thalia","WO destrabada",
       `WO-${w.id} · ${esc(P(w.prop).nombre)} ${esc(U(w.unidad).num)} ya se decidió. <b>${esc(tecN(w.tec))}</b> puede seguir.`,"v");
     render();
+  },
+  aprobFoto: d => {
+    // Adjuntar el comprobante reabre el modal (para mostrarlo) — hay que
+    // rescatar qué estaba tildado o se pierde al reconstruirlo de cero.
+    const marc = new Set(Array.from(document.querySelectorAll(".adchk")).filter(c=>c.checked).map(c=>c.dataset.lid));
+    const cobra = new Set(Array.from(document.querySelectorAll(".adcobra")).filter(c=>c.checked).map(c=>c.dataset.lid));
+    capturarFoto(url=>{
+      S._aprobFoto=url; modalMedio(d.sol);
+      document.querySelectorAll(".adchk").forEach(c=>{ c.checked=marc.size?marc.has(c.dataset.lid):true; });
+      document.querySelectorAll(".adcobra").forEach(c=>{ c.checked=cobra.has(c.dataset.lid); });
+    });
   },
   excRech: d => {
     const x = by(S.excepciones,d.id);
@@ -2673,12 +2734,19 @@ const ACC = {
        Míralo en <b>Técnicos › Hoy en campo</b>.`, tarde?"w":"v");
     render();
   },
-  fFoto: d => { const w=W(+d.id); S.reloj+=5; w.evid++;
-    w.hist.push([hora(),"Cargó evidencia",T(w.tec).nombre]);
-    toast("📷 Evidencia recibida",`WO-${w.id} ya tiene ${w.evid} foto(s).`,"v"); render(); },
+  fFoto: d => { const w=W(+d.id); S.reloj+=5;
+    capturarFoto(url=>{
+      (w.evidFotos=w.evidFotos||[]).push(fotoNueva(url, T(w.tec).nombre));
+      w.evid=w.evidFotos.length;
+      w.hist.push([hora(),"Cargó evidencia",T(w.tec).nombre]);
+      toast("📷 Evidencia recibida",`WO-${w.id} ya tiene ${w.evid} foto(s).`,"v"); render();
+    });
+  },
   fAdic: d => { S.phSheet={t:"adic", wo:+d.id,
     desc:"Hueco en el sheetrock del bano. Hay que poner masa y pintar antes del clean.",
     ubic:"Bano", filas:[{c:"Sheetrock",q:"1",p:"120"}]}; render(); },
+  fAdicFoto: d => { leerAdic();
+    capturarFoto(url=>{ S.phSheet.filas[+d.i].foto=url; render(); }); },
   fAdicMas: () => { leerAdic();
     // El renglón nuevo arranca en un concepto que todavía no usó: nadie quiere
     // «Sheetrock, Sheetrock» y tener que corregirlo a mano en el celular.
@@ -2750,7 +2818,11 @@ const ACC = {
       id:nid("ad"), sol, wo:w.id, desc:sh.desc.trim(), ubic:sh.ubic,
       concepto:f.c, cant:parseFloat(f.q)||1, precio:parseFloat(f.p)||null,
       estado:"Pendiente", aprob:null, origen:"Técnico",
-      fotosRef:0, fotosEvid:1, specs:{}, tec:null, fecha:null,
+      // Punto 7 del feedback: antes era una sola foto fija para todo el
+      // aviso — ahora cada hallazgo trae la suya propia (f.foto, opcional,
+      // se carga renglón por renglón desde el celular con fAdicFoto).
+      fotosRefArr:[], fotosEvidArr:f.foto?[fotoNueva(f.foto,T(w.tec).nombre)]:[],
+      specs:{}, tec:null, fecha:null,
       hist:[[hora(),`Creada por el técnico en sitio: ${f.c}`,T(w.tec).nombre]]}));
     w.estado="Esperando aprobación";
     w.hist.push([hora(),`Pidió aprobación de un adicional · ${lista}`,T(w.tec).nombre]);
@@ -2872,33 +2944,74 @@ const ACC = {
     const specs={};
     specsDef.forEach((c,i)=>{ const v=val("swSpec"+i); if(v && v.trim()) specs[c]=v.trim(); });
     const tecOverride=val("swTec")||null, fechaOverride=val("swFecha")||null;
+    const cobra = chk("swCobra");
     const na={id:nid("ad"), sol:"SOL"+Date.now(), wo:w.id, desc:notas, ubic, concepto:tipo,
       cant, precio, estado:"Aprobado", aprob:{medio:"Directo",quien:S.usuario,fecha:hora()},
-      origen:"Planificada", fotosRef:0, fotosEvid:0, specs,
+      origen:"Planificada", fotosRefArr:[], fotosEvidArr:[], specs,
       tec:tecOverride, fecha:fechaOverride,
       hist:[[hora(), `Sub-Work Order planificada creada: ${tipo}`, S.usuario]]};
     S.adicionales.push(na);
     w.hist.push([hora(), `Sub-Work Order planificada: ${tipo}`, S.usuario]);
+    // Reunión Claudia (feedback prototipo): igual que al aprobar una que
+    // descubrió el técnico (ver medioOK) — si tiene precio, entra sola a
+    // la nómina; a la factura solo si se tildó "Cobrar".
+    const monto = (precio||0)*(cant||1);
+    let plata = "";
+    if(monto>0){
+      S.excepciones.push({id:"X"+Date.now()+"_"+na.id, tipo:"Pago adicional al técnico", wo:w.id,
+        motivo:`Sub-Work Order planificada · ${tipo}${ubic?" · "+ubic:""}`, monto,
+        pide:S.usuario, aprueba:S.usuario, estado:"Aprobada",
+        fecha:w.fecha, creada:{quien:S.usuario,hora:hora()}, resol:{quien:S.usuario,hora:hora()}});
+      w.hist.push([hora(), `Nómina: ${money(monto)} de pago adicional para ${tecN(tecOverride||w.tec)}`, S.usuario]);
+      plata = `<br><br>💰 Se le suma ${money(monto)} a la nómina de ${esc(tecN(tecOverride||w.tec))}.`;
+      if(cobra){
+        w.extraFacturable = (w.extraFacturable||0) + monto;
+        w.hist.push([hora(), `Se suma ${money(monto)} a lo que se le factura a la propiedad`, S.usuario]);
+        plata += ` Se le suma ${money(monto)} a lo que se le factura a la propiedad.`;
+      } else {
+        plata += ` No se le factura nada a la propiedad — queda como costo interno.`;
+      }
+    }
     cm();
-    toast("✓ Sub-Work Order creada", `${esc(tipo)} agregada a WO-${w.id}.`, "v");
+    toast("✓ Sub-Work Order creada", `${esc(tipo)} agregada a WO-${w.id}.${plata}`, "v");
     render();
   },
   subwoFotoRef: d => {
     const a=S.adicionales.find(x=>x.id===+d.id); if(!a) return;
-    a.fotosRef=(a.fotosRef||0)+1;
     ultimoSubwoTocado = a.wo;
-    (a.hist=a.hist||[]).push([hora(), "Foto de referencia agregada", S.usuario]);
-    const w=W(a.wo);
-    if(w) w.hist.push([hora(), `Foto de referencia agregada a Sub-Work Order · ${a.concepto}`, S.usuario]);
-    render();
+    S.fotoModal={tipo:"subwoRef", id:a.id};
+    modalFotos();
   },
   subwoFotoEvid: d => {
     const a=S.adicionales.find(x=>x.id===+d.id); if(!a) return;
-    a.fotosEvid=(a.fotosEvid||0)+1;
     ultimoSubwoTocado = a.wo;
-    (a.hist=a.hist||[]).push([hora(), "Foto de evidencia agregada", S.usuario]);
-    const w=W(a.wo);
-    if(w) w.hist.push([hora(), `Foto de evidencia agregada a Sub-Work Order · ${a.concepto}`, S.usuario]);
-    render();
+    S.fotoModal={tipo:"subwoEvid", id:a.id};
+    modalFotos();
+  },
+  // Punto 7 del feedback: galería real — reemplaza los contadores de
+  // "fotos" repartidos por toda la app (Work Completed, Work to Be
+  // Performed y las Sub-Work Order Ref/Evid). fotoVer abre; esto agrega.
+  fotoVer: d => { S.fotoModal={tipo:d.tipo, id:+d.id}; modalFotos(); },
+  fotoModalAgregar: () => {
+    const m=S.fotoModal; if(!m) return;
+    capturarFoto(url=>{
+      if(m.tipo==="woEvid"){
+        const w=W(m.id);
+        (w.evidFotos=w.evidFotos||[]).push(fotoNueva(url, w.tec?T(w.tec).nombre:S.usuario));
+        w.evid=w.evidFotos.length;
+      } else if(m.tipo==="woPrevia"){
+        const w=W(m.id);
+        (w.fotosPrevias=w.fotosPrevias||[]).push(fotoNueva(url, w.tec?T(w.tec).nombre:S.usuario));
+      } else if(m.tipo==="subwoRef" || m.tipo==="subwoEvid"){
+        const a=S.adicionales.find(x=>x.id===m.id); if(!a) return;
+        const campo = m.tipo==="subwoRef" ? "fotosRefArr" : "fotosEvidArr";
+        const etiqueta = m.tipo==="subwoRef" ? "referencia" : "evidencia";
+        (a[campo]=a[campo]||[]).push(fotoNueva(url, S.usuario));
+        (a.hist=a.hist||[]).push([hora(), `Foto de ${etiqueta} agregada`, S.usuario]);
+        const w=W(a.wo);
+        if(w) w.hist.push([hora(), `Foto de ${etiqueta} agregada a Sub-Work Order · ${a.concepto}`, S.usuario]);
+      }
+      modalFotos();
+    });
   }
 };

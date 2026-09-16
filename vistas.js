@@ -212,13 +212,15 @@ function fichaWO(id){
             <td class="num mono">${a.precio?money(a.precio):"—"}</td>
             <td class="num mono">${a.precio?money(a.precio*(a.cant||1)):"—"}</td>
             <td><span class="pill ${a.estado==="Aprobado"?"v":a.estado==="Rechazado"?"r":"w"}">${a.estado}</span></td>
-            <td><div style="display:flex;gap:4px"><button class="btn sm" title="Fotos de referencia" data-a="subwoFotoRef" data-id="${a.id}">📷 Ref ${a.fotosRef||0}</button>
-              <button class="btn sm" title="Fotos de evidencia" data-a="subwoFotoEvid" data-id="${a.id}">📷 Evid ${a.fotosEvid||0}</button></div></td></tr>
-            ${(a.specs&&Object.keys(a.specs).length)||a.tec||a.fecha?`<tr><td colspan="8" style="padding-top:0;padding-bottom:9px">
-              <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <td><div style="display:flex;gap:4px"><button class="btn sm" title="Fotos de referencia" data-a="subwoFotoRef" data-id="${a.id}">📷 Ref ${(a.fotosRefArr||[]).length}</button>
+              <button class="btn sm" title="Fotos de evidencia" data-a="subwoFotoEvid" data-id="${a.id}">📷 Evid ${(a.fotosEvidArr||[]).length}</button></div></td></tr>
+            ${(a.specs&&Object.keys(a.specs).length)||a.tec||a.fecha||(a.aprob&&a.aprob.foto)?`<tr><td colspan="8" style="padding-top:0;padding-bottom:9px">
+              <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
                 ${Object.entries(a.specs||{}).map(([k,v])=>`<span class="pill">${esc(k)}: ${esc(v)}</span>`).join("")}
                 ${a.tec?`<span class="pill w">Técnico distinto: ${esc(tecN(a.tec))}</span>`:""}
                 ${a.fecha?`<span class="pill w">Fecha distinta: ${esc(a.fecha)}</span>`:""}
+                ${a.aprob&&a.aprob.foto?`<a href="${a.aprob.foto}" target="_blank" style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--azul)">
+                  <img src="${a.aprob.foto}" style="width:28px;height:28px;object-fit:cover;border-radius:5px">Comprobante de la aprobación</a>`:""}
               </div></td></tr>`:""}`).join("")}
           ${s.lineas.length>1?`<tr><td colspan="5" style="color:var(--faint)">Aprobado de esta solicitud</td>
             <td class="num mono" style="font-weight:750">${money(s.lineas.filter(l=>l.estado==="Aprobado").reduce((t,l)=>t+(l.precio||0)*(l.cant||1),0))}</td>
@@ -243,8 +245,18 @@ function fichaWO(id){
       </div></div>
 
       <div class="card"><div class="chd"><h3>Evidencia</h3><span class="r"><span class="pill ${w.evid?"v":"w"}">${w.evid}</span></span></div>
-        <div class="cp">${w.evid?`<div style="display:flex;gap:6px;flex-wrap:wrap">${Array.from({length:w.evid}).map(()=>`<div style="width:72px;height:54px;border-radius:7px;background:linear-gradient(135deg,#7fa8c9,#2d5a80)"></div>`).join("")}</div>`
-          :`<div style="color:var(--faint);font-size:12px">Todavía sin fotos del trabajo.</div>`}</div></div>
+        <div class="cp">${w.evid?`<div style="display:flex;gap:6px;flex-wrap:wrap">${fotosConRelleno(w.evidFotos,w.evid).map(f=>f.url
+            ?`<a href="${f.url}" target="_blank"><img src="${f.url}" style="width:72px;height:54px;object-fit:cover;border-radius:7px;border:1px solid var(--line)"></a>`
+            :`<div title="Foto de una versión anterior del prototipo, sin archivo real" style="width:72px;height:54px;border-radius:7px;background:linear-gradient(135deg,#7fa8c9,#2d5a80)"></div>`).join("")}</div>`
+          :`<div style="color:var(--faint);font-size:12px">Todavía sin fotos del trabajo.</div>`}
+          <button class="btn sm" style="margin-top:8px" data-a="fotoVer" data-tipo="woEvid" data-id="${w.id}">📷 ${w.evid?"Ver / agregar fotos":"Agregar foto"}</button></div></div>
+
+      ${["Repair","Cabinet","Resurface"].includes(w.cat)?`<div class="card"><div class="chd"><h3>Fotos de referencia</h3>
+        <span class="s">lo que hay que hacer, para que el técnico lo vea antes de llegar</span></div>
+        <div class="cp">${(w.fotosPrevias||[]).length?`<div style="display:flex;gap:6px;flex-wrap:wrap">${w.fotosPrevias.map(f=>
+            `<a href="${f.url}" target="_blank"><img src="${f.url}" style="width:72px;height:54px;object-fit:cover;border-radius:7px;border:1px solid var(--line)"></a>`).join("")}</div>`
+          :`<div style="color:var(--faint);font-size:12px">Todavía no hay fotos de referencia.</div>`}
+          <button class="btn sm" style="margin-top:8px" data-a="fotoVer" data-tipo="woPrevia" data-id="${w.id}">📷 ${(w.fotosPrevias||[]).length?"Ver / agregar fotos":"Agregar foto"}</button></div></div>`:""}
 
       ${mv.length?`<div class="card"><div class="chd"><h3>Material usado</h3></div><table><tbody>
         ${mv.map(m=>`<tr><td>${esc(by(S.productos,m.prod).nombre)}</td><td class="mono">${m.cant}</td><td class="num mono">${money(m.costo)}</td></tr>`).join("")}
@@ -1456,21 +1468,30 @@ function modalMedio(sol){
 
     ${pend.length>1?`<div class="fld" style="margin-bottom:12px">
       <label>¿Qué le autorizas?</label>
-      <div class="hint">Destilda lo que el cliente no aprobó. Al técnico le llega el detalle: qué sí hace y qué no.</div>
+      <div class="hint">Destilda lo que el cliente no aprobó. Al técnico le llega el detalle: qué sí hace y qué no.
+        Lo aprobado con precio le queda pendiente de pago al técnico solo; tildá «Cobrar al cliente» aparte, por cada concepto, si además hay que facturárselo — a veces se hace de cortesía.</div>
       <table style="margin-top:6px"><tbody>
+      <tr><td></td><td></td><td class="num">Precio</td><td style="text-align:center">Cobrar<br>al cliente</td></tr>
       ${pend.map(l=>`<tr>
         <td style="width:34px"><input type="checkbox" class="adchk" data-lid="${l.id}" checked style="width:16px;height:16px"></td>
         <td><b>${esc(l.concepto)}</b>${(l.cant||1)>1?` <span style="color:var(--faint)">× ${l.cant}</span>`:""}
           ${l.ubic?`<div style="font-size:11.5px;color:var(--faint)">${esc(l.ubic)}</div>`:""}</td>
-        <td class="num mono">${l.precio?money(l.precio*(l.cant||1)):"—"}</td></tr>`).join("")}
-      <tr><td></td><td style="color:var(--faint)">Total pedido</td><td class="num mono" style="font-weight:750">${money(tot)}</td></tr>
+        <td class="num mono">${l.precio?money(l.precio*(l.cant||1)):"—"}</td>
+        <td style="text-align:center">${l.precio?`<input type="checkbox" class="adcobra" data-lid="${l.id}" style="width:16px;height:16px">`:"—"}</td></tr>`).join("")}
+      <tr><td></td><td style="color:var(--faint)">Total pedido</td><td class="num mono" style="font-weight:750">${money(tot)}</td><td></td></tr>
       </tbody></table></div>`
     :`<div class="note" style="margin-bottom:12px"><b>${esc(pend[0].concepto)}</b>${(pend[0].cant||1)>1?` × ${pend[0].cant}`:""}
-        ${pend[0].precio?` · ${money(pend[0].precio*(pend[0].cant||1))}`:""}${pend[0].ubic?` · ${esc(pend[0].ubic)}`:""}</div>`}
+        ${pend[0].precio?` · ${money(pend[0].precio*(pend[0].cant||1))}`:""}${pend[0].ubic?` · ${esc(pend[0].ubic)}`:""}
+        ${pend[0].precio?`<label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-weight:500">
+          <input type="checkbox" class="adcobra" data-lid="${pend[0].id}" style="width:16px;height:16px"> Cobrar esto al cliente (además de pagárselo al técnico)</label>`:""}</div>`}
 
     ${p.aprob?`<div class="note" style="margin-bottom:12px"><b>Nota de ${esc(p.nombre)}:</b> ${esc(p.aprob)}</div>`:""}
     <div class="note w" style="margin-bottom:12px">Erika: «a veces las aprobaciones nos las dan por llamada, por mensaje, de diferentes maneras.
       Solo tener ese <b>sustento</b> de que sí se dio una aprobación». Lo que elijas define qué tan sólido queda si después lo discuten.</div>
+    ${S._aprobFoto
+      ?`<div class="note" style="margin-bottom:10px"><img src="${S._aprobFoto}" style="width:100%;max-height:130px;object-fit:cover;border-radius:9px;display:block;margin-bottom:6px">
+          <button type="button" class="btn sm" data-a="aprobFoto" data-sol="${sol}">Cambiar comprobante</button></div>`
+      :`<button type="button" class="btn" style="width:100%;justify-content:center;margin-bottom:10px" data-a="aprobFoto" data-sol="${sol}">📷 Adjuntar comprobante — opcional (captura del mensaje, correo, etc.)</button>`}
     <button class="btn" style="width:100%;justify-content:flex-start;margin-bottom:8px;padding:11px 13px;border-color:var(--verde)"
       data-a="medioOK" data-sol="${sol}" data-wo="${w.id}" data-medio="Enlace digital">
       <div style="flex:1;text-align:left">
@@ -1551,6 +1572,8 @@ function modalSubWO(woId){
       <div class="fld"><label>Cantidad (Quantity) <span class="req">*</span></label><input id="swCant" value="1" class="mono"></div>
       <div class="fld"><label>Precio <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><input id="swPrecio" class="mono" placeholder="0.00"></div>
     </div>
+    <label style="display:flex;align-items:center;gap:6px;margin:-6px 0 12px;font-weight:500;font-size:12.5px">
+      <input type="checkbox" id="swCobra" style="width:16px;height:16px"> Cobrar este precio a la propiedad (si no, el técnico igual cobra el suyo, pero es costo interno)</label>
     <div id="swSpecs"></div>
     <div class="fld"><label>Notas (Notes)</label><textarea id="swNotas" placeholder="Cualquier detalle que no entre en los campos de arriba…"></textarea></div>
 
@@ -1560,7 +1583,7 @@ function modalSubWO(woId){
       <div class="fld"><label>Fecha <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional, si es otro día</span></label>
         <input type="date" id="swFecha" value=""></div>
     </div>
-    <div class="note">Técnico y fecha quedan documentados en la Sub-Work Order, pero todavía no mueven la agenda ni la nómina — eso depende de cómo se resuelva la relación WO → Nómina → Facturación (punto 10 del feedback, todavía abierto).</div>
+    <div class="note">Técnico y fecha quedan documentados en la Sub-Work Order, pero todavía no mueven la agenda — es solo para saber quién y cuándo, la asignación real sigue siendo la de WO-${w.id}. Si le pusiste precio, sí entra a la nómina del técnico apenas guardás, y a la factura de la propiedad si tildaste «Cobrar».</div>
     <div class="note">Las fotos (Photos) se agregan después, desde la tarjeta «Sub-Work Orders» de esta WO — hay dos tipos: de referencia (para que el técnico vea con anticipación) y de evidencia (el resultado, para returns).</div>
   </div>
   <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
@@ -3073,11 +3096,83 @@ function modal(html,wide){ $("#mroot").innerHTML=`<div class="scrim" data-a="cm"
    / woGuardar). Cerrar CUALQUIER modal — cancelado o no — apaga esa marca:
    así, si el usuario abre otra cosa sin guardar, no queda una Solicitud
    vieja esperando pegarse a una Work Order que no tiene nada que ver. */
-function cm(){ $("#mroot").innerHTML=""; S.progSolId=null; if(typeof renderCoach==="function") renderCoach(); }
+function cm(){ $("#mroot").innerHTML=""; S.progSolId=null; S._aprobFoto=null; S._dvFoto=null; if(typeof renderCoach==="function") renderCoach(); }
 const val = id => { const e=document.getElementById(id); return e? e.value.trim() : ""; };
 const chk = id => { const e=document.getElementById(id); return e? e.checked : false; };
 function marcaFalta(ids){ let bad=false; ids.forEach(i=>{ const e=document.getElementById(i);
   if(e && !e.value.trim()){ e.parentElement.classList.add("bad"); bad=true; } else if(e) e.parentElement.classList.remove("bad"); }); return bad; }
+
+/* Punto 7 del feedback (fotos): el prototipo no tiene servidor, así que no hay
+   dónde "subir" nada de verdad — pero ya no hace falta simular con un
+   contador. Se elige una foto real (cámara o galería), se ve de verdad en
+   pantalla y se puede abrir en grande. Se reescala en un canvas antes de
+   guardarla en memoria para no inflar el estado con archivos gigantes. */
+function capturarFoto(cb){
+  // Gancho para las pruebas automáticas: un Chrome headless no tiene forma
+  // de tocar el selector de archivos real del sistema operativo, así que
+  // la prueba simula la elección seteando esto antes de disparar la acción.
+  if(typeof window!=="undefined" && window.__fotoTest!==undefined){
+    const url=window.__fotoTest; window.__fotoTest=undefined; cb(url); return;
+  }
+  const inp=document.createElement("input");
+  inp.type="file"; inp.accept="image/*"; inp.capture="environment";
+  inp.onchange=()=>{
+    const f=inp.files&&inp.files[0]; if(!f) return;
+    const r=new FileReader();
+    r.onload=()=>{
+      const img=new Image();
+      img.onload=()=>{
+        const MAX=1000, k=Math.min(1, MAX/Math.max(img.width,img.height));
+        const c=document.createElement("canvas");
+        c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
+        c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+        cb(c.toDataURL("image/jpeg",0.72));
+      };
+      img.src=r.result;
+    };
+    r.readAsDataURL(f);
+  };
+  inp.click();
+}
+const fotoNueva = (url, quien) => ({url, quien:quien||S.usuario, hora:hora()});
+/* w.evid es viejo y algunas WO sembradas tienen el número sin el array real
+   detrás (datos de ejemplo previos a este cambio) — se completa con el
+   bloque degradado de siempre para no mostrar un hueco donde el contador
+   dice que hay fotos. */
+const fotosConRelleno = (arr, n) => {
+  arr = arr||[];
+  return arr.length>=n ? arr : arr.concat(Array.from({length:n-arr.length},()=>({url:null})));
+};
+
+/* Galería genérica para cualquiera de los 4 puntos de "fotos" del feedback
+   (Work Completed, Work to Be Performed, Sub-Work Order Ref/Evid) — así no
+   hay que repetir el modal cuatro veces. S.fotoModal dice de qué WO/línea
+   se trata; fotoModalAgregar sabe en qué array de cada una hay que guardar. */
+function fotoModalInfo(m){
+  if(m.tipo==="woEvid"){ const w=W(m.id);
+    return {titulo:`Evidencia del trabajo — WO-${w.id}`, sub:"Lo que el técnico cargó al cerrar.", arr:(w.evidFotos=w.evidFotos||[])}; }
+  if(m.tipo==="woPrevia"){ const w=W(m.id);
+    return {titulo:`Fotos de referencia — WO-${w.id}`, sub:"Lo que hay que hacer, en foto — no en texto.", arr:(w.fotosPrevias=w.fotosPrevias||[])}; }
+  if(m.tipo==="subwoRef"){ const a=by(S.adicionales,m.id);
+    return {titulo:"Fotos de referencia", sub:esc(a.concepto), arr:(a.fotosRefArr=a.fotosRefArr||[])}; }
+  if(m.tipo==="subwoEvid"){ const a=by(S.adicionales,m.id);
+    return {titulo:"Fotos de evidencia", sub:esc(a.concepto), arr:(a.fotosEvidArr=a.fotosEvidArr||[])}; }
+  return {titulo:"Fotos", sub:"", arr:[]};
+}
+function modalFotos(){
+  const m=S.fotoModal; if(!m) return;
+  const {titulo, sub, arr} = fotoModalInfo(m);
+  modal(`<div class="mh"><h3>${esc(titulo)}</h3>${sub?`<p>${sub}</p>`:""}</div>
+  <div class="mb">
+    ${arr.length?`<div style="display:flex;flex-wrap:wrap;gap:8px">${arr.map(f=>`
+      <a href="${f.url}" target="_blank" style="display:block;border-radius:8px;overflow:hidden;border:1px solid var(--line)">
+        <img src="${f.url}" style="width:84px;height:84px;object-fit:cover;display:block"></a>`).join("")}</div>
+      <div class="hint" style="margin-top:10px">Tocá una foto para abrirla en grande, en una pestaña nueva.</div>`
+      : `<div class="note" style="text-align:center">Todavía no hay fotos acá.</div>`}
+  </div>
+  <div class="mf"><button class="btn" data-a="cm">Cerrar</button>
+    <button class="btn p" data-a="fotoModalAgregar">📷 Agregar foto</button></div>`);
+}
 
 /* Categorías donde la ubicación es obligatoria (Claudia: «que no poner solamente Repair») */
 const EXIGE_UBIC = ["Repair","Cabinet","Resurface","Installation","Ceramica"];

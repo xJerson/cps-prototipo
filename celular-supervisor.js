@@ -387,12 +387,13 @@ function hojaCel(sh){
         <label>Cant.<input id="paQ${i}" value="${esc(String(f.q))}" inputmode="numeric"></label>
         <label>Precio<input id="paP${i}" value="${esc(String(f.p))}" inputmode="decimal"></label>
       </div>
+      <button type="button" class="db g" style="grid-column:1/3;margin:0;padding:7px" data-a="fAdicFoto" data-i="${i}">${f.foto
+        ?`<img src="${f.foto}" style="width:16px;height:16px;object-fit:cover;border-radius:3px"> Foto agregada — tocá para cambiar`
+        :"📷 Agregar foto de esto"}</button>
     </div>`).join("")}
     <button class="db g admas" data-a="fAdicMas">+ Agregar otro concepto</button>
     ${sh.filas.length>1?`<div class="adtot"><span>${sh.filas.length} conceptos</span><b>${money(tot)}</b></div>`:""}
-
-    <label>Foto</label>
-    <div class="dph" style="margin:0 0 4px">📷 foto tomada · se adjunta sola</div>
+    <div class="sub" style="margin:-2px 0 4px">Cada renglón tiene su propio botón de foto — ya no es una sola para todo el aviso.</div>
     <button class="db p" style="margin-top:11px" data-a="fAdicOK" data-id="${sh.wo}">Enviar a oficina</button>
     <button class="db g" data-a="fSheetNo">Cancelar</button>
   </div></div>`;
