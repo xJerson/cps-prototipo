@@ -74,19 +74,22 @@ Object.assign(ACC, {
   /* «arrojar un documento de: esto es todo lo que hiciste y se te va a pagar tanto» */
   comprobante: d => {
     const t = T(d.tec);
-    const ws = S.wos.filter(w=>w.tec===d.tec && w.semana===S.semana && w.estado==="Completed");
+    // Punto 10: antes miraba siempre "la semana actual" (S.semana), sin
+    // importar qué período estuviera eligiendo Erika arriba en Nómina
+    // (Día/Semana/Rango/Mes) — ahora mira ese mismo período.
+    const per = S.periodo, perTxt = periodoTexto(per);
+    const ws = S.wos.filter(w=>w.tec===d.tec && enPeriodo(w.fecha,per) && w.estado==="Completed");
     const tot = ws.reduce((a,w)=>a+(egresoWO(w)||0),0);
-    const extra = S.excepciones.filter(x=>x.estado==="Aprobada" && x.tipo==="Pago adicional al técnico"
-                  && ws.some(w=>w.id===x.wo));
+    const extra = extrasAprobadosDeWOs(ws);
     const totExtra = extra.reduce((a,x)=>a+(x.monto||0),0);
     modal(`<div class="mh"><h3>Comprobante de pago</h3>
-      <p>${esc(tecN(d.tec))} · semana ${S.semana} de 2026</p></div>
+      <p>${esc(tecN(d.tec))} · ${esc(perTxt)}</p></div>
     <div class="mb">
       <div style="border:1px solid var(--line);border-radius:10px;overflow:hidden">
         <div style="background:var(--azul);color:#fff;padding:13px 15px;display:flex;align-items:center;gap:10px">
           <div style="width:30px;height:30px;border-radius:7px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:11px">CPS</div>
           <div><div style="font-weight:750">Cordova Property Services</div>
-            <div style="font-size:11px;opacity:.85">Resumen de trabajo · semana ${S.semana}</div></div>
+            <div style="font-size:11px;opacity:.85">Resumen de trabajo · ${esc(perTxt)}</div></div>
           <div style="margin-left:auto;text-align:right">
             <div style="font-size:10.5px;opacity:.85">Total a pagar</div>
             <div class="mono" style="font-size:20px;font-weight:750">${money(tot+totExtra)}</div></div></div>
@@ -95,11 +98,11 @@ Object.assign(ACC, {
           <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td>
           <td>${esc(w.serv)}<div style="font-size:10.5px;color:var(--faint)">${esc(U(w.unidad).rooms)}</div></td>
           <td class="num mono">${egresoWO(w)!==null?money(egresoWO(w)):'<span class="pill w">NA</span>'}</td></tr>`).join("")
-          ||`<tr><td colspan="4" class="empty">Sin trabajos terminados esta semana</td></tr>`}
+          ||`<tr><td colspan="4" class="empty">Sin trabajos terminados en este período</td></tr>`}
         ${extra.map(x=>`<tr style="background:var(--ambar-cl)"><td class="mono">—</td>
           <td colspan="2">Pago adicional aprobado · WO-${x.wo}<div style="font-size:10.5px;color:var(--ambar)">${esc(x.motivo.slice(0,70))}</div></td>
           <td class="num mono">${money(x.monto)}</td></tr>`).join("")}
-        <tr style="background:var(--surface-2);font-weight:750"><td colspan="3">Total semana ${S.semana}</td>
+        <tr style="background:var(--surface-2);font-weight:750"><td colspan="3">Total ${esc(perTxt)}</td>
           <td class="num mono" style="font-size:15px">${money(tot+totExtra)}</td></tr></tbody></table>
       </div>
       <div class="note" style="margin-top:12px">Solo para uso interno de oficina — el técnico no ve montos en su celular.</div>

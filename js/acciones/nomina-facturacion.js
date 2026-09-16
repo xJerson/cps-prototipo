@@ -150,7 +150,10 @@ Object.assign(ACC, {
     const ws=todas.filter(w=>!woBloqueada(w.id));
     if(!ws.length){ toast("🚫 Nada para pagar",
       bloqueadas.length?`${bloqueadas.length} Work Order(s) con excepción sin resolver — es todo lo que hay pendiente en este período.`:"No hay Work Orders listas para pagar.","r"); return; }
-    const tot=ws.reduce((a,w)=>a+(egresoWO(w)||0),0);
+    // Punto 10: sin esto, lo que queda registrado como "nómina pagada" no
+    // incluía los adicionales de Sub-Work Order ya aprobados — se le pagaba
+    // de más al técnico (vía comprobante) de lo que el registro decía.
+    const tot=ws.reduce((a,w)=>a+(egresoWO(w)||0),0) + extrasAprobadosDeWOs(ws).reduce((a,x)=>a+(x.monto||0),0);
     S.nomina.push({semana:S.semana, periodo:{...S.periodo}, wos:ws.map(w=>w.id), total:tot, quien:S.usuario, hora:hora()});
     ws.forEach(w=>{w.pagadaTec=true; w.hist.push([hora(),`Pagada al técnico en nómina — ${periodoTexto(S.periodo)}`,S.usuario]);});
     toast("✓ Nómina aprobada",

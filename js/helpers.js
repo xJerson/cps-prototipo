@@ -133,6 +133,14 @@ function egresoWO(w){
   const t=tarifaWO(w); return t? t.pago*(w.cant||1) : null;
 }
 function materialWO(w){ return S.movs.filter(m=>m.wo===w.id && m.tipo==="salida").reduce((a,m)=>a+m.costo,0); }
+/* Punto 10: el pago adicional que se aprueba al aceptar una Sub-Work
+   Order (ver medioOK) queda en S.excepciones, no en egresoWO — así que
+   cualquier pantalla que muestre "cuánto se le paga" a un técnico tiene
+   que sumarlo aparte, o el número no coincide con el comprobante real. */
+function extrasAprobadosDeWOs(ws){
+  const ids = new Set(ws.map(w=>w.id));
+  return S.excepciones.filter(x=>x.estado==="Aprobada" && x.tipo==="Pago adicional al técnico" && ids.has(x.wo));
+}
 function utilidadWO(w){ const i=ingresoWO(w); if(i===null) return null; return i-(egresoWO(w)||0)-materialWO(w); }
 function stock(prodId){ return S.movs.filter(m=>m.prod===prodId).reduce((a,m)=>a+(m.tipo==="entrada"?m.cant:-m.cant),0); }
 

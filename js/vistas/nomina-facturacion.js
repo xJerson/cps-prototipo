@@ -332,8 +332,13 @@ VIEWS.nomina = () => {
 
   ${Object.keys(porTec).length?Object.entries(porTec).map(([tid,arr])=>{
     const ing=arr.reduce((a,w)=>a+(ingresoWO(w)||0),0);
-    const egr=arr.reduce((a,w)=>a+(egresoWO(w)||0),0);
+    const egrBase=arr.reduce((a,w)=>a+(egresoWO(w)||0),0);
     const mat=arr.reduce((a,w)=>a+materialWO(w),0);
+    // Punto 10: "se le paga" tiene que incluir los adicionales de Sub-Work
+    // Order ya aprobados (S.excepciones) — si no, este número no coincide
+    // con el comprobante real que se le da al técnico.
+    const extras=extrasAprobadosDeWOs(arr);
+    const egr=egrBase+extras.reduce((a,x)=>a+(x.monto||0),0);
     return `<div class="card"><div class="chd"><h3>${esc(tecN(tid))}</h3>
       <span class="s">${arr.length} trabajos</span>
       <span class="r"><span style="font-size:11px;color:var(--faint)">se le paga</span>
@@ -348,6 +353,9 @@ VIEWS.nomina = () => {
         <td class="num mono">${egresoWO(w)!==null?money(egresoWO(w)):"—"}</td>
         <td class="num mono">${materialWO(w)?money(materialWO(w)):"—"}</td>
         ${puedeVerUtilidad()?`<td class="num mono" style="color:${utilidadWO(w)>=0?"var(--verde)":"var(--rojo)"}">${utilidadWO(w)!==null?money(utilidadWO(w)):"—"}</td>`:""}</tr>`).join("")}
+      ${extras.map(x=>`<tr style="background:var(--ambar-cl)"><td colspan="7">Pago adicional aprobado · WO-${x.wo}
+          <div style="font-size:10.5px;color:var(--ambar)">${esc((x.motivo||"").slice(0,70))}</div></td>
+        <td class="num mono">${money(x.monto)}</td><td></td>${puedeVerUtilidad()?`<td></td>`:""}</tr>`).join("")}
       <tr style="background:var(--surface-2);font-weight:700"><td colspan="6">Totales</td>
         <td class="num mono">${money(ing)}</td><td class="num mono">${money(egr)}</td>
         <td class="num mono">${money(mat)}</td>${puedeVerUtilidad()?`<td class="num mono" style="color:var(--verde)">${money(ing-egr-mat)}</td>`:""}</tr>
