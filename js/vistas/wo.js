@@ -178,16 +178,40 @@ function fichaWO(id){
           :`<div style="color:var(--faint);font-size:12px">Todavía sin fotos del trabajo.</div>`}
           <button class="btn sm" style="margin-top:8px" data-a="fotoVer" data-tipo="woEvid" data-id="${w.id}">📷 ${w.evid?"Ver / agregar fotos":"Agregar foto"}</button></div></div>
 
-      ${["Repair","Cabinet","Resurface"].includes(w.cat)?`<div class="card"><div class="chd"><h3>Fotos de referencia</h3>
-        <span class="s">lo que hay que hacer, para que el técnico lo vea antes de llegar</span></div>
+      <div class="card"><div class="chd"><h3>Fotos de referencia</h3>
+        <span class="s">estado inicial y trabajo solicitado — Work to Be Performed</span></div>
         <div class="cp">${(w.fotosPrevias||[]).length?`<div style="display:flex;gap:6px;flex-wrap:wrap">${w.fotosPrevias.map(f=>
             `<a href="${f.url}" target="_blank"><img src="${f.url}" style="width:72px;height:54px;object-fit:cover;border-radius:7px;border:1px solid var(--line)"></a>`).join("")}</div>`
           :`<div style="color:var(--faint);font-size:12px">Todavía no hay fotos de referencia.</div>`}
-          <button class="btn sm" style="margin-top:8px" data-a="fotoVer" data-tipo="woPrevia" data-id="${w.id}">📷 ${(w.fotosPrevias||[]).length?"Ver / agregar fotos":"Agregar foto"}</button></div></div>`:""}
+          <button class="btn sm" style="margin-top:8px" data-a="fotoVer" data-tipo="woPrevia" data-id="${w.id}">📷 ${(w.fotosPrevias||[]).length?"Ver / agregar fotos":"Agregar foto"}</button></div></div>
 
-      ${mv.length?`<div class="card"><div class="chd"><h3>Material usado</h3></div><table><tbody>
-        ${mv.map(m=>`<tr><td>${esc(by(S.productos,m.prod).nombre)}</td><td class="mono">${m.cant}</td><td class="num mono">${money(m.costo)}</td></tr>`).join("")}
-      </tbody></table></div>`:""}
+      ${(()=>{ const hallazgos=sols.flatMap(s=>s.lineas).filter(a=>a.hallazgoFoto);
+        return `<div class="card"><div class="chd"><h3>Hallazgos iniciales</h3>
+        <span class="s">problemas adicionales encontrados al llegar — Initial Findings</span></div>
+        <div class="cp">${hallazgos.length?`<div style="display:flex;gap:6px;flex-wrap:wrap">${hallazgos.map(a=>
+            `<a href="${a.hallazgoFoto.url}" target="_blank" title="${esc(a.concepto)}"><img src="${a.hallazgoFoto.url}" style="width:72px;height:54px;object-fit:cover;border-radius:7px;border:1px solid var(--line)"></a>`).join("")}</div>`
+          :`<div style="color:var(--faint);font-size:12px">Todavía no hay hallazgos con foto reportados en sitio.</div>`}</div></div>`; })()}
+
+      ${(()=>{ const aprobs=sols.flatMap(s=>s.lineas).filter(a=>a.aprob&&a.aprob.foto);
+        return `<div class="card"><div class="chd"><h3>Aprobaciones</h3>
+        <span class="s">evidencia de aprobación de trabajos adicionales — Approvals</span></div>
+        <div class="cp">${aprobs.length?`<div style="display:flex;flex-direction:column;gap:6px">${aprobs.map(a=>
+            `<a href="${a.aprob.foto}" target="_blank" style="display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--ink)">
+              <img src="${a.aprob.foto}" style="width:44px;height:44px;object-fit:cover;border-radius:6px;flex:none">
+              <span>${esc(a.concepto)}<br><span style="color:var(--faint)">${esc(a.aprob.quien||"")} · ${esc(a.aprob.hora||a.aprob.fecha||"")}</span></span></a>`).join("")}</div>`
+          :`<div style="color:var(--faint);font-size:12px">Todavía no hay comprobantes de aprobación.</div>`}</div></div>`; })()}
+
+      <div class="card"><div class="chd"><h3>Materials</h3>
+        <span class="s">material, cantidad, costo, técnico/proveedor y comprobante de compra</span></div>
+        <div class="cp">${mv.length?`<table><thead><tr><th>Material</th><th class="num">Qty</th><th class="num">Cost</th><th>Technician/vendor</th><th>Notes</th><th>Receipt</th></tr></thead><tbody>
+          ${mv.map(m=>`<tr><td>${esc(by(S.productos,m.prod).nombre)}</td>
+            <td class="num mono">${m.cant}</td>
+            <td class="num mono">${money(m.costo)}</td>
+            <td>${esc(m.quien)||"—"}</td>
+            <td style="font-size:11.5px;color:var(--soft)">${esc(m.notas)||"—"}</td>
+            <td>${m.recibo?`<a href="${m.recibo}" target="_blank">🧾 Ver</a>`:`<button type="button" class="btn sm" data-a="materialRecibo" data-id="${m.id}" data-wo="${w.id}">📎 Adjuntar</button>`}</td></tr>`).join("")}
+        </tbody></table>`:`<div style="color:var(--faint);font-size:12px">Todavía no hay materiales registrados en esta WO.</div>`}
+          <button class="btn sm p" style="margin-top:8px" data-a="materialAgregar" data-id="${w.id}">+ Agregar material</button></div></div>
     </div>
   </div>`;
 }
@@ -438,6 +462,29 @@ function refSubWO(){
     ${campos.map((c,i)=>`<div class="fld" style="margin-bottom:0"><label>${esc(c)}</label>
       <input id="swSpec${i}" data-spec="${esc(c)}" placeholder="${esc(c)}"></div>`).join("")}
   </div>` : "";
+}
+
+/* Punto 8 del feedback: en vez de mostrar más dinero en el costado de la
+   WO, esta sección deja registrar el material con sus datos completos
+   (Material, Quantity, Cost, Technician/vendor, Notes) — el comprobante
+   se adjunta aparte, con el mismo patrón que las otras fotos de evidencia. */
+function modalMaterial(woId){
+  const w=W(woId), tec=w.tec?T(w.tec):null;
+  modal(`<div class="mh"><h3>Agregar material</h3><p>WO-${w.id} · ${esc(P(w.prop).nombre)} ${esc(U(w.unidad).num)}</p></div>
+  <div class="mb">
+    <div class="fld"><label>Material <span class="req">*</span></label>
+      <select id="mtP">${S.productos.map(p=>`<option value="${p.id}">${esc(p.nombre)} — quedan ${stock(p.id)}</option>`).join("")}</select></div>
+    <div class="fg c2">
+      <div class="fld"><label>Quantity <span class="req">*</span></label><input id="mtC" class="mono" value="1"></div>
+      <div class="fld"><label>Cost <span class="req">*</span></label><input id="mtT" class="mono" placeholder="0.00"></div>
+    </div>
+    <div class="fld"><label>Technician/vendor</label>
+      <input id="mtQ" value="${tec?esc(tec.nombre+" "+tec.apellido):""}" placeholder="Técnico o proveedor que lo compró"></div>
+    <div class="fld"><label>Notes</label><textarea id="mtN" placeholder="Detalle, por qué se compró, dónde…"></textarea></div>
+    <div class="note">El comprobante (Attach Receipt / Voucher) se adjunta después, desde la tarjeta «Materials» de esta WO — cuando corresponda.</div>
+  </div>
+  <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
+    <button class="btn p" data-a="materialGuardar" data-id="${w.id}">Agregar material</button></div>`);
 }
 
 /* ── NÓMINA ── la pestaña Payroll, armada sola ── */

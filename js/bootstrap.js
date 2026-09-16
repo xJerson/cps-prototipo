@@ -118,6 +118,8 @@ const AUD = {
   cobLlamadaGuardar:{a:"Registró una llamada de cobranza", m:"Cobranza"},
   pagarSemana:{a:"Aprobó la nómina", m:"Nómina"},
   movGuardar:{a:"Registró movimiento de inventario", m:"Inventario"},
+  materialGuardar:{a:"Agregó un material a una Work Order", m:"Work Orders"},
+  materialRecibo:{a:"Adjuntó comprobante de un material", m:"Work Orders"},
   permisoGuardar:{a:"Registró un permiso", m:"Disponibilidad"},
   apruebaPermiso:{a:"Aprobó un permiso", m:"Disponibilidad"}
 };

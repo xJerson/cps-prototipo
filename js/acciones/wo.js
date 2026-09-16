@@ -706,4 +706,23 @@ Object.assign(ACC, {
     ultimoSubwoTocado = a.wo;
     S.fotoModal={tipo:"subwoEvid", id:a.id};
     modalFotos();
+  },
+  materialAgregar: d => modalMaterial(+d.id),
+  materialGuardar: d => {
+    if(marcaFalta(["mtC","mtT"])){ toast("Faltan datos","Cantidad y costo.","r"); return; }
+    const w=W(+d.id), prod=val("mtP"), cant=parseFloat(val("mtC"));
+    if(cant>stock(prod)){ toast("🚫 No hay tanto stock",`Solo quedan ${stock(prod)}.`,"r"); return; }
+    const nm={id:"M"+nid("mv"), prod, tipo:"salida", cant, fecha:w.fecha, wo:w.id,
+      costo:parseFloat(val("mtT")), tienda:"", quien:val("mtQ")||S.usuario,
+      notas:val("mtN")||"", recibo:null, evid:false};
+    S.movs.push(nm);
+    const p=by(S.productos,prod);
+    w.hist.push([hora(), `Material registrado: ${p.nombre} × ${cant}`, S.usuario]);
+    cm(); flash("wo:"+w.id);
+    toast("✓ Material agregado", `${esc(p.nombre)} agregado a WO-${w.id}.`, "v");
+    render();
+  },
+  materialRecibo: d => {
+    const m=S.movs.find(x=>x.id===d.id); if(!m) return;
+    capturarFoto(url=>{ m.recibo=url; m.evid=true; render(); });
   },});

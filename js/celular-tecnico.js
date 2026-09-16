@@ -91,7 +91,8 @@ function renderFon(){
       ${s.lineas.map(l=>`<div style="display:flex;justify-content:space-between;gap:7px;font-size:11.5px;padding:3px 0">
         <span>${l.estado==="Aprobado"?"✓":l.estado==="Rechazado"?"✗":"○"} ${esc(l.concepto)}${(l.cant||1)>1?` ×${l.cant}`:""}</span>
         <span style="color:var(--faint)">${l.estado==="Pendiente"?"esperando":l.estado.toLowerCase()}</span></div>`).join("")}
-      ${(s.lineas.some(l=>l.fotosRefArr&&l.fotosRefArr.length))?`<div class="dph s" style="margin-top:7px">📷 ${s.lineas.reduce((t,l)=>t+((l.fotosRefArr||[]).length),0)} foto(s) de referencia — mirá antes de empezar</div>`:""}
+      ${(s.lineas.some(l=>l.hallazgoFoto))?`<div class="dph s" style="margin-top:7px">📷 ${s.lineas.filter(l=>l.hallazgoFoto).length} foto(s) de hallazgo reportadas</div>`:""}
+      ${(s.lineas.some(l=>l.fotosRefArr&&l.fotosRefArr.length))?`<div class="dph s" style="margin-top:4px">📷 ${s.lineas.reduce((t,l)=>t+((l.fotosRefArr||[]).length),0)} foto(s) de referencia — mirá antes de empezar</div>`:""}
       ${(s.lineas.some(l=>l.fotosEvidArr&&l.fotosEvidArr.length))?`<div class="dph s" style="margin-top:4px">📷 ${s.lineas.reduce((t,l)=>t+((l.fotosEvidArr||[]).length),0)} foto(s) de evidencia</div>`:""}
       ${e==="Aprobado"?`<div class="ds" style="margin-top:5px;color:var(--verde)"><b>✓ Autorizado</b> — ya puedes hacerlo</div>`:""}
       ${e==="Rechazado"?`<div class="ds" style="margin-top:5px;color:var(--rojo)"><b>No autorizado</b> — no lo ejecutes</div>`:""}
@@ -101,7 +102,7 @@ function renderFon(){
       <div style="display:flex;gap:5px;flex-wrap:wrap">${fotosConRelleno(w.evidFotos,w.evid).map(f=>f.url
           ?`<img src="${f.url}" style="width:60px;height:45px;object-fit:cover;border-radius:7px">`
           :`<div class="dph s" style="width:60px;flex:none;margin:0">📷</div>`).join("")}</div></div>`
-      :(w.estado!=="Scheduled"?`<div class="dc" style="border-style:dashed"><div class="ds" style="text-align:center">Todavía sin evidencia del trabajo${ads.some(a=>(a.fotosRefArr&&a.fotosRefArr.length)||(a.fotosEvidArr&&a.fotosEvidArr.length))?"<br><span style='font-size:10px'>(la foto de la Sub-Work Order no cuenta para cerrar)</span>":""}</div></div>`:"")}`;
+      :(w.estado!=="Scheduled"?`<div class="dc" style="border-style:dashed"><div class="ds" style="text-align:center">Todavía sin evidencia del trabajo${ads.some(a=>a.hallazgoFoto||(a.fotosRefArr&&a.fotosRefArr.length)||(a.fotosEvidArr&&a.fotosEvidArr.length))?"<br><span style='font-size:10px'>(la foto de la Sub-Work Order no cuenta para cerrar)</span>":""}</div></div>`:"")}`;
 
     /* Los 4 botones de "mientras trabajas" se veían todos iguales — mismo
        gris, solo texto, sin ícono — y había que leer cada uno para saber

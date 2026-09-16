@@ -118,7 +118,11 @@ Object.assign(ACC, {
       // Punto 7 del feedback: antes era una sola foto fija para todo el
       // aviso — ahora cada hallazgo trae la suya propia (f.foto, opcional,
       // se carga renglón por renglón desde el celular con fAdicFoto).
-      fotosRefArr:[], fotosEvidArr:f.foto?[fotoNueva(f.foto,T(w.tec).nombre)]:[],
+      // hallazgoFoto queda separada de fotosEvidArr: es la foto del
+      // problema al encontrarlo (Initial Findings), no evidencia de que
+      // ya se resolvió — si se mezclan no se puede armar el historial
+      // visual por etapas que pidió Claudia.
+      fotosRefArr:[], fotosEvidArr:[], hallazgoFoto:f.foto?fotoNueva(f.foto,T(w.tec).nombre):null,
       specs:{}, tec:null, fecha:null,
       hist:[[hora(),`Creada por el técnico en sitio: ${f.c}`,T(w.tec).nombre]]}));
     w.estado="Esperando aprobación";
