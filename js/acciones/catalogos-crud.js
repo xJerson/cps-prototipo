@@ -5,7 +5,7 @@ Object.assign(ACC, {
   propVer: d => { S.mod="propiedades"; S.sub=d.id; S.tab="datos"; render(); },
   propNueva: d => { const p = d&&d.id ? P(d.id) : null;
     const op = (a,v) => a.map(x=>`<option ${x===v?"selected":""}>${esc(x)}</option>`).join("");
-    modal(`<div class="mh"><h3>${p?"Corregir "+esc(p.nombre):"Nueva propiedad"}</h3>
+    modal(`<div class="mh"><h3>${p?"Editar "+esc(p.nombre):"Nueva propiedad"}</h3>
       <p>${p?"Cada campo que cambies queda en la Bitácora con el valor anterior.":"Lo que Lydia registra al conseguir la cuenta. Claudia después le carga el seguro y la lista de precios."}</p></div>
     <div class="mb">
       <div class="fld"><label>Property Name <span class="req">*</span></label><input id="nP" value="${p?esc(p.nombre):""}"></div>
@@ -113,7 +113,7 @@ Object.assign(ACC, {
     const dr = S.uniDraft;
     const v = campo => dr&&dr[campo]!==undefined ? dr[campo] : (u?u[campo]:undefined);
     const tipoU = val("uTipo")||v("tipo")||"Residencial";
-    modal(`<div class="mh"><h3>${u?"Corregir unidad "+esc(u.num):"Nueva unidad"}</h3><p>${esc(P(pid).nombre)}</p></div>
+    modal(`<div class="mh"><h3>${u?"Editar unidad "+esc(u.num):"Nueva unidad"}</h3><p>${esc(P(pid).nombre)}</p></div>
     <div class="mb">
       <div class="note" style="margin-bottom:12px"><b>Location:</b> ${P(pid).zona?esc(P(pid).zona):'<span style="color:var(--faint)">sin definir en la propiedad</span>'}
         <span style="font-size:10.5px;color:var(--faint)"> — viene de la propiedad, no se repite acá</span></div>
@@ -198,7 +198,7 @@ Object.assign(ACC, {
   },
   conNuevo: d => { const c = d&&d.id ? by(S.contactos,d.id) : null;
     const pid = c ? c.prop : d.prop;
-    modal(`<div class="mh"><h3>${c?"Corregir contacto":"Nuevo contacto"}</h3><p>${esc(P(pid).nombre)}</p></div>
+    modal(`<div class="mh"><h3>${c?"Editar contacto":"Nuevo contacto"}</h3><p>${esc(P(pid).nombre)}</p></div>
     <div class="mb">
       <div class="fld"><label>Contact Type <span class="req">*</span></label><select id="cT">
         ${["Property Manager","Assistant Manager","Maintenance Supervisor","Accounts Payable","Regional Manager","Other"].map(t=>`<option ${c&&c.tipo===t?"selected":""}>${t}</option>`).join("")}</select></div>
@@ -250,7 +250,7 @@ Object.assign(ACC, {
   },
 
   tecNuevo: d => { const t = d&&d.id ? T(d.id) : null;
-    modal(`<div class="mh"><h3>${t?"Corregir "+esc(tecN(t.id)):"Nuevo técnico"}</h3>
+    modal(`<div class="mh"><h3>${t?"Editar "+esc(tecN(t.id)):"Nuevo técnico"}</h3>
       <p>${t?"Cada campo que cambies queda en la Bitácora con el valor anterior.":"La pestaña <code>Tecnicos</code>, con los mismos campos."}</p></div>
     <div class="mb">
       <div class="fg c2"><div class="fld"><label>Nombre <span class="req">*</span></label><input id="tN" value="${t?esc(t.nombre):""}"></div>
@@ -293,7 +293,7 @@ Object.assign(ACC, {
        el formulario — desde Tarifario (general) o desde el Price List de una
        propiedad (esa propiedad) — ya no se elige con un selector. */
     const propId = dr ? dr.prop : (t ? t.prop : (d&&d.prop ? d.prop : null));
-    modal(`<div class="mh"><h3>${t?"Corregir precio":"Add Item"}</h3>
+    modal(`<div class="mh"><h3>${t?"Editar precio":"Add Item"}</h3>
       <p>${t?"Un precio mal tecleado se arrastra a cada Work Order. Corrígelo aquí; el cambio queda en la Bitácora.":"Los mismos campos con los que ella registra un precio."}</p></div>
     <div class="mb">
       <div class="note" style="margin:0 0 12px">${propId?`Precio exclusivo de <b>${esc(P(propId).nombre)}</b>`:"<b>General</b> — aplica a todas las propiedades"}</div>
@@ -624,7 +624,7 @@ Object.assign(ACC, {
      propiedad es la que queda vinculada. Si administra más, se vinculan luego desde cada una. */
   cliNuevo: d => { const c = d&&d.id ? by(S.clientes,d.id) : null;
     const propId = d&&d.prop ? d.prop : "";
-    modal(`<div class="mh"><h3>${c?"Corregir "+esc(c.nombre):"Nuevo management"}</h3>
+    modal(`<div class="mh"><h3>${c?"Editar "+esc(c.nombre):"Nuevo management"}</h3>
       <p>${c?"Cambia lo que esté mal. Cada campo que toques queda en la Bitácora con el valor anterior.":"Se registra cuando ya se sabe quién administra una propiedad dada de alta."}</p></div>
     <div class="mb">
       <div class="fld"><label>Management Company Name <span class="req">*</span></label><input id="kN" value="${c?esc(c.nombre):""}"></div>

@@ -76,7 +76,7 @@ function fichaWO(id){
     <p>${esc(w.cat)} → ${esc(w.serv)} · ${esc(u.rooms)} · ${w.fecha} ·
       <a href="#" data-a="verEnAgenda" data-id="${w.id}" style="color:var(--azul);font-weight:650">semana ${w.semana} — ver en la agenda</a></p></div>
     <div class="act">
-      ${woEditable(w)?`<button class="btn" data-a="woEditar" data-id="${w.id}">Corregir datos</button>`:""}
+      ${woEditable(w)?`<button class="btn" data-a="woEditar" data-id="${w.id}">Editar datos</button>`:""}
       ${!["Completed","Canceled","Invoiced","Paid"].includes(w.estado)
         ?`<button class="btn ${w.confirmCliente?"":"p"}" data-a="progCliente" data-id="${w.id}">
             ${w.confirmCliente?"Ver coordinación con el cliente":"Programar con el cliente"}</button>`:""}
@@ -125,8 +125,7 @@ function fichaWO(id){
         </tbody></table></div>
 
       <div class="card"><div class="chd"><h3>Sub-Work Orders</h3>
-        <span class="s">trabajos que cuelgan de esta WO — planificados desde oficina o encontrados por el técnico en sitio</span>
-        <span class="r"><button class="btn sm p" data-a="subwoNueva" data-id="${w.id}">+ Nueva Sub-Work Order</button></span></div>
+        <span class="s">trabajos que cuelgan de esta WO — de oficina o encontrados en sitio</span></div>
         ${sols.length?`<table><thead><tr><th>Tipo</th><th>Origen</th><th>Ubicación</th><th class="num">Cant.</th><th class="num">P. unit.</th><th class="num">Importe</th><th>Estado</th><th>Fotos</th></tr></thead><tbody>
         ${sols.map(s=>`
           <tr><td colspan="8" style="background:var(--azul-cl);color:var(--azul-s)">
@@ -149,7 +148,11 @@ function fichaWO(id){
           ${s.lineas.length>1?`<tr><td colspan="5" style="color:var(--faint)">Aprobado de esta solicitud</td>
             <td class="num mono" style="font-weight:750">${money(s.lineas.filter(l=>l.estado==="Aprobado").reduce((t,l)=>t+(l.precio||0)*(l.cant||1),0))}</td>
             <td colspan="2"></td></tr>`:""}`).join("")}
-        </tbody></table>`:`<div class="cp"><div style="color:var(--faint);font-size:12px">Todavía no tiene ninguna Sub-Work Order.</div></div>`}</div>
+        </tbody></table>`:""}
+        <div class="cp">
+          ${sols.length?"":`<div style="color:var(--faint);font-size:12px;margin-bottom:8px">Todavía no tiene ninguna Sub-Work Order.</div>`}
+          <button class="btn sm p" data-a="subwoNueva" data-id="${w.id}">+ Nueva Sub-Work Order</button>
+        </div></div>
 
       ${trazaWO(w)}
 
@@ -447,7 +450,7 @@ const SUBWO_SPECS = {
 function modalWO(w){
   const opts = (a,v) => a.map(x=>`<option ${x===v?"selected":""}>${esc(x)}</option>`).join("");
   modal(`
-  <div class="mh"><h3>${w?`Corregir WO-${w.id}`:"Nueva Work Order"}</h3><p>${w?"Lo que se tecleó mal se arregla aquí. Cada campo que cambies queda en la Bitácora y en el historial de la orden.":"El sistema no deja guardar si falta un dato. Es lo que pidió Claudia: «no puedes pasar al siguiente paso si no tienes el primero»."}</p></div>
+  <div class="mh"><h3>${w?`Editar WO-${w.id}`:"Nueva Work Order"}</h3><p>${w?"Lo que se tecleó mal se arregla aquí. Cada campo que cambies queda en la Bitácora y en el historial de la orden.":"El sistema no deja guardar si falta un dato. Es lo que pidió Claudia: «no puedes pasar al siguiente paso si no tienes el primero»."}</p></div>
   <div class="mb">
     ${w&&w.tec?`<div class="note w" style="margin-bottom:12px"><b>Ya está asignada a ${esc(tecN(w.tec))}.</b> Si cambias la unidad o el servicio, a él le cambia el trabajo — el sistema se lo avisa al celular.</div>`:""}
     <div class="fg c2">

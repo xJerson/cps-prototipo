@@ -342,11 +342,11 @@ Object.assign(ACC, {
         <tbody>${S.draftPolizas.map((x,i)=>`<tr>
           <td>${esc(x.tipo)}</td><td>${esc(x.aseguradora)||"—"}</td><td class="mono">${esc(x.poliza)||"—"}</td>
           <td><span class="pill ${x.vence&&x.vence>=HOY_SUP?"v":"r"}">${esc(x.vence)||"—"}</span></td>
-          <td style="text-align:right;white-space:nowrap"><button class="btn sm" data-a="coiEditPoliza" data-i="${i}">Corregir</button>
+          <td style="text-align:right;white-space:nowrap"><button class="btn sm" data-a="coiEditPoliza" data-i="${i}">Editar</button>
           <button class="btn sm" data-a="coiDelPoliza" data-i="${i}">Quitar</button></td></tr>`).join("")}
         </tbody></table>`:`<div class="empty" style="border:1px dashed var(--line);border-radius:9px">Todavía sin pólizas. Agrega la primera abajo.</div>`}
       <div style="border:1px solid var(--line);border-radius:9px;padding:11px;margin-top:12px;background:var(--surface-2)">
-        <div style="font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);margin-bottom:8px" id="coiFormTitulo">${pre?"Corregir "+esc(pre.tipo):"Agregar póliza"}</div>
+        <div style="font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);margin-bottom:8px" id="coiFormTitulo">${pre?"Editar "+esc(pre.tipo):"Agregar póliza"}</div>
         <div class="fg c2">
           <div class="fld" style="margin-bottom:0"><label>Tipo</label><select id="coiT" data-a="coiTipoCambio">${POLIZA_TIPOS.map(t=>`<option ${pre&&t===pre.tipo?"selected":""}>${t}</option>`).join("")}</select></div>
           <div class="fld" style="margin-bottom:0"><label>Vence <span class="req">*</span></label><input type="date" id="coiV" value="${pre?esc(pre.vence):"2026-12-31"}"></div></div>
@@ -362,14 +362,14 @@ Object.assign(ACC, {
       <div class="note">Sin que todas las pólizas estén vigentes, el sistema no deja mandar a nadie a trabajar a esta propiedad.</div></div>
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
       <button class="btn p" data-a="coiOK" ${S.draftPolizas.length?"":"disabled"}>Guardar</button></div>`,true); },
-  /* Clic en "Corregir" de una fila carga esa póliza en el formulario de abajo. */
+  /* Clic en "Editar" de una fila carga esa póliza en el formulario de abajo. */
   coiEditPoliza: d => {
     const x = S.draftPolizas[+d.i]; if(!x) return;
     document.getElementById("coiT").value = x.tipo;
     document.getElementById("coiA").value = x.aseguradora||"";
     document.getElementById("coiP").value = x.poliza||"";
     document.getElementById("coiV").value = x.vence||"";
-    const t = document.getElementById("coiFormTitulo"); if(t) t.textContent = "Corregir "+x.tipo;
+    const t = document.getElementById("coiFormTitulo"); if(t) t.textContent = "Editar "+x.tipo;
   },
   /* Elegir en el select un tipo que ya está en el borrador también lo precarga —
      así cambiar solo la fecha no borra aseguradora ni póliza por accidente. */
@@ -378,7 +378,7 @@ Object.assign(ACC, {
     const a=document.getElementById("coiA"), pol=document.getElementById("coiP"), v=document.getElementById("coiV");
     if(ex){ a.value=ex.aseguradora||""; pol.value=ex.poliza||""; v.value=ex.vence||""; }
     else { a.value=""; pol.value=""; v.value="2026-12-31"; }
-    const t = document.getElementById("coiFormTitulo"); if(t) t.textContent = ex?"Corregir "+val("coiT"):"Agregar póliza";
+    const t = document.getElementById("coiFormTitulo"); if(t) t.textContent = ex?"Editar "+val("coiT"):"Agregar póliza";
   },
   coiAddPoliza: () => {
     if(!val("coiV")){ marcaFalta(["coiV"]); toast("Falta la fecha","Sin vencimiento la póliza no sirve.","r"); return; }

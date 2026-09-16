@@ -226,7 +226,7 @@ const AYUDA_VISTA = {
   tecnicos:{t:"Técnicos", d:"El equipo: quién está hoy en campo, la lista completa y el historial de asistencia.",
     tips:["Hacé clic en una fila para ver o corregir un técnico.","«+ Nuevo técnico» lo da de alta."]},
   tarifario:{t:"Tarifario", d:"Los precios generales: los que aplican a cualquier propiedad que no tenga un precio propio negociado.",
-    tips:["«+ Nueva tarifa» agrega uno.","Hacé clic en «Corregir» para editar uno existente.","La llave es Servicio + Rooms + Piso."]},
+    tips:["«+ Nueva tarifa» agrega uno.","Hacé clic en «Editar» para modificar uno existente.","La llave es Servicio + Rooms + Piso."]},
   catalogos:{t:"Catálogos", d:"Las listas que llenan cada desplegable del sistema: zonas, tipos de servicio, ubicaciones, estados de la orden.",
     tips:["Se agregan y se quitan acá, sin tocar nada más."]},
   nomina:{t:"Nómina", d:"Se arma sola con las órdenes validadas. Las completas se validan solas; acá solo aparecen las que les falta algo. El período (semana / día / rango / mes) se elige arriba.",
@@ -255,7 +255,7 @@ function renderAyudaVista(){
     tips:["«Asignar técnico» / «Programar con el cliente»: los dos pasos antes de que arranque el trabajo.","«Ver en el celular de …»: abre esta orden en el celular del técnico que la tiene — desde ahí él marca llegada, sube fotos y cierra.","«Detener trabajo»: si empezó pero no puede seguir por algo externo (falta material, no hay acceso…)."]};
   if(S.mod==="propiedades" && S.sub) info = {t:"Ficha de la propiedad",
     d:"Todo lo de esta propiedad, en pestañas. Se completan en cualquier orden; el «Expediente» te va marcando lo que falta.",
-    tips:["«Datos» son los datos generales — «Corregir datos» los edita.","«Expediente»: la lista de control. Sin completarla no se puede transferir a programación.","«Contactos», «Documentos» (el seguro), «Price List» y «Unidades» se cargan cada uno en su pestaña.","«Comunicación»: anotá cada llamada o correo con esta propiedad, para que quede el registro."]};
+    tips:["«Datos» son los datos generales — «Editar datos» los modifica.","«Expediente»: la lista de control. Sin completarla no se puede transferir a programación.","«Contactos», «Documentos» (el seguro), «Price List» y «Unidades» se cargan cada uno en su pestaña.","«Comunicación»: anotá cada llamada o correo con esta propiedad, para que quede el registro."]};
   const btn = `<button class="avb" data-a="ayudaVistaToggle">❔ ¿Qué es esta pantalla?</button>`;
   if(!S.ayudaVista || !info){ box.innerHTML = btn; return; }
   box.innerHTML = `<div class="avpanel">

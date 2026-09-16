@@ -299,7 +299,7 @@ function guardarEdicion(obj, nuevos, modulo, ref, extra, marca){
   render();
   return cambios.length;
 }
-/* Corregir una WO deja de ser inocente en cuanto el dinero ya salió */
+/* Editar una WO deja de ser inocente en cuanto el dinero ya salió */
 const woEditable = w => w.estado!=="Canceled" && !w.pagadaTec
   && !S.facturas.some(f=>f.lineas.includes(w.id));
 

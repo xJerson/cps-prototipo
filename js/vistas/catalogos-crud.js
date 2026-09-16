@@ -30,7 +30,7 @@ function fichaProp(id){
     <button class="btn sm" data-a="ir" data-m="propiedades" style="margin-bottom:7px">‹ Propiedades</button>
     <h2>${esc(p.nombre)} ${p.activa?"":'<span class="pill g" style="vertical-align:middle">Dada de baja</span>'}</h2>
     <p>${esc(p.zona)} · ${p.cliente?esc(CLI(p.cliente).nombre):'<span style="color:var(--faint)">sin management</span>'} · ${esc(p.dir)}</p></div>
-    <div class="act"><button class="btn" data-a="propNueva" data-id="${id}">Corregir datos</button>
+    <div class="act"><button class="btn" data-a="propNueva" data-id="${id}">Editar datos</button>
       <button class="btn ${p.activa?"":"v"}" data-a="propBaja" data-id="${id}">
       ${p.activa?"Dar de baja":"Reactivar"}</button></div></div>
   <div class="tabs">${[["datos","Datos"],["expediente",`Expediente ${expedienteOK(id)?"✓":"— incompleto"}`],["documentos","Documentos"],["unidades",`Unidades (${us.length})`],["contactos",`Contactos (${cs.length})`],["com",`Comunicación (${coms.length})`],["precios",`Price List (${tf.length})`],["previo",`Informes de campo (${S.reportes.filter(r=>r.prop===id).length})`],["hist",`Historial (${ws.length})`]]
@@ -66,7 +66,7 @@ function fichaProp(id){
         : c.k==="coi" ? `<button class="btn sm p" data-a="coiDirecto" data-id="${id}">Registrar COI</button>`
         /* "Price List" y "Estimado aprobado" no son campos de la propiedad
            (nombre, dirección, etc.) — son datos de otras dos colecciones.
-           "Completar" los mandaba al formulario de "Corregir propiedad",
+           "Completar" los mandaba al formulario de "Editar propiedad",
            que no tiene ningún campo para eso: el botón parecía funcionar
            pero no había nada ahí que de verdad resolviera el punto. */
         : c.k==="precios" ? `<button class="btn sm p" data-a="tab" data-t="precios" title="Se agrega desde la pestaña Price List de esta propiedad">Ir a Price List</button>`
@@ -150,7 +150,7 @@ function fichaProp(id){
       <td>${u.ocupacion==="Vacant"?'<span class="pill w">Vacant</span>':'<span class="pill v">Occupied</span>'}</td>
       <td>${(u.detalle||[]).map(x=>`${x.cantidad} ${esc(x.tipo)}`).join(" / ")||"—"}</td>
       <td class="num mono">${S.wos.filter(w=>w.unidad===u.id).length}</td>
-      <td style="text-align:right"><button class="btn sm" data-a="uniNueva" data-id="${u.id}">Corregir</button></td></tr>`).join("")}
+      <td style="text-align:right"><button class="btn sm" data-a="uniNueva" data-id="${u.id}">Editar</button></td></tr>`).join("")}
     </tbody></table>`:`<div class="empty">Todavía no hay ninguna registrada — no hace falta crearla aquí primero: aparece sola la primera vez que la uses en una Work Order o un Estimado.</div>`}</div>`:""}
 
   ${t==="contactos"?`<div class="card"><div class="chd"><h3>Contactos</h3>
@@ -159,7 +159,7 @@ function fichaProp(id){
     ${cs.length?`<table><thead><tr><th>Tipo</th><th>Nombre</th><th>Correo</th><th>Teléfono</th><th></th></tr></thead><tbody>
     ${cs.map(c=>`<tr class="${fl("con:"+c.id)}"><td><span class="pill a">${esc(c.tipo)}</span></td><td style="font-weight:650">${esc(c.nombre)}</td>
       <td>${esc(c.mail)}</td><td class="mono">${esc(c.tel)}</td>
-      <td style="text-align:right"><button class="btn sm" data-a="conNuevo" data-id="${c.id}">Corregir</button></td></tr>`).join("")}
+      <td style="text-align:right"><button class="btn sm" data-a="conNuevo" data-id="${c.id}">Editar</button></td></tr>`).join("")}
     </tbody></table>`:`<div class="empty">Sin contactos</div>`}
     <div class="cp" style="border-top:1px solid var(--line)"><div class="tr" style="margin:0">Hoy son 9 columnas fijas (Manager/Mail/Phone, Assistant/Mail/Phone, Maintenance/Mail/Phone). Si una propiedad tiene dos managers, no cabe.</div></div></div>`:""}
 
@@ -189,7 +189,7 @@ function fichaProp(id){
       <td>${x.pisos!=null?"Floor "+x.pisos:'<span class="pill g">cualquiera</span>'}</td>
       <td>${x.banos!=null?x.banos:'<span class="pill g">—</span>'}</td><td>${esc(x.desc)||"—"}</td>
       <td class="num mono">${money(x.precio)}</td>
-      ${puede("tarifario")?`<td style="text-align:right"><button class="btn sm" data-a="tarNueva" data-id="${x.id}">Corregir</button></td>`:""}</tr>`).join("")}
+      ${puede("tarifario")?`<td style="text-align:right"><button class="btn sm" data-a="tarNueva" data-id="${x.id}">Editar</button></td>`:""}</tr>`).join("")}
     </tbody></table>`:`<div class="empty">Sin precios propios — usa la tarifa general</div>`}</div>`:""}
 
   ${t==="hist"?`<div class="card"><div class="chd"><h3>Historial de la propiedad</h3>
@@ -320,7 +320,7 @@ const vTecLista = () => `
         <td>${!t.activo?'<span class="pill g">Dado de baja</span>'
              :b?`<span class="pill r"><span class="dot"></span>${esc(b.motivo)} ${b.desde.slice(5)}–${b.hasta.slice(5)}</span>`
                :'<span class="pill v">Disponible</span>'}</td>
-        <td style="text-align:right;white-space:nowrap"><button class="btn sm" data-a="tecNuevo" data-id="${t.id}">Corregir</button>
+        <td style="text-align:right;white-space:nowrap"><button class="btn sm" data-a="tecNuevo" data-id="${t.id}">Editar</button>
           <button class="btn sm ${t.activo?"":"v"}" data-a="tecBaja" data-id="${t.id}">${t.activo?"Dar de baja":"Reactivar"}</button></td></tr>`;
     }).join("")}</tbody></table></div>
   <div class="tr">La «última ubicación» es lo que UC-09 usa para sugerir al técnico más cercano. Sale sola de la llegada que él marca.</div>`;
@@ -340,7 +340,7 @@ VIEWS.tarifario = () => {
       <td>${t.pisos!=null?"Floor "+t.pisos:'<span class="pill g">cualquiera</span>'}</td>
       <td>${t.banos!=null?t.banos:'<span class="pill g">—</span>'}</td><td>${esc(t.desc)||"—"}</td>
       <td class="num mono">${money(t.precio)}</td>
-      <td style="text-align:right"><button class="btn sm" data-a="tarNueva" data-id="${t.id}">Corregir</button></td></tr>`;
+      <td style="text-align:right"><button class="btn sm" data-a="tarNueva" data-id="${t.id}">Editar</button></td></tr>`;
     }).join("")}</tbody></table></div>
   <div class="note"><b>Cómo resuelve el precio</b> — la misma llave de su Tabla Maestra (Rooms + Pisos + Servicio), en cuatro pasos:
     primero la tarifa negociada de esa propiedad para esos pisos; si no, la de la propiedad para cualquier piso;
@@ -506,8 +506,8 @@ VIEWS.clientes = () => `
       <td>${esc(c.contacto)}</td><td class="mono">${esc(c.tel)}</td><td>${esc(c.mail)}</td>
       <td class="num mono">${S.propiedades.filter(p=>p.cliente===c.id).length}</td>
       <td><button class="btn sm" data-a="cliDocsModal" data-id="${c.id}">${(c.vendorPacket==="Recibido"?1:0)+(c.w9==="Recibido"?1:0)}/2${c.vendorPacketPdf||c.w9Pdf?` 📎`:""}</button></td>
-      <td style="text-align:right"><button class="btn sm" data-a="cliNuevo" data-id="${c.id}">Corregir</button></td></tr>`).join("")}</tbody></table></div>
-  <div class="tr">El sistema avisa si el teléfono ya existe, para no duplicar el mismo management dos veces. Y si algo se tecleó mal, <b>Corregir</b> lo arregla: el valor anterior queda en la Bitácora. Client Status, Client Source e historial de comunicación se registran en cada <b>Propiedad</b>, no aquí — un mismo management puede tener varias, cada una con su propio estado.</div>`;
+      <td style="text-align:right"><button class="btn sm" data-a="cliNuevo" data-id="${c.id}">Editar</button></td></tr>`).join("")}</tbody></table></div>
+  <div class="tr">El sistema avisa si el teléfono ya existe, para no duplicar el mismo management dos veces. Y si algo se tecleó mal, <b>Editar</b> lo arregla: el valor anterior queda en la Bitácora. Client Status, Client Source e historial de comunicación se registran en cada <b>Propiedad</b>, no aquí — un mismo management puede tener varias, cada una con su propio estado.</div>`;
 
 /* UC-05 — el COI lo emite la aseguradora, no Cordova. Sin COI vigente no se manda a nadie a trabajar.
    Un mismo certificado (ACORD 25) trae varias pólizas — General Liability, Auto, Workers Comp, a

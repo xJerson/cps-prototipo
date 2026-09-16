@@ -202,7 +202,7 @@ VIEWS.solicitudes = () => `
       <td style="text-align:right;white-space:nowrap">
         ${s.estado==="Esperando inspección"&&!solInspeccionLista(s)?`<button class="btn sm" data-a="solComInspeccion" data-id="${s.id}">Asignar inspección a Gustavo</button>`:""}
         ${s.estado!=="Estimado creado"&&s.estado!=="Descartada"?`<button class="btn sm p" data-a="solComEstimado" data-id="${s.id}">Crear estimado</button>
-          <button class="btn sm" data-a="solComNueva" data-id="${s.id}">Corregir</button>
+          <button class="btn sm" data-a="solComNueva" data-id="${s.id}">Editar</button>
           <button class="btn sm" data-a="solComDescartar" data-id="${s.id}">Descartar</button>`:""}
         ${s.estado==="Estimado creado"?`<button class="btn sm" data-a="estInvoice" data-id="${s.estimadoId}">Ver estimado</button>`:""}
       </td></tr>`).join("")||`<tr><td colspan="7" class="empty">Sin solicitudes todavía</td></tr>`}
@@ -253,7 +253,7 @@ function refSolCom(preselectId, preservarTexto){
 }
 function modalSolCom(id){
   const s = id ? by(S.solicitudesComerciales,id) : null;
-  modal(`<div class="mh"><h3>${s?"Corregir solicitud":"Nueva Solicitud Comercial"}</h3><p>Lo mismo que Lydia anota cuando alguien pide un precio.</p></div>
+  modal(`<div class="mh"><h3>${s?"Editar solicitud":"Nueva Solicitud Comercial"}</h3><p>Lo mismo que Lydia anota cuando alguien pide un precio.</p></div>
   <div class="mb">
     <div class="fld"><label>Propiedad <span class="req">*</span></label>
       <select id="scProp" data-a="refSolCom">
