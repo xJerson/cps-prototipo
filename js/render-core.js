@@ -1,6 +1,7 @@
 "use strict";
 /* ══════════ RENDER ══════════ */
 const VIEWS = {};
+const ACC = {};
 function render(){
   const R = ROLES[S.usuario];
   if(!puede(S.mod)) S.mod = "tablero";
