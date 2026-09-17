@@ -545,6 +545,11 @@ function modalWO(w){
   <div class="mb">
     ${w&&w.tec?`<div class="note w" style="margin-bottom:12px"><b>Ya está asignada a ${esc(tecN(w.tec))}.</b> Si cambias la unidad o el servicio, a él le cambia el trabajo — el sistema se lo avisa al celular.</div>`:""}
     <div class="fg c2">
+      <div class="fld"><label>Tipo de servicio <span class="req">*</span></label>
+        <select id="wCat" data-a="woCat"><option value="" ${w?"":"selected"}>— selecciona —</option>${opts(activos("categorias"), w?w.cat:undefined)}</select></div>
+      <div class="fld"><label>Servicio <span class="req">*</span></label><select id="wServ" data-a="woServ"></select></div>
+    </div>
+    <div class="fg c2">
       <div class="fld" style="position:relative">
         <label>Propiedad <span class="req">*</span></label>
         <input id="wPropTxt" data-a="woPropBuscar" autocomplete="off" placeholder="Escribe para buscar…" value="${w?esc(P(w.prop).nombre):""}">
@@ -557,11 +562,6 @@ function modalWO(w){
         <input type="hidden" id="wUni" value="${w?w.unidad:""}">
         <div id="wUniSug" class="sugbox"></div>
       </div>
-    </div>
-    <div class="fg c2">
-      <div class="fld"><label>Tipo de servicio <span class="req">*</span></label>
-        <select id="wCat" data-a="woCat"><option value="" ${w?"":"selected"}>— selecciona —</option>${opts(activos("categorias"), w?w.cat:undefined)}</select></div>
-      <div class="fld"><label>Servicio <span class="req">*</span></label><select id="wServ" data-a="woServ"></select></div>
     </div>
     <div id="wUniNueva"></div>
     <div id="wDeriv"></div>
@@ -605,6 +605,26 @@ function refWO(){
   const pid=val("wProp"), cat=val("wCat");
   const uid=val("wUni"), esNueva=uid==="__new__";
   const uniTxt=document.getElementById("wUniTxt");
+  /* Sección 4 del feedback: el Servicio depende del Tipo de servicio, no de
+     la Propiedad — se resuelve antes del bloqueo de abajo para que se pueda
+     elegir Tipo de servicio y Servicio primero, y recién después Propiedad
+     y Unidad (antes esto se pisaba con "elige un servicio primero" si
+     todavía no habías tocado Propiedad). */
+  const selS = document.getElementById("wServ");
+  const prevS = selS.value;
+  if(!cat){
+    selS.innerHTML = `<option value="">— elige un tipo de servicio primero —</option>`;
+  } else {
+    const lista = servDe(cat);
+    selS.innerHTML = `<option value="" ${prevS?"":"selected"}>— selecciona un servicio —</option>`
+      + lista.map(s=>`<option ${s===prevS?"selected":""}>${esc(s)}</option>`).join("");
+    if(lista.includes(prevS)) selS.value = prevS;
+  }
+  const exige = EXIGE_UBIC.includes(cat);
+  document.getElementById("wUbicReq").innerHTML = exige? '<span class="req">*</span>' : '';
+  document.getElementById("wUbicHint").innerHTML = exige
+    ? `<span style="color:var(--ambar)">Obligatoria para ${esc(cat)}: «imagínate que la reparación está en el closet y el técnico no la encuentra».</span>`
+    : "opcional para este tipo de servicio";
   /* Reunión Claudia (feedback prototipo): nada viene elegido de entrada —
      el usuario tiene que ESCRIBIR y elegir de una sugerencia en vivo, no
      de una lista precargada. Si todavía no hay propiedad, ni se puede
@@ -616,7 +636,6 @@ function refWO(){
     const caja=document.getElementById("wUniNueva"); if(caja) caja.innerHTML="";
     document.getElementById("wDeriv").innerHTML = `<div class="note r" style="margin-bottom:12px"><b>Elige una propiedad primero.</b></div>`;
     document.getElementById("wSugerencia").innerHTML = "";
-    const selS0=document.getElementById("wServ"); selS0.innerHTML = `<option value="">— elige un servicio primero —</option>`;
     refTarifa(); return;
   }
   if(uniTxt){ uniTxt.disabled=false; uniTxt.placeholder="Escribe para buscar…"; }
@@ -684,22 +703,6 @@ function refWO(){
           <div style="font-size:11px;margin-top:6px;opacity:.85">Revisa que no sea la misma antes de seguir.</div></div>`
       : "";
   }
-  // El servicio no viene elegido de entrada: hay que tocarlo a propósito
-  const selS = document.getElementById("wServ");
-  const prevS = selS.value;
-  if(!cat){
-    selS.innerHTML = `<option value="">— elige un tipo de servicio primero —</option>`;
-  } else {
-    const lista = servDe(cat);
-    selS.innerHTML = `<option value="" ${prevS?"":"selected"}>— selecciona un servicio —</option>`
-      + lista.map(s=>`<option ${s===prevS?"selected":""}>${esc(s)}</option>`).join("");
-    if(lista.includes(prevS)) selS.value = prevS;
-  }
-  const exige = EXIGE_UBIC.includes(cat);
-  document.getElementById("wUbicReq").innerHTML = exige? '<span class="req">*</span>' : '';
-  document.getElementById("wUbicHint").innerHTML = exige
-    ? `<span style="color:var(--ambar)">Obligatoria para ${esc(cat)}: «imagínate que la reparación está en el closet y el técnico no la encuentra».</span>`
-    : "opcional para este tipo de servicio";
   refTarifa();
 }
 
