@@ -466,7 +466,7 @@ VIEWS.despacho = () => {
 /* ── PROPIEDADES ── una ficha, no 27 columnas ── */
 function modalSubWO(woId){
   const w=W(woId), u=U(w.unidad);
-  modal(`<div class="mh"><h3>Nueva Sub-Work Order</h3><p>WO-${w.id} · ${esc(P(w.prop).nombre)} ${esc(u.num)} — se agrega ya aprobada, sin frenar esta WO.</p></div>
+  modal(`<div class="mh"><h3>Nueva Sub-Work Order</h3><p>WO-${w.id} · ${esc(P(w.prop).nombre)} ${esc(u.num)} — sin costo se agrega ya aprobada; con costo queda pendiente de aprobación en Excepciones.</p></div>
   <div class="mb">
     <input type="hidden" id="swWo" value="${w.id}">
     <div class="fg c2">
@@ -479,8 +479,6 @@ function modalSubWO(woId){
       <div class="fld"><label>Cantidad (Quantity) <span class="req">*</span></label><input id="swCant" value="1" class="mono"></div>
       <div class="fld"><label>Precio <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><input id="swPrecio" class="mono" placeholder="0.00"></div>
     </div>
-    <label style="display:flex;align-items:center;gap:6px;margin:-6px 0 12px;font-weight:500;font-size:12.5px">
-      <input type="checkbox" id="swCobra" style="width:16px;height:16px"> Cobrar este precio a la propiedad (si no, el técnico igual cobra el suyo, pero es costo interno)</label>
     <div id="swSpecs"></div>
     <div class="fld"><label>Notas (Notes)</label><textarea id="swNotas" placeholder="Cualquier detalle que no entre en los campos de arriba…"></textarea></div>
 
@@ -490,7 +488,7 @@ function modalSubWO(woId){
       <div class="fld"><label>Fecha <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional, si es otro día</span></label>
         <input type="date" id="swFecha" value=""></div>
     </div>
-    <div class="note">Técnico y fecha quedan documentados en la Sub-Work Order, pero todavía no mueven la agenda — es solo para saber quién y cuándo, la asignación real sigue siendo la de WO-${w.id}. Si le pusiste precio, sí entra a la nómina del técnico apenas guardás, y a la factura de la propiedad si tildaste «Cobrar».</div>
+    <div class="note">Técnico y fecha quedan documentados en la Sub-Work Order, pero todavía no mueven la agenda — es solo para saber quién y cuándo, la asignación real sigue siendo la de WO-${w.id}. Sección 5 del feedback: si le ponés precio, la Sub-Work Order queda <b>pendiente de aprobación</b> — aparece espejada en Excepciones, y ahí mismo se decide por qué canal aprobó el cliente y si se le factura a la propiedad. Sin precio no hay nada que aprobar, así que queda directo.</div>
     <div class="note">Las fotos (Photos) se agregan después, desde la tarjeta «Sub-Work Orders» de esta WO — hay dos tipos: de referencia (para que el técnico vea con anticipación) y de evidencia (el resultado, para returns).</div>
   </div>
   <div class="mf"><button class="btn" data-a="cm">Cancelar</button>

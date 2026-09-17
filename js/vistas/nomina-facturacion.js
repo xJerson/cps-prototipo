@@ -28,12 +28,16 @@ function excAuto(){
   });
   // Una excepción por SOLICITUD, no por concepto: el técnico mandó un aviso,
   // no tres. Claudia lo abre una vez y adentro decide línea por línea.
+  // Sección 5 del feedback: una Sub-Work Order planificada con costo entra
+  // por el mismo camino (S.adicionales) que un hallazgo del técnico — acá
+  // solo se distingue el rótulo y quién la pidió, según origen.
   solTodas().filter(solPend).forEach(s=>{
     const p = s.lineas.filter(l=>l.estado==="Pendiente");
-    out.push({id:"AUTO-A"+s.sol, tipo:"Adicional en sitio", wo:s.wo, auto:true,
+    const esPlanificada = s.origen==="Planificada";
+    out.push({id:"AUTO-A"+s.sol, tipo:esPlanificada?"Sub-Work Order pendiente":"Adicional en sitio", wo:s.wo, auto:true,
       motivo:`${s.desc} — ${p.length} concepto(s): ${p.map(l=>l.concepto+((l.cant||1)>1?` ×${l.cant}`:"")).join(", ")}`,
       monto:p.reduce((t,l)=>t+(l.precio||0)*(l.cant||1),0),
-      pide:"Técnico", aprueba:"Claudia", estado:"Pendiente", fecha:"", resol:null});
+      pide:esPlanificada?"Oficina":"Técnico", aprueba:"Claudia", estado:"Pendiente", fecha:"", resol:null});
   });
   // La primera vez que el sistema detecta cada una queda su hora — así se ve
   // desde cuándo está esperando, no solo cuándo se resolvió.

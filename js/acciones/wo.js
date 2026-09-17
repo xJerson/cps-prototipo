@@ -689,36 +689,27 @@ Object.assign(ACC, {
     const specs={};
     specsDef.forEach((c,i)=>{ const v=val("swSpec"+i); if(v && v.trim()) specs[c]=v.trim(); });
     const tecOverride=val("swTec")||null, fechaOverride=val("swFecha")||null;
-    const cobra = chk("swCobra");
+    const monto = (precio||0)*(cant||1);
+    /* Sección 5 del feedback: "Approval, if required" — con costo, la Sub-WO
+       no queda aprobada de una: se guarda como un adicional más (mismo
+       S.adicionales que usa el técnico), así excAuto() ya la espeja sola en
+       Excepciones y se aprueba con el mismo modal de "¿cómo aprobó el
+       cliente?" (medioOK), que ahí mismo decide nómina y si se factura.
+       Sin costo no hay nada que aprobar, queda directo como antes. */
     const na={id:nid("ad"), sol:"SOL"+Date.now(), wo:w.id, desc:notas, ubic, concepto:tipo,
-      cant, precio, estado:"Aprobado", aprob:{medio:"Directo",quien:S.usuario,fecha:hora()},
+      cant, precio, estado: monto>0 ? "Pendiente" : "Aprobado",
+      aprob: monto>0 ? null : {medio:"Directo",quien:S.usuario,fecha:hora()},
       origen:"Planificada", fotosRefArr:[], fotosEvidArr:[], specs,
       tec:tecOverride, fecha:fechaOverride,
       hist:[[hora(), `Sub-Work Order planificada creada: ${tipo}`, S.usuario]]};
     S.adicionales.push(na);
     w.hist.push([hora(), `Sub-Work Order planificada: ${tipo}`, S.usuario]);
-    // Reunión Claudia (feedback prototipo): igual que al aprobar una que
-    // descubrió el técnico (ver medioOK) — si tiene precio, entra sola a
-    // la nómina; a la factura solo si se tildó "Cobrar".
-    const monto = (precio||0)*(cant||1);
-    let plata = "";
-    if(monto>0){
-      S.excepciones.push({id:"X"+Date.now()+"_"+na.id, tipo:"Pago adicional al técnico", wo:w.id,
-        motivo:`Sub-Work Order planificada · ${tipo}${ubic?" · "+ubic:""}`, monto,
-        pide:S.usuario, aprueba:S.usuario, estado:"Aprobada",
-        fecha:w.fecha, creada:{quien:S.usuario,hora:hora()}, resol:{quien:S.usuario,hora:hora()}});
-      w.hist.push([hora(), `Nómina: ${money(monto)} de pago adicional para ${tecN(tecOverride||w.tec)}`, S.usuario]);
-      plata = `<br><br>💰 Se le suma ${money(monto)} a la nómina de ${esc(tecN(tecOverride||w.tec))}.`;
-      if(cobra){
-        w.extraFacturable = (w.extraFacturable||0) + monto;
-        w.hist.push([hora(), `Se suma ${money(monto)} a lo que se le factura a la propiedad`, S.usuario]);
-        plata += ` Se le suma ${money(monto)} a lo que se le factura a la propiedad.`;
-      } else {
-        plata += ` No se le factura nada a la propiedad — queda como costo interno.`;
-      }
-    }
     cm();
-    toast("✓ Sub-Work Order creada", `${esc(tipo)} agregada a WO-${w.id}.${plata}`, "v");
+    toast("✓ Sub-Work Order creada",
+      monto>0
+        ? `${esc(tipo)} agregada a WO-${w.id}. Como tiene costo (${money(monto)}), queda <b>pendiente de aprobación</b> — la vas a encontrar en Excepciones para confirmar cómo la aprobó el cliente.`
+        : `${esc(tipo)} agregada a WO-${w.id}.`,
+      "v");
     render();
   },
   subwoFotoRef: d => {

@@ -63,10 +63,13 @@ Object.assign(ACC, {
       const monto = (l.precio||0)*(l.cant||1);
       if(monto>0){
         pagoTec += monto;
+        // Quién PIDIÓ el adicional no siempre es el técnico — una Sub-Work
+        // Order planificada (sección 5 del feedback) la pide oficina, no él.
+        const quienPidio = s.origen==="Planificada" ? "Oficina" : tecN(w.tec);
         S.excepciones.push({id:"X"+Date.now()+"_"+l.id, tipo:"Pago adicional al técnico", wo:w.id,
           motivo:`Sub-Work Order aprobada · ${l.concepto}${l.ubic?" · "+l.ubic:""}`, monto,
-          pide:tecN(w.tec), aprueba:S.usuario, estado:"Aprobada",
-          fecha:w.fecha, creada:{quien:tecN(w.tec),hora:hora()}, resol:{quien:S.usuario,hora:hora()}});
+          pide:quienPidio, aprueba:S.usuario, estado:"Aprobada",
+          fecha:w.fecha, creada:{quien:quienPidio,hora:hora()}, resol:{quien:S.usuario,hora:hora()}});
         if(cobraSet.has(l.id)){
           cobroCliente += monto;
           w.extraFacturable = (w.extraFacturable||0) + monto;
