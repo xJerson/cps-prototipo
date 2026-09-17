@@ -91,6 +91,22 @@ Object.assign(ACC, {
       toast("🚫 No se puede guardar", `Falta: <b>${faltan.join(", ")}</b>.${EXIGE_UBIC.includes(cat)&&!ubic?" Una reparación sin ubicación hace que el técnico la busque por toda la unidad.":""}`,"r");
       return;
     }
+    const yo = d&&d.id ? W(+d.id) : null;
+    // Punto 2 del feedback: no alcanza con avisar que la unidad ya tiene
+    // otras WO — hay que impedir la que es EXACTAMENTE la misma. La llave
+    // es Unidad + Servicio + Fecha (y también Ubicación cuando el servicio
+    // la exige, porque ahí sí puede haber dos reparaciones legítimas el
+    // mismo día en la misma unidad, en lugares distintos).
+    if(!esNueva){
+      const dup = S.wos.find(w2 => w2.unidad===uid && w2.serv===serv && w2.fecha===fecha
+        && w2.estado!=="Canceled" && (!yo || w2.id!==yo.id)
+        && (!EXIGE_UBIC.includes(cat) || w2.ubic===ubic));
+      if(dup){
+        toast("🚫 Ya existe una Work Order igual",
+          `WO-${dup.id} ya es <b>${esc(serv)}</b> para esta unidad el <b>${esc(fecha)}</b>${EXIGE_UBIC.includes(cat)?` en «${esc(ubic)}»`:""}. Si es otro trabajo, cambiá el servicio, la fecha o la ubicación — si es el mismo, abrí esa WO en vez de crear otra.`,"r");
+        return;
+      }
+    }
     /* "+ Nueva unidad…" no manda a otra pantalla a crearla antes — se
        registra en S.unidades en este mismo guardado (reunión 2026-09-09:
        la Unidad no es un bloqueo, se va llenando sola con el uso). */
@@ -109,7 +125,6 @@ Object.assign(ACC, {
       S.unidades.push(uNueva); flash("uni:"+uNueva.id);
       uid = uNueva.id;
     }
-    const yo = d&&d.id ? W(+d.id) : null;
     if(yo){
       if(!woEditable(yo)){ toast("🚫 Ya no se puede corregir","Se facturó o se pagó mientras tenías el formulario abierto.","r"); return; }
       return guardarEdicion(yo,
