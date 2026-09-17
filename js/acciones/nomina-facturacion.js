@@ -30,7 +30,7 @@ Object.assign(ACC, {
      cerraba en silencio y no había forma de saber por qué seguía frenada. */
   medioNo: d => { const w=W(+d.wo); cm();
     toast("⚠ Quedó sin decidir",
-      `WO-${w.id} sigue en <b>Esperando aprobación</b> y <b>${esc(tecN(w.tec))}</b> no puede avanzar hasta que alguien decida.
+      `El adicional de WO-${w.id} sigue sin resolverse — <b>${esc(tecN(w.tec))}</b> puede seguir con lo programado, pero esa WO no se paga ni se factura hasta que decidas.
        La tienes en <b>Excepciones</b>.`,"w");
     render(); },
   medioOK: d => {
@@ -76,10 +76,10 @@ Object.assign(ACC, {
     });
     no.forEach(l=>{ l.estado="Rechazado"; l.aprob=sello(null);
       (l.hist=l.hist||[]).push([hora(), "Rechazada", S.usuario]); });
-    // Se destraba solo si NO queda ninguna otra solicitud sin decidir: si el
-    // técnico mandó dos y se aprueba una, la orden sigue frenada por la otra.
+    // El pago/factura de la WO sigue frenado (vía woBloqueada) solo si queda
+    // otra solicitud del técnico sin decidir — el técnico nunca estuvo
+    // frenado, así que acá no hay nada que destrabarle a él.
     const quedan = S.adicionales.filter(a=>a.wo===w.id && a.estado==="Pendiente").length;
-    if(w.estado==="Esperando aprobación" && !quedan) w.estado="In progress";
     flash("wo:"+w.id);
     const nom = a => a.map(l=>l.concepto).join(", ");
     if(ok.length) w.hist.push([hora(), `Adicional aprobado por ${d.medio.toLowerCase()} · ${nom(ok)}`, S.usuario]);
@@ -97,13 +97,11 @@ Object.assign(ACC, {
     toast(no.length ? (ok.length?"Adicional aprobado en parte":"Adicional no aprobado") : "✓ Adicional aprobado",
       `${ok.length?`Sí: <b>${esc(nom(ok))}</b>. `:""}${no.length?`No: <b>${esc(nom(no))}</b>. `:""}${sustento}${plata} `
       + (quedan
-          ? `<br><br><b>Ojo: WO-${w.id} sigue frenada</b> — hay otra solicitud del técnico sin decidir.`
-          : `<br><br><b>${esc(tecN(w.tec))}</b> ya fue avisado y puede seguir.`),
+          ? `<br><br><b>Ojo: el pago/factura de WO-${w.id} sigue frenado</b> — hay otra solicitud del técnico sin decidir.`
+          : `<br><br>El pago/factura de WO-${w.id} ya puede seguir su curso.`),
       (no.length||quedan)?"w":"v");
     noti(no.length ? (ok.length?"Adicional aprobado en parte":"Adicional NO aprobado") : "Adicional aprobado",
       `${ok.length?`Haz: ${nom(ok)}. `:""}${no.length?`NO hagas: ${nom(no)}. `:""}Lo decidió ${S.usuario} (${d.medio.toLowerCase()}).`, false);
-    if(!quedan) avisar("Thalia","WO destrabada",
-      `WO-${w.id} · ${esc(P(w.prop).nombre)} ${esc(U(w.unidad).num)} ya se decidió. <b>${esc(tecN(w.tec))}</b> puede seguir.`,"v");
     render();
   },
   aprobFoto: d => {

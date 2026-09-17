@@ -125,21 +125,22 @@ Object.assign(ACC, {
       fotosRefArr:[], fotosEvidArr:[], hallazgoFoto:f.foto?fotoNueva(f.foto,T(w.tec).nombre):null,
       specs:{}, tec:null, fecha:null,
       hist:[[hora(),`Creada por el técnico en sitio: ${f.c}`,T(w.tec).nombre]]}));
-    w.estado="Esperando aprobación";
+    /* El técnico sigue con lo que tenía programado — el adicional no frena
+       la WO. Lo que sí queda frenado es el pago/factura de ESA WO puntual:
+       la excepción en vivo que arma excAuto() ("Adicional en sitio") ya se
+       encarga de eso a través de woBloqueada(), sin necesidad de congelar
+       el estado de la WO ni la agenda del técnico. */
     w.hist.push([hora(),`Pidió aprobación de un adicional · ${lista}`,T(w.tec).nombre]);
     S.phSheet=null;
     toast("⚠ Adicional enviado a oficina",
-      `WO-${w.id} · ${sh.filas.length} concepto(s): ${esc(lista)}. Entró como <b>excepción</b>: esa WO no se paga ni se factura hasta que Claudia decida.`,"w");
-    /* Decide Claudia, pero a Thalia le acaba de quedar una orden frenada:
-       si se entera al final del día, ya reorganizó la agenda dos veces. */
-    avisar("Thalia","Una orden quedó frenada",
-      `WO-${w.id} · ${esc(P(w.prop).nombre)} ${esc(U(w.unidad).num)} — <b>${esc(tecN(w.tec))}</b> pidió aprobación de un adicional (${esc(lista)}).
-       Decide Claudia; tú solo tenlo en cuenta para la agenda.`,"w");
+      `${sh.filas.length} concepto(s): ${esc(lista)}. Entró como <b>excepción</b>: WO-${w.id} no se paga ni se factura hasta que Claudia decida — pero podés seguir con lo que sigue programado.`,"w");
     render(); },
   fTermine: d => {
     const w=W(+d.id);
-    if(S.adicionales.some(a=>a.wo===w.id&&a.estado==="Pendiente")){
-      toast("🚫 Todavía no puedes cerrar","Hay un adicional esperando aprobación de oficina.","r"); return; }
+    /* Un adicional pendiente ya NO frena que el técnico cierre lo que tenía
+       programado — el pago/factura de esta WO igual queda frenado por la
+       excepción en vivo que arma excAuto() (ver woBloqueada), así que no
+       hace falta bloquear también el cierre del trabajo en sí. */
     if(!asisDe(w.id)){ S.phSheet={t:"llegada",wo:w.id}; render(); return; }
     if(!w.evid){
       toast("🚫 Falta la evidencia","Claudia: «no hay ni un registro, no me consta lo que me estás diciendo». Toma al menos una foto.","r"); return; }
