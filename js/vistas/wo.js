@@ -586,6 +586,21 @@ function modalWO(w){
   if(w) document.getElementById("wServ").innerHTML = `<option selected>${esc(w.serv)}</option>`;
   refWO();
 }
+/* Ajuste al punto 2 después de hablar con Claudia: no se bloquea, se
+   avisa — a veces sí piden el mismo trabajo meses después (una limpieza,
+   por ejemplo), y ahí la unidad+servicio+fecha coincidiendo no es un error.
+   Quien carga la WO decide: abrir la que ya existe, o seguir igual. */
+function modalDupWO(dup){
+  modal(`<div class="mh"><h3>Ya existe una Work Order igual</h3></div>
+  <div class="mb">
+    <div class="note w">WO-${dup.id} ya es <b>${esc(dup.serv)}</b> para esta unidad el <b>${esc(dup.fecha)}</b>${dup.ubic?` en «${esc(dup.ubic)}»`:""}.
+      Si es el mismo pedido, abrila en vez de crear otra. Si es un trabajo nuevo que coincide en fecha, seguí y se crea igual.</div>
+  </div>
+  <div class="mf">
+    <button class="btn" data-a="woVerDesdeModal" data-id="${dup.id}">Abrir WO-${dup.id}</button>
+    <button class="btn p" data-a="woContinuarDuplicado">Continuar y crear de todas formas</button>
+  </div>`);
+}
 function refWO(){
   const pid=val("wProp"), cat=val("wCat");
   const uid=val("wUni"), esNueva=uid==="__new__";

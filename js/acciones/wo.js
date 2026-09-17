@@ -92,72 +92,82 @@ Object.assign(ACC, {
       return;
     }
     const yo = d&&d.id ? W(+d.id) : null;
-    // Punto 2 del feedback: no alcanza con avisar que la unidad ya tiene
-    // otras WO — hay que impedir la que es EXACTAMENTE la misma. La llave
-    // es Unidad + Servicio + Fecha (y también Ubicación cuando el servicio
-    // la exige, porque ahí sí puede haber dos reparaciones legítimas el
-    // mismo día en la misma unidad, en lugares distintos).
+    S._woPendienteGuardar = null;   // cualquier confirmación pendiente de un intento anterior queda descartada
+
+    const procederGuardado = () => {
+      /* "+ Nueva unidad…" no manda a otra pantalla a crearla antes — se
+         registra en S.unidades en este mismo guardado (reunión 2026-09-09:
+         la Unidad no es un bloqueo, se va llenando sola con el uso). */
+      let uNueva = u;
+      if(esNueva){
+        const bld=val("wUniBld"), uNumR=val("wUniNum");
+        // Reunión Claudia: para Repair/Resurface/etc. no se pidió Bedrooms —
+        // la unidad queda "sin definir" en eso hasta que alguien la complete
+        // desde una WO que sí lo necesite (Clean, Paint...).
+        const sinBed = SIN_BEDROOMS.includes(cat);
+        const bedrooms=(tipoNueva==="Residencial"&&!sinBed)?parseInt(val("wUniBedrooms"))||0:null,
+              estudio=sinBed?false:chk("wUniEstudio"), livingRoom=sinBed?false:chk("wUniLivingRoom");
+        uNueva = {id:"U"+nid("u"), prop:pid, building:bld, unidadNum:uNumR, num:uNumComp(bld,uNumR),
+          tipo:tipoNueva, bedrooms, estudio, livingRoom, bathrooms:parseInt(val("wUniBathrooms"))||null,
+          rooms:sinBed?null:roomsDesde(tipoNueva,bedrooms,estudio,livingRoom), pisos:parseInt(val("wUniPisos"))||1, detalle:[]};
+        S.unidades.push(uNueva); flash("uni:"+uNueva.id);
+        uid = uNueva.id;
+      }
+      if(yo){
+        if(!woEditable(yo)){ toast("🚫 Ya no se puede corregir","Se facturó o se pagó mientras tenías el formulario abierto.","r"); return; }
+        return guardarEdicion(yo,
+          {prop:pid, unidad:uid, cat, serv, ubic, fecha, semana:semanaDe(fecha),
+           horaProg, cant:cantN,
+           po:val("wPO"), notasTec:val("wNotas")},
+          "Work Orders", "WO-"+yo.id,
+          (o,cambios)=>{
+            flash("wo:"+o.id);
+            o.hist.push([hora(), "Datos corregidos: "+cambios.map(c=>c.campo).join(", "), S.usuario]);
+            // Si ya hay técnico, el cambio le llega: si no, se entera al llegar
+            if(o.tec) noti("Tu trabajo cambió",
+              `WO-${o.id}: ${cambios.map(c=>`${c.campo} ahora es ${c.a}`).join(". ")}. Revísalo antes de salir.`, false);
+          });
+      }
+      const id = nid("w");
+      flash("wo:"+id);
+      const nueva = {id, prop:pid, unidad:uid, cat, serv, ubic, tec:null, estado:"Scheduled", horaProg, cant:cantN,
+        semana:semanaDe(fecha), fecha, po:val("wPO"), asistencia:false, evid:0, mats:[],
+        notas:"", notasTec:val("wNotas"), hist:[[hora(),"Creada",S.usuario]]};
+      S.wos.push(nueva);
+      /* Si esta WO nace de "Programar" en una Solicitud, recién AHORA que de
+         verdad se guardó algo se marca la solicitud "Programada" y se liga
+         una con la otra — no al abrir el modal (ver solProgramar). */
+      if(S.progSolId){
+        const s = by(S.solicitudes, S.progSolId);
+        if(s){ s.estado="Programada"; nueva.origen={tipo:"Solicitud", id:s.id}; }
+        S.progSolId = null;
+      }
+      cm();
+      const t = tarifa(pid,cat,serv,uNueva.rooms,uNueva.pisos);
+      toast("✓ Work Order creada", `<b>WO-${id}</b> · ${esc(P(pid).nombre)} ${esc(uNueva.num)}. ${t?"Ingreso "+money(t.precio)+" ya calculado.":"Sin tarifa: quedará como NA."}${esNueva?" Unidad "+esc(uNueva.num)+" agregada al catálogo.":""}`,"v");
+      S.mod="wo"; S.sub=id; render();
+    };
+
+    // Punto 2 del feedback, ajustado después de hablar con Claudia: esto no
+    // bloquea — avisa. A veces sí piden el mismo trabajo meses después (una
+    // limpieza, por ejemplo), así que la decisión de si es un duplicado de
+    // verdad queda en manos de quien está cargando la WO: abrir la que ya
+    // existe, o seguir y crear la nueva igual.
     if(!esNueva){
       const dup = S.wos.find(w2 => w2.unidad===uid && w2.serv===serv && w2.fecha===fecha
         && w2.estado!=="Canceled" && (!yo || w2.id!==yo.id)
         && (!EXIGE_UBIC.includes(cat) || w2.ubic===ubic));
       if(dup){
-        toast("🚫 Ya existe una Work Order igual",
-          `WO-${dup.id} ya es <b>${esc(serv)}</b> para esta unidad el <b>${esc(fecha)}</b>${EXIGE_UBIC.includes(cat)?` en «${esc(ubic)}»`:""}. Si es otro trabajo, cambiá el servicio, la fecha o la ubicación — si es el mismo, abrí esa WO en vez de crear otra.`,"r");
+        S._woPendienteGuardar = procederGuardado;
+        modalDupWO(dup);
         return;
       }
     }
-    /* "+ Nueva unidad…" no manda a otra pantalla a crearla antes — se
-       registra en S.unidades en este mismo guardado (reunión 2026-09-09:
-       la Unidad no es un bloqueo, se va llenando sola con el uso). */
-    let uNueva = u;
-    if(esNueva){
-      const bld=val("wUniBld"), uNumR=val("wUniNum");
-      // Reunión Claudia: para Repair/Resurface/etc. no se pidió Bedrooms —
-      // la unidad queda "sin definir" en eso hasta que alguien la complete
-      // desde una WO que sí lo necesite (Clean, Paint...).
-      const sinBed = SIN_BEDROOMS.includes(cat);
-      const bedrooms=(tipoNueva==="Residencial"&&!sinBed)?parseInt(val("wUniBedrooms"))||0:null,
-            estudio=sinBed?false:chk("wUniEstudio"), livingRoom=sinBed?false:chk("wUniLivingRoom");
-      uNueva = {id:"U"+nid("u"), prop:pid, building:bld, unidadNum:uNumR, num:uNumComp(bld,uNumR),
-        tipo:tipoNueva, bedrooms, estudio, livingRoom, bathrooms:parseInt(val("wUniBathrooms"))||null,
-        rooms:sinBed?null:roomsDesde(tipoNueva,bedrooms,estudio,livingRoom), pisos:parseInt(val("wUniPisos"))||1, detalle:[]};
-      S.unidades.push(uNueva); flash("uni:"+uNueva.id);
-      uid = uNueva.id;
-    }
-    if(yo){
-      if(!woEditable(yo)){ toast("🚫 Ya no se puede corregir","Se facturó o se pagó mientras tenías el formulario abierto.","r"); return; }
-      return guardarEdicion(yo,
-        {prop:pid, unidad:uid, cat, serv, ubic, fecha, semana:semanaDe(fecha),
-         horaProg, cant:cantN,
-         po:val("wPO"), notasTec:val("wNotas")},
-        "Work Orders", "WO-"+yo.id,
-        (o,cambios)=>{
-          flash("wo:"+o.id);
-          o.hist.push([hora(), "Datos corregidos: "+cambios.map(c=>c.campo).join(", "), S.usuario]);
-          // Si ya hay técnico, el cambio le llega: si no, se entera al llegar
-          if(o.tec) noti("Tu trabajo cambió",
-            `WO-${o.id}: ${cambios.map(c=>`${c.campo} ahora es ${c.a}`).join(". ")}. Revísalo antes de salir.`, false);
-        });
-    }
-    const id = nid("w");
-    flash("wo:"+id);
-    const nueva = {id, prop:pid, unidad:uid, cat, serv, ubic, tec:null, estado:"Scheduled", horaProg, cant:cantN,
-      semana:semanaDe(fecha), fecha, po:val("wPO"), asistencia:false, evid:0, mats:[],
-      notas:"", notasTec:val("wNotas"), hist:[[hora(),"Creada",S.usuario]]};
-    S.wos.push(nueva);
-    /* Si esta WO nace de "Programar" en una Solicitud, recién AHORA que de
-       verdad se guardó algo se marca la solicitud "Programada" y se liga
-       una con la otra — no al abrir el modal (ver solProgramar). */
-    if(S.progSolId){
-      const s = by(S.solicitudes, S.progSolId);
-      if(s){ s.estado="Programada"; nueva.origen={tipo:"Solicitud", id:s.id}; }
-      S.progSolId = null;
-    }
-    cm();
-    const t = tarifa(pid,cat,serv,uNueva.rooms,uNueva.pisos);
-    toast("✓ Work Order creada", `<b>WO-${id}</b> · ${esc(P(pid).nombre)} ${esc(uNueva.num)}. ${t?"Ingreso "+money(t.precio)+" ya calculado.":"Sin tarifa: quedará como NA."}${esNueva?" Unidad "+esc(uNueva.num)+" agregada al catálogo.":""}`,"v");
-    S.mod="wo"; S.sub=id; render();
+    procederGuardado();
+  },
+  woContinuarDuplicado: () => {
+    const fn = S._woPendienteGuardar; S._woPendienteGuardar = null;
+    if(fn) fn();
   },
 
   /* ── COORDINAR LA FECHA CON EL CLIENTE ──────────────────────── */
