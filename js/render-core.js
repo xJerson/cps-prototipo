@@ -12,7 +12,7 @@ function render(){
   $("#side").innerHTML = MODS.map(m=>{
     if(m.g) return MODS.filter(x=>x.id&&puede(x.id)).length? `<div class="slbl">${m.g}</div>`:"";
     if(!puede(m.id)) return "";
-    const c = m.id==="alertas"? nA : 0;
+    const c = m.id==="alertas" ? nA : m.id==="excepciones" ? excPend().length : 0;
     return `<button class="nav ${S.mod===m.id?"on":""}" data-a="ir" data-m="${m.id}">
       <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${m.ic}</svg>
       <span class="lb">${m.n}</span>${c?`<span class="n">${c}</span>`:""}</button>`;
@@ -142,10 +142,10 @@ function ayudaContexto(){
     return null;
   }
 
-  /* G · Excepciones */
+  /* G · Approval Requests */
   if(S.mod==="excepciones" && excPend().length)
     return {sel:'[data-a="excTarifa"],[data-a="excAprob"]',
-      txt:"Resolvé cada excepción con su botón — mientras exista, frena que se pague y se facture la WO a la que está atada."};
+      txt:"Resuelve cada Approval Request con su botón — mientras siga pendiente, frena el pago y la factura de la WO asociada."};
 
   /* H · Nómina / Facturación */
   if(S.mod==="nomina"){
@@ -233,9 +233,9 @@ const AYUDA_VISTA = {
   catalogos:{t:"Catálogos", d:"Las listas que llenan cada desplegable del sistema: zonas, tipos de servicio, ubicaciones, estados de la orden.",
     tips:["Se agregan y se quitan acá, sin tocar nada más."]},
   nomina:{t:"Nómina", d:"Se arma sola con las órdenes validadas. Las completas se validan solas; acá solo aparecen las que les falta algo. El período (semana / día / rango / mes) se elige arriba.",
-    tips:["«Revisar y validar» abre el detalle de una orden.","Una WO con excepción sin resolver no se paga hasta que se resuelva — el resto del período sí."]},
+    tips:["«Revisar y validar» abre el detalle de una orden.","Una WO con Approval Request pendiente no se paga hasta que se resuelva — el resto del período sí."]},
   facturacion:{t:"Facturación", d:"De órdenes terminadas a factura, agrupadas por propiedad, sin volver a escribir nada. El período (semana / día / rango / mes) se elige arriba.",
-    tips:["«Generar factura» crea la factura de esa propiedad.","Se frena solo la WO con excepción pendiente o sin tarifa, no toda la propiedad."]},
+    tips:["«Generar factura» crea la factura de esa propiedad.","Se frena solo la WO con Approval Request pendiente o sin tarifa, no toda la propiedad."]},
   cobranza:{t:"Cobranza", d:"El seguimiento de las facturas emitidas. Pasados 30 días sin pago, arranca la secuencia de reclamo.",
     tips:[]},
   inventario:{t:"Inventario de materiales", d:"Los materiales. El stock no se edita: es la suma de las compras menos las salidas.",
@@ -244,7 +244,7 @@ const AYUDA_VISTA = {
     tips:["Los filtros de arriba acotan por persona o por módulo."]},
   alertas:{t:"Alertas", d:"Cosas que vencen o que faltan (un seguro por vencer, una tarifa faltante, una orden sin técnico), recalculadas solas. Ninguna es genérica.",
     tips:[]},
-  excepciones:{t:"Excepciones", d:"Todo lo que se sale de la regla y necesita que alguien decida. Mientras una siga pendiente, frena que se pague y se facture la WO a la que está atada (si no está atada a ninguna WO, frena toda la nómina y facturación).",
+  excepciones:{t:"Approval Requests", d:"Solicitudes que necesitan una decisión de oficina. Mientras una siga pendiente, frena el pago y la factura de la WO asociada (si no está atada a una WO, frena toda la nómina y facturación).",
     tips:["Cada fila tiene su botón para resolverla.","«Quién decide» dice a quién le toca cada una."]},
   gustavoweb:{t:"Vista de Gustavo (web)", d:"Lo mismo que Gustavo ve en su celular, como página web — de referencia para cuando se construya la app real.",
     tips:[]}

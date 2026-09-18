@@ -1,4 +1,19 @@
 "use strict";
+function asignarApprovalRequest(id, quien){
+  if(!quien) return;
+  const manual=by(S.excepciones,id);
+  const asignacion={assignedTo:quien, assignedBy:S.usuario, assignedAt:hora(), workStatus:"In progress"};
+  if(manual) Object.assign(manual,asignacion);
+  else {
+    const auto=excAuto().find(x=>x.id===id);
+    if(!auto) return;
+    const todas=S.excAsignaciones || (S.excAsignaciones={});
+    todas[id]=asignacion;
+  }
+  flash("exc:"+id);
+  toast("Approval Request assigned",`<b>${esc(quien)}</b> is now working this request.`,"v");
+  render();
+}
 Object.assign(ACC, {
 
 
@@ -7,10 +22,22 @@ Object.assign(ACC, {
     if(marcaFalta(["xMo"])){ toast("Falta el motivo","Sin motivo nadie puede decidir.","r"); return; }
     const nx={id:"X"+Date.now(), tipo:val("xT"), wo:val("xW")?+val("xW"):null,
       motivo:val("xMo"), monto:parseFloat(val("xM"))||null, pide:S.usuario, aprueba:val("xA"),
-      estado:"Pendiente", fecha:"2026-08-11", creada:{quien:S.usuario,hora:hora()}, resol:null};
+      estado:"Pendiente", assignedTo:null, assignedBy:null, assignedAt:null, workStatus:"Unassigned",
+      fecha:"2026-08-11", creada:{quien:S.usuario,hora:hora()}, resol:null};
     S.excepciones.push(nx); flash("exc:"+nx.id);
-    cm(); toast("Excepción levantada",`Le quedó a <b>${esc(nx.aprueba)}</b> para decidir. ${nx.wo?`WO-${nx.wo} no se paga ni se factura hasta resolverla.`:"No es de una WO puntual, así que frena toda la nómina y facturación hasta resolverla."}`,"w"); render();
+    cm(); toast("Approval Request created",`It is <b>Unassigned</b>. Assign an owner before starting work. ${nx.wo?`WO-${nx.wo} no se paga ni se factura hasta resolverla.`:"No es de una WO puntual, así que frena toda la nómina y facturación hasta resolverla."}`,"w"); render();
   },
+  excFiltro: d => { S.excFiltro=d.f; render(); },
+  excAsignarYo: d => asignarApprovalRequest(d.id,S.usuario),
+  excAsignarModal: d => {
+    const x=excTodas().find(y=>y.id===d.id); if(!x) return;
+    const usuarios=Object.keys(ROLES);
+    modal(`<div class="mh"><h3>Assign Approval Request</h3><p>${esc(x.tipo)}${x.wo?` · WO-${x.wo}`:""}</p></div>
+      <div class="mb"><div class="fld"><label>Assigned to</label><select id="excAsignada">${usuarios.map(u=>`<option ${u===x.assignedTo?"selected":""}>${esc(u)}</option>`).join("")}</select></div>
+      <div class="hint">The assignee owns the operational follow-up. The approver remains ${esc(x.aprueba)}.</div></div>
+      <div class="mf"><button class="btn" data-a="cm">Cancel</button><button class="btn p" data-a="excAsignarGuardar" data-id="${x.id}">Assign</button></div>`);
+  },
+  excAsignarGuardar: d => { const quien=val("excAsignada"); cm(); asignarApprovalRequest(d.id,quien); },
   excAprob: d => {
     const x = by(S.excepciones,d.id);
     if(x){ x.estado="Aprobada"; x.resol={quien:S.usuario,hora:hora()}; flash("exc:"+x.id);

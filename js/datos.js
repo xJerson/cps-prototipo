@@ -236,6 +236,9 @@ let S = {
     {id:"X1",tipo:"Pago adicional al técnico",wo:1039,motivo:"Marcos tuvo que hacer resane de pared antes de pintar; no está en la tarifa.",monto:75,pide:"Marcos Ayala",aprueba:"Claudia",estado:"Pendiente",fecha:"2026-08-10",creada:{quien:"Marcos Ayala",hora:"7:50"},resol:null}
   ],
   excCreadas:{},   // primera vez que se vio cada excepción automática: id -> hora. Así queda "creada el/a las" sin tener que guardarlas de antemano.
+  // Las solicitudes automáticas se reconstruyen al renderizar. Su propietario
+  // operativo vive aparte para que no se pierda entre renders.
+  excAsignaciones:{},
   productos:[
     {id:"PR1",cat:"Pintura",nombre:"ProMar 200 eggshell",um:"galón",costo:32.5,min:12},
     {id:"PR2",cat:"Pintura",nombre:"Primer PVA",um:"galón",costo:24.0,min:8},
@@ -252,4 +255,3 @@ let S = {
 };
 
 S.cat = CAT;   // los catálogos son datos del sistema, no constantes del código
-

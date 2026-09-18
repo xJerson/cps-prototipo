@@ -368,7 +368,6 @@ function hojaCel(sh){
      tope se lo puso el Excel, no el trabajo. */
   if(sh.t==="adic"){
     const cs = activos("adicionales");
-    const tot = sh.filas.reduce((t,f)=>t+(parseFloat(f.p)||0)*(parseFloat(f.q)||1),0);
     return `<div class="fscrim" data-a="fSheetNo"><div class="fsheet" data-stop>
     <div class="grab"></div>
     <h4>Necesito aprobación</h4>
@@ -385,14 +384,13 @@ function hojaCel(sh){
       <button class="adx" data-a="fAdicMenos" data-i="${i}" ${sh.filas.length===1?"disabled":""}>−</button>
       <div class="adnum">
         <label>Cant.<input id="paQ${i}" value="${esc(String(f.q))}" inputmode="numeric"></label>
-        <label>Precio<input id="paP${i}" value="${esc(String(f.p))}" inputmode="decimal"></label>
       </div>
       <button type="button" class="db g" style="grid-column:1/3;margin:0;padding:7px" data-a="fAdicFoto" data-i="${i}">${f.foto
         ?`<img src="${f.foto}" style="width:16px;height:16px;object-fit:cover;border-radius:3px"> Foto agregada — tocá para cambiar`
         :"📷 Agregar foto de esto"}</button>
     </div>`).join("")}
     <button class="db g admas" data-a="fAdicMas">+ Agregar otro concepto</button>
-    ${sh.filas.length>1?`<div class="adtot"><span>${sh.filas.length} conceptos</span><b>${money(tot)}</b></div>`:""}
+    ${sh.filas.length>1?`<div class="adtot"><span>${sh.filas.length} conceptos</span></div>`:""}
     <div class="sub" style="margin:-2px 0 4px">Cada renglón tiene su propio botón de foto — ya no es una sola para todo el aviso.</div>
     <button class="db p" style="margin-top:11px" data-a="fAdicOK" data-id="${sh.wo}">Enviar a oficina</button>
     <button class="db g" data-a="fSheetNo">Cancelar</button>

@@ -41,7 +41,7 @@ VIEWS.tablero = () => {
 /* Lo que el Tablero sí debe tener: lo que hay que atender hoy, con el camino para hacerlo */
 function vPendientes(){
   const items = [
-    {n:"Excepciones sin resolver", c:excPend().length, m:"excepciones",
+    {n:"Approval Requests pending", c:excPend().length, m:"excepciones",
      d:"Frenan el pago y la factura de la WO que tienen atada", k:"r"},
     {n:"Work Orders sin técnico",  c:S.wos.filter(w=>!w.tec&&esAgendada(w.estado)).length, m:"wo",
      d:"Agendadas pero sin nadie asignado", k:"w"},
@@ -61,7 +61,7 @@ function vPendientes(){
      d:"Por debajo del mínimo", k:"w"}
   ].filter(x=>x.c>0 && puede(x.m));
   if(!items.length) return `<div class="card"><div class="cp"><div class="note v" style="margin:0">
-    <b>Nada pendiente de tu parte.</b> Ninguna excepción abierta, todo asignado y nada esperando decisión.</div></div></div>`;
+    <b>Nada pendiente de tu parte.</b> No hay Approval Requests pendientes, todo está asignado y nada espera decisión.</div></div></div>`;
   return `
   <div class="card"><div class="chd"><h3>Lo que necesita tu atención</h3>
     <span class="s">${items.reduce((a,x)=>a+x.c,0)} cosas esperando · ordenadas por urgencia</span></div>

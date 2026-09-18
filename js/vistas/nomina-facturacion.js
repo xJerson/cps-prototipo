@@ -1,6 +1,10 @@
 "use strict";
 function excAuto(){
   const out=[];
+  const asignaciones = S.excAsignaciones || (S.excAsignaciones={});
+  const conAsignacion = x => ({...x, ...(asignaciones[x.id]||{}),
+    assignedTo:(asignaciones[x.id]||{}).assignedTo||null,
+    workStatus:(asignaciones[x.id]||{}).assignedTo ? "In progress" : "Unassigned"});
   // Una excepción automática ya decidida no vuelve a aparecer:
   // queda su registro en S.excepciones con quién la resolvió.
   const resueltas = new Set(S.excepciones.filter(x=>x.estado!=="Pendiente").map(x=>x.tipo+"|"+x.wo));
@@ -12,19 +16,19 @@ function excAuto(){
        ella misma (ella habla con los managers). Si sí preguntó, le toca
        a Claudia, porque es quien ajusta el precio caso por caso para que
        la unidad entre en el presupuesto (ver w.pidioPrecio / modalTarifaExc). */
-    out.push({id:"AUTO-T"+w.id, tipo:"Tarifa no encontrada", wo:w.id, auto:true,
+    out.push(conAsignacion({id:"AUTO-T"+w.id, tipo:"Tarifa no encontrada", wo:w.id, auto:true,
       motivo:`No hay precio para ${w.serv} · ${U(w.unidad).rooms} en ${P(w.prop).nombre}. Hoy saldría "NA".`,
-      monto:null, pide:"Sistema", aprueba: w.pidioPrecio?"Claudia":"Thalia", estado:"Pendiente", fecha:w.fecha, resol:null});
+      monto:null, pide:"Sistema", aprueba: w.pidioPrecio?"Claudia":"Thalia", estado:"Pendiente", fecha:w.fecha, resol:null}));
   });
   S.asistencias.filter(a=>a.declarada).forEach(a=>{
-    out.push({id:"AUTO-D"+a.wo, tipo:"Llegada declarada", wo:a.wo, auto:true,
+    out.push(conAsignacion({id:"AUTO-D"+a.wo, tipo:"Llegada declarada", wo:a.wo, auto:true,
       motivo:`${tecN(a.tec)} cerró WO-${a.wo} sin haber marcado llegada; declaró las ${a.horaReal}. No está verificada.`,
-      monto:null, pide:"Sistema", aprueba:"Gustavo", estado:"Pendiente", fecha:a.fecha, resol:null});
+      monto:null, pide:"Sistema", aprueba:"Gustavo", estado:"Pendiente", fecha:a.fecha, resol:null}));
   });
   S.wos.filter(w=>w.estado==="Completed" && !w.evid && !w.evidExcusada).forEach(w=>{
-    out.push({id:"AUTO-E"+w.id, tipo:"Cierre sin evidencia", wo:w.id, auto:true,
+    out.push(conAsignacion({id:"AUTO-E"+w.id, tipo:"Cierre sin evidencia", wo:w.id, auto:true,
       motivo:`WO-${w.id} se cerró sin ninguna foto. No hay con qué sustentar el cobro si el cliente reclama.`,
-      monto:null, pide:"Sistema", aprueba:"Gustavo", estado:"Pendiente", fecha:w.fecha, resol:null});
+      monto:null, pide:"Sistema", aprueba:"Gustavo", estado:"Pendiente", fecha:w.fecha, resol:null}));
   });
   // Una excepción por SOLICITUD, no por concepto: el técnico mandó un aviso,
   // no tres. Claudia lo abre una vez y adentro decide línea por línea.
@@ -34,18 +38,26 @@ function excAuto(){
   solTodas().filter(solPend).forEach(s=>{
     const p = s.lineas.filter(l=>l.estado==="Pendiente");
     const esPlanificada = s.origen==="Planificada";
-    out.push({id:"AUTO-A"+s.sol, tipo:esPlanificada?"Sub-Work Order pendiente":"Adicional en sitio", wo:s.wo, auto:true,
+    out.push(conAsignacion({id:"AUTO-A"+s.sol, tipo:esPlanificada?"Sub-Work Order pendiente":"Adicional en sitio", wo:s.wo, auto:true,
       motivo:`${s.desc} — ${p.length} concepto(s): ${p.map(l=>l.concepto+((l.cant||1)>1?` ×${l.cant}`:"")).join(", ")}`,
       monto:p.reduce((t,l)=>t+(l.precio||0)*(l.cant||1),0),
-      pide:esPlanificada?"Oficina":"Técnico", aprueba:"Claudia", estado:"Pendiente", fecha:"", resol:null});
+      pide:esPlanificada?"Oficina":"Técnico", aprueba:"Claudia", estado:"Pendiente", fecha:"", resol:null}));
   });
   // La primera vez que el sistema detecta cada una queda su hora — así se ve
   // desde cuándo está esperando, no solo cuándo se resolvió.
-  out.forEach(x=>{ if(!S.excCreadas[x.id]) S.excCreadas[x.id]=hora(); x.creada={quien:x.pide,hora:S.excCreadas[x.id]}; });
+  out.forEach(x=>{
+    if(!S.excCreadas[x.id]) S.excCreadas[x.id]=hora();
+    x.creada={quien:x.pide,hora:S.excCreadas[x.id]};
+    // Estos objetos nacen de nuevo en cada render; completar con el registro
+    // persistente evita que una solicitud tomada vuelva a quedar sin dueño.
+    Object.assign(x, (S.excAsignaciones||{})[x.id]||{});
+  });
   return out.filter(viva);
 }
 const excTodas = () => S.excepciones.concat(excAuto());
 const excPend  = () => excTodas().filter(x=>x.estado==="Pendiente");
+const excAsignadaA = x => x.assignedTo || null;
+const excEstadoTrabajo = x => excAsignadaA(x) ? "In progress" : "Unassigned";
 /* Reunión Claudia (feedback prototipo): una excepción sin resolver ya no
    frena TODA la nómina/facturación — frena solo la WO a la que está atada.
    Una excepción sin WO (se levantó suelta, sin elegir ninguna) sigue frenando
@@ -57,23 +69,28 @@ VIEWS.excepciones = () => {
   const todas = excTodas();
   const pend = todas.filter(x=>x.estado==="Pendiente");
   const res  = todas.filter(x=>x.estado!=="Pendiente");
+  const filtro = S.excFiltro||"unassigned";
+  const visibles = pend.filter(x=>filtro==="all" || (filtro==="mine" ? x.assignedTo===S.usuario : !x.assignedTo));
   const porTipo = {};
   pend.forEach(x=>porTipo[x.tipo]=(porTipo[x.tipo]||0)+1);
   return `
-  <div class="ph"><div><h2>Excepciones</h2>
-    <p>Todo lo que se sale de la regla y necesita que <b>alguien más</b> decida. Cada una frena el pago y la factura de su propia WO — no de las demás.</p></div>
-    <div class="act"><button class="btn p" data-a="excNueva">+ Levantar excepción</button></div></div>
+  <div class="ph"><div><h2>Approval Requests</h2>
+    <p>Solicitudes que necesitan que <b>alguien de oficina</b> decida. Cada una frena el pago y la factura de su propia WO — no de las demás.</p></div>
+    <div class="act"><button class="btn p" data-a="excNueva">+ New Approval Request</button></div></div>
 
   ${pend.length
-    ? `<div class="note r" style="margin-bottom:14px"><b>${pend.length} excepción(es) sin resolver.</b> ${excBloqueaTodo()?`Hay al menos una sin WO puntual — esa frena <b>toda</b> la nómina y facturación.`:`Cada una frena solo el pago y la factura de su propia WO — el resto de la semana sigue su curso.`}</div>`
-    : `<div class="note v" style="margin-bottom:14px"><b>Sin excepciones pendientes.</b> Nada frenado por este motivo.</div>`}
+    ? `<div class="note r" style="margin-bottom:14px"><b>${pend.length} Approval Request(s) pending.</b> ${excBloqueaTodo()?`Hay al menos una sin WO puntual — esa frena <b>toda</b> la nómina y facturación.`:`Cada una frena solo el pago y la factura de su propia WO — el resto de la semana sigue su curso.`}</div>`
+    : `<div class="note v" style="margin-bottom:14px"><b>No pending Approval Requests.</b> Nada frenado por este motivo.</div>`}
 
   ${pend.length?`<div class="kpis">${Object.entries(porTipo).map(([t,n])=>
     `<div class="kpi"><div class="l">${esc(t)}</div><div class="v w">${n}</div></div>`).join("")}</div>`:""}
 
-  <div class="card"><div class="chd"><h3>Pendientes de decisión</h3><span class="s">cada una espera a una persona concreta</span></div>
-    ${pend.length?`<table><thead><tr><th>Tipo</th><th>WO</th><th>Motivo</th><th>Quién lo pide</th><th>Desde</th><th>Quién decide</th><th class="num">Monto</th><th></th></tr></thead><tbody>
-    ${pend.map(x=>`<tr class="${fl("exc:"+x.id)}">
+  <div class="card"><div class="chd"><h3>Pending Approval Requests</h3><span class="s">assign an owner before anyone starts working it</span></div>
+    <div class="act" style="margin:0 0 10px"><button class="btn sm ${filtro==="unassigned"?"p":""}" data-a="excFiltro" data-f="unassigned">Unassigned (${pend.filter(x=>!x.assignedTo).length})</button><button class="btn sm ${filtro==="mine"?"p":""}" data-a="excFiltro" data-f="mine">Mine (${pend.filter(x=>x.assignedTo===S.usuario).length})</button><button class="btn sm ${filtro==="all"?"p":""}" data-a="excFiltro" data-f="all">All (${pend.length})</button></div>
+    ${visibles.length?`<table><thead><tr><th>Assigned to</th><th>Status</th><th>Type</th><th>WO</th><th>Reason</th><th>Requested by</th><th>Since</th><th>Approver</th><th class="num">Amount</th><th></th></tr></thead><tbody>
+    ${visibles.map(x=>`<tr class="${fl("exc:"+x.id)}">
+      <td>${x.assignedTo?`<b>${esc(x.assignedTo)}</b><div style="font-size:9.5px;color:var(--faint)">${x.assignedBy?`assigned by ${esc(x.assignedBy)} · ${esc(x.assignedAt||"")}`:""}</div>`:'<span class="pill w">Unassigned</span>'}</td>
+      <td><span class="pill ${x.assignedTo?"a":"w"}">${esc(x.workStatus||"Unassigned")}</span></td>
       <td><span class="pill ${x.tipo==="Tarifa no encontrada"?"w":x.tipo==="Cierre sin evidencia"?"r":"m"}"><span class="dot"></span>${esc(x.tipo)}</span>
         ${x.auto?'<div style="font-size:9.5px;color:var(--faint);margin-top:2px">detectada por el sistema</div>':""}</td>
       <td class="mono">${x.wo?`<b style="cursor:pointer" data-a="woVer" data-id="${x.wo}">WO-${x.wo}</b>`:"—"}</td>
@@ -83,12 +100,14 @@ VIEWS.excepciones = () => {
       <td><span class="pill a">${esc(x.aprueba)}</span></td>
       <td class="num mono">${x.monto?money(x.monto):"—"}</td>
       <td style="text-align:right;white-space:nowrap">
-        ${x.tipo==="Tarifa no encontrada"
+        ${x.assignedTo===S.usuario?"":`<button class="btn sm" data-a="excAsignarYo" data-id="${x.id}">Assign to me</button>`}
+        <button class="btn sm" data-a="excAsignarModal" data-id="${x.id}">Assign</button>
+        ${(x.assignedTo===S.usuario || x.aprueba===S.usuario) ? (x.tipo==="Tarifa no encontrada"
           ? `<button class="btn sm p" data-a="excTarifa" data-id="${x.id}" data-wo="${x.wo}">Definir tarifa</button>`
           : `<button class="btn sm" data-a="excRech" data-id="${x.id}">Rechazar</button>
-             <button class="btn sm v" data-a="excAprob" data-id="${x.id}">Aprobar</button>`}
+             <button class="btn sm v" data-a="excAprob" data-id="${x.id}">Aprobar</button>`) : '<span style="font-size:10px;color:var(--faint)">Assigned owner or approver resolves</span>'}
       </td></tr>`).join("")}
-    </tbody></table>`:`<div class="empty"><div class="b">✓</div>Nada pendiente</div>`}
+    </tbody></table>`:`<div class="empty"><div class="b">✓</div>No requests in this filter</div>`}
   </div>
 
   ${res.length?`<div class="card"><div class="chd"><h3>Resueltas</h3></div>
@@ -101,11 +120,11 @@ VIEWS.excepciones = () => {
       <td class="num mono">${x.monto?money(x.monto):"—"}</td></tr>`).join("")}
     </tbody></table></div>`:""}
 
-  <div class="tr">Cada excepción queda con quién la pidió y desde cuándo está — y al resolverse, con quién decidió y cuándo. Es lo que hoy se decide por WhatsApp y nadie puede reconstruir después.</div>`;
+  <div class="tr">Cada Approval Request guarda quién la pidió y desde cuándo espera; al resolverse, también quién decidió y cuándo. Es lo que hoy se decide por WhatsApp y nadie puede reconstruir después.</div>`;
 };
 
 function modalExc(){
-  modal(`<div class="mh"><h3>Levantar una excepción</h3><p>Algo que se sale de la regla y necesita que otra persona lo apruebe.</p></div>
+  modal(`<div class="mh"><h3>New Approval Request</h3><p>Algo que se sale de la regla y necesita que otra persona lo apruebe.</p></div>
   <div class="mb">
     <div class="fld"><label>Tipo <span class="req">*</span></label><select id="xT">
       ${["Pago adicional al técnico","Ajuste de precio al cliente","Descuento especial","Cierre sin evidencia","Trabajo fuera de tarifa","Otro"].map(t=>`<option>${t}</option>`).join("")}</select></div>
@@ -329,10 +348,10 @@ VIEWS.nomina = () => {
         <td style="text-align:right"><button class="btn sm p" data-a="validarModal" data-id="${w.id}">Revisar y validar</button></td></tr>`).join("")}
       </tbody></table></div>`:"";})()}
 
-  ${bloqSemana?`<div class="note r" style="margin-bottom:14px"><b>${bloqSemana} Work Order(s) con excepción sin resolver.</b>
+  ${bloqSemana?`<div class="note r" style="margin-bottom:14px"><b>${bloqSemana} Work Order(s) with a pending Approval Request.</b>
     No se pagan hasta que se resuelva — un pago adicional o una tarifa sin definir cambian lo que se le debe al técnico. El resto del período se paga igual.
-    <button class="btn sm" data-a="ir" data-m="excepciones" style="margin-left:8px">Ver excepciones</button></div>`
-   :`<div class="note v" style="margin-bottom:14px"><b>Período listo para pagar.</b> Sin Work Orders frenadas por excepción.</div>`}
+    <button class="btn sm" data-a="ir" data-m="excepciones" style="margin-left:8px">View Approval Requests</button></div>`
+   :`<div class="note v" style="margin-bottom:14px"><b>Período listo para pagar.</b> Sin Work Orders frenadas por una Approval Request.</div>`}
 
   ${Object.keys(porTec).length?Object.entries(porTec).map(([tid,arr])=>{
     const ing=arr.reduce((a,w)=>a+(ingresoWO(w)||0),0);
@@ -352,7 +371,7 @@ VIEWS.nomina = () => {
       <tbody>${arr.map(w=>`<tr><td class="mono" style="font-weight:700">WO-${w.id}</td>
         <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td><td>${esc(w.serv)}</td><td>${esc(U(w.unidad).rooms)}</td>
         <td class="num mono">${U(w.unidad).pisos||"—"}</td>
-        <td>${w.pagadaTec?'<span class="pill v">✓ sí</span>':woBloqueada(w.id)?'<span class="pill r">excepción</span>':'<span class="pill g">no</span>'}</td>
+        <td>${w.pagadaTec?'<span class="pill v">✓ sí</span>':woBloqueada(w.id)?'<span class="pill r">approval pending</span>':'<span class="pill g">no</span>'}</td>
         <td class="num mono">${ingresoWO(w)!==null?money(ingresoWO(w)):'<span class="pill w">NA</span>'}</td>
         <td class="num mono">${egresoWO(w)!==null?money(egresoWO(w)):"—"}</td>
         <td class="num mono">${materialWO(w)?money(materialWO(w)):"—"}</td>
@@ -417,10 +436,10 @@ VIEWS.nomina = () => {
           ? `<div class="mono" style="font-size:24px;font-weight:750">${money(neto)}</div>
              <div style="font-size:11px;color:var(--faint)">${money(bruto)} menos ${money(aplicado)} de descuentos</div>
              ${sinAplicar>0.009?`<div style="font-size:11px;color:var(--rojo);margin-top:2px">
-               ${money(sinAplicar)} no se pudo descontar: supera lo que ganó esta semana — queda como excepción</div>`:""}`
+               ${money(sinAplicar)} no se pudo descontar: supera lo que ganó esta semana — queda como Approval Request</div>`:""}`
           : `<div class="mono" style="font-size:24px;font-weight:750">${money(bruto)}</div>`;})()}</div>
     <button class="btn ${!pagables||yaPag?"":"v"}" data-a="pagarSemana" style="margin-left:auto" ${!pagables||yaPag?"disabled":""}>
-      ${yaPag?"Semana ya pagada":pagables?"Aprobar y marcar como pagada":"Nada pagable — todo frenado por excepción"}</button>
+      ${yaPag?"Semana ya pagada":pagables?"Aprobar y marcar como pagada":"Nada pagable — todo frenado por Approval Requests"}</button>
   </div></div>`:""}
   <div class="tr">Erika: «todo lo que está en la semana 29 tiene que pagarse este viernes». El sistema agrupa por la misma semana con la que ya filtran.</div>`;
 };
@@ -451,11 +470,11 @@ VIEWS.facturacion = () => {
                 — ${esc(d.area)}, ${diasAbierta(d)} día(s) abierta`;}).join("<br>")}</div>
     <button class="btn sm" data-a="ir" data-m="supervision" style="margin-top:7px">Ver devoluciones</button></div>`:""}
   ${frenadasExc.length?`<div class="note r" style="margin-bottom:14px">
-    <b>${frenadasExc.length} Work Order(s) no se pueden facturar: tienen una excepción sin resolver.</b><br>
+    <b>${frenadasExc.length} Work Order(s) no se pueden facturar: tienen una Approval Request pendiente.</b><br>
     Facturar con una tarifa sin definir, o con un adicional todavía sin decidir, es facturar mal. El resto de cada propiedad se puede facturar igual.
     <div style="margin-top:6px;font-size:11.5px">
       ${frenadasExc.map(w=>`WO-${w.id} · ${esc(P(w.prop).nombre)} ${U(w.unidad)?esc(U(w.unidad).num):""}`).join("<br>")}</div>
-    <button class="btn sm" data-a="ir" data-m="excepciones" style="margin-top:7px">Ver excepciones</button></div>`:""}
+    <button class="btn sm" data-a="ir" data-m="excepciones" style="margin-top:7px">View Approval Requests</button></div>`:""}
 
   ${Object.keys(porProp).length?Object.entries(porProp).map(([pid,arr])=>{
     const tot=arr.reduce((a,w)=>a+(ingresoWO(w)||0),0);
@@ -468,7 +487,7 @@ VIEWS.facturacion = () => {
         <td>${w.evid?`<span class="pill v">${w.evid} foto(s)</span>`:'<span class="pill r"><span class="dot"></span>sin evidencia</span>'}</td>
         <td class="num mono">${ingresoWO(w)!==null?money(ingresoWO(w)):'<span class="pill w">NA</span>'}</td></tr>`).join("")}
       </tbody></table>
-      ${sinT?`<div class="cp" style="border-top:1px solid var(--line)"><div class="note w" style="margin:0"><b>${sinT} línea sin tarifa.</b> Resuélvela en Excepciones antes de facturar.</div></div>`:""}
+      ${sinT?`<div class="cp" style="border-top:1px solid var(--line)"><div class="note w" style="margin:0"><b>${sinT} línea sin tarifa.</b> Resuélvela en Approval Requests antes de facturar.</div></div>`:""}
       <div class="mf" style="border-top:1px solid var(--line)">
         <button class="btn ${sinT?"":"p"}" data-a="facturar" data-prop="${pid}" ${sinT?"disabled":""}>Generar factura</button></div>
     </div>`;

@@ -292,16 +292,15 @@ function leerSup(){
 
 /* render() reconstruye la hoja entera, así que antes de agregar o quitar un
    renglón hay que rescatar lo que el técnico ya escribió: si no, se le borra la
-   descripción y los precios que venía llenando. */
+   descripción, el concepto y la cantidad que venía llenando. */
 function leerAdic(){
   const sh=S.phSheet; if(!sh||sh.t!=="adic") return;
   const t=document.getElementById("paD"); if(t) sh.desc=t.value;
   const u=document.getElementById("paU"); if(u) sh.ubic=u.value;
   sh.filas.forEach((f,i)=>{
     const c=document.getElementById("paC"+i),
-          q=document.getElementById("paQ"+i),
-          p=document.getElementById("paP"+i);
-    if(c) f.c=c.value; if(q) f.q=q.value; if(p) f.p=p.value;
+          q=document.getElementById("paQ"+i);
+    if(c) f.c=c.value; if(q) f.q=q.value;
   });
 }
 function leerMaterial(){

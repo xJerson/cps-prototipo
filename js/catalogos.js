@@ -83,7 +83,7 @@ const servTodos = t => CAT.servicios.filter(s=>s.tipo===t);
 /* ══════════ ROLES — quién ve qué (UC del módulo que le toca) ══════════ */
 const ROLES = {
   "Claudia":{i:"CV",r:"Administración / Estimados",m:"*"},
-  "Lydia":  {i:"LC",r:"Comercial",     m:["tablero","clientes","solicitudes","estimados","propiedades","wo","calendario","reportes","alertas"]},
+  "Lydia":  {i:"LC",r:"Comercial",     m:["tablero","clientes","solicitudes","estimados","propiedades","wo","calendario","excepciones","reportes","alertas"]},
   "Thalia": {i:"TM",r:"Programación",  m:["tablero","wo","calendario","despacho","supervision","propiedades","tecnicos","catalogos","excepciones","reportes","alertas"]},
   "Gustavo":{i:"GA",r:"Supervisión",   m:["tablero","wo","calendario","supervision","gustavoweb","inventario","tecnicos","excepciones","reportes","alertas"]},
   "Erika":  {i:"EM",r:"Administración",m:["tablero","wo","nomina","facturacion","cobranza","tarifario","inventario","excepciones","reportes","alertas","bitacora"]}
@@ -96,7 +96,7 @@ const MODS = [
   {id:"despacho",  n:"Disponibilidad",       ic:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'},
   {id:"supervision",n:"Supervisión",         ic:'<path d="M20 6L9 17l-5-5"/>'},
   {id:"gustavoweb",n:"Vista de Gustavo (web)",ic:'<rect x="5" y="2" width="14" height="20" rx="3"/><path d="M9 18h6"/>'},
-  {id:"excepciones",n:"Excepciones",         ic:'<path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>'},
+  {id:"excepciones",n:"Approval Requests",         ic:'<path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>'},
   {id:"reportes",  n:"Reportes",              ic:'<path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/>'},
   {g:"Comercial"},
   {id:"clientes",  n:"Management",ic:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>'},
@@ -116,4 +116,3 @@ const MODS = [
   {id:"alertas",   n:"Alertas",              ic:'<path d="M18 8A6 6 0 1 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/>'},
   {id:"bitacora",  n:"Bitácora",             ic:'<path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/>'}
 ];
-

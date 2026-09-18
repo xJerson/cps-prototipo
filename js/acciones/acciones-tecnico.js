@@ -41,14 +41,14 @@ Object.assign(ACC, {
   },
   fAdic: d => { S.phSheet={t:"adic", wo:+d.id,
     desc:"Hueco en el sheetrock del bano. Hay que poner masa y pintar antes del clean.",
-    ubic:"Bano", filas:[{c:"Sheetrock",q:"1",p:"120"}]}; render(); },
+    ubic:"Bano", filas:[{c:"Sheetrock",q:"1"}]}; render(); },
   fAdicFoto: d => { leerAdic();
     capturarFoto(url=>{ S.phSheet.filas[+d.i].foto=url; render(); }); },
   fAdicMas: () => { leerAdic();
     // El renglón nuevo arranca en un concepto que todavía no usó: nadie quiere
     // «Sheetrock, Sheetrock» y tener que corregirlo a mano en el celular.
     const cs=activos("adicionales"), ya=S.phSheet.filas.map(f=>f.c);
-    S.phSheet.filas.push({c: cs.find(c=>!ya.includes(c)) || cs[0], q:"1", p:""});
+    S.phSheet.filas.push({c: cs.find(c=>!ya.includes(c)) || cs[0], q:"1"});
     render(); },
   fAdicMenos: d => { leerAdic(); S.phSheet.filas.splice(+d.i,1); render(); },
 
@@ -113,7 +113,7 @@ Object.assign(ACC, {
     const sol="SOL"+Date.now(), lista=sh.filas.map(f=>f.c).join(", ");
     sh.filas.forEach(f=>S.adicionales.push({
       id:nid("ad"), sol, wo:w.id, desc:sh.desc.trim(), ubic:sh.ubic,
-      concepto:f.c, cant:parseFloat(f.q)||1, precio:parseFloat(f.p)||null,
+      concepto:f.c, cant:parseFloat(f.q)||1,
       estado:"Pendiente", aprob:null, origen:"Técnico",
       // Punto 7 del feedback: antes era una sola foto fija para todo el
       // aviso — ahora cada hallazgo trae la suya propia (f.foto, opcional,
