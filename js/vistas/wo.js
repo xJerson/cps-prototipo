@@ -1,6 +1,7 @@
 "use strict";
 VIEWS.wo = () => {
   if(S.sub) return fichaWO(S.sub);
+  const puedeVerDinero = puedeVerUtilidad();
   const f = S.tab||"todas";
   let ws = S.wos.slice().sort((a,b)=>b.id-a.id);
   if(f==="semana") ws = ws.filter(w=>w.semana===S.semana);
@@ -42,7 +43,7 @@ VIEWS.wo = () => {
       `<button class="tab ${f===k?"on":""}" data-a="tab" data-t="${k}">${n}</button>`).join("")}
   </div>
   <div class="card"><table>
-    <thead><tr><th>WO</th><th>Fecha</th><th>Hora</th><th>Sem</th><th>Propiedad · Unidad</th><th>Rooms</th><th>Tipo</th><th>Servicio</th><th>Técnico</th><th>Llegada</th><th>Estado</th><th class="num">Ingreso</th></tr></thead>
+    <thead><tr><th>WO</th><th>Fecha</th><th>Hora</th><th>Sem</th><th>Propiedad · Unidad</th><th>Rooms</th><th>Tipo</th><th>Servicio</th><th>Técnico</th><th>Llegada</th><th>Estado</th>${puedeVerDinero?'<th class="num">Ingreso</th>':""}</tr></thead>
     <tbody>${ws.map(w=>{
       const t=tarifaWO(w);
       return `<tr class="cl${fl("wo:"+w.id)}" data-a="woVer" data-id="${w.id}">
@@ -60,13 +61,13 @@ VIEWS.wo = () => {
           ${fechaSinConfirmar(w)?`<span class="pill w" title="Se le propuso una fecha al cliente y todavía no la confirmó"><span class="dot"></span>Sin confirmar</span>`:""}
           ${bloqueadaPorDev(w)?`<span class="pill r" title="${esc(devAbiertaDeWO(w.id).area)}: ${esc(devAbiertaDeWO(w.id).desc)}"><span class="dot"></span>Devolución abierta</span>`:""}
         </div></td>
-        <td class="num mono">${t?money(t.precio):'<span class="pill w">NA</span>'}</td></tr>`;
-    }).join("")||`<tr><td colspan="12" class="empty">Nada aquí</td></tr>`}</tbody>
+        ${puedeVerDinero?`<td class="num mono">${t?money(t.precio):'<span class="pill w">NA</span>'}</td>`:""}</tr>`;
+    }).join("")||`<tr><td colspan="${puedeVerDinero?12:11}" class="empty">Nada aquí</td></tr>`}</tbody>
   </table></div>`;
 };
 
 function fichaWO(id){
-  const w=W(id), p=P(w.prop), u=U(w.unidad), t=tarifaWO(w);
+  const w=W(id), p=P(w.prop), u=U(w.unidad), t=tarifaWO(w), puedeVerDinero=puedeVerUtilidad();
   const ads=S.adicionales.filter(a=>a.wo===id), sols=solsDe(id);
   const mv=S.movs.filter(m=>m.wo===id);
   return `
@@ -117,7 +118,7 @@ function fichaWO(id){
           <tr><td style="color:var(--faint)">Código de puerta</td><td class="mono">${esc(p.door)}</td></tr>
           <tr><td style="color:var(--faint)">Técnico</td><td>${w.tec?esc(tecN(w.tec)):'<span class="pill w">sin asignar</span>'}</td></tr>
           <tr><td style="color:var(--faint)">Tiempo en sitio</td><td class="mono">${w.horas?w.horas+" h":"—"}<span style="color:var(--faint);font-weight:400"> · no afecta el pago</span></td></tr>
-          <tr><td style="color:var(--faint)">Cantidad</td><td class="mono">${w.cant||1}${(w.cant||1)>1&&t?` × ${money(t.precio)} = ${money(ingresoWO(w))}`:""}</td></tr>
+          <tr><td style="color:var(--faint)">Cantidad</td><td class="mono">${w.cant||1}${puedeVerDinero&&(w.cant||1)>1&&t?` × ${money(t.precio)} = ${money(ingresoWO(w))}`:""}</td></tr>
           <tr><td style="color:var(--faint)">PO</td><td class="mono">${esc(w.po)||"—"}</td></tr>
           <tr><td style="color:var(--faint)">Asistencia</td><td>${w.asistencia?'<span class="pill v">Sí</span>':'<span class="pill g">No registrada</span>'}</td></tr>
           <tr><td style="color:var(--faint)">Notas al técnico</td><td>${esc(w.notasTec)||"—"}</td></tr>
@@ -126,18 +127,17 @@ function fichaWO(id){
 
       <div class="card"><div class="chd"><h3>Sub-Work Orders</h3>
         <span class="s">trabajos que cuelgan de esta WO — de oficina o encontrados en sitio</span></div>
-        ${sols.length?`<table><thead><tr><th>Tipo</th><th>Origen</th><th>Ubicación</th><th class="num">Cant.</th><th class="num">P. unit.</th><th class="num">Importe</th><th>Estado</th><th>Fotos</th></tr></thead><tbody>
+        ${sols.length?`<table><thead><tr><th>Tipo</th><th>Origen</th><th>Ubicación</th><th class="num">Cant.</th>${puedeVerDinero?'<th class="num">P. unit.</th><th class="num">Importe</th>':""}<th>Estado</th><th>Fotos</th></tr></thead><tbody>
         ${sols.map(s=>`
-          <tr><td colspan="8" style="background:var(--azul-cl);color:var(--azul-s)">
+          <tr><td colspan="${puedeVerDinero?8:6}" style="background:var(--azul-cl);color:var(--azul-s)">
             <b>${s.origen==="Planificada"?"Sub-Work Order planificada":"Un solo aviso del técnico"}</b>${s.desc?" · "+esc(s.desc):""}</td></tr>
           ${s.lineas.map(a=>`<tr><td><b>${esc(a.concepto)}</b></td><td><span class="pill ${a.origen==="Planificada"?"a":"m"}">${esc(a.origen||"Técnico")}</span></td><td>${esc(a.ubic)}</td>
             <td class="num mono">${a.cant||1}</td>
-            <td class="num mono">${a.precio?money(a.precio):"—"}</td>
-            <td class="num mono">${a.precio?money(a.precio*(a.cant||1)):"—"}</td>
+            ${puedeVerDinero?`<td class="num mono">${a.precio?money(a.precio):"—"}</td><td class="num mono">${a.precio?money(a.precio*(a.cant||1)):"—"}</td>`:""}
             <td><span class="pill ${a.estado==="Aprobado"?"v":a.estado==="Rechazado"?"r":"w"}">${a.estado}</span></td>
             <td><div style="display:flex;gap:4px"><button class="btn sm" title="Fotos de referencia" data-a="subwoFotoRef" data-id="${a.id}">📷 Ref ${(a.fotosRefArr||[]).length}</button>
               <button class="btn sm" title="Fotos de evidencia" data-a="subwoFotoEvid" data-id="${a.id}">📷 Evid ${(a.fotosEvidArr||[]).length}</button></div></td></tr>
-            ${(a.specs&&Object.keys(a.specs).length)||a.tec||a.fecha||(a.aprob&&a.aprob.foto)?`<tr><td colspan="8" style="padding-top:0;padding-bottom:9px">
+            ${(a.specs&&Object.keys(a.specs).length)||a.tec||a.fecha||(a.aprob&&a.aprob.foto)?`<tr><td colspan="${puedeVerDinero?8:6}" style="padding-top:0;padding-bottom:9px">
               <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
                 ${Object.entries(a.specs||{}).map(([k,v])=>`<span class="pill">${esc(k)}: ${esc(v)}</span>`).join("")}
                 ${a.tec?`<span class="pill w">Técnico distinto: ${esc(tecN(a.tec))}</span>`:""}
@@ -145,9 +145,7 @@ function fichaWO(id){
                 ${a.aprob&&a.aprob.foto?`<a href="${a.aprob.foto}" target="_blank" style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--azul)">
                   <img src="${a.aprob.foto}" style="width:28px;height:28px;object-fit:cover;border-radius:5px">Comprobante de la aprobación</a>`:""}
               </div></td></tr>`:""}`).join("")}
-          ${s.lineas.length>1?`<tr><td colspan="5" style="color:var(--faint)">Aprobado de esta solicitud</td>
-            <td class="num mono" style="font-weight:750">${money(s.lineas.filter(l=>l.estado==="Aprobado").reduce((t,l)=>t+(l.precio||0)*(l.cant||1),0))}</td>
-            <td colspan="2"></td></tr>`:""}`).join("")}
+          ${puedeVerDinero&&s.lineas.length>1?`<tr><td colspan="5" style="color:var(--faint)">Aprobado de esta solicitud</td><td class="num mono" style="font-weight:750">${money(s.lineas.filter(l=>l.estado==="Aprobado").reduce((t,l)=>t+(l.precio||0)*(l.cant||1),0))}</td><td colspan="2"></td></tr>`:""}`).join("")}
         </tbody></table>`:""}
         <div class="cp">
           ${sols.length?"":`<div style="color:var(--faint);font-size:12px;margin-bottom:8px">Todavía no tiene ninguna Sub-Work Order.</div>`}
@@ -161,16 +159,9 @@ function fichaWO(id){
     </div>
 
     <div>
-      <div class="card"><div class="chd"><h3>Dinero</h3></div><div class="cp">
-        ${t?`<div style="display:flex;justify-content:space-between;padding:5px 0"><span style="color:var(--soft)">Ingreso</span><span class="mono" style="font-weight:700">${money(t.precio)}</span></div>
-        <div style="display:flex;justify-content:space-between;padding:5px 0"><span style="color:var(--soft)">Egreso (técnico)</span><span class="mono">${money(t.pago)}</span></div>
-        <div style="display:flex;justify-content:space-between;padding:5px 0"><span style="color:var(--soft)">Material</span><span class="mono">${money(materialWO(w))}</span></div>
-        ${puedeVerUtilidad()?`<div style="display:flex;justify-content:space-between;padding:9px 0 0;margin-top:6px;border-top:1px solid var(--line)">
-          <span style="font-weight:700">Utilidad</span><span class="mono" style="font-weight:750;color:var(--verde)">${money(utilidadWO(w))}</span></div>`:""}
-        <div class="tr">Tarifa nivel <b>${t.nivel}</b> para ${esc(u.rooms)}. No se teclea: sale del tarifario.</div>`
-        :`<div class="note w"><b>Sin tarifa.</b> No hay precio para ${esc(w.serv)} · ${esc(u.rooms)}${w.prop?" en "+esc(p.nombre):""}. Hoy esto sale como «NA».</div>`}
-      </div></div>
-
+      ${puedeVerDinero?`<div class="card"><div class="chd"><h3>Dinero</h3></div><div class="cp">
+        ${t?`<div style="display:flex;justify-content:space-between;padding:5px 0"><span style="color:var(--soft)">Ingreso</span><span class="mono" style="font-weight:700">${money(t.precio)}</span></div><div style="display:flex;justify-content:space-between;padding:5px 0"><span style="color:var(--soft)">Egreso (técnico)</span><span class="mono">${money(t.pago)}</span></div><div style="display:flex;justify-content:space-between;padding:5px 0"><span style="color:var(--soft)">Material</span><span class="mono">${money(materialWO(w))}</span></div><div style="display:flex;justify-content:space-between;padding:9px 0 0;margin-top:6px;border-top:1px solid var(--line)"><span style="font-weight:700">Utilidad</span><span class="mono" style="font-weight:750;color:var(--verde)">${money(utilidadWO(w))}</span></div><div class="tr">Tarifa nivel <b>${t.nivel}</b> para ${esc(u.rooms)}. No se teclea: sale del tarifario.</div>`:`<div class="note w"><b>Sin tarifa.</b> No hay precio para ${esc(w.serv)} · ${esc(u.rooms)}${w.prop?" en "+esc(p.nombre):""}. Hoy esto sale como «NA».</div>`}
+      </div></div>`:""}
       <div class="card"><div class="chd"><h3>Evidencia</h3><span class="r"><span class="pill ${w.evid?"v":"w"}">${w.evid}</span></span></div>
         <div class="cp">${w.evid?`<div style="display:flex;gap:6px;flex-wrap:wrap">${fotosConRelleno(w.evidFotos,w.evid).map(f=>f.url
             ?`<a href="${f.url}" target="_blank"><img src="${f.url}" style="width:72px;height:54px;object-fit:cover;border-radius:7px;border:1px solid var(--line)"></a>`
@@ -202,11 +193,11 @@ function fichaWO(id){
           :`<div style="color:var(--faint);font-size:12px">Todavía no hay comprobantes de aprobación.</div>`}</div></div>`; })()}
 
       <div class="card"><div class="chd"><h3>Materials</h3>
-        <span class="s">material, cantidad, costo, técnico/proveedor y comprobante de compra</span></div>
-        <div class="cp">${mv.length?`<table><thead><tr><th>Material</th><th class="num">Qty</th><th class="num">Cost</th><th>Technician/vendor</th><th>Notes</th><th>Receipt</th></tr></thead><tbody>
+          <span class="s">material, cantidad${puedeVerDinero?", costo":""}, técnico/proveedor y comprobante de compra</span></div>
+        <div class="cp">${mv.length?`<table><thead><tr><th>Material</th><th class="num">Qty</th>${puedeVerDinero?'<th class="num">Cost</th>':""}<th>Technician/vendor</th><th>Notes</th><th>Receipt</th></tr></thead><tbody>
           ${mv.map(m=>`<tr><td>${esc(by(S.productos,m.prod).nombre)}</td>
             <td class="num mono">${m.cant}</td>
-            <td class="num mono">${money(m.costo)}</td>
+            ${puedeVerDinero?`<td class="num mono">${money(m.costo)}</td>`:""}
             <td>${esc(m.quien)||"—"}</td>
             <td style="font-size:11.5px;color:var(--soft)">${esc(m.notas)||"—"}</td>
             <td>${m.recibo?`<a href="${m.recibo}" target="_blank">🧾 Ver</a>`:`<button type="button" class="btn sm" data-a="materialRecibo" data-id="${m.id}" data-wo="${w.id}">📎 Adjuntar</button>`}</td></tr>`).join("")}
@@ -222,6 +213,7 @@ function trazaWO(w){
   const est = w.origen ? by(S.estimados,w.origen.id) : null;
   const fac = S.facturas.find(f=>f.lineas.includes(w.id));
   const nom = w.pagadaTec ? S.nomina.find(n=>n.wos && n.wos.includes(w.id)) : null;
+  const puedeVerDinero = puedeVerUtilidad();
   const paso = (ok,tit,det,quien) => `<li class="${ok?"hecho":"pend"}">
     <span class="mk">${ok?"✓":"○"}</span>
     <div style="min-width:0"><div class="tt">${tit}</div>
@@ -229,12 +221,12 @@ function trazaWO(w){
       ${quien?`<div class="qq">${esc(quien)}</div>`:""}</div></li>`;
 
   return `<div class="card"><div class="chd"><h3>Trazabilidad</h3>
-    <span class="s">de dónde vino este trabajo y a dónde fue a parar el dinero</span></div>
+    <span class="s">${puedeVerDinero?"de dónde vino este trabajo y a dónde fue a parar el dinero":"historial operativo del trabajo"}</span></div>
     <div class="cp"><ul class="traza">
     ${paso(true,"Propiedad",
       `<b>${esc(p.nombre)}</b> · ${esc(p.estado||"—")} · entró por ${esc(p.origen||"—")}${p.cliente?` · management: ${esc(c.nombre)}`:""}`, null)}
     ${paso(!!est, est?`Estimado ${esc(est.num)}`:"Sin estimado previo",
-      est ? `${money(totalEst(est))} · ${est.lineas.length} línea(s)` : "Se agendó directo, sin cotización",
+      est ? `${puedeVerDinero?money(totalEst(est))+" · ":""}${est.lineas.length} línea(s)` : "Se agendó directo, sin cotización",
       est&&est.aprob ? `Aprobado por ${esc(est.aprob.quien)} vía ${esc(est.aprob.medio)}${est.aprob.ip?" · IP "+est.aprob.ip:""} · ${esc(est.aprob.fecha)}` : null)}
     ${paso(true,`Work Order WO-${w.id} creada`,
       `${esc(p.nombre)} · ${esc(U(w.unidad).num)} · ${esc(w.serv)}`,
@@ -259,10 +251,10 @@ function trazaWO(w){
       w.supervisada?"Revisada y aprobada":"Pendiente de que Gustavo la revise",
       w.supervisada?esc((w.hist.find(h=>h[1].includes("Supervisión"))||[])[2]||""):null)}
     ${paso(!!fac, fac?`Facturada en ${esc(fac.num)}`:"Sin facturar",
-      fac?`${money(ingresoWO(w)||0)} de ${money(fac.total)} · vence ${esc(fac.vence)}`:"Todavía no entra a ninguna factura",null)}
+      fac?`${puedeVerDinero?money(ingresoWO(w)||0)+" de "+money(fac.total)+" · ":""}vence ${esc(fac.vence)}`:"Todavía no entra a ninguna factura",null)}
     ${paso(!!w.cobrada,"Cobrada", w.cobrada?`Pago registrado`:"Pendiente de cobro",null)}
     ${paso(!!w.pagadaTec,"Pagada al técnico",
-      w.pagadaTec?`${money(egresoWO(w)||0)} en la nómina de la semana ${w.semana}`:"No ha entrado a nómina",
+      w.pagadaTec?`${puedeVerDinero?money(egresoWO(w)||0)+" en ":"En "}la nómina de la semana ${w.semana}`:"No ha entrado a nómina",
       nom?`Aprobada por ${esc(nom.quien)} · ${esc(nom.hora)}`:null)}
     </ul>
     <div class="tr" style="margin-top:10px">Cada eslabón guarda quién y cuándo. Hoy, si el cliente reclama un cobro, reconstruir esto depende de que alguien se acuerde y busque en su WhatsApp.</div>
@@ -539,7 +531,7 @@ const SUBWO_SPECS = {
 function modalWO(w){
   const opts = (a,v) => a.map(x=>`<option ${x===v?"selected":""}>${esc(x)}</option>`).join("");
   modal(`
-  <div class="mh"><h3>${w?`Editar WO-${w.id}`:"Nueva Work Order"}</h3><p>${w?"Lo que se tecleó mal se arregla aquí. Cada campo que cambies queda en la Bitácora y en el historial de la orden.":"El sistema no deja guardar si falta un dato. Es lo que pidió Claudia: «no puedes pasar al siguiente paso si no tienes el primero»."}</p></div>
+  <div class="mh"><h3>${w?`Editar WO-${w.id}`:"Nueva Work Order"}</h3><p>${w?"Lo que se tecleó mal se arregla aquí. Cada campo que cambies queda en la Bitácora y en el historial de la orden.":"Completa los datos del trabajo. La fecha y la hora se pueden coordinar después."}</p></div>
   <div class="mb">
     ${w&&w.tec?`<div class="note w" style="margin-bottom:12px"><b>Ya está asignada a ${esc(tecN(w.tec))}.</b> Si cambias la unidad o el servicio, a él le cambia el trabajo — el sistema se lo avisa al celular.</div>`:""}
     <div class="fg c2">
@@ -568,10 +560,10 @@ function modalWO(w){
       <div class="fld"><label>Ubicación dentro de la unidad <span id="wUbicReq"></span></label>
         <select id="wUbic"><option value="">— sin especificar —</option>${opts(activos("ubicaciones"), w?w.ubic:"")}</select>
         <div class="hint" id="wUbicHint"></div></div>
-      <div class="fld"><label>Fecha y hora <span class="req">*</span></label><div style="display:flex;gap:7px"><input type="date" id="wFecha" value="${w?esc(w.fecha):""}" style="flex:2"><input id="wHora" value="${w?esc(w.horaProg||"9:00"):""}" class="mono" style="flex:1" placeholder="9:00"></div></div>
+      <div class="fld"><label>Fecha y hora <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcionales</span></label><div style="display:flex;gap:7px"><input type="date" id="wFecha" value="${w?esc(w.fecha||""):""}" style="flex:2"><input id="wHora" value="${w?esc(w.horaProg||""):""}" class="mono" style="flex:1" placeholder="9:00"></div></div>
     </div>
     <div class="fg c2">
-      <div class="fld"><label>Cantidad <span class="req">*</span></label><input id="wCant" value="${w?(w.cant||1):""}" placeholder="1" class="mono"><div class="hint">El importe es precio unitario × cantidad.</div></div>
+      <div class="fld"><label>Cantidad <span class="req">*</span></label><input id="wCant" value="${w?(w.cant||1):""}" placeholder="1" class="mono"></div>
       <div class="fld"><label>PO</label><input id="wPO" placeholder="opcional" value="${w?esc(w.po||""):""}"></div>
     </div>
     <div class="fld"><label>Notas al técnico</label><textarea id="wNotas" placeholder="lo que el técnico necesita saber antes de llegar">${w?esc(w.notasTec||""):""}</textarea></div>
@@ -717,7 +709,9 @@ function refTarifa(){
   const u = uid==="__new__" ? {rooms: SIN_BEDROOMS.includes(val("wCat")) ? null : roomsDesde(tipoT, val("wUniBedrooms"), chk("wUniEstudio"), chk("wUniLivingRoom")), pisos: parseInt(val("wUniPisos"))||1} : by(S.unidades, uid);
   const t = u ? tarifa(val("wProp"), val("wCat"), serv, u.rooms, u.pisos) : null;
   caja.innerHTML = t
-    ? `<div class="note v"><b>Tarifa ${t.nivel} (${esc(t.detalle)}):</b> se cobra ${money(t.precio)} y se le paga ${money(t.pago)} al técnico.${puedeVerUtilidad()?` Utilidad ${money(t.precio-t.pago)}.`:""}</div>`
+    ? (puedeVerUtilidad()
+      ? `<div class="note v"><b>Tarifa ${t.nivel} (${esc(t.detalle)}):</b> se cobra ${money(t.precio)} y se le paga ${money(t.pago)} al técnico. Utilidad ${money(t.precio-t.pago)}.</div>`
+      : `<div class="note v"><b>Tarifa ${t.nivel} (${esc(t.detalle)}) configurada.</b></div>`)
     : `<div class="note w"><b>Sin tarifa para esta combinación.</b> Se puede guardar, pero saldrá «NA» y quedará una <b>excepción</b> para que Erika la defina.</div>`;
 }
 

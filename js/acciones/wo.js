@@ -82,12 +82,10 @@ Object.assign(ACC, {
     if(!esNueva && u && !u.rooms) faltan.push("número de cuartos de la unidad");
     if(!cat) faltan.push("tipo de servicio");
     if(!serv) faltan.push("servicio");
-    if(!fecha) faltan.push("fecha");
-    if(!horaProg) faltan.push("hora");
     if(!(cantN>0)) faltan.push("cantidad");
     if(EXIGE_UBIC.includes(cat) && !ubic) faltan.push("ubicación dentro de la unidad");
     if(faltan.length){
-      marcaFalta(["wProp","wUni","wCat","wServ","wFecha","wHora","wCant"].concat(esNueva?["wUniNum","wUniBedrooms"]:[]).concat(EXIGE_UBIC.includes(cat)?["wUbic"]:[]));
+      marcaFalta(["wProp","wUni","wCat","wServ","wCant"].concat(esNueva?["wUniNum","wUniBedrooms"]:[]).concat(EXIGE_UBIC.includes(cat)?["wUbic"]:[]));
       toast("🚫 No se puede guardar", `Falta: <b>${faltan.join(", ")}</b>.${EXIGE_UBIC.includes(cat)&&!ubic?" Una reparación sin ubicación hace que el técnico la busque por toda la unidad.":""}`,"r");
       return;
     }
@@ -116,7 +114,7 @@ Object.assign(ACC, {
       if(yo){
         if(!woEditable(yo)){ toast("🚫 Ya no se puede corregir","Se facturó o se pagó mientras tenías el formulario abierto.","r"); return; }
         return guardarEdicion(yo,
-          {prop:pid, unidad:uid, cat, serv, ubic, fecha, semana:semanaDe(fecha),
+          {prop:pid, unidad:uid, cat, serv, ubic, fecha, semana:fecha?semanaDe(fecha):null,
            horaProg, cant:cantN,
            po:val("wPO"), notasTec:val("wNotas")},
           "Work Orders", "WO-"+yo.id,
@@ -131,7 +129,7 @@ Object.assign(ACC, {
       const id = nid("w");
       flash("wo:"+id);
       const nueva = {id, prop:pid, unidad:uid, cat, serv, ubic, tec:null, estado:"Scheduled", horaProg, cant:cantN,
-        semana:semanaDe(fecha), fecha, po:val("wPO"), asistencia:false, evid:0, mats:[],
+        semana:fecha?semanaDe(fecha):null, fecha, po:val("wPO"), asistencia:false, evid:0, mats:[],
         notas:"", notasTec:val("wNotas"), hist:[[hora(),"Creada",S.usuario]]};
       S.wos.push(nueva);
       /* Si esta WO nace de "Programar" en una Solicitud, recién AHORA que de

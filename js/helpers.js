@@ -31,13 +31,9 @@ const W = id => by(S.wos,id);
 const money = n => "$"+(Math.round(n*100)/100).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 const hora = () => { const h=Math.floor(S.reloj/60),m=S.reloj%60; return h+":"+String(m).padStart(2,"0"); };
 const puede = m => { const r=ROLES[S.usuario]; return r.m==="*" || r.m.includes(m); };
-/* La Utilidad (el margen real del negocio) no es como el resto de los
-   permisos, que se dan por módulo — es un número puntual que el cliente
-   pidió que solo Claudia vea, sin importar en qué pantalla salga (Tablero,
-   Reportes, Nómina, el detalle de una WO...). El Ingreso y el Egreso al
-   técnico sí se quedan visibles donde ya estaban — es solo la utilidad la
-   que se esconde. */
-const puedeVerUtilidad = () => S.usuario==="Claudia";
+/* Los datos financieros son sensibles: solo Claudia y Erika pueden verlos,
+   sin importar en qué pantalla aparezcan. */
+const puedeVerUtilidad = () => ["Claudia","Erika"].includes(S.usuario);
 
 /* Íconos de composición de unidad — compartidos entre el Price List
    (Tarifario) y el selector de Unidad del Estimado, para que la misma
@@ -233,4 +229,3 @@ function alertas(){
     .forEach(v=>A.push({t:"Seguimiento comercial vencido",d:`${v.prop?P(v.prop).nombre:v.propNombre} · próxima acción era ${v.proximaAccion}`,q:"Lydia",n:"r"}));
   return A;
 }
-
