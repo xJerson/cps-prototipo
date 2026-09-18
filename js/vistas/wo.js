@@ -194,10 +194,11 @@ function fichaWO(id){
 
       <div class="card"><div class="chd"><h3>Materials</h3>
           <span class="s">material, cantidad${puedeVerDinero?", costo":""}, técnico/proveedor y comprobante de compra</span></div>
-        <div class="cp">${mv.length?`<table><thead><tr><th>Material</th><th class="num">Qty</th>${puedeVerDinero?'<th class="num">Cost</th>':""}<th>Technician/vendor</th><th>Notes</th><th>Receipt</th></tr></thead><tbody>
+        <div class="cp">${mv.length?`<table><thead><tr><th>Material</th><th>Origen</th><th class="num">Qty</th>${puedeVerDinero?'<th class="num">Cost</th>':""}<th>Technician/vendor</th><th>Notes</th><th>Receipt</th></tr></thead><tbody>
           ${mv.map(m=>`<tr><td>${esc(by(S.productos,m.prod).nombre)}</td>
+            <td><span class="pill ${m.cliente?"a":"g"}">${m.cliente?"Cliente":"Córdoba"}</span></td>
             <td class="num mono">${m.cant}</td>
-            ${puedeVerDinero?`<td class="num mono">${money(m.costo)}</td>`:""}
+            ${puedeVerDinero?`<td class="num mono">${m.cliente?"—":money(m.costo)}</td>`:""}
             <td>${esc(m.quien)||"—"}</td>
             <td style="font-size:11.5px;color:var(--soft)">${esc(m.notas)||"—"}</td>
             <td>${m.recibo?`<a href="${m.recibo}" target="_blank">🧾 Ver</a>`:`<button type="button" class="btn sm" data-a="materialRecibo" data-id="${m.id}" data-wo="${w.id}">📎 Adjuntar</button>`}</td></tr>`).join("")}
@@ -503,22 +504,39 @@ function refSubWO(){
    (Material, Quantity, Cost, Technician/vendor, Notes) — el comprobante
    se adjunta aparte, con el mismo patrón que las otras fotos de evidencia. */
 function modalMaterial(woId){
-  const w=W(woId), tec=w.tec?T(w.tec):null;
+  const w=W(woId);
   modal(`<div class="mh"><h3>Agregar material</h3><p>WO-${w.id} · ${esc(P(w.prop).nombre)} ${esc(U(w.unidad).num)}</p></div>
   <div class="mb">
-    <div class="fld"><label>Material <span class="req">*</span></label>
-      <select id="mtP">${S.productos.map(p=>`<option value="${p.id}">${esc(p.nombre)} — quedan ${stock(p.id)}</option>`).join("")}</select></div>
-    <div class="fg c2">
-      <div class="fld"><label>Quantity <span class="req">*</span></label><input id="mtC" class="mono" value="1"></div>
-      <div class="fld"><label>Cost <span class="req">*</span></label><input id="mtT" class="mono" placeholder="0.00"></div>
-    </div>
-    <div class="fld"><label>Technician/vendor</label>
-      <input id="mtQ" value="${tec?esc(tec.nombre+" "+tec.apellido):""}" placeholder="Técnico o proveedor que lo compró"></div>
-    <div class="fld"><label>Notes</label><textarea id="mtN" placeholder="Detalle, por qué se compró, dónde…"></textarea></div>
-    <div class="note">El comprobante (Attach Receipt / Voucher) se adjunta después, desde la tarjeta «Materials» de esta WO — cuando corresponda.</div>
+    <input type="hidden" id="mtWO" value="${w.id}">
+    <div class="fld"><label>Origen <span class="req">*</span></label>
+      <select id="mtOrigen" data-a="materialOrigen"><option value="cordoba">Inventario de Córdoba</option><option value="cliente">Comprado por el cliente</option></select>
+      <div class="hint">El material del cliente queda en el inventario de esta propiedad y nunca descuenta stock de Córdoba.</div></div>
+    <div id="mtCampos"></div>
   </div>
   <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
     <button class="btn p" data-a="materialGuardar" data-id="${w.id}">Agregar material</button></div>`);
+  refMaterial();
+}
+
+function refMaterial(){
+  const caja=$("#mtCampos"), woId=+val("mtWO"); if(!caja || !woId) return;
+  const w=W(woId), tec=w.tec?T(w.tec):null, esCliente=val("mtOrigen")==="cliente";
+  if(!esCliente){
+    caja.innerHTML=`<div class="fld"><label>Material <span class="req">*</span></label>
+      <select id="mtP">${S.productos.filter(p=>!p.cliente).map(p=>`<option value="${p.id}">${esc(p.nombre)} — quedan ${stock(p.id)}</option>`).join("")}</select></div>
+      <div class="fg c2"><div class="fld"><label>Quantity <span class="req">*</span></label><input id="mtC" class="mono" value="1"></div><div class="fld"><label>Cost <span class="req">*</span></label><input id="mtT" class="mono" placeholder="0.00"></div></div>
+      <div class="fld"><label>Technician/vendor</label><input id="mtQ" value="${tec?esc(tec.nombre+" "+tec.apellido):""}" placeholder="Técnico o proveedor que lo compró"></div>
+      <div class="fld"><label>Notes</label><textarea id="mtN" placeholder="Detalle, por qué se compró, dónde…"></textarea></div>`;
+    return;
+  }
+  const propios=S.productos.filter(p=>p.cliente && p.clienteProp===w.prop), seleccionado=$("#mtPCliente")?val("mtPCliente"):"";
+  caja.innerHTML=`<div class="fld"><label>Material del cliente <span class="req">*</span></label>
+    <select id="mtPCliente" data-a="materialClienteRef"><option value="">+ Crear material nuevo…</option>${propios.map(p=>`<option value="${p.id}" ${p.id===seleccionado?"selected":""}>${esc(p.nombre)} — quedan ${stockCliente(p.id,w.prop)} ${esc(p.um||"")}</option>`).join("")}</select></div>
+    ${seleccionado?"":`<div class="fg c2"><div class="fld"><label>Nombre <span class="req">*</span></label><input id="mtNombre" placeholder="Ej. pintura blanca"></div><div class="fld"><label>Unidad</label><input id="mtUM" value="unidad" placeholder="galón, caja…"></div></div>`}
+    <div class="fg c2"><div class="fld"><label>Cantidad comprada</label><input id="mtCompra" class="mono" value="0"><div class="hint">Lo que sobre queda en esta propiedad.</div></div><div class="fld"><label>Usada en esta WO <span class="req">*</span></label><input id="mtC" class="mono" value="1"></div></div>
+    <div class="fld"><label>Proveedor / quién compró</label><input id="mtQ" value="Cliente" placeholder="Cliente o proveedor"></div>
+    <div class="fld"><label>Notas</label><textarea id="mtN" placeholder="Detalle, por qué se compró, dónde…"></textarea></div>
+    <div class="note">Se registra como material del cliente: no descuenta inventario de Córdoba ni suma costo para Córdoba.</div>`;
 }
 
 /* ── NÓMINA ── la pestaña Payroll, armada sola ── */

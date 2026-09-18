@@ -723,18 +723,37 @@ Object.assign(ACC, {
     modalFotos();
   },
   materialAgregar: d => modalMaterial(+d.id),
+  materialOrigen: () => refMaterial(),
+  materialClienteRef: () => refMaterial(),
   materialGuardar: d => {
-    if(marcaFalta(["mtC","mtT"])){ toast("Faltan datos","Cantidad y costo.","r"); return; }
-    const w=W(+d.id), prod=val("mtP"), cant=parseFloat(val("mtC"));
-    if(cant>stock(prod)){ toast("🚫 No hay tanto stock",`Solo quedan ${stock(prod)}.`,"r"); return; }
-    const nm={id:"M"+nid("mv"), prod, tipo:"salida", cant, fecha:w.fecha, wo:w.id,
-      costo:parseFloat(val("mtT")), tienda:"", quien:val("mtQ")||S.usuario,
-      notas:val("mtN")||"", recibo:null, evid:false};
-    S.movs.push(nm);
-    const p=by(S.productos,prod);
-    w.hist.push([hora(), `Material registrado: ${p.nombre} × ${cant}`, S.usuario]);
+    const w=W(+d.id), cliente=val("mtOrigen")==="cliente", cant=parseFloat(val("mtC"));
+    if(!cant||cant<=0){ marcaFalta(["mtC"]); toast("Falta cantidad","Indica cuánto material se usó en la WO.","r"); return; }
+    let prod, p;
+    if(!cliente){
+      if(marcaFalta(["mtC","mtT"])){ toast("Faltan datos","Cantidad y costo.","r"); return; }
+      prod=val("mtP");
+      if(cant>stock(prod)){ toast("🚫 No hay tanto stock",`Solo quedan ${stock(prod)}.`,"r"); return; }
+      const nm={id:"M"+nid("mv"), prod, tipo:"salida", cant, fecha:w.fecha, wo:w.id,
+        costo:parseFloat(val("mtT")), tienda:"", quien:val("mtQ")||S.usuario,
+        notas:val("mtN")||"", recibo:null, evid:false};
+      S.movs.push(nm);
+      p=by(S.productos,prod);
+    }else{
+      prod=val("mtPCliente");
+      const compra=parseFloat(val("mtCompra"))||0;
+      if(!prod){
+        if(marcaFalta(["mtNombre"])){ toast("Falta el material","Escribe el nombre del material comprado por el cliente.","r"); return; }
+        prod="PC"+Date.now();
+        p={id:prod,nombre:val("mtNombre"),um:val("mtUM")||"unidad",min:0,cliente:true,clienteProp:w.prop};
+        S.productos.push(p);
+      }else p=by(S.productos,prod);
+      if(cant>stockCliente(prod,w.prop)+compra){ toast("🚫 No alcanza el material del cliente",`Hay ${stockCliente(prod,w.prop)} disponible(s) en esta propiedad y se compraron ${compra}.`,"r"); return; }
+      if(compra>0) S.movs.push({id:"MC"+nid("mv"),prod,tipo:"entrada",cant:compra,fecha:w.fecha,prop:w.prop,cliente:true,costo:0,tienda:"",quien:val("mtQ")||"Cliente",notas:val("mtN")||"",recibo:null,evid:false});
+      S.movs.push({id:"MC"+nid("mv"),prod,tipo:"salida",cant,fecha:w.fecha,prop:w.prop,wo:w.id,cliente:true,costo:0,tienda:"",quien:val("mtQ")||"Cliente",notas:val("mtN")||"",recibo:null,evid:false});
+    }
+    w.hist.push([hora(), `Material ${cliente?"del cliente":"registrado"}: ${p.nombre} × ${cant}`, S.usuario]);
     cm(); flash("wo:"+w.id);
-    toast("✓ Material agregado", `${esc(p.nombre)} agregado a WO-${w.id}.`, "v");
+    toast("✓ Material agregado", `${esc(p.nombre)} agregado a WO-${w.id}${cliente?" como material del cliente":""}.`, "v");
     render();
   },
   materialRecibo: d => {

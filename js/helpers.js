@@ -128,7 +128,7 @@ function egresoWO(w){
   if(w.pago!=null) return w.pago*(w.cant||1);
   const t=tarifaWO(w); return t? t.pago*(w.cant||1) : null;
 }
-function materialWO(w){ return S.movs.filter(m=>m.wo===w.id && m.tipo==="salida").reduce((a,m)=>a+m.costo,0); }
+function materialWO(w){ return S.movs.filter(m=>m.wo===w.id && m.tipo==="salida" && !m.cliente).reduce((a,m)=>a+m.costo,0); }
 /* Punto 10: el pago adicional que se aprueba al aceptar una Sub-Work
    Order (ver medioOK) queda en S.excepciones, no en egresoWO — así que
    cualquier pantalla que muestre "cuánto se le paga" a un técnico tiene
@@ -138,7 +138,8 @@ function extrasAprobadosDeWOs(ws){
   return S.excepciones.filter(x=>x.estado==="Aprobada" && x.tipo==="Pago adicional al técnico" && ids.has(x.wo));
 }
 function utilidadWO(w){ const i=ingresoWO(w); if(i===null) return null; return i-(egresoWO(w)||0)-materialWO(w); }
-function stock(prodId){ return S.movs.filter(m=>m.prod===prodId).reduce((a,m)=>a+(m.tipo==="entrada"?m.cant:-m.cant),0); }
+function stock(prodId){ return S.movs.filter(m=>m.prod===prodId && !m.cliente).reduce((a,m)=>a+(m.tipo==="entrada"?m.cant:-m.cant),0); }
+function stockCliente(prodId,propId){ return S.movs.filter(m=>m.prod===prodId && m.cliente && m.prop===propId).reduce((a,m)=>a+(m.tipo==="entrada"?m.cant:-m.cant),0); }
 
 function capacidadDia(tecId,fecha){ return S.wos.filter(w=>w.tec===tecId && w.fecha===fecha && !["Canceled","Rescheduled"].includes(w.estado)).length; }
 const CAP = 2; // UC-07: dos propiedades por jornada
