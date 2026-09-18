@@ -117,7 +117,6 @@ function fichaWO(id){
           <tr><td style="color:var(--faint)">Ubicación del trabajo</td><td>${w.ubic?esc(w.ubic):'<span class="pill w">sin especificar</span>'}</td></tr>
           <tr><td style="color:var(--faint)">Código de puerta</td><td class="mono">${esc(p.door)}</td></tr>
           <tr><td style="color:var(--faint)">Técnico</td><td>${w.tec?esc(tecN(w.tec)):'<span class="pill w">sin asignar</span>'}</td></tr>
-          <tr><td style="color:var(--faint)">Tiempo en sitio</td><td class="mono">${w.horas?w.horas+" h":"—"}<span style="color:var(--faint);font-weight:400"> · no afecta el pago</span></td></tr>
           <tr><td style="color:var(--faint)">Cantidad</td><td class="mono">${w.cant||1}${puedeVerDinero&&(w.cant||1)>1&&t?` × ${money(t.precio)} = ${money(ingresoWO(w))}`:""}</td></tr>
           <tr><td style="color:var(--faint)">PO</td><td class="mono">${esc(w.po)||"—"}</td></tr>
           <tr><td style="color:var(--faint)">Asistencia</td><td>${w.asistencia?'<span class="pill v">Sí</span>':'<span class="pill g">No registrada</span>'}</td></tr>
