@@ -189,10 +189,10 @@ Object.assign(ACC, {
       const numR = val("eUniNum"), bld = val("eUniBld");
       if(!numR){ toast("Falta el número","Escribe el número de la unidad nueva, o elige «— sin unidad específica —» si no aplica.","r"); return; }
       const tipoE = val("eUniTipo")||"Residencial";
-      const bedroomsE = tipoE==="Residencial"?parseInt(val("eUniBedrooms"))||0:null, estudioE = chk("eUniEstudio"), livingRoomE = chk("eUniLivingRoom");
+      const bedroomsE = tipoE==="Residencial"?parseInt(val("eUniBedrooms"))||0:null;
       const nueva = {id:"U"+nid("u"), prop:S.estHdr.prop, building:bld, unidadNum:numR, num:uNumComp(bld,numR),
-        tipo:tipoE, bedrooms:bedroomsE, estudio:estudioE, livingRoom:livingRoomE, bathrooms:parseInt(val("eUniBathrooms"))||null,
-        rooms:roomsDesde(tipoE,bedroomsE,estudioE,livingRoomE), pisos:parseInt(val("eUniPisos"))||1, detalle:[]};
+        tipo:tipoE, bedrooms:bedroomsE, bathrooms:parseInt(val("eUniBathrooms"))||null,
+        rooms:roomsDesde(tipoE,bedroomsE), pisos:parseInt(val("eUniPisos"))||null, detalle:[]};
       S.unidades.push(nueva); flash("uni:"+nueva.id);
       uid = nueva.id;
     }

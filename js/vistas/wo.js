@@ -8,22 +8,40 @@ VIEWS.wo = () => {
   if(f==="sin") ws = ws.filter(w=>!w.tec);
   if(f==="curso") ws = ws.filter(w=>["In progress","Esperando aprobación"].includes(w.estado));
   if(f==="camino") ws = ws.filter(w=>w.tec && esAgendada(w.estado) && !asisDe(w.id));
+  const filtroFecha=S.filtroWO||{modo:"todos",sem:S.semana,desde:"",hasta:""};
+  const fechaRapida={hoy:HOY_SUP,manana:fechaMover(HOY_SUP,1),ayer:fechaMover(HOY_SUP,-1)};
+  if(fechaRapida[filtroFecha.modo]) ws=ws.filter(w=>w.fecha===fechaRapida[filtroFecha.modo]);
+  if(filtroFecha.modo==="semana") ws=ws.filter(w=>w.semana===filtroFecha.sem);
+  if(filtroFecha.modo==="rango") ws=ws.filter(w=>(!filtroFecha.desde||w.fecha>=filtroFecha.desde)&&(!filtroFecha.hasta||w.fecha<=filtroFecha.hasta));
   // «luego preguntan de unidades de hace dos meses, qué se hizo, qué pasó»
   // El identificador se compara también normalizado (sin guiones ni espacios)
   // para que "B102", "B 102" y "B-102" encuentren la misma unidad.
   if(S.busca){ const q=S.busca.toLowerCase(), qn=uNorm(S.busca);
+    const terms=q.split(/\s+/).filter(Boolean);
     ws = ws.filter(w=>{
       const un=U(w.unidad);
-      const txt=(un.num+" "+P(w.prop).nombre+" "+w.serv+" "+w.id).toLowerCase();
-      return txt.includes(q) || (qn && uNorm(un.num).includes(qn)); }); }
+      const fac=S.facturas.find(f=>f.lineas&&f.lineas.includes(w.id));
+      const txt=[un&&un.num,P(w.prop).nombre,w.serv,w.cat,w.id,w.notas,w.notasTec,
+        w.tec?tecN(w.tec):"",fac&&fac.num].filter(Boolean).join(" ").toLowerCase();
+      return (terms.length&&terms.every(term=>txt.includes(term))) || (qn && un&&uNorm(un.num).includes(qn)); }); }
   return `
   <div class="ph"><div><h2>Work Orders</h2><p>La pestaña <code>Schedule</code>, con los mismos campos — pero el técnico y la propiedad se eligen, no se escriben.</p></div>
     <div class="act">
-      <input id="woBuscar" value="${esc(S.busca||"")}" placeholder="Buscar unidad, propiedad o WO…"
+      <input id="woBuscar" value="${esc(S.busca||"")}" placeholder="Propiedad, unidad, técnico o palabras…"
         style="font-family:inherit;font-size:12.5px;padding:7px 10px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink);width:220px">
       <button class="btn" data-a="buscarUni">Buscar</button>
       <button class="btn p" data-a="woNueva">+ Nueva Work Order</button></div></div>
-  ${S.busca?`<div class="note" style="margin-bottom:12px"><b>Buscando «${esc(S.busca)}»</b> — para cuando un manager pregunta qué se hizo en una unidad hace dos meses.
+  <div class="card" style="margin-bottom:12px"><div class="cp" style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
+    <span style="font-size:11px;color:var(--faint);font-weight:700;text-transform:uppercase">Fecha</span>
+    ${[["todos","Todas"],["hoy","Hoy"],["manana","Mañana"],["ayer","Ayer"]].map(([m,n])=>`<button class="btn sm ${filtroFecha.modo===m?"p":""}" data-a="woFiltroRapido" data-m="${m}">${n}</button>`).join("")}
+    <span style="font-size:11px;color:var(--faint);margin-left:5px">Semana</span>
+    <input id="woFsem" data-a="woFiltroSemana" type="number" min="1" max="53" value="${esc(String(filtroFecha.sem||S.semana))}" class="mono" style="width:56px;padding:5px">
+    <span style="font-size:11px;color:var(--faint);margin-left:5px">Rango</span>
+    <input id="woFdesde" data-a="woFiltroDesde" type="date" value="${esc(filtroFecha.desde||"")}">
+    <span style="color:var(--faint)">al</span>
+    <input id="woFhasta" data-a="woFiltroHasta" type="date" value="${esc(filtroFecha.hasta||"")}">
+  </div></div>
+  ${S.busca?`<div class="note" style="margin-bottom:12px"><b>Buscando «${esc(S.busca)}»</b> — se combinan las palabras: propiedad, unidad, técnico, servicio y notas.
     <button class="btn sm" data-a="buscarLimpiar" style="margin-left:8px">Limpiar</button></div>`:""}
 
   ${S.solicitudes.filter(x=>x.estado==="Pendiente").length?`
@@ -42,8 +60,9 @@ VIEWS.wo = () => {
     ${[["todas","Todas"],["semana","Semana "+S.semana],["sin","Sin técnico"],["camino","Asignadas sin llegar"],["curso","En curso"]].map(([k,n])=>
       `<button class="tab ${f===k?"on":""}" data-a="tab" data-t="${k}">${n}</button>`).join("")}
   </div>
+  <div class="note" style="margin-bottom:12px"><b>${ws.length} resultado(s).</b> Los filtros de texto y fecha se mantienen juntos hasta que los cambies.</div>
   <div class="card"><table>
-    <thead><tr><th>WO</th><th>Fecha</th><th>Hora</th><th>Sem</th><th>Propiedad · Unidad</th><th>Rooms</th><th>Tipo</th><th>Servicio</th><th>Técnico</th><th>Llegada</th><th>Estado</th>${puedeVerDinero?'<th class="num">Ingreso</th>':""}</tr></thead>
+    <thead><tr><th>WO</th><th>Fecha</th><th>Hora</th><th>Sem</th><th>Propiedad · Unidad</th><th>Rooms</th><th>Tipo</th><th>Servicio</th><th>Técnico</th><th>Llegada</th><th>Estado</th>${puedeVerDinero?'<th class="num">Cobrado</th><th class="num">Pagado</th>':""}</tr></thead>
     <tbody>${ws.map(w=>{
       const t=tarifaWO(w);
       return `<tr class="cl${fl("wo:"+w.id)}" data-a="woVer" data-id="${w.id}">
@@ -61,8 +80,9 @@ VIEWS.wo = () => {
           ${fechaSinConfirmar(w)?`<span class="pill w" title="Se le propuso una fecha al cliente y todavía no la confirmó"><span class="dot"></span>Sin confirmar</span>`:""}
           ${bloqueadaPorDev(w)?`<span class="pill r" title="${esc(devAbiertaDeWO(w.id).area)}: ${esc(devAbiertaDeWO(w.id).desc)}"><span class="dot"></span>Devolución abierta</span>`:""}
         </div></td>
-        ${puedeVerDinero?`<td class="num mono">${t?money(t.precio):'<span class="pill w">NA</span>'}</td>`:""}</tr>`;
-    }).join("")||`<tr><td colspan="${puedeVerDinero?12:11}" class="empty">Nada aquí</td></tr>`}</tbody>
+        ${puedeVerDinero?`<td class="num mono">${w.facturada&&ingresoWO(w)!==null?money(ingresoWO(w)):"—"}</td>
+          <td class="num mono">${w.pagadaTec&&egresoWO(w)!==null?money(egresoWO(w)):"—"}</td>`:""}</tr>`;
+    }).join("")||`<tr><td colspan="${puedeVerDinero?13:11}" class="empty">Nada aquí</td></tr>`}</tbody>
   </table></div>`;
 };
 
@@ -657,25 +677,19 @@ function refWO(){
         <input id="wUniBld" data-a="woUniCampo" placeholder="A, B…" value="${esc(val("wUniBld"))}"></div>
       <div class="fld" style="margin-bottom:0"><label>Unidad <span class="req">*</span></label>
         <input id="wUniNum" data-a="woUniCampo" placeholder="204, 27, 8…" value="${esc(val("wUniNum"))}"></div>
-      <div class="fld" style="margin-bottom:0"><label>Floor</label>
-        <select id="wUniPisos" data-a="woUniCampo">${activos("pisos").map(pi=>`<option ${String(pi)===val("wUniPisos")?"selected":""}>${pi}</option>`).join("")}</select></div>
+      <div class="fld" style="margin-bottom:0"><label>Floors <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— solo si afecta la tarifa</span></label>
+        <select id="wUniPisos" data-a="woUniCampo"><option value="">— no aplica —</option>${activos("pisos").map(pi=>`<option ${String(pi)===val("wUniPisos")?"selected":""}>${pi}</option>`).join("")}</select></div>
       <div class="fld" style="margin-bottom:0"><label>Tipo <span class="req">*</span></label>
         <select id="wUniTipo" data-a="woUniCampo">
           <option ${tipoN==="Residencial"?"selected":""}>Residencial</option>
           <option ${tipoN==="Oficina"?"selected":""}>Oficina</option></select></div>
     </div>
-    ${(tipoN==="Residencial" && !SIN_BEDROOMS.includes(cat))?`<div class="fg c4" style="margin:-4px 0 12px">
+    ${(tipoN==="Residencial" && !SIN_BEDROOMS.includes(cat))?`<div class="fg c2" style="margin:-4px 0 12px">
       <div class="fld" style="margin-bottom:0"><label>Bedrooms <span class="req">*</span></label>
         <input id="wUniBedrooms" data-a="woUniCampo" type="number" min="0" class="mono" placeholder="0 = Studio" value="${esc(val("wUniBedrooms"))}"></div>
       <div class="fld" style="margin-bottom:0"><label>Bathrooms <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— informativo</span></label>
         <input id="wUniBathrooms" data-a="woUniCampo" type="number" min="0" class="mono" placeholder="opcional" value="${esc(val("wUniBathrooms"))}"></div>
-      <div class="fld" style="margin-bottom:0;display:flex;align-items:flex-end;padding-bottom:9px">
-        <label style="display:flex;align-items:center;gap:6px;font-weight:500;text-transform:none;font-size:12px">
-          <input type="checkbox" id="wUniEstudio" data-a="woUniCampo" ${chk("wUniEstudio")?"checked":""} style="width:auto"> + estudio aparte</label></div>
-      <div class="fld" style="margin-bottom:0;display:flex;align-items:flex-end;padding-bottom:9px">
-        <label style="display:flex;align-items:center;gap:6px;font-weight:500;text-transform:none;font-size:12px">
-          <input type="checkbox" id="wUniLivingRoom" data-a="woUniCampo" ${chk("wUniLivingRoom")?"checked":""} style="width:auto"> + living room aparte</label></div>
-    </div>`:(tipoN==="Residencial"&&cat?`<div class="tr" style="margin:-6px 0 12px">«${esc(cat)}» se cobra por el trabajo puntual, no por el tamaño de la unidad — no hace falta Bedrooms/Bathrooms.</div>`:"")}`;
+    </div><div class="tr" style="margin:-2px 0 12px">Studio, balcón y living room no se guardan en la unidad: el técnico los solicita como adicionales solo cuando aplican.</div>`:(tipoN==="Residencial"&&cat?`<div class="tr" style="margin:-6px 0 12px">«${esc(cat)}» se cobra por el trabajo puntual, no por el tamaño de la unidad — no hace falta Bedrooms/Bathrooms.</div>`:"")}`;
   })() : "";
   // Lo que hoy se reescribe en cada fila de Schedule y aquí sale solo
   document.getElementById("wDeriv").innerHTML = u
@@ -684,7 +698,7 @@ function refWO(){
           <span class="pill a">Zona: ${esc(p.zona)}</span>
           <span class="pill a">Dirección: ${esc(p.dir)}</span>
           <span class="pill a">Rooms: ${esc(u.rooms)}</span>
-          <span class="pill a">Pisos: ${u.pisos}</span>
+          ${u.pisos?`<span class="pill a">Pisos: ${u.pisos}</span>`:""}
           <span class="pill a">Door code: ${esc(p.door)}</span>
         </div>
         <div style="font-size:11px;margin-top:6px;opacity:.85">Hoy estos cinco se vuelven a escribir en cada fila de <code>Schedule</code>.</div></div>`
@@ -723,7 +737,7 @@ function refTarifa(){
   // uno al vuelo solo para poder previsualizar el precio con lo que ya
   // se escribió (rooms/pisos), sin esperar a que la WO se guarde.
   const tipoT = val("wUniTipo")||"Residencial";
-  const u = uid==="__new__" ? {rooms: SIN_BEDROOMS.includes(val("wCat")) ? null : roomsDesde(tipoT, val("wUniBedrooms"), chk("wUniEstudio"), chk("wUniLivingRoom")), pisos: parseInt(val("wUniPisos"))||1} : by(S.unidades, uid);
+  const u = uid==="__new__" ? {rooms: SIN_BEDROOMS.includes(val("wCat")) ? null : roomsDesde(tipoT, val("wUniBedrooms")), pisos: parseInt(val("wUniPisos"))||null} : by(S.unidades, uid);
   const t = u ? tarifa(val("wProp"), val("wCat"), serv, u.rooms, u.pisos) : null;
   caja.innerHTML = t
     ? (puedeVerUtilidad()

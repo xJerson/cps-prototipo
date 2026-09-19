@@ -434,14 +434,17 @@ function hojaCel(sh){
     <button class="db g" data-a="fSheetNo">Cancelar</button>
   </div></div>`;
 
-  if(sh.t==="corrobNo") return `<div class="fscrim" data-a="fSheetNo"><div class="fsheet" data-stop>
+  if(sh.t==="corrobNo"){ const w=W(sh.wo), u=U(w.unidad); return `<div class="fscrim" data-a="fSheetNo"><div class="fsheet" data-stop>
     <div class="grab"></div>
-    <h4>¿Qué no coincide?</h4>
-    <div class="sub">Le llega a oficina al instante. Igual puedes seguir trabajando — es para que lo tengan en cuenta.</div>
-    <textarea id="cnTxt" placeholder="Ej: la unidad tiene 3 bedrooms, no 2 como dice acá"></textarea>
-    <button class="db p" style="margin-top:11px" data-a="woCorroboraNoOK" data-id="${sh.wo}">Enviar y empezar</button>
+    <h4>Corregir datos de la unidad</h4>
+    <div class="sub">Esto crea una Approval Request para oficina. Tú reportas lo que ves; oficina revisa y decide si actualiza el dato.</div>
+    <label>Campo</label><input value="Floors" disabled>
+    <label>Dato actual</label><input value="${esc(String(u.pisos))} floor(s)" disabled>
+    <label>Floors observados</label><input id="cnPisos" type="number" min="1" value="${esc(String(u.pisos))}">
+    <label>Nota</label><textarea id="cnTxt" placeholder="Ej: son 2 pisos; la escalera llega al segundo nivel"></textarea>
+    <button class="db p" style="margin-top:11px" data-a="woCorroboraNoOK" data-id="${sh.wo}">Enviar para revisión y empezar</button>
     <button class="db g" data-a="fSheetNo">Cancelar</button>
-  </div></div>`;
+  </div></div>`; }
 
   if(sh.t==="permiso") return `<div class="fscrim" data-a="fSheetNo"><div class="fsheet" data-stop>
     <div class="grab"></div>

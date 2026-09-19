@@ -2,30 +2,38 @@
 function asignarApprovalRequest(id, quien){
   if(!quien) return;
   const manual=by(S.excepciones,id);
-  const asignacion={assignedTo:quien, assignedBy:S.usuario, assignedAt:hora(), workStatus:"In progress"};
-  if(manual) Object.assign(manual,asignacion);
-  else {
+  let destino=manual;
+  if(!destino) {
     const auto=excAuto().find(x=>x.id===id);
     if(!auto) return;
     const todas=S.excAsignaciones || (S.excAsignaciones={});
-    todas[id]=asignacion;
+    destino=todas[id] || (todas[id]={});
   }
+  const anterior=destino.assignedTo;
+  const asignacion={assignedTo:quien, assignedBy:S.usuario, assignedAt:hora(), workStatus:"In progress"};
+  registrarHistorialApproval(destino,anterior&&anterior!==quien?"Reassigned":"Assigned",
+    anterior&&anterior!==quien?`${anterior} → ${quien}`:quien);
+  Object.assign(destino,asignacion);
   flash("exc:"+id);
   toast("Approval Request assigned",`<b>${esc(quien)}</b> is now working this request.`,"v");
   render();
+}
+function registrarHistorialApproval(x, evento, detalle){
+  (x.historial||=([])).push({evento,quien:S.usuario,hora:hora(),fecha:HOY_SUP,detalle:detalle||""});
 }
 Object.assign(ACC, {
 
 
   excNueva: () => modalExc(),
   excGuardar: () => {
-    if(marcaFalta(["xMo"])){ toast("Falta el motivo","Sin motivo nadie puede decidir.","r"); return; }
-    const nx={id:"X"+Date.now(), tipo:val("xT"), wo:val("xW")?+val("xW"):null,
-      motivo:val("xMo"), monto:parseFloat(val("xM"))||null, pide:S.usuario, aprueba:val("xA"),
+    if(marcaFalta(["xW","xMo"])){ toast("Falta información","Elige la Work Order y explica el motivo.","r"); return; }
+    const nx={id:"X"+Date.now(), tipo:val("xT"), wo:+val("xW"),
+      motivo:val("xMo"), monto:null, pide:S.usuario, aprueba:val("xA"),
       estado:"Pendiente", assignedTo:null, assignedBy:null, assignedAt:null, workStatus:"Unassigned",
-      fecha:"2026-08-11", creada:{quien:S.usuario,hora:hora()}, resol:null};
+      fecha:HOY_SUP, creada:{quien:S.usuario,hora:hora(),minuto:S.reloj,fecha:HOY_SUP},
+      historial:[{evento:"Created",quien:S.usuario,hora:hora(),fecha:HOY_SUP}], resol:null};
     S.excepciones.push(nx); flash("exc:"+nx.id);
-    cm(); toast("Approval Request created",`It is <b>Unassigned</b>. Assign an owner before starting work. ${nx.wo?`WO-${nx.wo} no se paga ni se factura hasta resolverla.`:"No es de una WO puntual, así que frena toda la nómina y facturación hasta resolverla."}`,"w"); render();
+    cm(); toast("Approval Request created",`It is <b>Unassigned</b>. Assign an owner before starting work. WO-${nx.wo} no se paga ni se factura hasta resolverla.`,"w"); render();
   },
   excFiltro: d => { S.excFiltro=d.f; render(); },
   excAsignarYo: d => asignarApprovalRequest(d.id,S.usuario),
@@ -38,16 +46,34 @@ Object.assign(ACC, {
       <div class="mf"><button class="btn" data-a="cm">Cancel</button><button class="btn p" data-a="excAsignarGuardar" data-id="${x.id}">Assign</button></div>`);
   },
   excAsignarGuardar: d => { const quien=val("excAsignada"); cm(); asignarApprovalRequest(d.id,quien); },
+  excUnidadRevisar: d => modalCorregirUnidad(d.id),
+  excUnidadAplicar: d => {
+    const x=by(S.excepciones,d.id), datos=x&&x.datosUnidad, pisos=parseInt(val("corrPisos"));
+    if(!x||!datos) return;
+    if(!pisos || pisos<1){ toast("Falta el dato","Indica los pisos aprobados.","r"); return; }
+    const u=U(datos.unidad), w=W(x.wo); if(!u||!w) return;
+    const anterior=u.pisos;
+    u.pisos=pisos;
+    (u.cambios||=([])).push({campo:"pisos",anterior,nuevo:pisos,quien:S.usuario,hora:hora(),wo:w.id,origen:"Approval Request"});
+    x.estado="Aprobada"; x.accion=`Updated unit floors: ${anterior} → ${pisos}`;
+    x.resol={quien:S.usuario,hora:hora()};
+    registrarHistorialApproval(x,"Approved",x.accion);
+    w.hist.push([hora(),x.accion,S.usuario]);
+    cm(); flash("exc:"+x.id);
+    toast("✓ Unit data updated",`Floors for ${esc(u.num)} changed from ${anterior} to ${pisos}. The audit stays on this Approval Request.`,"v");
+    render();
+  },
   excAprob: d => {
     const x = by(S.excepciones,d.id);
-    if(x){ x.estado="Aprobada"; x.resol={quien:S.usuario,hora:hora()}; flash("exc:"+x.id);
+    if(x){ x.estado="Aprobada"; x.resol={quien:S.usuario,hora:hora()}; registrarHistorialApproval(x,"Approved"); flash("exc:"+x.id);
       toast("✓ Excepción aprobada",`${esc(x.tipo)} — autorizada por ${S.usuario}. Queda registrado quién y cuándo.`,"v");
       render(); return; }
     const sa = solTodas().find(z=>"AUTO-A"+z.sol===d.id);
     if(sa){ modalMedio(sa.sol); return; }         // el adicional pregunta CÓMO aprobó el cliente
     const a = excAuto().find(y=>y.id===d.id);
     if(a){
-      S.excepciones.push({...a, id:"X"+Date.now(), auto:false, estado:"Aprobada", resol:{quien:S.usuario,hora:hora()}});
+      const nx={...a, id:"X"+Date.now(), auto:false, estado:"Aprobada", resol:{quien:S.usuario,hora:hora()}};
+      registrarHistorialApproval(nx,"Approved"); S.excepciones.push(nx);
       if(a.tipo==="Cierre sin evidencia"){ const w=W(a.wo); if(w) w.evidExcusada=true; }
     }
     toast("✓ Excepción resuelta","Queda el registro de quién la autorizó.","v");
@@ -147,7 +173,7 @@ Object.assign(ACC, {
   },
   excRech: d => {
     const x = by(S.excepciones,d.id);
-    if(x){ x.estado="Rechazada"; x.resol={quien:S.usuario,hora:hora()}; flash("exc:"+x.id);
+    if(x){ x.estado="Rechazada"; x.resol={quien:S.usuario,hora:hora()}; registrarHistorialApproval(x,"Rejected"); flash("exc:"+x.id);
       toast("Excepción rechazada","Queda registrado que no se autorizó.","w"); render(); return; }
     const sa = solTodas().find(z=>"AUTO-A"+z.sol===d.id);
     if(sa){
@@ -165,7 +191,8 @@ Object.assign(ACC, {
       render(); return;
     }
     const a=excAuto().find(y=>y.id===d.id);
-    if(a) S.excepciones.push({...a,id:"X"+Date.now(),auto:false,estado:"Rechazada",resol:{quien:S.usuario,hora:hora()}});
+    if(a){ const nx={...a,id:"X"+Date.now(),auto:false,estado:"Rechazada",resol:{quien:S.usuario,hora:hora()}};
+      registrarHistorialApproval(nx,"Rejected"); S.excepciones.push(nx); }
     toast("Excepción rechazada","Queda registrado que no se autorizó.","w"); render();
   },
 
@@ -182,7 +209,7 @@ Object.assign(ACC, {
     // incluía los adicionales de Sub-Work Order ya aprobados — se le pagaba
     // de más al técnico (vía comprobante) de lo que el registro decía.
     const tot=ws.reduce((a,w)=>a+(egresoWO(w)||0),0) + extrasAprobadosDeWOs(ws).reduce((a,x)=>a+(x.monto||0),0);
-    S.nomina.push({semana:S.semana, periodo:{...S.periodo}, wos:ws.map(w=>w.id), total:tot, quien:S.usuario, hora:hora()});
+    S.nomina.push({semana:S.semana, periodo:{...S.periodo}, wos:ws.map(w=>w.id), total:tot, quien:S.usuario, fecha:HOY_SUP, hora:hora()});
     ws.forEach(w=>{w.pagadaTec=true; w.hist.push([hora(),`Pagada al técnico en nómina — ${periodoTexto(S.periodo)}`,S.usuario]);});
     toast("✓ Nómina aprobada",
       `${periodoTexto(S.periodo)} · ${money(tot)} a ${new Set(ws.map(w=>w.tec)).size} técnicos.`

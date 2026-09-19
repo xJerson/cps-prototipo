@@ -124,7 +124,7 @@ Object.assign(ACC, {
           <input id="uN" placeholder="204, 27, 8…" value="${dr?esc(dr.unidadNum||dr.num||""):(u?esc(u.unidadNum||u.num||""):"")}"></div>
       </div>
       <div class="fg c3" style="margin-top:11px">
-        <div class="fld" style="margin-bottom:0"><label>Floor</label><select id="uP">${op(activos("pisos"), dr?dr.pisos:(u?u.pisos:""))}</select></div>
+        <div class="fld" style="margin-bottom:0"><label>Floors <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— solo si afecta la tarifa</span></label><select id="uP"><option value="">— no aplica —</option>${op(activos("pisos"), dr?dr.pisos:(u?u.pisos:""))}</select></div>
         <div class="fld" style="margin-bottom:0"><label>Tipo <span class="req">*</span></label>
           <select id="uTipo" data-a="uniCampoTipo" data-prop="${pid}" data-id="${u?u.id:""}">
             <option ${tipoU==="Residencial"?"selected":""}>Residencial</option>
@@ -134,23 +134,17 @@ Object.assign(ACC, {
             <option ${(dr?dr.ocupacion:(u?u.ocupacion:""))!=="Vacant"?"selected":""}>Occupied</option>
             <option ${(dr?dr.ocupacion:(u?u.ocupacion:""))==="Vacant"?"selected":""}>Vacant</option></select></div>
       </div>
-      ${tipoU==="Residencial"?`<div class="fg c4">
+      ${tipoU==="Residencial"?`<div class="fg c2">
         <div class="fld" style="margin-bottom:0"><label>Bedrooms <span class="req">*</span></label>
           <input id="uBedrooms" type="number" min="0" class="mono" placeholder="0 = Studio" value="${dr&&dr.bedrooms!=null?dr.bedrooms:(u&&u.bedrooms!=null?u.bedrooms:"")}"></div>
         <div class="fld" style="margin-bottom:0"><label>Bathrooms <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— informativo</span></label>
           <input id="uBathrooms" type="number" min="0" class="mono" placeholder="opcional" value="${dr&&dr.bathrooms!=null?dr.bathrooms:(u&&u.bathrooms!=null?u.bathrooms:"")}"></div>
-        <div class="fld" style="margin-bottom:0;display:flex;align-items:flex-end;padding-bottom:9px">
-          <label style="display:flex;align-items:center;gap:6px;font-weight:500;text-transform:none;font-size:12px">
-            <input type="checkbox" id="uEstudio" ${(dr?dr.estudio:(u?u.estudio:false))?"checked":""} style="width:auto"> + estudio aparte</label></div>
-        <div class="fld" style="margin-bottom:0;display:flex;align-items:flex-end;padding-bottom:9px">
-          <label style="display:flex;align-items:center;gap:6px;font-weight:500;text-transform:none;font-size:12px">
-            <input type="checkbox" id="uLivingRoom" ${(dr?dr.livingRoom:(u?u.livingRoom:false))?"checked":""} style="width:auto"> + living room aparte</label></div>
-      </div>`:""}
+      </div><div class="tr" style="margin-top:8px">Studio, balcón y living room se solicitan como adicionales cuando aplican, no se guardan en la unidad.</div>`:""}
       <div class="fld"><label>Detail <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional, solo informativo (closets, garage, etc.)</span></label>
         ${S.uniDetalle.length?`<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px">${S.uniDetalle.map((x,i)=>
           `<span class="pill a">${x.cantidad} ${esc(x.tipo)} <a href="#" data-a="uniDetQuitar" data-i="${i}" data-prop="${pid}" data-id="${u?u.id:""}" style="margin-left:5px;color:inherit">✕</a></span>`).join("")}</div>`:""}
         <div class="fg c3">
-          <div class="fld" style="margin-bottom:0"><select id="uDetTipo">${["Bedroom","Bathroom","Living Room","Studio","Office"].map(t=>`<option>${t}</option>`).join("")}</select></div>
+          <div class="fld" style="margin-bottom:0"><select id="uDetTipo">${["Closet","Garage","Office","Other"].map(t=>`<option>${t}</option>`).join("")}</select></div>
           <div class="fld" style="margin-bottom:0"><input id="uDetCant" type="number" class="mono" min="1" value="1"></div>
           <button type="button" class="btn sm" data-a="uniDetAgregar" data-prop="${pid}" data-id="${u?u.id:""}">+ Agregar</button>
         </div></div>
@@ -162,20 +156,20 @@ Object.assign(ACC, {
   // Cambiar Tipo muestra/oculta Bedrooms — rearma el modal preservando lo tecleado.
   uniCampoTipo: d => {
     S.uniDraft = {building:val("uBld"), unidadNum:val("uN"), pisos:val("uP"), tipo:val("uTipo"),
-      bedrooms:val("uTipo")==="Residencial"?parseInt(val("uBedrooms"))||0:null, estudio:chk("uEstudio"), livingRoom:chk("uLivingRoom"),
+      bedrooms:val("uTipo")==="Residencial"?parseInt(val("uBedrooms"))||0:null,
       bathrooms:parseInt(val("uBathrooms"))||null, ocupacion:val("uOcup")};
     ACC.uniNueva({id:d.id||"", prop:d.prop, keep:true});
   },
   uniDetAgregar: d => {
     S.uniDraft = {building:val("uBld"), unidadNum:val("uN"), pisos:val("uP"), tipo:val("uTipo"),
-      bedrooms:val("uTipo")==="Residencial"?parseInt(val("uBedrooms"))||0:null, estudio:chk("uEstudio"), livingRoom:chk("uLivingRoom"),
+      bedrooms:val("uTipo")==="Residencial"?parseInt(val("uBedrooms"))||0:null,
       bathrooms:parseInt(val("uBathrooms"))||null, ocupacion:val("uOcup")};
     S.uniDetalle.push({tipo:val("uDetTipo"), cantidad:parseInt(val("uDetCant"))||1});
     ACC.uniNueva({id:d.id||"", prop:d.prop, keep:true});
   },
   uniDetQuitar: d => {
     S.uniDraft = {building:val("uBld"), unidadNum:val("uN"), pisos:val("uP"), tipo:val("uTipo"),
-      bedrooms:val("uTipo")==="Residencial"?parseInt(val("uBedrooms"))||0:null, estudio:chk("uEstudio"), livingRoom:chk("uLivingRoom"),
+      bedrooms:val("uTipo")==="Residencial"?parseInt(val("uBedrooms"))||0:null,
       bathrooms:parseInt(val("uBathrooms"))||null, ocupacion:val("uOcup")};
     S.uniDetalle.splice(+d.i,1);
     ACC.uniNueva({id:d.id||"", prop:d.prop, keep:true});
@@ -186,10 +180,10 @@ Object.assign(ACC, {
     if(marcaFalta(faltanU)){ toast("Falta un dato","Sin número de unidad y Bedrooms no se puede armar ni identificar ni cotizar.","r"); return; }
     const yo = d&&d.id ? by(S.unidades,d.id) : null;
     const bld=val("uBld"), uNumR=val("uN");
-    const bedroomsU = tipoU==="Residencial"?parseInt(val("uBedrooms"))||0:null, estudioU = chk("uEstudio"), livingRoomU = chk("uLivingRoom");
+    const bedroomsU = tipoU==="Residencial"?parseInt(val("uBedrooms"))||0:null;
     const datos = {building:bld, unidadNum:uNumR, num:uNumComp(bld,uNumR),
-      tipo:tipoU, bedrooms:bedroomsU, estudio:estudioU, livingRoom:livingRoomU, bathrooms:parseInt(val("uBathrooms"))||null, ocupacion:val("uOcup")||"Occupied",
-      rooms:roomsDesde(tipoU,bedroomsU,estudioU,livingRoomU),pisos:parseInt(val("uP"))||1,detalle:S.uniDetalle.slice()};
+      tipo:tipoU, bedrooms:bedroomsU, bathrooms:parseInt(val("uBathrooms"))||null, ocupacion:val("uOcup")||"Occupied",
+      rooms:roomsDesde(tipoU,bedroomsU),pisos:parseInt(val("uP"))||null,detalle:S.uniDetalle.slice()};
     S.uniDetalle=[]; S.uniDraft=null;
     if(yo) return guardarEdicion(yo, datos, "Propiedades", P(yo.prop).nombre+" · unidad "+yo.num, null, "uni:"+yo.id);
     const nu = {id:"U"+nid("u"),prop:d.prop, ...datos};
@@ -379,25 +373,19 @@ Object.assign(ACC, {
           <input id="eUniBld" value="${esc(val("eUniBld"))}" placeholder="A, B…"></div>
         <div class="fld" style="margin-bottom:0"><label>Unidad <span class="req">*</span></label>
           <input id="eUniNum" value="${esc(val("eUniNum"))}" placeholder="204, 27, 8…"></div>
-        <div class="fld" style="margin-bottom:0"><label>Floor</label>
-          <select id="eUniPisos">${activos("pisos").map(pi=>`<option ${String(pi)===val("eUniPisos")?"selected":""}>${pi}</option>`).join("")}</select></div>
+        <div class="fld" style="margin-bottom:0"><label>Floors <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— solo si afecta la tarifa</span></label>
+          <select id="eUniPisos"><option value="">— no aplica —</option>${activos("pisos").map(pi=>`<option ${String(pi)===val("eUniPisos")?"selected":""}>${pi}</option>`).join("")}</select></div>
         <div class="fld" style="margin-bottom:0"><label>Tipo</label>
           <select id="eUniTipo" data-a="estUniDetalle">
             <option ${tipoN==="Residencial"?"selected":""}>Residencial</option>
             <option ${tipoN==="Oficina"?"selected":""}>Oficina</option></select></div>
       </div>
-      ${tipoN==="Residencial"?`<div class="fg c4" style="margin:6px 0 0">
+      ${tipoN==="Residencial"?`<div class="fg c2" style="margin:6px 0 0">
         <div class="fld" style="margin-bottom:0"><label>Bedrooms</label>
           <input id="eUniBedrooms" type="number" min="0" class="mono" placeholder="0 = Studio" value="${esc(val("eUniBedrooms"))}"></div>
         <div class="fld" style="margin-bottom:0"><label>Bathrooms <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— informativo</span></label>
           <input id="eUniBathrooms" type="number" min="0" class="mono" placeholder="opcional" value="${esc(val("eUniBathrooms"))}"></div>
-        <div class="fld" style="margin-bottom:0;display:flex;align-items:flex-end;padding-bottom:9px">
-          <label style="display:flex;align-items:center;gap:6px;font-weight:500;text-transform:none;font-size:12px">
-            <input type="checkbox" id="eUniEstudio" ${chk("eUniEstudio")?"checked":""} style="width:auto"> + estudio aparte</label></div>
-        <div class="fld" style="margin-bottom:0;display:flex;align-items:flex-end;padding-bottom:9px">
-          <label style="display:flex;align-items:center;gap:6px;font-weight:500;text-transform:none;font-size:12px">
-            <input type="checkbox" id="eUniLivingRoom" ${chk("eUniLivingRoom")?"checked":""} style="width:auto"> + living room aparte</label></div>
-      </div>`:""}` : "";
+      </div><div class="tr" style="margin-top:8px">Studio, balcón y living room se agregan como adicionales solo cuando aplican.</div>`:""}` : "";
   },
   /* Su ejemplo real de Price List (vCita) nombra los ítems así:
      "Angel Landing - Full Paint 2 Bedroom" — nombre de la propiedad primero,

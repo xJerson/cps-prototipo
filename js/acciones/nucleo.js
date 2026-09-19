@@ -40,6 +40,24 @@ Object.assign(ACC, {
   calperMes:   () => { S.periodoCal.mes = +document.querySelector('[data-a="calperMes"]').value; render(); },
   calperAnio:  () => { S.periodoCal.anio = +document.querySelector('[data-a="calperAnio"]').value; render(); },
 
+  /* ── Búsqueda de Work Orders: texto y fecha se combinan, no se reemplazan. */
+  woFiltroRapido: d => {
+    const f=S.filtroWO||(S.filtroWO={modo:"todos",sem:S.semana,desde:"",hasta:""});
+    f.modo=d.m; render();
+  },
+  woFiltroSemana: () => {
+    const f=S.filtroWO||(S.filtroWO={modo:"semana",sem:S.semana,desde:"",hasta:""});
+    f.modo="semana"; f.sem=+document.getElementById("woFsem").value||S.semana; render();
+  },
+  woFiltroDesde: () => {
+    const f=S.filtroWO||(S.filtroWO={modo:"rango",sem:S.semana,desde:"",hasta:""});
+    f.modo="rango"; f.desde=document.getElementById("woFdesde").value; render();
+  },
+  woFiltroHasta: () => {
+    const f=S.filtroWO||(S.filtroWO={modo:"rango",sem:S.semana,desde:"",hasta:""});
+    f.modo="rango"; f.hasta=document.getElementById("woFhasta").value; render();
+  },
+
   /* ---- UC-02: Lydia pasa la solicitud a Thalia sin llamada ---- */
   transferir: d => {
     if(!expedienteOK(d.id)){ toast("🚫 Expediente incompleto","Faltan campos obligatorios.","r"); return; }

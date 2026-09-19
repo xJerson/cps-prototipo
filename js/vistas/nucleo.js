@@ -89,6 +89,11 @@ function enPeriodo(fecha, per){
   if(per.tipo==="mes")   return !!per.mes && fecha.slice(0,7)===`${per.anio}-${String(per.mes).padStart(2,"0")}`;
   return semanaDe(fecha)===per.sem;   // "semana" \u2014 y cualquier per\u00edodo mal armado cae ac\u00e1
 }
+function fechaMover(fecha, dias){
+  const d=new Date(fecha+"T12:00:00");
+  d.setDate(d.getDate()+dias);
+  return d.toISOString().slice(0,10);
+}
 function periodoTexto(per){
   if(per.tipo==="dia")   return per.dia   ? per.dia                         : "\u2014 elige un d\u00eda \u2014";
   if(per.tipo==="rango") return (per.desde&&per.hasta) ? `${per.desde} al ${per.hasta}` : "\u2014 elige un rango \u2014";
@@ -120,6 +125,29 @@ function renderSelectorPeriodo(per=S.periodo, pref=""){
     </select>
     ${camposTipo[per.tipo]}
   </div>`;
+}
+/* La operación trabaja desfasada: mientras se paga una semana ya cerrada,
+   la siguiente sigue recibiendo trabajo. Esta tarjeta las muestra juntas sin
+   mezclar los botones de pago/facturación del período que se eligió arriba. */
+function resumenDosSemanas(sem){
+  return `<div class="card" style="margin:14px 0"><div class="chd"><h3>Semanas de operación</h3>
+    <span class="s">Pago y trabajo consecutivo, visibles al mismo tiempo</span></div>
+    <div class="cp" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:10px">${[
+      [sem,"Semana en pago"], [sem+1,"Semana operativa"]
+    ].map(([n,label])=>{
+      const ws=S.wos.filter(w=>w.semana===n&&w.estado!=="Canceled");
+      const terminadas=ws.filter(w=>w.estado==="Completed");
+      const pendientes=ws.filter(w=>!w.pagadaTec&&w.estado==="Completed");
+      const totalPago=pendientes.reduce((t,w)=>t+(egresoWO(w)||0),0);
+      const totalCobro=terminadas.reduce((t,w)=>t+(ingresoWO(w)||0),0);
+      return `<div style="border:1px solid var(--line);border-radius:8px;padding:10px">
+        <div style="font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em">${label}</div>
+        <div style="font-weight:750;margin:3px 0">Semana ${n}</div>
+        <div style="font-size:12px">${ws.length} WO · ${terminadas.length} terminada(s)</div>
+        <div style="font-size:11px;color:var(--soft);margin-top:5px">Por pagar: <b class="mono">${money(totalPago)}</b> · Por cobrar: <b class="mono">${money(totalCobro)}</b></div>
+        ${n===sem?"":`<button class="btn sm" data-a="perNav" data-s="${n}" style="margin-top:8px">Abrir esta semana</button>`}
+      </div>`;
+    }).join("")}</div></div>`;
 }
 function diasDeSemana(sem){
   const base = new Date(LUN_S33 + "T12:00:00");
@@ -305,4 +333,3 @@ function guardarEdicion(obj, nuevos, modulo, ref, extra, marca){
 /* Editar una WO deja de ser inocente en cuanto el dinero ya salió */
 const woEditable = w => w.estado!=="Canceled" && !w.pagadaTec
   && !S.facturas.some(f=>f.lineas.includes(w.id));
-

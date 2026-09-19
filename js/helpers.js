@@ -12,16 +12,14 @@ const uNumComp = (b,n) => { b=String(b||"").trim(); n=String(n||"").trim(); retu
 /* Para comparar identificadores sin que "102B" / "B 102" / "b-102" se traten
    como distintos: se quita todo lo que no sea letra o número, en minúscula. */
 const uNorm = s => String(s||"").toLowerCase().replace(/[^a-z0-9]/g,"");
-/* Reunión Claudia (feedback prototipo): Rooms ya no se elige de una lista de
-   textos armados ("2 bedroom and studio") — se compone solo a partir de
-   Bedrooms + Tipo + el casillero "tiene estudio aparte", con el mismo texto
-   exacto que ya usa tarifa() para buscar el precio. Cero cambios ahí. */
-function roomsDesde(tipo, bedrooms, estudio, livingRoom){
+/* El tamaño base de una unidad sale solo de Bedrooms. Studio, balcón y living
+   room no son características maestras: se piden como adicionales si de verdad
+   aparecen en el trabajo. */
+function roomsDesde(tipo, bedrooms){
   if(tipo==="Oficina") return "Oficina";
   const n = parseInt(bedrooms)||0;
   if(n<=0) return "Studio";
-  const extras = [estudio?"studio":null, livingRoom?"living room":null].filter(Boolean);
-  return extras.length ? `${n} bedroom and ${extras.join(" and ")}` : `${n} bedroom`;
+  return `${n} bedroom`;
 }
 const T = id => by(S.tecnicos,id);
 const CLI = id => by(S.clientes,id) || {nombre:"—"};
@@ -56,7 +54,7 @@ const cajaAmb = (ic, n, lab) => `<div style="border:1px solid var(--line);border
    nadie la vuelve a describir a mano. */
 function unidadCardHTML(u){
   if(!u) return "";
-  const cajas = [cajaAmb(IC_PISO, "Floor "+u.pisos, "Piso")]
+  const cajas = (u.pisos ? [cajaAmb(IC_PISO, "Floor "+u.pisos, "Piso")] : [])
     .concat((u.detalle||[]).map(x=>cajaAmb(ICONO_AMB[x.tipo]||ICONO_DEF, x.cantidad, x.tipo)));
   return `<div style="margin:9px 0 2px">
     <div style="display:inline-block;background:var(--azul);color:#fff;font-size:12.5px;font-weight:750;padding:4px 12px;border-radius:99px;margin-bottom:8px">${esc(u.num)}</div>
@@ -217,6 +215,12 @@ function alertas(){
   S.wos.filter(w=>w.tec && esAgendada(w.estado) && !asisDe(w.id)).forEach(w=>A.push({t:"Sin marcar llegada",d:`WO-${w.id} · ${tecN(w.tec)} no ha marcado llegada (programada ${w.horaProg||"9:00"})`,q:"Thalia",n:"g"}));
   solTodas().filter(solPend).forEach(s=>A.push({t:"Adicional esperando aprobación",
     d:`WO-${s.wo} · ${s.lineas.filter(l=>l.estado==="Pendiente").length} concepto(s): ${solTxt(s)}`,q:"Claudia",n:"r"}));
+  /* Los SLA de Approval Requests se ven también fuera de la bandeja, para que
+     una persona no tenga que acordarse de abrirla para enterarse del vencimiento. */
+  excPend().forEach(x=>{ const sla=slaApprovalRequest(x); if(sla&&sla.alerta) A.push({
+    t:sla.texto, d:`${x.wo?`WO-${x.wo} · `:""}${x.tipo}: ${x.motivo}`,
+    q:x.assignedTo||x.aprueba, n:sla.nivel
+  }); });
   S.wos.filter(w=>!tarifaWO(w)).forEach(w=>A.push({t:"Tarifa faltante",d:`${w.serv} · ${U(w.unidad).rooms} en ${P(w.prop).nombre} — hoy saldría "NA"`,q:"Erika",n:"w"}));
   S.propiedades.filter(p=>!p.activa).forEach(p=>A.push({t:"Propiedad inactiva",d:`${p.nombre} no genera Work Orders`,q:"Lydia",n:"g"}));
   S.propiedades.filter(p=>!coiVigente(p.id)).forEach(p=>A.push({t:"COI sin registrar",d:`${p.nombre} no tiene certificado vigente`,q:"Claudia",n:"r"}));

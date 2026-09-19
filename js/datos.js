@@ -14,6 +14,9 @@ let S = {
   // Punto 9 del feedback: el Calendario necesita el mismo Día/Semana/Rango/Mes
   // que Nómina y Facturación, pero sin pisarles el período — estado propio.
   periodoCal:{tipo:"semana", sem:33, dia:"2026-08-12", desde:"2026-08-01", hasta:"2026-08-15", anio:2026, mes:8},
+  /* El buscador de Work Orders conserva texto y fecha por separado: cambiar
+     uno no borra el otro, que era el problema del Excel. */
+  filtroWO:{modo:"todos", sem:33, desde:"", hasta:""},
   sub:null, tab:null, phone:false, phTec:"T1", phView:"agenda", phWO:null, notis:[],
   coach:true,   // asistente "¿qué hago ahora?" — se puede apagar desde su tarjeta
   /* El celular tiene dos dueños distintos: el técnico ejecuta, el supervisor reporta.

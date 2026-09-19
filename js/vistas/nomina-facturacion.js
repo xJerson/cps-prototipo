@@ -46,11 +46,18 @@ function excAuto(){
   // La primera vez que el sistema detecta cada una queda su hora — así se ve
   // desde cuándo está esperando, no solo cuándo se resolvió.
   out.forEach(x=>{
-    if(!S.excCreadas[x.id]) S.excCreadas[x.id]=hora();
-    x.creada={quien:x.pide,hora:S.excCreadas[x.id]};
+    if(!S.excCreadas[x.id]) S.excCreadas[x.id]={hora:hora(),minuto:S.reloj,fecha:HOY_SUP};
+    /* Compatibilidad con los registros del prototipo anterior, que guardaban
+       solo la hora. Los nuevos conservan minuto y fecha para medir el SLA. */
+    const creada=S.excCreadas[x.id];
+    x.creada={quien:x.pide,hora:typeof creada==="string"?creada:creada.hora,
+      minuto:typeof creada==="string"?S.reloj:creada.minuto,
+      fecha:typeof creada==="string"?HOY_SUP:creada.fecha};
+    const registro=asignaciones[x.id] || (asignaciones[x.id]={});
+    if(!registro.historial) registro.historial=[{evento:"Created",quien:x.pide,hora:x.creada.hora,fecha:x.creada.fecha}];
     // Estos objetos nacen de nuevo en cada render; completar con el registro
     // persistente evita que una solicitud tomada vuelva a quedar sin dueño.
-    Object.assign(x, (S.excAsignaciones||{})[x.id]||{});
+    Object.assign(x, registro);
   });
   return out.filter(viva);
 }
@@ -58,12 +65,38 @@ const excTodas = () => S.excepciones.concat(excAuto());
 const excPend  = () => excTodas().filter(x=>x.estado==="Pendiente");
 const excAsignadaA = x => x.assignedTo || null;
 const excEstadoTrabajo = x => excAsignadaA(x) ? "In progress" : "Unassigned";
-/* Reunión Claudia (feedback prototipo): una excepción sin resolver ya no
-   frena TODA la nómina/facturación — frena solo la WO a la que está atada.
-   Una excepción sin WO (se levantó suelta, sin elegir ninguna) sigue frenando
-   todo, porque no hay forma de saber a cuál limitar el freno. */
-const excBloqueaTodo = () => excPend().some(x=>!x.wo);
-const woBloqueada = wid => excBloqueaTodo() || excPend().some(x=>x.wo===wid);
+function proximoMiercoles(fecha){
+  const d=new Date((fecha||HOY_SUP)+"T00:00:00");
+  const dias=(3-d.getDay()+7)%7 || 7;
+  d.setDate(d.getDate()+dias);
+  return d.toISOString().slice(0,10);
+}
+/* SLA visible y real del prototipo: las aprobaciones del técnico se vuelven
+   urgentes a los 20 min; definir una tarifa avisa a las 24 h y vence el
+   miércoles siguiente. La misma función alimenta la tabla y las alertas. */
+function slaApprovalRequest(x){
+  if(x.estado!=="Pendiente") return null;
+  const creada=x.creada||{};
+  const minutos=Math.max(0,S.reloj-(creada.minuto==null?S.reloj:creada.minuto));
+  const tecnica=x.pide==="Técnico" || x.tipo==="Adicional en sitio";
+  if(tecnica && minutos>=20)
+    return {nivel:"r",texto:`URGENT · ${minutos} min`,alerta:true};
+  const tarifa=x.tipo==="Tarifa no encontrada" || x.tipo==="Trabajo fuera de tarifa";
+  if(!tarifa) return null;
+  const vence=proximoMiercoles(creada.fecha||x.fecha||HOY_SUP);
+  if(HOY_SUP>vence) return {nivel:"r",texto:`OVERDUE · due ${vence}`,alerta:true};
+  if(minutos>=1440) return {nivel:"w",texto:`TARIFF ALERT · ${Math.floor(minutos/60)} h · due ${vence}`,alerta:true};
+  return null;
+}
+/* Toda Approval Request debe estar ligada a una WO. Por eso solo frena esa
+   orden: las demás nóminas y facturas pueden continuar. */
+const excBloqueaTodo = () => false;
+const woBloqueada = wid => excPend().some(x=>x.wo===wid);
+function historialApproval(x){
+  const hs=x.historial||[];
+  return hs.length?`<div style="font-size:9.5px;color:var(--faint);margin-top:5px">${hs.map(h=>
+    `${esc(h.hora||"")} · ${esc(h.evento)} · ${esc(h.quien)}${h.detalle?` · ${esc(h.detalle)}`:""}`).join("<br>")}</div>`:"";
+}
 
 VIEWS.excepciones = () => {
   const todas = excTodas();
@@ -79,7 +112,7 @@ VIEWS.excepciones = () => {
     <div class="act"><button class="btn p" data-a="excNueva">+ New Approval Request</button></div></div>
 
   ${pend.length
-    ? `<div class="note r" style="margin-bottom:14px"><b>${pend.length} Approval Request(s) pending.</b> ${excBloqueaTodo()?`Hay al menos una sin WO puntual — esa frena <b>toda</b> la nómina y facturación.`:`Cada una frena solo el pago y la factura de su propia WO — el resto de la semana sigue su curso.`}</div>`
+    ? `<div class="note r" style="margin-bottom:14px"><b>${pend.length} Approval Request(s) pending.</b> Cada una frena solo el pago y la factura de su propia WO — el resto de la semana sigue su curso.</div>`
     : `<div class="note v" style="margin-bottom:14px"><b>No pending Approval Requests.</b> Nada frenado por este motivo.</div>`}
 
   ${pend.length?`<div class="kpis">${Object.entries(porTipo).map(([t,n])=>
@@ -87,37 +120,35 @@ VIEWS.excepciones = () => {
 
   <div class="card"><div class="chd"><h3>Pending Approval Requests</h3><span class="s">assign an owner before anyone starts working it</span></div>
     <div class="act" style="margin:0 0 10px"><button class="btn sm ${filtro==="unassigned"?"p":""}" data-a="excFiltro" data-f="unassigned">Unassigned (${pend.filter(x=>!x.assignedTo).length})</button><button class="btn sm ${filtro==="mine"?"p":""}" data-a="excFiltro" data-f="mine">Mine (${pend.filter(x=>x.assignedTo===S.usuario).length})</button><button class="btn sm ${filtro==="all"?"p":""}" data-a="excFiltro" data-f="all">All (${pend.length})</button></div>
-    ${visibles.length?`<table><thead><tr><th>Assigned to</th><th>Status</th><th>Type</th><th>WO</th><th>Reason</th><th>Requested by</th><th>Since</th><th>Approver</th><th class="num">Amount</th><th></th></tr></thead><tbody>
-    ${visibles.map(x=>`<tr class="${fl("exc:"+x.id)}">
+    ${visibles.length?`<table><thead><tr><th>Time</th><th>WO</th><th>Assigned to</th><th>Type</th><th>Reason</th><th>Requested by</th><th>Approve / Reject</th></tr></thead><tbody>
+    ${visibles.map(x=>{ const sla=slaApprovalRequest(x); return `<tr class="${fl("exc:"+x.id)}">
+      <td class="mono" style="color:${sla&&sla.nivel==="r"?"var(--rojo)":"var(--faint)"}">${x.creada?esc(x.creada.hora):"—"}${sla?`<div><span class="pill ${sla.nivel}" style="margin-top:3px">${esc(sla.texto)}</span></div>`:""}</td>
+      <td class="mono">${x.wo?`<b style="cursor:pointer" data-a="woVer" data-id="${x.wo}">WO-${x.wo}</b>`:"—"}</td>
       <td>${x.assignedTo?`<b>${esc(x.assignedTo)}</b><div style="font-size:9.5px;color:var(--faint)">${x.assignedBy?`assigned by ${esc(x.assignedBy)} · ${esc(x.assignedAt||"")}`:""}</div>`:'<span class="pill w">Unassigned</span>'}</td>
-      <td><span class="pill ${x.assignedTo?"a":"w"}">${esc(x.workStatus||"Unassigned")}</span></td>
       <td><span class="pill ${x.tipo==="Tarifa no encontrada"?"w":x.tipo==="Cierre sin evidencia"?"r":"m"}"><span class="dot"></span>${esc(x.tipo)}</span>
         ${x.auto?'<div style="font-size:9.5px;color:var(--faint);margin-top:2px">detectada por el sistema</div>':""}</td>
-      <td class="mono">${x.wo?`<b style="cursor:pointer" data-a="woVer" data-id="${x.wo}">WO-${x.wo}</b>`:"—"}</td>
-      <td style="max-width:340px">${esc(x.motivo)}</td>
+      <td style="max-width:340px">${esc(x.motivo)}${historialApproval(x)}</td>
       <td>${esc(x.pide)}</td>
-      <td class="mono" style="color:var(--faint)">${x.creada?esc(x.creada.hora):"—"}</td>
-      <td><span class="pill a">${esc(x.aprueba)}</span></td>
-      <td class="num mono">${x.monto?money(x.monto):"—"}</td>
       <td style="text-align:right;white-space:nowrap">
         ${x.assignedTo===S.usuario?"":`<button class="btn sm" data-a="excAsignarYo" data-id="${x.id}">Assign to me</button>`}
         <button class="btn sm" data-a="excAsignarModal" data-id="${x.id}">Assign</button>
-        ${(x.assignedTo===S.usuario || x.aprueba===S.usuario) ? (x.tipo==="Tarifa no encontrada"
+        ${(x.assignedTo===S.usuario || x.aprueba===S.usuario) ? (x.tipo==="Unit data mismatch"
+          ? `<button class="btn sm p" data-a="excUnidadRevisar" data-id="${x.id}">Review correction</button>`
+          : x.tipo==="Tarifa no encontrada"
           ? `<button class="btn sm p" data-a="excTarifa" data-id="${x.id}" data-wo="${x.wo}">Definir tarifa</button>`
           : `<button class="btn sm" data-a="excRech" data-id="${x.id}">Rechazar</button>
              <button class="btn sm v" data-a="excAprob" data-id="${x.id}">Aprobar</button>`) : '<span style="font-size:10px;color:var(--faint)">Assigned owner or approver resolves</span>'}
-      </td></tr>`).join("")}
+      </td></tr>`; }).join("")}
     </tbody></table>`:`<div class="empty"><div class="b">✓</div>No requests in this filter</div>`}
   </div>
 
   ${res.length?`<div class="card"><div class="chd"><h3>Resueltas</h3></div>
-    <table><thead><tr><th>Tipo</th><th>WO</th><th>Quién la pidió</th><th>Creada</th><th>Resultado</th><th>Quién decidió</th><th>Cuándo</th><th class="num">Monto</th></tr></thead><tbody>
+    <table><thead><tr><th>Tipo</th><th>WO</th><th>Quién la pidió</th><th>Creada</th><th>Resultado</th><th>Quién decidió</th><th>Cuándo</th></tr></thead><tbody>
     ${res.map(x=>`<tr class="${fl("exc:"+x.id)}"><td>${esc(x.tipo)}</td><td class="mono">${x.wo?"WO-"+x.wo:"—"}</td>
       <td>${x.creada?esc(x.creada.quien):esc(x.pide)}</td>
       <td class="mono" style="color:var(--faint)">${x.creada?esc(x.creada.hora):"—"}</td>
-      <td><span class="pill ${x.estado==="Aprobada"?"v":"r"}">${x.estado}</span></td>
-      <td>${x.resol?esc(x.resol.quien):"—"}</td><td class="mono">${x.resol?esc(x.resol.hora):"—"}</td>
-      <td class="num mono">${x.monto?money(x.monto):"—"}</td></tr>`).join("")}
+      <td><span class="pill ${x.estado==="Aprobada"?"v":"r"}">${x.estado}</span>${historialApproval(x)}</td>
+      <td>${x.resol?esc(x.resol.quien):"—"}</td><td class="mono">${x.resol?esc(x.resol.hora):"—"}</td></tr>`).join("")}
     </tbody></table></div>`:""}
 
   <div class="tr">Cada Approval Request guarda quién la pidió y desde cuándo espera; al resolverse, también quién decidió y cuándo. Es lo que hoy se decide por WhatsApp y nadie puede reconstruir después.</div>`;
@@ -126,17 +157,35 @@ VIEWS.excepciones = () => {
 function modalExc(){
   modal(`<div class="mh"><h3>New Approval Request</h3><p>Algo que se sale de la regla y necesita que otra persona lo apruebe.</p></div>
   <div class="mb">
+    <details class="note" style="margin-bottom:12px">
+      <summary style="cursor:pointer;font-weight:700">? What will the system do after this request is created?</summary>
+      <div style="margin-top:8px;font-size:12px;line-height:1.5">
+        It will start <b>Unassigned</b>, so the team can assign one owner and avoid duplicate work. The related Work Order will remain on hold for payment and invoicing until the request is approved or rejected.<br><br>
+        <b>Alert rules:</b> technician approvals become urgent after 20 minutes and show in red; tariff-definition requests warn after 24 hours and become overdue on Wednesday of the following week. The system shows them in this table and in the app alerts; it never approves, rejects, or reassigns work automatically.
+      </div>
+    </details>
     <div class="fld"><label>Tipo <span class="req">*</span></label><select id="xT">
       ${["Pago adicional al técnico","Ajuste de precio al cliente","Descuento especial","Cierre sin evidencia","Trabajo fuera de tarifa","Otro"].map(t=>`<option>${t}</option>`).join("")}</select></div>
-    <div class="fg c2">
-      <div class="fld"><label>Work Order</label><select id="xW"><option value="">— ninguna —</option>
-        ${S.wos.map(w=>`<option value="${w.id}">WO-${w.id} · ${esc(P(w.prop).nombre)} ${esc(U(w.unidad).num)}</option>`).join("")}</select></div>
-      <div class="fld"><label>Monto</label><input id="xM" placeholder="opcional" class="mono"></div></div>
+    <div class="fld"><label>Work Order <span class="req">*</span></label><select id="xW"><option value="">— selecciona —</option>
+      ${S.wos.map(w=>`<option value="${w.id}">WO-${w.id} · ${esc(P(w.prop).nombre)} ${esc(U(w.unidad).num)}</option>`).join("")}</select></div>
     <div class="fld"><label>Quién debe aprobarla <span class="req">*</span></label>
       <select id="xA">${Object.keys(ROLES).map(r=>`<option ${r==="Claudia"?"selected":""}>${r}</option>`).join("")}</select></div>
     <div class="fld"><label>Motivo <span class="req">*</span></label><textarea id="xMo" placeholder="Por qué se sale de lo normal"></textarea></div>
   </div>
   <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="excGuardar">Levantar</button></div>`);
+}
+
+function modalCorregirUnidad(id){
+  const x=by(S.excepciones,id), d=x&&x.datosUnidad, u=d&&U(d.unidad);
+  if(!x||!d||!u) return;
+  modal(`<div class="mh"><h3>Review unit data correction</h3><p>WO-${x.wo} · ${esc(P(W(x.wo).prop).nombre)} · ${esc(u.num)}</p></div>
+    <div class="mb">
+      <div class="note w" style="margin-bottom:12px"><b>Reported by ${esc(x.pide)}:</b> ${esc(x.motivo)}<br>Confirm the observed value before changing the master unit data.</div>
+      <div class="fg c2"><div class="fld"><label>Current floors</label><input value="${esc(String(d.anterior))}" disabled></div>
+        <div class="fld"><label>Approved floors <span class="req">*</span></label><input id="corrPisos" type="number" min="1" value="${esc(String(d.propuesto))}"></div></div>
+      ${d.nota?`<div class="fld"><label>Technician note</label><div class="note" style="margin:0">${esc(d.nota)}</div></div>`:""}
+    </div>
+    <div class="mf"><button class="btn" data-a="cm">Cancel</button><button class="btn p" data-a="excUnidadAplicar" data-id="${x.id}">Apply correction</button></div>`);
 }
 
 /* Lo que le llega al cliente por correo (UC-05) */
@@ -311,6 +360,14 @@ VIEWS.nomina = () => {
   <div class="ph"><div><h2>Nómina — ${periodoTexto(S.periodo)}</h2>
     <p>La pestaña <code>Payroll</code>. Se arma sola con las Work Orders <b>validadas</b> — hoy se rearma a mano.</p></div></div>
   ${renderSelectorPeriodo()}
+  ${S.periodo.tipo==="semana"?resumenDosSemanas(S.periodo.sem):""}
+
+  ${S.nomina.length?`<div class="card" style="margin-bottom:14px"><div class="chd"><h3>Historial de nóminas</h3><span class="s">Registro de pagos ya aprobados</span></div>
+    <table><thead><tr><th>Período</th><th>Fecha de pago</th><th>Registró</th><th class="num">WO</th><th class="num">Total</th></tr></thead><tbody>
+      ${S.nomina.slice().reverse().map(n=>`<tr><td>${esc(periodoTexto(n.periodo||{tipo:"semana",sem:n.semana}))}</td>
+        <td class="mono">${esc(n.fecha||"—")} ${esc(n.hora||"")}</td><td>${esc(n.quien||"—")}</td>
+        <td class="num mono">${(n.wos||[]).length}</td><td class="num mono" style="font-weight:700">${money(n.total||0)}</td></tr>`).join("")}
+    </tbody></table></div>`:""}
 
   ${(()=>{ /* Lo que se le pidió al técnico y todavía no contesta. Sin esta lista
               la solicitud se perdía: no había dónde ver quién debía qué. */
@@ -461,6 +518,7 @@ VIEWS.facturacion = () => {
   <div class="ph"><div><h2>Facturación — ${periodoTexto(S.periodo)}</h2>
     <p>De Work Orders terminadas a factura, sin volver a escribir nada. El número y el vencimiento se calculan.</p></div></div>
   ${renderSelectorPeriodo()}
+  ${S.periodo.tipo==="semana"?resumenDosSemanas(S.periodo.sem):""}
   ${frenadas.length?`<div class="note w" style="margin-bottom:14px">
     <b>${frenadas.length} Work Order(s) no se pueden facturar: tienen una devolución abierta.</b><br>
     Se mandaron a corregir, así que no se le cobran al cliente hasta que Gustavo verifique que quedaron bien.

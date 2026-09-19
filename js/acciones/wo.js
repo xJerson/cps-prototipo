@@ -103,11 +103,10 @@ Object.assign(ACC, {
         // la unidad queda "sin definir" en eso hasta que alguien la complete
         // desde una WO que sí lo necesite (Clean, Paint...).
         const sinBed = SIN_BEDROOMS.includes(cat);
-        const bedrooms=(tipoNueva==="Residencial"&&!sinBed)?parseInt(val("wUniBedrooms"))||0:null,
-              estudio=sinBed?false:chk("wUniEstudio"), livingRoom=sinBed?false:chk("wUniLivingRoom");
+        const bedrooms=(tipoNueva==="Residencial"&&!sinBed)?parseInt(val("wUniBedrooms"))||0:null;
         uNueva = {id:"U"+nid("u"), prop:pid, building:bld, unidadNum:uNumR, num:uNumComp(bld,uNumR),
-          tipo:tipoNueva, bedrooms, estudio, livingRoom, bathrooms:parseInt(val("wUniBathrooms"))||null,
-          rooms:sinBed?null:roomsDesde(tipoNueva,bedrooms,estudio,livingRoom), pisos:parseInt(val("wUniPisos"))||1, detalle:[]};
+          tipo:tipoNueva, bedrooms, bathrooms:parseInt(val("wUniBathrooms"))||null,
+          rooms:sinBed?null:roomsDesde(tipoNueva,bedrooms), pisos:parseInt(val("wUniPisos"))||null, detalle:[]};
         S.unidades.push(uNueva); flash("uni:"+uNueva.id);
         uid = uNueva.id;
       }
@@ -643,13 +642,27 @@ Object.assign(ACC, {
   },
   woCorroboraNo: d => { S.phSheet={t:"corrobNo", wo:+d.id}; render(); },
   woCorroboraNoOK: d => {
-    const w=W(+d.id), u=U(w.unidad), txt=val("cnTxt");
-    if(!txt || !txt.trim()){ toast("Falta el detalle","Decí qué no coincide.","r"); return; }
-    w.corroborado=true; w.corroboradoNota=txt.trim(); S.phSheet=null;
-    w.hist.push([hora(),`Reportó que la unidad no coincide: ${txt.trim()}`,T(w.tec).nombre]);
-    avisar("Thalia","La unidad no coincide con el sistema",
-      `WO-${w.id} · ${esc(P(w.prop).nombre)} ${esc(u.num)} — ${esc(tecN(w.tec))}: ${esc(txt.trim())}`,"w");
-    toast("Avisado a oficina","Podés seguir trabajando — Thalia ya lo tiene en cuenta.","v");
+    const w=W(+d.id), u=U(w.unidad), txt=val("cnTxt"), pisos=parseInt(val("cnPisos"));
+    if(!pisos || pisos<1){ toast("Falta el dato","Indica cuántos pisos ves en la unidad.","r"); return; }
+    if(pisos===u.pisos){ toast("Sin cambio","El número de pisos observado coincide con el sistema.","w"); return; }
+    const abierta=S.excepciones.find(x=>x.estado==="Pendiente" && x.tipo==="Unit data mismatch" && x.wo===w.id
+      && x.datosUnidad && x.datosUnidad.campo==="pisos");
+    if(!abierta){
+      const quien=T(w.tec).nombre;
+      const x={id:"X"+Date.now(), tipo:"Unit data mismatch", wo:w.id,
+        motivo:`Floors: system says ${u.pisos}; technician observed ${pisos}.${txt?` ${txt}`:""}`,
+        monto:null, pide:quien, aprueba:"Thalia", estado:"Pendiente",
+        assignedTo:null, assignedBy:null, assignedAt:null, workStatus:"Unassigned",
+        fecha:HOY_SUP, creada:{quien,hora:hora(),minuto:S.reloj,fecha:HOY_SUP},
+        datosUnidad:{unidad:u.id,campo:"pisos",anterior:u.pisos,propuesto:pisos,nota:txt||""},
+        historial:[{evento:"Created",quien,hora:hora(),fecha:HOY_SUP}], resol:null};
+      S.excepciones.push(x);
+      avisar("Thalia","Unit data mismatch needs review",
+        `WO-${w.id} · ${esc(P(w.prop).nombre)} ${esc(u.num)} — Floors: ${u.pisos} → ${pisos}.`,"w");
+    }
+    w.corroborado=true; w.corroboradoNota=`Floors: ${u.pisos} → ${pisos}${txt?` · ${txt}`:""}`; S.phSheet=null;
+    w.hist.push([hora(),`Reported unit data mismatch: ${w.corroboradoNota}`,T(w.tec).nombre]);
+    toast("Enviado para revisión","Podés seguir trabajando. Oficina debe revisar el cambio antes de actualizar la unidad.","v");
     render();
   },
 
