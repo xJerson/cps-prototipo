@@ -717,26 +717,38 @@ Object.assign(ACC, {
       concepto:a.concepto, ubic:a.ubic, initial:a.hallazgoFoto?[a.hallazgoFoto]:[], post:(a.fotosEvidArr||[]).slice(), ref:(a.fotosRefArr||[]).slice()
     }));
     const parentPost=(w.evidFotos||[]).slice();
-    if(!items.some(x=>x.post.length)||!parentPost.length){ toast("Falta evidencia post-work","Carga al menos una foto final del trabajo principal o de una Sub-WO.","r"); return; }
-    const r={id:"CR"+Date.now(),token:"cps"+Date.now().toString(36)+Math.random().toString(36).slice(2,8),wo:w.id,prop:w.propiedad||w.prop,propiedad:p.nombre,unidad:U(w.unidad).num,correo:mail,mensaje:val("crMsg"),items,parentPost,estado:"Enviado",creado:HOY_SUP,enviado:HOY_SUP,hora:hora(),respondido:null};
+    if(!items.some(x=>x.post.length) && !parentPost.length){ toast("Falta evidencia post-work","Carga al menos una foto final del trabajo principal o de una Sub-WO.","r"); return; }
+    const r={id:"CR"+Date.now(),wo:w.id,prop:w.propiedad||w.prop,propiedad:p.nombre,unidad:U(w.unidad).num,correo:mail,mensaje:val("crMsg"),items,parentPost,estado:"Enviado",canalEnvio:"Correo electrónico",creado:HOY_SUP,enviado:HOY_SUP,hora:hora(),respondido:null};
     S.revisionesCliente.unshift(r); guardarRevisionesCliente(); w.validada=false;
     w.clienteRevisionId=r.id; w.hist.push([hora(),`Expediente post-work enviado a ${mail}`,S.usuario]);
     cm();
-    toast("✓ Expediente enviado",`Correo registrado para <b>${esc(mail)}</b>.<br><br><span class="mono" style="font-size:11px">${esc(urlRevisionCliente(r))}</span>` ,"v"); render();
+    toast("✓ Correo preparado",`Correo registrado para <b>${esc(mail)}</b> con <b>${parentPost.length+items.reduce((n,x)=>n+x.post.length,0)} foto(s) adjunta(s)</b>. Cuando el cliente responda, registra aquí el canal y su aprobación.` ,"v"); render();
   },
-  clienteRevisionVer: d => { const r=by(S.revisionesCliente,d.id); if(r) modalClienteRevision(r); },
+  clienteRevisionVer: d => { const r=by(S.revisionesCliente,d.id); if(r) modalClienteCorreo(r); },
+  clienteRespuestaModal: d => modalClienteRespuesta(d.id,d.respuesta||"confirmada"),
+  clienteRespuestaGuardar: d => {
+    const r=by(S.revisionesCliente,d.id), nota=val("crRespuesta"), canal=val("crCanal"); if(!r||!nota||!canal){ toast("Faltan datos","Selecciona el canal y escribe qué respondió el cliente.","r"); return; }
+    const confirmada=d.respuesta==="confirmada";
+    r.estado=confirmada?"Confirmado":"Corrección solicitada";
+    r.respondido={quien:S.usuario,canal,fecha:HOY_SUP,hora:hora(),nota}; guardarRevisionesCliente();
+    const w=W(r.wo); if(w){
+      if(confirmada){ w.clienteConfirmado=r.respondido; w.clienteCorreccion=null; w.hist.push([hora(),`Cliente aprobó el expediente post-work por ${canal}`,S.usuario]); if(w.estado==="Completed"&&w.evid>0&&ingresoWO(w)!==null&&!subWOsPendientesDeWO(w.id).length) w.validada=true; }
+      else { w.clienteCorreccion={fecha:HOY_SUP,hora:hora(),nota,canal}; w.validada=false; w.hist.push([hora(),`Cliente solicitó corrección por ${canal}: ${nota}`,S.usuario]); avisar("Erika","Cliente solicitó una corrección",`WO-${w.id}: ${nota}`,"r"); }
+    }
+    cm(); toast(confirmada?"✓ Aprobación registrada":"Corrección registrada",`Respuesta guardada por canal <b>${esc(canal)}</b>, con fecha y hora.`,confirmada?"v":"w"); render();
+  },
   clienteConfirmar: d => {
     const r=by(S.revisionesCliente,d.id); if(!r||r.estado!=="Enviado") return;
     r.estado="Confirmado"; r.respondido={quien:"Cliente",fecha:HOY_SUP,hora:hora(),nota:"Finalización confirmada"}; guardarRevisionesCliente();
     const w=W(r.wo); if(w){ w.clienteConfirmado=r.respondido; w.hist.push([hora(),"Cliente confirmó la finalización del expediente post-work","Cliente"]); if(w.estado==="Completed"&&w.evid>0&&ingresoWO(w)!==null&&!subWOsPendientesDeWO(w.id).length) w.validada=true; }
-    toast("✓ Finalización confirmada","La respuesta quedó registrada. Oficina ya puede continuar con el cierre.","v"); if(S.clienteReviewPublic) render(); else { cm(); render(); }
+    toast("✓ Finalización confirmada","La respuesta quedó registrada. Oficina ya puede continuar con el cierre.","v"); cm(); render();
   },
   clienteCorreccion: d => { const r=by(S.revisionesCliente,d.id); if(r&&r.estado==="Enviado") modalClienteCorreccion(r); },
   clienteCorreccionGuardar: d => {
     const r=by(S.revisionesCliente,d.id), nota=val("crCorrection"); if(!r||!nota){ toast("Falta el detalle","Describe qué debe corregirse.","r"); return; }
     r.estado="Corrección solicitada"; r.respondido={quien:"Cliente",fecha:HOY_SUP,hora:hora(),nota}; guardarRevisionesCliente();
     const w=W(r.wo); if(w){ w.clienteCorreccion={fecha:HOY_SUP,hora:hora(),nota}; w.validada=false; w.hist.push([hora(),`Cliente solicitó corrección: ${nota}`,"Cliente"]); avisar("Erika","Cliente solicitó una corrección",`WO-${w.id}: ${nota}`,"r"); }
-    toast("Solicitud enviada","Oficina recibió el detalle de la corrección.","w"); if(S.clienteReviewPublic) render(); else { cm(); render(); }
+    toast("Solicitud enviada","Oficina recibió el detalle de la corrección.","w"); cm(); render();
   },
   clienteRevisionExcepcion: d => {
     const r=by(S.revisionesCliente,d.id), w=r&&W(r.wo); if(!r||!w) return;

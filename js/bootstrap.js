@@ -227,9 +227,6 @@ try{
   const guardadas=JSON.parse(localStorage.getItem("cps_cliente_revisiones")||"[]");
   if(Array.isArray(guardadas) && guardadas.length) S.revisionesCliente=guardadas;
 }catch(e){}
-const clienteReviewToken=new URLSearchParams(location.search).get("clienteReview");
-if(clienteReviewToken) S.clienteReviewPublic=clienteReviewToken;
-
 if(new URLSearchParams(location.search).get("gustavo")==="1"){
   document.body.classList.add("gmode");
   ACC.verGustavoCel();
