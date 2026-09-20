@@ -114,8 +114,8 @@ function renderFon(){
       ${w.notasTec?dato("Nota de esta orden", w.notasTec):""}
     </div>
 
-    ${["Repair","Cabinet","Resurface"].includes(w.cat)?`<div class="dc">
-      <div class="dl" style="margin:0 0 6px">Fotos de referencia</div>
+    ${(w.fotosPrevias||[]).length || ["Repair","Cabinet","Resurface"].includes(w.cat)?`<div class="dc">
+      <div class="dl" style="margin:0 0 6px">Fotos para prepararte antes de ir</div>
       ${(w.fotosPrevias||[]).length?`<div style="display:flex;gap:5px;flex-wrap:wrap">${w.fotosPrevias.map(f=>
           `<img src="${f.url}" style="width:60px;height:45px;object-fit:cover;border-radius:7px">`).join("")}</div>`
         :`<div class="ds">Todavía no hay fotos de referencia.</div>`}
@@ -243,6 +243,7 @@ function renderFon(){
             <div class="ds" style="font-size:10px">${w.fecha} · ${esc(w.horaProg||"9:00")}</div></div>
           <span class="dtag" style="background:${col}22;color:${col};flex:none;height:fit-content">${esc(w.estado)}</span></div>
         ${a?`<div class="ds" style="margin-top:5px;color:var(--verde)">Llegaste ${a.horaReal} · ${esc(a.puntualidad)}</div>`:""}
+        ${(w.fotosPrevias||[]).length?`<div class="ds" style="margin-top:5px;color:var(--azul);font-weight:700">📷 ${(w.fotosPrevias||[]).length} foto(s) para prepararte antes de ir</div>`:""}
         <div class="ds" style="margin-top:6px;color:var(--azul);font-weight:650">Abrir ›</div></div>`;
     }).join("")+subMias.map(a=>{
       const w=W(a.wo), p=P(w.prop), u=U(w.unidad), estado=a.estadoTrabajo||"Assigned";
@@ -253,6 +254,7 @@ function renderFon(){
           <div class="dh">${esc(p.nombre)}</div><div class="ds">${esc(u.num)} · ${esc(a.concepto)}</div>
           <div class="ds" style="font-size:10px">${esc(fechaSubWO(a)||"Sin fecha")}${a.ubic?` · ${esc(a.ubic)}`:""}</div></div>
           <span class="dtag" style="background:${col}22;color:${col};height:fit-content">${esc(estado)}</span></div>
+        ${(a.fotosRefArr||[]).length?`<div class="ds" style="margin-top:5px;color:var(--azul);font-weight:700">📷 ${(a.fotosRefArr||[]).length} foto(s) de referencia para preparar la visita</div>`:""}
         <div class="ds" style="margin-top:6px;color:var(--azul);font-weight:650">Abrir ›</div></div>`;
     }).join("") : `<div style="text-align:center;padding:40px 14px;color:var(--faint);font-size:11.5px">Sin trabajos asignados</div>`)
     + `<div class="dl">Otras cosas</div>
