@@ -266,12 +266,12 @@ function modalMedio(sol){
         <td style="width:34px"><input type="checkbox" class="adchk" data-lid="${l.id}" checked style="width:16px;height:16px"></td>
         <td><b>${esc(l.concepto)}</b>${(l.cant||1)>1?` <span style="color:var(--faint)">× ${l.cant}</span>`:""}
           ${l.ubic?`<div style="font-size:11.5px;color:var(--faint)">${esc(l.ubic)}</div>`:""}</td>
-        <td class="num mono">${l.precio?money(l.precio*(l.cant||1)):"—"}</td>
+        <td class="num mono">${l.precio?money(l.precio*(l.cant||1)):`<input class="adprecio mono" data-lid="${l.id}" placeholder="Precio manual" style="width:92px">`}</td>
         <td style="text-align:center">${l.precio?`<input type="checkbox" class="adcobra" data-lid="${l.id}" style="width:16px;height:16px">`:"—"}</td></tr>`).join("")}
       <tr><td></td><td style="color:var(--faint)">Total pedido</td><td class="num mono" style="font-weight:750">${money(tot)}</td><td></td></tr>
       </tbody></table></div>`
     :`<div class="note" style="margin-bottom:12px"><b>${esc(pend[0].concepto)}</b>${(pend[0].cant||1)>1?` × ${pend[0].cant}`:""}
-        ${pend[0].precio?` · ${money(pend[0].precio*(pend[0].cant||1))}`:""}${pend[0].ubic?` · ${esc(pend[0].ubic)}`:""}
+        ${pend[0].precio?` · ${money(pend[0].precio*(pend[0].cant||1))}`:` · <input class="adprecio mono" data-lid="${pend[0].id}" placeholder="Precio manual" style="width:120px">`}${pend[0].ubic?` · ${esc(pend[0].ubic)}`:""}
         ${pend[0].precio?`<label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-weight:500">
           <input type="checkbox" class="adcobra" data-lid="${pend[0].id}" style="width:16px;height:16px"> Cobrar esto al cliente (además de pagárselo al técnico)</label>`:""}</div>`}
 

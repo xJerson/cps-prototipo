@@ -203,6 +203,7 @@ const solsDe   = wo => solTodas().filter(s=>s.wo===wo);
 const solPend  = s  => s.lineas.some(l=>l.estado==="Pendiente");
 const solMonto = s  => s.lineas.reduce((t,l)=>t+(l.precio||0)*(l.cant||1),0);
 const solTxt   = s  => s.lineas.map(l=>l.concepto+((l.cant||1)>1?` ×${l.cant}`:"")).join(", ");
+const adicionalCatalogo = nombre => (CAT.adicionalesCatalogo||[]).find(x=>x.nombre===nombre)||null;
 /* Estado de la solicitud vista como un todo: si oficina aprobó unas y rechazó
    otras, no es «aprobada» ni «rechazada» — es parcial, y hay que decirlo. */
 function solEstado(s){

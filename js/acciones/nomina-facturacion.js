@@ -95,6 +95,8 @@ Object.assign(ACC, {
     const s = solTodas().find(z=>z.sol===d.sol), w = s&&W(s.wo);
     if(!s || (s.aprobador && s.aprobador!==S.usuario)){ toast("Aprobación delegada",`Esta solicitud debe aprobarla <b>${esc(s&&s.aprobador||"Thalia")}</b>. Si está fuera de su alcance, asígnala a Gustavo u otra persona antes de decidir.`,"w"); return; }
     const pend = s.lineas.filter(l=>l.estado==="Pendiente");
+    document.querySelectorAll(".adprecio").forEach(e=>{ const l=pend.find(x=>x.id===+e.dataset.lid); if(l){ const p=parseFloat(e.value); if(Number.isFinite(p)&&p>=0){ l.precio=p; l.precioOrigen="manual-aprobado"; } } });
+    if(pend.some(l=>l.precio==null)){ toast("Falta precio","Los trabajos complejos necesitan un precio manual antes de aprobarlos.","r"); return; }
     // Con un solo concepto no hay tildes que leer: se aprueba entero.
     const chks = Array.from(document.querySelectorAll(".adchk"));
     const marc = new Set(chks.filter(c=>c.checked).map(c=>+c.dataset.lid));

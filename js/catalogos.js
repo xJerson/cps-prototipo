@@ -33,8 +33,15 @@ const CAT = {
   ],
   // Catalogo!P — OJO: es otra lista distinta, son conceptos de trabajo extra, no servicios que se venden
   // Los cinco del flujograma del técnico + los de Catalogo!P del Excel
-  adicionales:["Cambio de color","Cambio de brillo (sheen)","Extra prep","Heavy clean","Servicio adicional",
+  adicionales:["Extra clean","Cambio de color","Cambio de brillo (sheen)","Extra prep","Heavy clean","Simple repair","Servicio adicional",
                "Studio","Balcony","Living room (carpet)","Tape","Sheetrock","Masa","Garage","Primer","Textura","Closet exterior","Door","Caulking","Other"],
+  // Adicionales estándar con precio de catálogo. Los conceptos complejos
+  // siguen entrando como "Other" y oficina captura el precio al aprobarlos.
+  adicionalesCatalogo:[
+    {id:"AD1",nombre:"Extra clean",precio:55,pago:30},
+    {id:"AD2",nombre:"Heavy clean",precio:210,pago:105},
+    {id:"AD3",nombre:"Simple repair",precio:75,pago:38}
+  ],
   ubicaciones:["Sala","Comedor","Room","Bano","Closet","Pantry","Exterior","Otro"],   // Catalogo!Q
   // Cómo se clasifica un daño previo. Sale de lo que describió Claudia:
   // «interruptores manchados con pintura», golpes, marcas que ya estaban.

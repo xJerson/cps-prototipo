@@ -167,9 +167,10 @@ Object.assign(ACC, {
     S.reloj+=8;
     // Un solo envío para el técnico; N líneas para el sistema, unidas por `sol`.
     const sol="SOL"+Date.now(), lista=sh.filas.map(f=>f.c).join(", ");
-    sh.filas.forEach(f=>S.adicionales.push({
+    sh.filas.forEach(f=>{ const cat=adicionalCatalogo(f.c); S.adicionales.push({
       id:nid("ad"), sol, wo:w.id, desc:sh.desc.trim(), ubic:sh.ubic,
       concepto:f.c, cant:parseFloat(f.q)||1,
+      precio:cat?cat.precio:null, pago:cat?cat.pago:null, precioOrigen:cat?"catalogo":"manual", catalogoId:cat?cat.id:null,
       estado:"Pendiente", aprob:null, origen:"Técnico",
       // Punto 7 del feedback: antes era una sola foto fija para todo el
       // aviso — ahora cada hallazgo trae la suya propia (f.foto, opcional,
@@ -180,7 +181,7 @@ Object.assign(ACC, {
       // visual por etapas que pidió Claudia.
       fotosRefArr:[], fotosEvidArr:[], hallazgoFoto:f.foto?fotoNueva(f.foto,T(w.tec).nombre):null,
       specs:{}, tec:null, fecha:null,
-      hist:[[hora(),`Creada por el técnico en sitio: ${f.c}`,T(w.tec).nombre]]}));
+      hist:[[hora(),`Creada por el técnico en sitio: ${f.c}${cat?` · precio de catálogo ${money(cat.precio)}`:" · precio manual pendiente"}`,T(w.tec).nombre]]}); });
     /* El técnico sigue con lo que tenía programado — el adicional no frena
        la WO. Lo que sí queda frenado es el pago/factura de ESA WO puntual:
        la excepción en vivo que arma excAuto() ("Adicional en sitio") ya se

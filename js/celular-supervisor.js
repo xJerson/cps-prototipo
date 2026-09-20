@@ -368,6 +368,7 @@ function hojaCel(sh){
      tope se lo puso el Excel, no el trabajo. */
   if(sh.t==="adic"){
     const cs = activos("adicionales");
+    const estandar = new Set((CAT.adicionalesCatalogo||[]).map(x=>x.nombre));
     return `<div class="fscrim" data-a="fSheetNo"><div class="fsheet" data-stop>
     <div class="grab"></div>
     <h4>Necesito aprobación</h4>
@@ -380,7 +381,7 @@ function hojaCel(sh){
     <label>¿Qué hay que hacer?</label>
     <div class="sub" style="margin:-3px 0 7px">Un renglón por concepto. Oficina puede autorizarte uno y el otro no.</div>
     ${sh.filas.map((f,i)=>`<div class="adfila">
-      <select id="paC${i}">${cs.map(c=>`<option ${c===f.c?"selected":""}>${esc(c)}</option>`).join("")}</select>
+      <select id="paC${i}">${cs.map(c=>`<option value="${esc(c)}" ${c===f.c?"selected":""}>${esc(c)}${estandar.has(c)?" · catálogo":" · manual"}</option>`).join("")}</select>
       <button class="adx" data-a="fAdicMenos" data-i="${i}" ${sh.filas.length===1?"disabled":""}>−</button>
       <div class="adnum">
         <label>Cant.<input id="paQ${i}" value="${esc(String(f.q))}" inputmode="numeric"></label>
@@ -391,7 +392,7 @@ function hojaCel(sh){
     </div>`).join("")}
     <button class="db g admas" data-a="fAdicMas">+ Agregar otro concepto</button>
     ${sh.filas.length>1?`<div class="adtot"><span>${sh.filas.length} conceptos</span></div>`:""}
-    <div class="sub" style="margin:-2px 0 4px">Cada renglón tiene su propio botón de foto — ya no es una sola para todo el aviso.</div>
+    <div class="sub" style="margin:-2px 0 4px">Los adicionales estándar traen precio de catálogo. Los trabajos complejos se envían como manuales y oficina define el precio al aprobar.</div>
     <button class="db p" style="margin-top:11px" data-a="fAdicOK" data-id="${sh.wo}">Enviar a oficina</button>
     <button class="db g" data-a="fSheetNo">Cancelar</button>
   </div></div>`;
