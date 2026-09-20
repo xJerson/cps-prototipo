@@ -189,7 +189,8 @@ Object.assign(ACC, {
     w.hist.push([hora(),`Pidió aprobación de un adicional · ${lista}`,T(w.tec).nombre]);
     S.phSheet=null;
     toast("⚠ Adicional enviado a oficina",
-      `${sh.filas.length} concepto(s): ${esc(lista)}. Entró como <b>excepción</b>: WO-${w.id} no se paga ni se factura hasta que Claudia decida — pero podés seguir con lo que sigue programado.`,"w");
+      `${sh.filas.length} concepto(s): ${esc(lista)}. Entró como <b>Approval Request</b>: Thalia recibe primero la decisión; si está fuera de su alcance puede reasignarla a Gustavo u otra persona. La WO no se paga ni factura hasta resolverla — pero podés seguir con lo programado.`,"w");
+    avisar("Thalia","Adicional esperando aprobación",`WO-${w.id} · ${lista}. Revisa el alcance y aprueba o reasigna la solicitud.`,"r");
     render(); },
   fTermine: d => {
     const w=W(+d.id);

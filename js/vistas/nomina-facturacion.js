@@ -41,7 +41,7 @@ function excAuto(){
     out.push(conAsignacion({id:"AUTO-A"+s.sol, tipo:esPlanificada?"Sub-Work Order pendiente":"Adicional en sitio", wo:s.wo, auto:true,
       motivo:`${s.desc} — ${p.length} concepto(s): ${p.map(l=>l.concepto+((l.cant||1)>1?` ×${l.cant}`:"")).join(", ")}`,
       monto:p.reduce((t,l)=>t+(l.precio||0)*(l.cant||1),0),
-      pide:esPlanificada?"Oficina":"Técnico", aprueba:"Claudia", estado:"Pendiente", fecha:"", resol:null}));
+      pide:esPlanificada?"Oficina":"Técnico", aprueba:s.aprobador||"Thalia", estado:"Pendiente", fecha:"", resol:null}));
   });
   // La primera vez que el sistema detecta cada una queda su hora — así se ve
   // desde cuándo está esperando, no solo cuándo se resolvió.
@@ -124,7 +124,7 @@ VIEWS.excepciones = () => {
     ${visibles.map(x=>{ const sla=slaApprovalRequest(x); return `<tr class="${fl("exc:"+x.id)}">
       <td class="mono" style="color:${sla&&sla.nivel==="r"?"var(--rojo)":"var(--faint)"}">${x.creada?esc(x.creada.hora):"—"}${sla?`<div><span class="pill ${sla.nivel}" style="margin-top:3px">${esc(sla.texto)}</span></div>`:""}</td>
       <td class="mono">${x.wo?`<b style="cursor:pointer" data-a="woVer" data-id="${x.wo}">WO-${x.wo}</b>`:"—"}</td>
-      <td>${x.assignedTo?`<b>${esc(x.assignedTo)}</b><div style="font-size:9.5px;color:var(--faint)">${x.assignedBy?`assigned by ${esc(x.assignedBy)} · ${esc(x.assignedAt||"")}`:""}</div>`:'<span class="pill w">Unassigned</span>'}</td>
+      <td>${x.assignedTo?`<b>${esc(x.assignedTo)}</b><div style="font-size:9.5px;color:var(--faint)">${x.assignedBy?`assigned by ${esc(x.assignedBy)} · ${esc(x.assignedAt||"")}`:""}</div>`:'<span class="pill w">Unassigned</span>'}${x.aprueba?`<div style="font-size:9.5px;color:var(--faint);margin-top:2px">approver: ${esc(x.aprueba)}</div>`:""}</td>
       <td><span class="pill ${x.tipo==="Tarifa no encontrada"?"w":x.tipo==="Cierre sin evidencia"?"r":"m"}"><span class="dot"></span>${esc(x.tipo)}</span>
         ${x.auto?'<div style="font-size:9.5px;color:var(--faint);margin-top:2px">detectada por el sistema</div>':""}</td>
       <td style="max-width:340px">${esc(x.motivo)}${historialApproval(x)}</td>

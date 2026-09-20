@@ -152,7 +152,7 @@ let S = {
   adicionales:[], facturas:[], pagos:[], nomina:[], bitacora:[], audSeq:0, avisos:[], campana:false,
   /* Expedientes post-work enviados al cliente: se conserva el token para
      que el enlace pueda abrirse en otra pestaña del mismo origen. */
-  revisionesCliente:[],
+  revisionesCliente:[], aprobadoresSol:{},
   /* Lo que Gustavo manda desde el campo. Hoy va por WhatsApp: llega, pero no se queda.
      A los dos meses, cuando el manager reclama, esas fotos ya no las encuentra nadie. */
   reportes:[

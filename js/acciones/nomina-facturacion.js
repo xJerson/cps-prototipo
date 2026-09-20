@@ -10,6 +10,11 @@ function asignarApprovalRequest(id, quien){
     destino=todas[id] || (todas[id]={});
   }
   const anterior=destino.assignedTo;
+  const solId=String(id).startsWith("AUTO-A")?String(id).slice(6):null;
+  if(solId){
+    (S.aprobadoresSol||(S.aprobadoresSol={}))[solId]=quien;
+    destino.aprueba=quien;
+  }
   const asignacion={assignedTo:quien, assignedBy:S.usuario, assignedAt:hora(), workStatus:"In progress"};
   registrarHistorialApproval(destino,anterior&&anterior!==quien?"Reassigned":"Assigned",
     anterior&&anterior!==quien?`${anterior} → ${quien}`:quien);
@@ -42,7 +47,7 @@ Object.assign(ACC, {
     const usuarios=Object.keys(ROLES);
     modal(`<div class="mh"><h3>Assign Approval Request</h3><p>${esc(x.tipo)}${x.wo?` · WO-${x.wo}`:""}</p></div>
       <div class="mb"><div class="fld"><label>Assigned to</label><select id="excAsignada">${usuarios.map(u=>`<option ${u===x.assignedTo?"selected":""}>${esc(u)}</option>`).join("")}</select></div>
-      <div class="hint">The assignee owns the operational follow-up. The approver remains ${esc(x.aprueba)}.</div></div>
+      <div class="hint">The assigned person owns the approval follow-up. First-line approval defaults to Thalia; Gustavo or another person can take it when it is outside Thalia's scope.</div></div>
       <div class="mf"><button class="btn" data-a="cm">Cancel</button><button class="btn p" data-a="excAsignarGuardar" data-id="${x.id}">Assign</button></div>`);
   },
   excAsignarGuardar: d => { const quien=val("excAsignada"); cm(); asignarApprovalRequest(d.id,quien); },
@@ -87,7 +92,8 @@ Object.assign(ACC, {
        La tienes en <b>Excepciones</b>.`,"w");
     render(); },
   medioOK: d => {
-    const s = solTodas().find(z=>z.sol===d.sol), w = W(s.wo);
+    const s = solTodas().find(z=>z.sol===d.sol), w = s&&W(s.wo);
+    if(!s || (s.aprobador && s.aprobador!==S.usuario)){ toast("Aprobación delegada",`Esta solicitud debe aprobarla <b>${esc(s&&s.aprobador||"Thalia")}</b>. Si está fuera de su alcance, asígnala a Gustavo u otra persona antes de decidir.`,"w"); return; }
     const pend = s.lineas.filter(l=>l.estado==="Pendiente");
     // Con un solo concepto no hay tildes que leer: se aprueba entero.
     const chks = Array.from(document.querySelectorAll(".adchk"));
@@ -146,6 +152,7 @@ Object.assign(ACC, {
     flash("wo:"+w.id);
     const nom = a => a.map(l=>l.concepto).join(", ");
     if(ok.length) w.hist.push([hora(), `Adicional aprobado por ${d.medio.toLowerCase()} · ${nom(ok)}`, S.usuario]);
+    if(ok.length){ (s.lineas||[]).forEach(l=>{ if(l.estado!=="Pendiente") l.aprobador=s.aprobador; }); }
     if(no.length) w.hist.push([hora(), `Adicional NO aprobado · ${nom(no)}`, S.usuario]);
     if(pagoTec>0) w.hist.push([hora(), `Nómina: ${money(pagoTec)} de pago adicional asignado según cada Sub-Work Order`, S.usuario]);
     cm();

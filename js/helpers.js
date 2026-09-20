@@ -192,7 +192,7 @@ function solTodas(){
   const g=[];
   S.adicionales.forEach(a=>{
     let s=g.find(x=>x.sol===a.sol);
-    if(!s) g.push(s={sol:a.sol, wo:a.wo, desc:a.desc, ubic:a.ubic, origen:a.origen, lineas:[]});
+    if(!s) g.push(s={sol:a.sol, wo:a.wo, desc:a.desc, ubic:a.ubic, origen:a.origen, aprobador:(S.aprobadoresSol||{})[a.sol]||"Thalia", lineas:[]});
     s.fotosRef=(s.fotosRef||0)+((a.fotosRefArr||[]).length);
     s.fotosEvid=(s.fotosEvid||0)+((a.fotosEvidArr||[]).length);
     s.lineas.push(a);
@@ -236,7 +236,7 @@ function alertas(){
   S.asistencias.filter(a=>a.puntualidad==="Tarde").forEach(a=>A.push({t:"Llegada tarde",d:`${tecN(a.tec)} llegó ${a.horaReal} a WO-${a.wo} (programada ${a.horaProg})`,q:"Gustavo",n:"w"}));
   S.wos.filter(w=>w.tec && esAgendada(w.estado) && !asisDe(w.id)).forEach(w=>A.push({t:"Sin marcar llegada",d:`WO-${w.id} · ${tecN(w.tec)} no ha marcado llegada (programada ${w.horaProg||"9:00"})`,q:"Thalia",n:"g"}));
   solTodas().filter(solPend).forEach(s=>A.push({t:"Adicional esperando aprobación",
-    d:`WO-${s.wo} · ${s.lineas.filter(l=>l.estado==="Pendiente").length} concepto(s): ${solTxt(s)}`,q:"Claudia",n:"r"}));
+    d:`WO-${s.wo} · ${s.lineas.filter(l=>l.estado==="Pendiente").length} concepto(s): ${solTxt(s)}`,q:s.aprobador||"Thalia",n:"r"}));
   /* Los SLA de Approval Requests se ven también fuera de la bandeja, para que
      una persona no tenga que acordarse de abrirla para enterarse del vencimiento. */
   excPend().forEach(x=>{ const sla=slaApprovalRequest(x); if(sla&&sla.alerta) A.push({
