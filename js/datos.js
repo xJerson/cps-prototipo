@@ -150,6 +150,9 @@ let S = {
     {id:1044,prop:"P1",unidad:"U3",cat:"Clean",serv:"Full clean",tec:"T1",estado:"Scheduled",semana:33,fecha:"2026-08-13",horaProg:"9:00",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",hist:[["8:30","Creada","Claudia"]]}
   ],
   adicionales:[], facturas:[], pagos:[], nomina:[], bitacora:[], audSeq:0, avisos:[], campana:false,
+  /* Expedientes post-work enviados al cliente: se conserva el token para
+     que el enlace pueda abrirse en otra pestaña del mismo origen. */
+  revisionesCliente:[], clienteReviewPublic:null,
   /* Lo que Gustavo manda desde el campo. Hoy va por WhatsApp: llega, pero no se queda.
      A los dos meses, cuando el manager reclama, esas fotos ya no las encuentra nadie. */
   reportes:[

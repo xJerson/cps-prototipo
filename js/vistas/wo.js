@@ -88,7 +88,7 @@ VIEWS.wo = () => {
 
 function fichaWO(id){
   const w=W(id), p=P(w.prop), u=U(w.unidad), t=tarifaWO(w), puedeVerDinero=puedeVerUtilidad();
-  const ads=S.adicionales.filter(a=>a.wo===id), sols=solsDe(id);
+  const ads=S.adicionales.filter(a=>a.wo===id), sols=solsDe(id), rev=revisionClienteDeWO(id);
   const mv=S.movs.filter(m=>m.wo===id);
   return `
   <div class="ph"><div>
@@ -172,6 +172,21 @@ function fichaWO(id){
         <div class="cp">
           ${sols.length?"":`<div style="color:var(--faint);font-size:12px;margin-bottom:8px">Todavía no tiene ninguna Sub-Work Order.</div>`}
           <button class="btn sm p" data-a="subwoNueva" data-id="${w.id}">+ Nueva Sub-Work Order</button>
+        </div></div>
+
+      <div class="card"><div class="chd"><h3>Expediente post-work para el cliente</h3>
+        <span class="s">correo con enlace de revisión y confirmación</span></div>
+        <div class="cp">
+          ${rev?`<div class="note ${rev.estado==="Confirmado"?"v":rev.estado==="Corrección solicitada"?"r":"w"}" style="margin:0 0 9px">
+            <b>${esc(rev.estado)}</b> · ${esc(rev.correo)} · enviado ${esc(rev.enviado||rev.creado)}
+            ${rev.respondido?`<br>Respondió ${esc(rev.respondido.quien||"cliente")} el ${esc(rev.respondido.fecha||"")} ${rev.respondido.nota?`· ${esc(rev.respondido.nota)}`:""}`:""}</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <button class="btn sm" data-a="clienteRevisionVer" data-id="${rev.id}">Abrir enlace</button>
+              ${rev.estado==="Corrección solicitada"?`<button class="btn sm" data-a="clienteRevisionExcepcion" data-id="${rev.id}">Registrar excepción y cerrar</button>`:""}
+              ${rev.estado!=="Confirmado"?`<button class="btn sm" data-a="clienteExpediente" data-id="${w.id}">Enviar nuevamente</button>`:""}
+            </div>`
+          :`<div class="note" style="margin:0 0 9px">Cuando las fotos post-work estén listas, envía al cliente un correo con un enlace para revisar y confirmar.</div>
+            <button class="btn sm p" data-a="clienteExpediente" data-id="${w.id}">Enviar expediente al cliente</button>`}
         </div></div>
 
       ${trazaWO(w)}
@@ -539,6 +554,53 @@ function modalGestionSubWO(id){
     <div class="note">La reasignación afecta la agenda móvil y la nómina de esta Sub-Work Order, no cambia al técnico de la WO principal.</div>
   </div><div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="subwoGestionGuardar" data-id="${a.id}">Guardar</button></div>`);
 }
+
+function modalClienteExpediente(woId){
+  const w=W(woId), p=P(w.prop), c=CLI(p.cliente), cs=contactosDe(w.prop)||[];
+  const mail=(cs[0]&&cs[0].mail)||c.mail||"";
+  const items=solsDe(w.id).flatMap(s=>s.lineas).filter(a=>a.estado==="Aprobado");
+  const post=(w.evidFotos||[]).length+items.reduce((n,a)=>n+(a.fotosEvidArr||[]).length,0);
+  modal(`<div class="mh"><h3>Enviar expediente al cliente</h3><p>WO-${w.id} · ${esc(p.nombre)} · ${esc(U(w.unidad).num)}</p></div>
+  <div class="mb"><div class="note ${post?"v":"w"}" style="margin-bottom:12px"><b>${post} foto(s) post-work.</b>
+    ${post?"El cliente recibirá un enlace para revisar y confirmar la finalización.":"Agrega evidencia final antes de enviar el expediente."}</div>
+    <div class="fld"><label>Correo del cliente <span class="req">*</span></label><input id="crMail" type="email" value="${esc(mail)}" placeholder="manager@cliente.com"></div>
+    <div class="fld"><label>Mensaje</label><textarea id="crMsg" rows="3">Hola, compartimos el expediente post-work de WO-${w.id}. Revisa las fotos y confirma si el trabajo quedó finalizado.</textarea></div>
+    <div class="hint">Se registra el envío y se genera un enlace único. En este prototipo el correo queda simulado en la bandeja de salida.</div>
+  </div><div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="clienteExpedienteEnviar" data-id="${w.id}" ${post?"":"disabled"}>Enviar correo</button></div>`);
+}
+
+function modalClienteRevision(r){
+  if(!r) return;
+  const items=r.items||[];
+  modal(`<div class="mh"><h3>Revisión de finalización</h3><p>${esc(r.propiedad)} · Unidad ${esc(r.unidad)} · WO-${r.wo}</p></div>
+  <div class="mb"><div class="note" style="margin-bottom:12px">${esc(r.mensaje||"Revisa el expediente post-work y confirma la finalización.")}</div>
+    ${items.map(x=>`<div class="dc" style="margin-bottom:9px"><div class="dh">${esc(x.concepto)}</div>${x.ubic?`<div class="ds">Location: ${esc(x.ubic)}</div>`:""}
+      ${x.initial&&x.initial.length?`<div class="ds" style="margin-top:3px">Initial finding</div><div style="display:flex;gap:5px;margin-top:4px">${x.initial.map(f=>`<img src="${f.url}" style="width:64px;height:48px;object-fit:cover;border-radius:6px">`).join("")}</div>`:""}
+      <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px">${(x.post||[]).map(f=>`<img src="${f.url}" style="width:78px;height:58px;object-fit:cover;border-radius:7px">`).join("")||`<span class="ds">Sin foto post-work</span>`}</div></div>`).join("")}
+    ${r.parentPost&&r.parentPost.length?`<div class="dc"><div class="dh">Trabajo principal</div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:7px">${r.parentPost.map(f=>`<img src="${f.url}" style="width:78px;height:58px;object-fit:cover;border-radius:7px">`).join("")}</div></div>`:""}
+    ${r.estado==="Confirmado"?`<div class="note v"><b>Finalización confirmada.</b> ${esc(r.respondido&&r.respondido.fecha||"")}</div>`:
+      r.estado==="Corrección solicitada"?`<div class="note r"><b>Corrección solicitada.</b> ${esc(r.respondido&&r.respondido.nota||"")}</div>`:
+      `<div class="note">Elige una opción. La respuesta queda registrada con fecha y hora.</div>`}
+  </div><div class="mf"><button class="btn" data-a="cm">Cerrar</button>
+    ${r.estado==="Enviado"?`<button class="btn" data-a="clienteCorreccion" data-id="${r.id}">Solicitar corrección</button><button class="btn v" data-a="clienteConfirmar" data-id="${r.id}">Confirmar finalización</button>`:""}</div>`);
+}
+function modalClienteCorreccion(r){
+  modal(`<div class="mh"><h3>Solicitar corrección</h3><p>Describe qué debe revisarse antes de confirmar.</p></div>
+  <div class="mb"><div class="fld"><label>Detalle <span class="req">*</span></label><textarea id="crCorrection" rows="4" placeholder="Qué foto o parte del trabajo necesita corrección…"></textarea></div></div>
+  <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn r" data-a="clienteCorreccionGuardar" data-id="${r.id}">Enviar solicitud</button></div>`);
+}
+
+VIEWS.clienteReview = () => {
+  const r=(S.revisionesCliente||[]).find(x=>x.token===S.clienteReviewPublic);
+  if(!r) return `<div class="card" style="max-width:680px;margin:40px auto"><div class="empty"><div class="b">Enlace no disponible</div>Este expediente ya no está disponible.</div></div>`;
+  const estado=r.estado, items=r.items||[];
+  return `<div class="card" style="max-width:760px;margin:28px auto"><div class="chd"><h2>Expediente post-work</h2><span class="pill ${estado==="Confirmado"?"v":estado==="Corrección solicitada"?"r":"a"}">${esc(estado)}</span></div>
+    <div class="cp"><p style="color:var(--soft)">${esc(r.propiedad)} · Unidad ${esc(r.unidad)} · WO-${r.wo}</p>
+      ${items.map(x=>`<div class="dc" style="margin:10px 0"><div class="dh">${esc(x.concepto)}</div>${x.ubic?`<div class="ds">${esc(x.ubic)}</div>`:""}${x.initial&&x.initial.length?`<div class="ds" style="margin-top:5px">Initial finding</div><div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px">${x.initial.map(f=>`<img src="${f.url}" style="width:80px;height:58px;object-fit:cover;border-radius:6px">`).join("")}</div>`:""}<div class="ds" style="margin-top:7px">Post-work</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:4px">${(x.post||[]).map(f=>`<img src="${f.url}" style="width:120px;height:88px;object-fit:cover;border-radius:8px">`).join("")||`<div class="ds">Sin fotos post-work</div>`}</div></div>`).join("")}
+      ${r.parentPost&&r.parentPost.length?`<div class="dc"><div class="dh">Trabajo principal</div><div style="display:flex;gap:7px;flex-wrap:wrap;margin-top:8px">${r.parentPost.map(f=>`<img src="${f.url}" style="width:120px;height:88px;object-fit:cover;border-radius:8px">`).join("")}</div></div>`:""}
+      ${estado==="Enviado"?`<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px"><button class="btn" data-a="clienteCorreccion" data-id="${r.id}">Solicitar corrección</button><button class="btn v" data-a="clienteConfirmar" data-id="${r.id}">Confirmar finalización</button></div>`:`<div class="note ${estado==="Confirmado"?"v":"r"}" style="margin-top:16px">${estado==="Confirmado"?"Gracias. La finalización quedó confirmada.":"La solicitud de corrección fue enviada a oficina."}</div>`}
+    </div></div>`;
+};
 
 /* Punto 8 del feedback: en vez de mostrar más dinero en el costado de la
    WO, esta sección deja registrar el material con sus datos completos

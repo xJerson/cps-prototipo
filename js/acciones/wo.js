@@ -710,6 +710,39 @@ Object.assign(ACC, {
   subwoNueva: d => modalSubWO(+d.id),
   subwoTipoRef: () => refSubWO(),
   subwoGestionar: d => modalGestionSubWO(+d.id),
+  clienteExpediente: d => modalClienteExpediente(+d.id),
+  clienteExpedienteEnviar: d => {
+    const w=W(+d.id), p=w&&P(w.prop), mail=val("crMail"); if(!w||!mail){ toast("Falta el correo","Indica el correo del cliente para enviar el expediente.","r"); return; }
+    const items=solsDe(w.id).flatMap(s=>s.lineas).filter(a=>a.estado==="Aprobado").map(a=>({
+      concepto:a.concepto, ubic:a.ubic, initial:a.hallazgoFoto?[a.hallazgoFoto]:[], post:(a.fotosEvidArr||[]).slice(), ref:(a.fotosRefArr||[]).slice()
+    }));
+    const parentPost=(w.evidFotos||[]).slice();
+    if(!items.some(x=>x.post.length)||!parentPost.length){ toast("Falta evidencia post-work","Carga al menos una foto final del trabajo principal o de una Sub-WO.","r"); return; }
+    const r={id:"CR"+Date.now(),token:"cps"+Date.now().toString(36)+Math.random().toString(36).slice(2,8),wo:w.id,prop:w.propiedad||w.prop,propiedad:p.nombre,unidad:U(w.unidad).num,correo:mail,mensaje:val("crMsg"),items,parentPost,estado:"Enviado",creado:HOY_SUP,enviado:HOY_SUP,hora:hora(),respondido:null};
+    S.revisionesCliente.unshift(r); guardarRevisionesCliente(); w.validada=false;
+    w.clienteRevisionId=r.id; w.hist.push([hora(),`Expediente post-work enviado a ${mail}`,S.usuario]);
+    cm();
+    toast("✓ Expediente enviado",`Correo registrado para <b>${esc(mail)}</b>.<br><br><span class="mono" style="font-size:11px">${esc(urlRevisionCliente(r))}</span>` ,"v"); render();
+  },
+  clienteRevisionVer: d => { const r=by(S.revisionesCliente,d.id); if(r) modalClienteRevision(r); },
+  clienteConfirmar: d => {
+    const r=by(S.revisionesCliente,d.id); if(!r||r.estado!=="Enviado") return;
+    r.estado="Confirmado"; r.respondido={quien:"Cliente",fecha:HOY_SUP,hora:hora(),nota:"Finalización confirmada"}; guardarRevisionesCliente();
+    const w=W(r.wo); if(w){ w.clienteConfirmado=r.respondido; w.hist.push([hora(),"Cliente confirmó la finalización del expediente post-work","Cliente"]); if(w.estado==="Completed"&&w.evid>0&&ingresoWO(w)!==null&&!subWOsPendientesDeWO(w.id).length) w.validada=true; }
+    toast("✓ Finalización confirmada","La respuesta quedó registrada. Oficina ya puede continuar con el cierre.","v"); if(S.clienteReviewPublic) render(); else { cm(); render(); }
+  },
+  clienteCorreccion: d => { const r=by(S.revisionesCliente,d.id); if(r&&r.estado==="Enviado") modalClienteCorreccion(r); },
+  clienteCorreccionGuardar: d => {
+    const r=by(S.revisionesCliente,d.id), nota=val("crCorrection"); if(!r||!nota){ toast("Falta el detalle","Describe qué debe corregirse.","r"); return; }
+    r.estado="Corrección solicitada"; r.respondido={quien:"Cliente",fecha:HOY_SUP,hora:hora(),nota}; guardarRevisionesCliente();
+    const w=W(r.wo); if(w){ w.clienteCorreccion={fecha:HOY_SUP,hora:hora(),nota}; w.validada=false; w.hist.push([hora(),`Cliente solicitó corrección: ${nota}`,"Cliente"]); avisar("Erika","Cliente solicitó una corrección",`WO-${w.id}: ${nota}`,"r"); }
+    toast("Solicitud enviada","Oficina recibió el detalle de la corrección.","w"); if(S.clienteReviewPublic) render(); else { cm(); render(); }
+  },
+  clienteRevisionExcepcion: d => {
+    const r=by(S.revisionesCliente,d.id), w=r&&W(r.wo); if(!r||!w) return;
+    r.estado="Excepción registrada"; r.respondido={quien:S.usuario,fecha:HOY_SUP,hora:hora(),nota:"Oficina autorizó cerrar sin nueva confirmación"}; w.clienteReviewOverride=true; if(w.estado==="Completed"&&w.evid>0&&ingresoWO(w)!==null&&!subWOsPendientesDeWO(w.id).length) w.validada=true; w.hist.push([hora(),"Oficina registró excepción a la confirmación del cliente",S.usuario]); guardarRevisionesCliente();
+    toast("Excepción registrada","La revisión del cliente queda documentada y oficina puede continuar.","v"); render();
+  },
   subwoGestionGuardar: d => {
     const a=by(S.adicionales,+d.id), w=a&&W(a.wo); if(!a||!w) return;
     const antes=tecSubWO(a), tec=val("sgTec")||null, fecha=val("sgFecha")||null;

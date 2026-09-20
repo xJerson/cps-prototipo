@@ -32,6 +32,15 @@ Object.assign(ACC, {
       toast("📷 Evidencia recibida",`${a.fotosEvidArr.length} foto(s) en esta Sub-WO.`,"v"); render();
     });
   },
+  fSubHallazgo: d => {
+    const a=S.adicionales.find(x=>x.id===+d.id); if(!a) return;
+    capturarFoto(url=>{
+      a.hallazgoFoto=fotoNueva(url,tecN(S.phTec));
+      (a.hist=a.hist||[]).push([hora(),"Initial finding cargado",tecN(S.phTec)]);
+      const w=W(a.wo); if(w) w.hist.push([hora(),`Initial finding agregado a Sub-WO · ${a.concepto}`,tecN(S.phTec)]);
+      toast("📷 Initial finding guardado","La foto quedó separada de la evidencia final.","v"); render();
+    });
+  },
   fSubTerminar: d => {
     const a=S.adicionales.find(x=>x.id===+d.id); if(!a) return;
     if(!(a.fotosEvidArr||[]).length){ toast("🚫 Falta la evidencia","Agrega al menos una foto antes de terminar la Sub-WO.","r"); return; }

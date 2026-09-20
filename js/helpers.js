@@ -151,6 +151,15 @@ const subWOsOperativas = () => S.adicionales.filter(a=>a.origen==="Planificada" 
 const subWOsDeTec = tid => subWOsOperativas().filter(a=>tecSubWO(a)===tid && a.estadoTrabajo!=="Canceled");
 const subWOsPendientesDeWO = wid => subWOsOperativas().filter(a=>a.wo===wid && a.estadoTrabajo!=="Canceled"
   && (a.estadoTrabajo!=="Completed" || !(a.fotosEvidArr||[]).length));
+const revisionClienteDeWO = wid => (S.revisionesCliente||[]).filter(r=>r.wo===wid).slice(-1)[0]||null;
+const clienteRevisionPendienteDeWO = wid => { const r=revisionClienteDeWO(wid); return !!r && ["Enviado","Corrección solicitada"].includes(r.estado); };
+const urlRevisionCliente = r => {
+  const base=location.origin&&location.origin!=="null" ? location.origin+location.pathname : "https://xjerson.github.io/cps-prototipo/";
+  return `${base}?clienteReview=${encodeURIComponent(r.token)}`;
+};
+function guardarRevisionesCliente(){
+  try{ localStorage.setItem("cps_cliente_revisiones",JSON.stringify(S.revisionesCliente||[])); }catch(e){}
+}
 function utilidadWO(w){ const i=ingresoWO(w); if(i===null) return null; return i-(egresoWO(w)||0)-materialWO(w); }
 function stock(prodId){ return S.movs.filter(m=>m.prod===prodId && !m.cliente).reduce((a,m)=>a+(m.tipo==="entrada"?m.cant:-m.cant),0); }
 function stockCliente(prodId,propId){ return S.movs.filter(m=>m.prod===prodId && m.cliente && m.prop===propId).reduce((a,m)=>a+(m.tipo==="entrada"?m.cant:-m.cant),0); }

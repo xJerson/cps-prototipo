@@ -64,11 +64,13 @@ function renderFon(){
           ${a.desc?`<div class="ds" style="margin-top:5px"><b>Notas:</b> ${esc(a.desc)}</div>`:""}
         </div></div>
       ${(a.fotosRefArr||[]).length?`<div class="dc"><div class="dl" style="margin:0 0 6px">Fotos de referencia</div><div style="display:flex;gap:5px;flex-wrap:wrap">${a.fotosRefArr.map(f=>`<img src="${f.url}" style="width:60px;height:45px;object-fit:cover;border-radius:7px">`).join("")}</div></div>`:""}
+      ${a.hallazgoFoto?`<div class="dc"><div class="dl" style="margin:0 0 6px">Initial finding</div><img src="${a.hallazgoFoto.url}" style="width:100px;height:72px;object-fit:cover;border-radius:7px"></div>`:""}
       <div class="dc"><div class="dl" style="margin:0 0 6px">Evidencia (${(a.fotosEvidArr||[]).length})</div>
         ${(a.fotosEvidArr||[]).length?`<div style="display:flex;gap:5px;flex-wrap:wrap">${a.fotosEvidArr.map(f=>`<img src="${f.url}" style="width:60px;height:45px;object-fit:cover;border-radius:7px">`).join("")}</div>`:`<div class="ds">Todavía no hay evidencia.</div>`}
       </div>
       ${estado==="Assigned"?`<button class="db p" data-a="fSubIniciar" data-id="${a.id}">Empezar Sub-WO</button>`:""}
       ${["Assigned","In progress"].includes(estado)?`<button class="db g" data-a="fSubFoto" data-id="${a.id}">📷 Agregar evidencia</button>`:""}
+      ${["Assigned","In progress"].includes(estado)&&!a.hallazgoFoto?`<button class="db g" data-a="fSubHallazgo" data-id="${a.id}">📷 Registrar initial finding</button>`:""}
       ${estado==="In progress"?`<button class="db v" data-a="fSubTerminar" data-id="${a.id}">✓ Terminar Sub-WO</button>`:""}
       ${estado==="Completed"?`<div class="dc" style="text-align:center;background:var(--verde-cl);border-color:transparent"><div class="dh" style="color:var(--verde)">✓ Sub-WO terminada</div><div class="ds">Oficina ya recibió la evidencia.</div></div>`:""}`;
   }

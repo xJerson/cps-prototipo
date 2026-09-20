@@ -3,6 +3,16 @@
 const VIEWS = {};
 const ACC = {};
 function render(){
+  /* Enlace público del cliente: no muestra navegación interna ni exige rol.
+     La respuesta se procesa contra el token del expediente. */
+  if(S.clienteReviewPublic){
+    $("#side").innerHTML="";
+    $("#wkChip").textContent="Revisión del cliente";
+    $("#av").textContent=""; $("#rtag").textContent="Cliente"; $("#usel").innerHTML="";
+    $("#main").innerHTML=(VIEWS.clienteReview||(()=>""))();
+    document.body.classList.remove("po");
+    return;
+  }
   const R = ROLES[S.usuario];
   if(!puede(S.mod)) S.mod = "tablero";
   $("#wkChip").textContent = "Semana "+S.semana+" · 2026";

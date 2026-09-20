@@ -208,7 +208,7 @@ Object.assign(ACC, {
     // Reunión Claudia (feedback prototipo): una excepción ya no frena a todo
     // el mundo — solo a la WO que tiene la excepción. El resto del período
     // se paga igual. Y el período mismo ya no es solo "la semana actual".
-    const todas=S.wos.filter(w=>enPeriodo(w.fecha,S.periodo)&&w.estado==="Completed"&&w.validada&&!w.pagadaTec&&!subWOsPendientesDeWO(w.id).length);
+    const todas=S.wos.filter(w=>enPeriodo(w.fecha,S.periodo)&&w.estado==="Completed"&&w.validada&&!w.pagadaTec&&!subWOsPendientesDeWO(w.id).length&&!clienteRevisionPendienteDeWO(w.id));
     const bloqueadas=todas.filter(w=>woBloqueada(w.id));
     const ws=todas.filter(w=>!woBloqueada(w.id));
     if(!ws.length){ toast("🚫 Nada para pagar",
@@ -276,6 +276,7 @@ Object.assign(ACC, {
     if(!w.evid) falta.push("evidencia del trabajo");
     if(ingresoWO(w)===null) falta.push("tarifa");
     if(subsPend.length) falta.push(`${subsPend.length} Sub-WO sin terminar o sin evidencia`);
+    if(clienteRevisionPendienteDeWO(w.id)) falta.push("confirmación del cliente");
     const faltaBase=!w.evid || ingresoWO(w)===null;
     modal(`<div class="mh"><h3>Validar WO-${w.id}</h3>
       <p>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)} · ${esc(tecN(w.tec))}</p></div>

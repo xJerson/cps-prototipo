@@ -350,7 +350,7 @@ function modalTarifaExc(woId, xid){
 VIEWS.nomina = () => {
   const ws = S.wos.filter(w=>enPeriodo(w.fecha,S.periodo) && w.estado==="Completed");
   const bloqSemana = ws.filter(w=>!w.pagadaTec && woBloqueada(w.id)).length;
-  const pagables = ws.filter(w=>w.validada && !w.pagadaTec && !woBloqueada(w.id) && !subWOsPendientesDeWO(w.id).length).length;
+  const pagables = ws.filter(w=>w.validada && !w.pagadaTec && !woBloqueada(w.id) && !subWOsPendientesDeWO(w.id).length && !clienteRevisionPendienteDeWO(w.id)).length;
   const extrasPeriodo=extrasAprobadosDeWOs(ws);
   const porTec = {};
   ws.forEach(w=>{ if(!w.tec) return; (porTec[w.tec]=porTec[w.tec]||[]).push(w); });
@@ -510,7 +510,7 @@ VIEWS.facturacion = () => {
      Gustavo verifique. Y el touch-up jamas se factura: es costo de la casa.
      Reunión Claudia (feedback prototipo): mismo período que Nómina — antes
      esto mostraba TODO lo listo sin importar la fecha, ahora se puede acotar. */
-  const candidatas = S.wos.filter(w=>enPeriodo(w.fecha,S.periodo) && w.estado==="Completed" && w.supervisada && w.validada && !subWOsPendientesDeWO(w.id).length
+  const candidatas = S.wos.filter(w=>enPeriodo(w.fecha,S.periodo) && w.estado==="Completed" && w.supervisada && w.validada && !subWOsPendientesDeWO(w.id).length && !clienteRevisionPendienteDeWO(w.id)
                                      && !w.facturada && puedeFacturar(w));
   const listas = candidatas.filter(w=>!woBloqueada(w.id));
   const frenadasExc = candidatas.filter(w=>woBloqueada(w.id));

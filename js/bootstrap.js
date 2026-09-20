@@ -80,6 +80,7 @@ const AUD = {
   fTermine:{a:"Cerró el trabajo", m:"Campo"},
   fSubIniciar:{a:"Inició una Sub-Work Order", m:"Campo"},
   fSubFoto:{a:"Agregó evidencia a una Sub-Work Order", m:"Campo"},
+  fSubHallazgo:{a:"Registró un initial finding de una Sub-Work Order", m:"Campo"},
   fSubTerminar:{a:"Cerró una Sub-Work Order", m:"Campo"},
   fPermisoOK:{a:"Solicitó permiso", m:"Campo"},
   medioOK:{a:"Decidió un adicional", m:"Excepciones"},
@@ -222,6 +223,13 @@ document.addEventListener("keydown", e=>{ if(e.key==="Escape") cm(); });
    directo en su celular, a pantalla completa, sin el dashboard alrededor —
    y desde ahí el navegador ofrece instalarla como PWA. Mismo archivo,
    mismo estado, nada duplicado. ══ */
+try{
+  const guardadas=JSON.parse(localStorage.getItem("cps_cliente_revisiones")||"[]");
+  if(Array.isArray(guardadas) && guardadas.length) S.revisionesCliente=guardadas;
+}catch(e){}
+const clienteReviewToken=new URLSearchParams(location.search).get("clienteReview");
+if(clienteReviewToken) S.clienteReviewPublic=clienteReviewToken;
+
 if(new URLSearchParams(location.search).get("gustavo")==="1"){
   document.body.classList.add("gmode");
   ACC.verGustavoCel();
