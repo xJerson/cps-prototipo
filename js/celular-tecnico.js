@@ -72,7 +72,7 @@ function renderFon(){
       ${["Assigned","In progress"].includes(estado)?`<button class="db g" data-a="fSubFoto" data-id="${a.id}">📷 Agregar evidencia</button>`:""}
       ${["Assigned","In progress"].includes(estado)&&!a.hallazgoFoto?`<button class="db g" data-a="fSubHallazgo" data-id="${a.id}">📷 Registrar initial finding</button>`:""}
       ${estado==="In progress"?`<button class="db v" data-a="fSubTerminar" data-id="${a.id}">✓ Terminar Sub-WO</button>`:""}
-      ${estado==="Completed"?`<div class="dc" style="text-align:center;background:var(--verde-cl);border-color:transparent"><div class="dh" style="color:var(--verde)">✓ Sub-WO terminada</div><div class="ds">Oficina ya recibió la evidencia.</div></div>`:""}`;
+      ${estado==="Completed"?`<div class="dc" style="text-align:center;background:var(--verde-cl);border-color:transparent"><div class="dh" style="color:var(--verde)">✓ Sub-WO terminada${a.parcial?" parcialmente":""}</div><div class="ds">${a.parcial?`${a.cantRealizada||0}/${a.cant||1} realizada(s); ${a.cantPendiente||0} pendiente(s) para reasignar.`:"Oficina ya recibió la evidencia."}</div></div>`:""}`;
   }
   else if(S.phView==="wo" && S.phWO){
     const w=W(S.phWO), p=P(w.prop), u=U(w.unidad);

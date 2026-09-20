@@ -237,8 +237,8 @@ Object.assign(ACC, {
     const conceptosBase=ws.map(w=>({tipo:"WO",wo:w.id,subwo:null,unidad:U(w.unidad).num,
       descripcion:w.serv,cantidad:w.cant||1,importe:ingresoBaseWO(w)||0,evidencia:w.evid||0}));
     const conceptoExtra=a=>({tipo:"Sub-WO",wo:a.wo,subwo:a.id,unidad:U(W(a.wo).unidad).num,
-      descripcion:a.concepto+(a.ubic?` · ${a.ubic}`:""),cantidad:a.cant||1,
-      importe:a.montoFactura!=null?a.montoFactura:(a.precio||0)*(a.cant||1),evidencia:(a.fotosEvidArr||[]).length});
+      descripcion:a.concepto+(a.ubic?` · ${a.ubic}`:""),cantidad:cantSubWO(a),
+      importe:a.montoFactura!=null?a.montoFactura*(cantSubWO(a)/(a.cant||1)):(a.precio||0)*cantSubWO(a),evidencia:(a.fotosEvidArr||[]).length});
     const creadas=[];
     const crearFactura=(conceptos,separada=false)=>{
       const num="INV-2026-"+String(1040+(++ID.f-600)).padStart(4,"0"), id="F"+ID.f;

@@ -150,7 +150,8 @@ const fechaSubWO = a => a.fecha || (W(a.wo)&&W(a.wo).fecha) || "";
 const subWOsOperativas = () => S.adicionales.filter(a=>a.origen==="Planificada" && a.estado==="Aprobado");
 const subWOsDeTec = tid => subWOsOperativas().filter(a=>tecSubWO(a)===tid && a.estadoTrabajo!=="Canceled");
 const subWOsPendientesDeWO = wid => subWOsOperativas().filter(a=>a.wo===wid && a.estadoTrabajo!=="Canceled"
-  && (a.estadoTrabajo!=="Completed" || !(a.fotosEvidArr||[]).length));
+  && (a.cantPendiente>0 || a.estadoTrabajo!=="Completed" || !(a.fotosEvidArr||[]).length));
+const cantSubWO = a => a && a.cantRealizada>0 ? a.cantRealizada : (a&&a.cant||1);
 const revisionClienteDeWO = wid => (S.revisionesCliente||[]).filter(r=>r.wo===wid).slice(-1)[0]||null;
 const clienteRevisionPendienteDeWO = wid => { const r=revisionClienteDeWO(wid); return !!r && ["Enviado","Corrección solicitada"].includes(r.estado); };
 function guardarRevisionesCliente(){

@@ -162,7 +162,8 @@ function fichaWO(id){
                 ${Object.entries(a.specs||{}).map(([k,v])=>`<span class="pill">${esc(k)}: ${esc(v)}</span>`).join("")}
                 ${a.origen==="Planificada"?`<span class="pill a">Técnico: ${a.tec?esc(tecN(a.tec)):"hereda de WO-"+a.wo}</span>`:""}
                 ${a.origen==="Planificada"?`<span class="pill a">Fecha: ${esc(fechaSubWO(a)||"sin programar")}</span>`:""}
-                ${a.estadoTrabajo?`<span class="pill ${a.estadoTrabajo==="Completed"?"v":"w"}">Operación: ${esc(a.estadoTrabajo)}</span>`:""}
+                ${a.estadoTrabajo?`<span class="pill ${a.estadoTrabajo==="Completed"?"v":"w"}">Operación: ${esc(a.estadoTrabajo)}${a.parcial?` · ${a.cantRealizada||0}/${a.cant||1}`:""}</span>`:""}
+                ${a.cantPendiente>0?`<span class="pill w">${a.cantPendiente} pendiente(s) · reasignable</span>`:""}
                 ${a.facturable?`<span class="pill v">Factura: ${a.facturaSeparada?"separada":"concepto adicional"}</span>`:""}
                 ${a.aprob&&a.aprob.foto?`<a href="${a.aprob.foto}" target="_blank" style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--azul)">
                   <img src="${a.aprob.foto}" style="width:28px;height:28px;object-fit:cover;border-radius:5px">Comprobante de la aprobación</a>`:""}

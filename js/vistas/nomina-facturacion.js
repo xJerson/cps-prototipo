@@ -550,7 +550,7 @@ VIEWS.facturacion = () => {
         ${S.adicionales.filter(a=>a.wo===w.id&&a.estado==="Aprobado"&&a.facturable&&!a.facturada).map(a=>`<tr style="background:var(--azul-cl)">
           <td class="mono">↳ Sub-WO</td><td>${esc(U(w.unidad).num)}</td><td>${esc(a.concepto)}${a.ubic?` · ${esc(a.ubic)}`:""}</td>
           <td>${esc(tecN(tecSubWO(a)))}</td><td><span class="pill ${a.fotosEvidArr&&a.fotosEvidArr.length?"v":"w"}">${(a.fotosEvidArr||[]).length} foto(s)</span></td>
-          <td class="num mono">${money(a.montoFactura!=null?a.montoFactura:(a.precio||0)*(a.cant||1))}<div style="font-size:10px;color:var(--faint)">${a.facturaSeparada?"factura separada":"misma factura"}</div></td></tr>`).join("")}`).join("")}
+          <td class="num mono">${money(a.montoFactura!=null?a.montoFactura*(cantSubWO(a)/(a.cant||1)):(a.precio||0)*cantSubWO(a))}<div style="font-size:10px;color:var(--faint)">${a.facturaSeparada?"factura separada":"misma factura"}</div></td></tr>`).join("")}`).join("")}
       </tbody></table>
       ${sinT?`<div class="cp" style="border-top:1px solid var(--line)"><div class="note w" style="margin:0"><b>${sinT} línea sin tarifa.</b> Resuélvela en Approval Requests antes de facturar.</div></div>`:""}
       <div class="mf" style="border-top:1px solid var(--line)">

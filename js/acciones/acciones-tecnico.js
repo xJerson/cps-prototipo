@@ -44,18 +44,31 @@ Object.assign(ACC, {
   fSubTerminar: d => {
     const a=S.adicionales.find(x=>x.id===+d.id); if(!a) return;
     if(!(a.fotosEvidArr||[]).length){ toast("🚫 Falta la evidencia","Agrega al menos una foto antes de terminar la Sub-WO.","r"); return; }
-    a.estadoTrabajo="Completed";
-    (a.hist=a.hist||[]).push([hora(),"Sub-WO terminada",tecN(S.phTec)]);
-    const w=W(a.wo);
-    if(w){
-      w.hist.push([hora(),`Sub-WO terminada · ${a.concepto} · ${(a.fotosEvidArr||[]).length} evidencia(s)`,tecN(S.phTec)]);
-      const pendientes=subWOsOperativas().some(x=>x.wo===w.id && x.estadoTrabajo!=="Canceled" && (x.estadoTrabajo!=="Completed" || !(x.fotosEvidArr||[]).length));
-      if(w.estado==="Completed" && w.evid>0 && ingresoWO(w)!==null && !pendientes){
-        w.validada=true; w.hist.push([hora(),"Validada automáticamente: WO y Sub-WO completas","Sistema"]);
-      }
+    const total=Math.max(1,parseFloat(a.cant)||1), hechas=Math.min(total,parseFloat(a.cantRealizada)||0);
+    modal(`<div class="mh"><h3>Registrar avance de Sub-WO</h3><p>${esc(a.concepto)} · WO-${a.wo}</p></div>
+      <div class="mb"><div class="note v">Marca cuántas unidades/reparaciones terminó este técnico. Las restantes se separarán para reasignarlas.</div>
+      <div class="fld"><label>Terminadas por este técnico <span class="req">*</span></label><input id="subHechas" type="number" min="1" max="${total}" step="1" value="${hechas||total}"></div>
+      <div class="hint">Total de la Sub-WO: ${total}. La evidencia cargada queda asociada al técnico actual.</div></div>
+      <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn v" data-a="fSubTerminarGuardar" data-id="${a.id}">Guardar y terminar</button></div>`);
+  },
+  fSubTerminarGuardar: d => {
+    const a=S.adicionales.find(x=>x.id===+d.id); if(!a) return;
+    const total=Math.max(1,parseFloat(a.cant)||1), hechas=parseFloat(val("subHechas"));
+    if(!Number.isFinite(hechas)||hechas<1||hechas>total){ toast("Cantidad inválida",`Indica un número entre 1 y ${total}.`,"r"); return; }
+    const resto=total-hechas, tecnico=tecN(S.phTec), w=W(a.wo);
+    a.cantRealizada=hechas; a.cantPendiente=resto; a.estadoTrabajo="Completed"; a.parcial=resto>0;
+    (a.hist=a.hist||[]).push([hora(),resto?`Avance registrado: ${hechas}/${total}; ${resto} pendiente(s)`:"Sub-WO terminada",tecnico]);
+    if(resto>0){
+      const nueva={...a,id:nid("ad"),cant:resto,cantRealizada:0,cantPendiente:resto,parcial:false,tec:null,fecha:null,estadoTrabajo:"Unassigned",fotosEvidArr:[],hallazgoFoto:null,facturada:false,hist:[[hora(),`Resto reasignable creado desde Sub-WO #${a.id}`,"Sistema"]],reasignadaDe:a.id};
+      S.adicionales.push(nueva);
     }
-    avisar("Erika","Sub-WO terminada",`WO-${a.wo} · ${a.concepto} quedó completa con evidencia.`,"v");
-    toast("✓ Sub-WO terminada","Oficina ya recibió el cierre y la evidencia.","v"); render();
+    if(w){
+      w.hist.push([hora(),resto?`Sub-WO parcialmente terminada · ${a.concepto} · ${hechas}/${total} por ${tecnico}; ${resto} reasignable(s)`: `Sub-WO terminada · ${a.concepto} · ${hechas} por ${tecnico}`,tecnico]);
+      const pendientes=subWOsOperativas().some(x=>x.wo===w.id && x.estadoTrabajo!=="Canceled" && (x.cantPendiente>0 || x.estadoTrabajo!=="Completed" || !(x.fotosEvidArr||[]).length));
+      if(w.estado==="Completed" && w.evid>0 && ingresoWO(w)!==null && !pendientes){ w.validada=true; w.hist.push([hora(),"Validada automáticamente: WO y Sub-WO completas","Sistema"]); }
+    }
+    cm(); avisar("Erika",resto?"Sub-WO parcialmente terminada":"Sub-WO terminada",`WO-${a.wo} · ${a.concepto}: ${hechas}/${total} realizado(s) por ${tecnico}${resto?`, ${resto} reasignable(s)`:""}.`,"v");
+    toast(resto?"✓ Avance guardado":"✓ Sub-WO terminada",resto?`${resto} pendiente(s) quedaron disponibles para reasignar a otro técnico.`:"Oficina ya recibió el cierre y la evidencia.","v"); render();
   },
   fLlegue: d => {
     const w=W(+d.id), p=P(w.prop);
@@ -194,7 +207,7 @@ Object.assign(ACC, {
     w.hist.push([hora(),`Terminó · ${w.evid} evidencia(s)${w.horas?` · ${w.horas} h en sitio`:""}`,T(w.tec).nombre]);
     // Hoy Erika revisa a mano porque los reportes le llegan en papel.
     // Aquí el dato ya está: si está completo, se valida solo. A ella solo le llega lo que falla.
-    const subsPend=subWOsOperativas().some(a=>a.wo===w.id && a.estadoTrabajo!=="Canceled" && (a.estadoTrabajo!=="Completed" || !(a.fotosEvidArr||[]).length));
+    const subsPend=subWOsOperativas().some(a=>a.wo===w.id && a.estadoTrabajo!=="Canceled" && (a.cantPendiente>0 || a.estadoTrabajo!=="Completed" || !(a.fotosEvidArr||[]).length));
     if(w.evid>0 && ingresoWO(w)!==null && !subsPend){
       w.validada=true;
       w.hist.push([hora(),"Validada automáticamente: evidencia y tarifa completas","Sistema"]);
