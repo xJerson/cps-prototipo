@@ -47,12 +47,14 @@ Object.assign(ACC, {
     document.getElementById("wUniTxt").value = u.num;
     document.getElementById("wUni").value = u.id;
     document.getElementById("wUniSug").innerHTML = "";
+    document.getElementById("wUniNueva").innerHTML = "";
     refWO();
   },
   woUniElegirNueva: () => {
     const q = val("wUniTxt");
     document.getElementById("wUni").value = "__new__";
     document.getElementById("wUniSug").innerHTML = "";
+    document.getElementById("wUniNueva").innerHTML = "";
     refWO();
     const n=document.getElementById("wUniNum"); if(n) n.value = q;
   },
@@ -68,54 +70,70 @@ Object.assign(ACC, {
     modalWO(w); },
   woGuardar: d => {
     const pid=val("wProp"), cat=val("wCat"), serv=val("wServ"), ubic=val("wUbic"), fecha=val("wFecha");
-    const horaProg=val("wHora"), cantN=parseFloat(val("wCant"));
+    const horaProg=val("wHora"), cantN=parseFloat(val("wCant")), po=val("wPO"), notasTec=val("wNotas");
     let uid=val("wUni");
     const esNueva = uid==="__new__";
     const faltan=[];
     if(!pid) faltan.push("propiedad");
     const tipoNueva = val("wUniTipo")||"Residencial";
+    const requiereBedrooms = tipoNueva==="Residencial" && !SIN_BEDROOMS.includes(cat);
     if(esNueva){
       if(!val("wUniNum")) faltan.push("número de unidad");
-      if(tipoNueva==="Residencial" && !SIN_BEDROOMS.includes(cat) && val("wUniBedrooms")==="") faltan.push("bedrooms de la unidad");
+      if(requiereBedrooms && val("wUniBedrooms")==="") faltan.push("bedrooms de la unidad");
     } else if(!uid) faltan.push("unidad");
     const u = esNueva ? null : by(S.unidades,uid);
-    if(!esNueva && u && !u.rooms) faltan.push("número de cuartos de la unidad");
+    if(!esNueva && u && requiereBedrooms && val("wUniBedrooms")==="") faltan.push("bedrooms de la unidad");
     if(!cat) faltan.push("tipo de servicio");
     if(!serv) faltan.push("servicio");
     if(!(cantN>0)) faltan.push("cantidad");
     if(EXIGE_UBIC.includes(cat) && !ubic) faltan.push("ubicación dentro de la unidad");
     if(faltan.length){
-      marcaFalta(["wProp","wUni","wCat","wServ","wCant"].concat(esNueva?["wUniNum","wUniBedrooms"]:[]).concat(EXIGE_UBIC.includes(cat)?["wUbic"]:[]));
+      marcaFalta(["wProp","wUni","wCat","wServ","wCant"].concat(esNueva?["wUniNum"]:[]).concat(requiereBedrooms?["wUniBedrooms"]:[]).concat(EXIGE_UBIC.includes(cat)?["wUbic"]:[]));
       toast("🚫 No se puede guardar", `Falta: <b>${faltan.join(", ")}</b>.${EXIGE_UBIC.includes(cat)&&!ubic?" Una reparación sin ubicación hace que el técnico la busque por toda la unidad.":""}`,"r");
       return;
     }
+    /* Se captura antes de abrir una posible confirmación de duplicado: ese
+       modal reemplaza el formulario, pero los datos de unidad no deben perderse. */
+    const bedTxt=val("wUniBedrooms");
+    const bedrooms=(tipoNueva==="Residencial"&&bedTxt!=="")?parseInt(bedTxt)||0:null;
+    const datosUnidad = {
+      tipo:tipoNueva, bedrooms,
+      bathrooms:val("wUniBathrooms")!==""?parseInt(val("wUniBathrooms"))||0:null,
+      ocupacion:val("wUniOcup")||"Occupied",
+      rooms:tipoNueva==="Residencial"&&bedTxt===""?null:roomsDesde(tipoNueva,bedrooms),
+      pisos:parseInt(val("wUniPisos"))||null
+    };
     const yo = d&&d.id ? W(+d.id) : null;
     S._woPendienteGuardar = null;   // cualquier confirmación pendiente de un intento anterior queda descartada
 
     const procederGuardado = () => {
+      if(yo && !woEditable(yo)){ toast("🚫 Ya no se puede corregir","Se facturó o se pagó mientras tenías el formulario abierto.","r"); return; }
       /* "+ Nueva unidad…" no manda a otra pantalla a crearla antes — se
          registra en S.unidades en este mismo guardado (reunión 2026-09-09:
          la Unidad no es un bloqueo, se va llenando sola con el uso). */
       let uNueva = u;
+      let cambiosUnidad=[];
       if(esNueva){
         const bld=val("wUniBld"), uNumR=val("wUniNum");
-        // Reunión Claudia: para Repair/Resurface/etc. no se pidió Bedrooms —
-        // la unidad queda "sin definir" en eso hasta que alguien la complete
-        // desde una WO que sí lo necesite (Clean, Paint...).
-        const sinBed = SIN_BEDROOMS.includes(cat);
-        const bedrooms=(tipoNueva==="Residencial"&&!sinBed)?parseInt(val("wUniBedrooms"))||0:null;
         uNueva = {id:"U"+nid("u"), prop:pid, building:bld, unidadNum:uNumR, num:uNumComp(bld,uNumR),
-          tipo:tipoNueva, bedrooms, bathrooms:parseInt(val("wUniBathrooms"))||null,
-          rooms:sinBed?null:roomsDesde(tipoNueva,bedrooms), pisos:parseInt(val("wUniPisos"))||null, detalle:[]};
+          ...datosUnidad, detalle:[]};
         S.unidades.push(uNueva); flash("uni:"+uNueva.id);
         uid = uNueva.id;
+      } else if(uNueva){
+        cambiosUnidad=diffCampos(uNueva,datosUnidad);
+        if(cambiosUnidad.length){
+          Object.assign(uNueva,datosUnidad); flash("uni:"+uNueva.id);
+          S.bitacora.unshift({n:++S.audSeq,fecha:"2026-08-11",hora:hora(),usuario:S.usuario,rol:ROLES[S.usuario].r,
+            accion:"Completó datos de unidad desde Work Order",modulo:"Propiedades",ref:P(pid).nombre+" · unidad "+uNueva.num,cambios:cambiosUnidad});
+        }
       }
       if(yo){
-        if(!woEditable(yo)){ toast("🚫 Ya no se puede corregir","Se facturó o se pagó mientras tenías el formulario abierto.","r"); return; }
-        return guardarEdicion(yo,
-          {prop:pid, unidad:uid, cat, serv, ubic, fecha, semana:fecha?semanaDe(fecha):null,
-           horaProg, cant:cantN,
-           po:val("wPO"), notasTec:val("wNotas")},
+        const datosWO={prop:pid, unidad:uid, cat, serv, ubic, fecha, semana:fecha?semanaDe(fecha):null,
+          horaProg, cant:cantN, po, notasTec};
+        if(!diffCampos(yo,datosWO).length && cambiosUnidad.length){
+          cm(); toast("✓ Unidad actualizada",`Los datos de <b>${esc(uNueva.num)}</b> quedaron guardados para las próximas Work Orders.`,"v"); render(); return;
+        }
+        return guardarEdicion(yo, datosWO,
           "Work Orders", "WO-"+yo.id,
           (o,cambios)=>{
             flash("wo:"+o.id);
@@ -128,8 +146,8 @@ Object.assign(ACC, {
       const id = nid("w");
       flash("wo:"+id);
       const nueva = {id, prop:pid, unidad:uid, cat, serv, ubic, tec:null, estado:"Scheduled", horaProg, cant:cantN,
-        semana:fecha?semanaDe(fecha):null, fecha, po:val("wPO"), asistencia:false, evid:0, mats:[],
-        notas:"", notasTec:val("wNotas"), hist:[[hora(),"Creada",S.usuario]]};
+        semana:fecha?semanaDe(fecha):null, fecha, po, asistencia:false, evid:0, mats:[],
+        notas:"", notasTec, hist:[[hora(),"Creada",S.usuario]]};
       S.wos.push(nueva);
       /* Si esta WO nace de "Programar" en una Solicitud, recién AHORA que de
          verdad se guardó algo se marca la solicitud "Programada" y se liga
@@ -691,6 +709,24 @@ Object.assign(ACC, {
 
   subwoNueva: d => modalSubWO(+d.id),
   subwoTipoRef: () => refSubWO(),
+  subwoGestionar: d => modalGestionSubWO(+d.id),
+  subwoGestionGuardar: d => {
+    const a=by(S.adicionales,+d.id), w=a&&W(a.wo); if(!a||!w) return;
+    const antes=tecSubWO(a), tec=val("sgTec")||null, fecha=val("sgFecha")||null;
+    let estado=a.estado==="Pendiente"?"Pending approval":val("sgEstado");
+    if(estado==="Unassigned" && (tec||w.tec)) estado="Assigned";
+    if(estado==="Completed" && !(a.fotosEvidArr||[]).length){
+      toast("🚫 Falta la evidencia","No se puede completar una Sub-Work Order sin al menos una foto.","r"); return;
+    }
+    a.tec=tec; a.fecha=fecha; a.estadoTrabajo=estado; a.facturaSeparada=val("sgFactura")==="separada";
+    if(estado!=="Canceled" && estado!=="Completed") w.validada=false;
+    if(w.estado==="Completed" && w.evid>0 && ingresoWO(w)!==null && !subWOsPendientesDeWO(w.id).length) w.validada=true;
+    const despues=tecSubWO(a);
+    a.hist.push([hora(),`Gestión actualizada · ${estado} · ${despues?tecN(despues):"sin técnico"}`,S.usuario]);
+    w.hist.push([hora(),`Sub-Work Order ${a.concepto}: ${estado}${despues?" · "+tecN(despues):""}`,S.usuario]);
+    if(despues&&despues!==antes) avisar(tecN(despues),"Nueva Sub-Work Order",`WO-${w.id} · ${a.concepto} · ${fechaSubWO(a)||"sin fecha"}`,"a");
+    cm(); flash("wo:"+w.id); toast("✓ Sub-Work Order actualizada","La agenda y la nómina usarán esta asignación.","v"); render();
+  },
   subwoGuardar: d => {
     if(marcaFalta(["swTipo","swUbic","swCant"])){ toast("Faltan datos","Elegí el tipo, la ubicación y la cantidad.","r"); return; }
     const w=W(+val("swWo"));
@@ -711,9 +747,11 @@ Object.assign(ACC, {
       cant, precio, estado: monto>0 ? "Pendiente" : "Aprobado",
       aprob: monto>0 ? null : {medio:"Directo",quien:S.usuario,fecha:hora()},
       origen:"Planificada", fotosRefArr:[], fotosEvidArr:[], specs,
-      tec:tecOverride, fecha:fechaOverride,
+      tec:tecOverride, fecha:fechaOverride, facturaSeparada:val("swFacturaModo")==="separada", facturable:false,
+      estadoTrabajo:monto>0?"Pending approval":(tecOverride||w.tec?"Assigned":"Unassigned"),
       hist:[[hora(), `Sub-Work Order planificada creada: ${tipo}`, S.usuario]]};
     S.adicionales.push(na);
+    if(na.estado==="Aprobado") w.validada=false;
     w.hist.push([hora(), `Sub-Work Order planificada: ${tipo}`, S.usuario]);
     cm();
     toast("✓ Sub-Work Order creada",

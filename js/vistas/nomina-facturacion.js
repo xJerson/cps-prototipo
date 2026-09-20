@@ -350,9 +350,11 @@ function modalTarifaExc(woId, xid){
 VIEWS.nomina = () => {
   const ws = S.wos.filter(w=>enPeriodo(w.fecha,S.periodo) && w.estado==="Completed");
   const bloqSemana = ws.filter(w=>!w.pagadaTec && woBloqueada(w.id)).length;
-  const pagables = ws.filter(w=>w.validada && !w.pagadaTec && !woBloqueada(w.id)).length;
+  const pagables = ws.filter(w=>w.validada && !w.pagadaTec && !woBloqueada(w.id) && !subWOsPendientesDeWO(w.id).length).length;
+  const extrasPeriodo=extrasAprobadosDeWOs(ws);
   const porTec = {};
   ws.forEach(w=>{ if(!w.tec) return; (porTec[w.tec]=porTec[w.tec]||[]).push(w); });
+  extrasPeriodo.forEach(x=>{ const tid=tecExtra(x); if(tid && !porTec[tid]) porTec[tid]=[]; });
   // Ya no hay "la nómina de la semana" única: se está pagada cuando no queda
   // nada pagable en el período que se está mirando.
   const yaPag = ws.length>0 && pagables===0 && bloqSemana===0;
@@ -417,10 +419,10 @@ VIEWS.nomina = () => {
     // Punto 10: "se le paga" tiene que incluir los adicionales de Sub-Work
     // Order ya aprobados (S.excepciones) — si no, este número no coincide
     // con el comprobante real que se le da al técnico.
-    const extras=extrasAprobadosDeWOs(arr);
+    const extras=extrasPeriodo.filter(x=>tecExtra(x)===tid);
     const egr=egrBase+extras.reduce((a,x)=>a+(x.monto||0),0);
     return `<div class="card"><div class="chd"><h3>${esc(tecN(tid))}</h3>
-      <span class="s">${arr.length} trabajos</span>
+      <span class="s">${arr.length} WO${extras.length?` + ${extras.length} Sub-WO`:""}</span>
       <span class="r"><span style="font-size:11px;color:var(--faint)">se le paga</span>
         <span class="mono" style="font-size:16px;font-weight:750">${money(egr)}</span>
         <button class="btn sm" data-a="comprobante" data-tec="${tid}">Ver comprobante</button></span></div>
@@ -477,12 +479,13 @@ VIEWS.nomina = () => {
              se le puede cobrar de vuelta, y el total no puede salir negativo.
              Los descuentos por devolución se llevan por semana — fuera del
              período «Semana» se muestra el bruto, sin netear. */
-        const bruto=ws.reduce((a,w)=>a+(egresoWO(w)||0),0);
+        const bruto=ws.reduce((a,w)=>a+(egresoWO(w)||0),0)+extrasPeriodo.reduce((a,x)=>a+(x.monto||0),0);
         if(S.periodo.tipo!=="semana") return `<div class="mono" style="font-size:24px;font-weight:750">${money(bruto)}</div>`;
-        const tecs=[...new Set(ws.map(w=>w.tec).filter(Boolean))];
+        const tecs=[...new Set(ws.map(w=>w.tec).filter(Boolean).concat(extrasPeriodo.map(tecExtra).filter(Boolean)))];
         let neto=0, aplicado=0;
         tecs.forEach(t=>{
-          const b=ws.filter(w=>w.tec===t).reduce((a,w)=>a+(egresoWO(w)||0),0);
+          const b=ws.filter(w=>w.tec===t).reduce((a,w)=>a+(egresoWO(w)||0),0)
+            + extrasPeriodo.filter(x=>tecExtra(x)===t).reduce((a,x)=>a+(x.monto||0),0);
           const dd=totalDesc(t,S.periodo.sem);
           neto += Math.max(0, b-dd);
           aplicado += Math.min(b, dd);
@@ -507,7 +510,7 @@ VIEWS.facturacion = () => {
      Gustavo verifique. Y el touch-up jamas se factura: es costo de la casa.
      Reunión Claudia (feedback prototipo): mismo período que Nómina — antes
      esto mostraba TODO lo listo sin importar la fecha, ahora se puede acotar. */
-  const candidatas = S.wos.filter(w=>enPeriodo(w.fecha,S.periodo) && w.estado==="Completed" && w.supervisada && w.validada
+  const candidatas = S.wos.filter(w=>enPeriodo(w.fecha,S.periodo) && w.estado==="Completed" && w.supervisada && w.validada && !subWOsPendientesDeWO(w.id).length
                                      && !w.facturada && puedeFacturar(w));
   const listas = candidatas.filter(w=>!woBloqueada(w.id));
   const frenadasExc = candidatas.filter(w=>woBloqueada(w.id));
@@ -543,7 +546,11 @@ VIEWS.facturacion = () => {
       <tbody>${arr.map(w=>`<tr><td class="mono" style="font-weight:700">WO-${w.id}</td><td>${esc(U(w.unidad).num)}</td>
         <td>${esc(w.serv)}</td><td>${w.tec?esc(tecN(w.tec)):"—"}</td>
         <td>${w.evid?`<span class="pill v">${w.evid} foto(s)</span>`:'<span class="pill r"><span class="dot"></span>sin evidencia</span>'}</td>
-        <td class="num mono">${ingresoWO(w)!==null?money(ingresoWO(w)):'<span class="pill w">NA</span>'}</td></tr>`).join("")}
+        <td class="num mono">${ingresoBaseWO(w)!==null?money(ingresoBaseWO(w)):'<span class="pill w">NA</span>'}</td></tr>
+        ${S.adicionales.filter(a=>a.wo===w.id&&a.estado==="Aprobado"&&a.facturable&&!a.facturada).map(a=>`<tr style="background:var(--azul-cl)">
+          <td class="mono">↳ Sub-WO</td><td>${esc(U(w.unidad).num)}</td><td>${esc(a.concepto)}${a.ubic?` · ${esc(a.ubic)}`:""}</td>
+          <td>${esc(tecN(tecSubWO(a)))}</td><td><span class="pill ${a.fotosEvidArr&&a.fotosEvidArr.length?"v":"w"}">${(a.fotosEvidArr||[]).length} foto(s)</span></td>
+          <td class="num mono">${money(a.montoFactura!=null?a.montoFactura:(a.precio||0)*(a.cant||1))}<div style="font-size:10px;color:var(--faint)">${a.facturaSeparada?"factura separada":"misma factura"}</div></td></tr>`).join("")}`).join("")}
       </tbody></table>
       ${sinT?`<div class="cp" style="border-top:1px solid var(--line)"><div class="note w" style="margin:0"><b>${sinT} línea sin tarifa.</b> Resuélvela en Approval Requests antes de facturar.</div></div>`:""}
       <div class="mf" style="border-top:1px solid var(--line)">
@@ -554,7 +561,7 @@ VIEWS.facturacion = () => {
   ${S.facturas.length?`<div class="card"><div class="chd"><h3>Facturas emitidas</h3></div>
     <table><thead><tr><th>Número</th><th>Propiedad</th><th class="num">Líneas</th><th>Emisión</th><th>Vence</th><th>Estado</th><th class="num">Total</th><th></th></tr></thead>
     <tbody>${S.facturas.map(f=>`<tr class="${fl("fac:"+f.id)}"><td class="mono" style="font-weight:700">${esc(f.num)}</td><td>${esc(P(f.prop).nombre)}</td>
-      <td class="num mono">${f.lineas.length}</td><td class="mono">${f.emision}</td><td class="mono">${f.vence}</td>
+      <td class="num mono">${(f.conceptos||f.lineas).length}</td><td class="mono">${f.emision}</td><td class="mono">${f.vence}</td>
       <td><span class="pill ${f.estado==="Pagada"?"v":facVencida(f)?"r":f.estado==="Emitida"?"g":"a"}">${esc(facEstadoTexto(f))}</span></td>
       <td class="num mono" style="font-weight:700">${money(f.total)}</td>
       <td style="text-align:right;white-space:nowrap">
@@ -569,6 +576,11 @@ VIEWS.facturacion = () => {
 };
 
 /* UC-17 — «eso también para saber hacer las facturas y enviarlas» */
+function conceptosFactura(f){
+  if(f.conceptos) return f.conceptos;
+  return f.lineas.map(id=>W(id)).filter(Boolean).map(w=>({tipo:"WO",wo:w.id,unidad:U(w.unidad).num,
+    descripcion:w.serv,cantidad:w.cant||1,importe:ingresoWO(w)||0,evidencia:w.evid||0}));
+}
 /* ── EL PDF DE LA FACTURA ─────────────────────────────────
    Abre el documento en una ventana aparte y lanza la impresión: el navegador
    lo guarda como PDF de verdad. No es una simulación — el archivo que sale es
@@ -576,12 +588,12 @@ VIEWS.facturacion = () => {
 function abrirPDF(fid, imprimir){
   const f = by(S.facturas, fid); if(!f) return;
   const p = P(f.prop), c = CLI(p.cliente);
-  const ws = f.lineas.map(id => W(id)).filter(Boolean);
-  const filas = ws.map(w => `<tr>
-      <td class="m">WO-${w.id}</td>
-      <td>${esc(U(w.unidad) ? U(w.unidad).num : "\u2014")}</td>
-      <td>${esc(w.serv)}<div class="s">${esc(w.cat)} \u00b7 ${esc(w.fecha)}</div></td>
-      <td class="n m">${money(ingresoWO(w) || 0)}</td></tr>`).join("");
+  const conceptos=conceptosFactura(f);
+  const filas = conceptos.map(x => `<tr>
+      <td class="m">WO-${x.wo}${x.tipo==="Sub-WO"?" · Sub-WO":""}</td>
+      <td>${esc(x.unidad||"\u2014")}</td>
+      <td>${esc(x.descripcion)}<div class="s">${esc(x.tipo||"WO")}${x.cantidad>1?` · Cantidad ${x.cantidad}`:""}</div></td>
+      <td class="n m">${money(x.importe||0)}</td></tr>`).join("");
 
   const doc = `<!doctype html><html lang="es"><head><meta charset="utf-8">
     <title>${esc(f.num)}</title>
@@ -633,7 +645,7 @@ function abrirPDF(fid, imprimir){
     </table>
 
     <div class="pie">
-      Cada l\u00ednea corresponde a una Work Order con su evidencia fotogr\u00e1fica archivada.<br>
+      Cada l\u00ednea corresponde a un concepto de Work Order o Sub-Work Order con su evidencia archivada.<br>
       Generada el ${esc(f.emision)} a las ${esc(f.pdfHora || "")} por ${esc(f.pdfQuien || "")}.
     </div>
     ${imprimir ? "<script>window.onload=()=>setTimeout(()=>window.print(),300)<\/script>" : ""}
@@ -647,7 +659,7 @@ function abrirPDF(fid, imprimir){
 
 function modalFactura(fid, enviando){
   const f=by(S.facturas,fid), p=P(f.prop), c=CLI(p.cliente);
-  const ws=f.lineas.map(id=>W(id)).filter(Boolean);
+  const conceptos=conceptosFactura(f);
   modal(`<div class="mh"><h3>Factura ${esc(f.num)}</h3><p>${esc(p.nombre)} · ${esc(c.nombre)}</p></div>
   <div class="mb">
     <div style="border:1px solid var(--line);border-radius:10px;overflow:hidden">
@@ -658,15 +670,15 @@ function modalFactura(fid, enviando){
         <div style="margin-left:auto;text-align:right"><div style="font-size:10.5px;opacity:.85">Total</div>
           <div class="mono" style="font-size:20px;font-weight:750">${money(f.total)}</div></div></div>
       <table><thead><tr><th>WO</th><th>Unidad</th><th>Servicio</th><th>Evidencia</th><th class="num">Importe</th></tr></thead>
-      <tbody>${ws.map(w=>`<tr><td class="mono">WO-${w.id}</td><td>${esc(U(w.unidad).num)}</td>
-        <td>${esc(w.serv)}</td>
-        <td>${w.evid?`<span class="pill v">${w.evid} foto(s)</span>`:'<span class="pill w">—</span>'}</td>
-        <td class="num mono">${money(ingresoWO(w)||0)}</td></tr>`).join("")}
+      <tbody>${conceptos.map(x=>`<tr><td class="mono">WO-${x.wo}${x.tipo==="Sub-WO"?" · Sub-WO":""}</td><td>${esc(x.unidad||"—")}</td>
+        <td>${esc(x.descripcion)}</td>
+        <td>${x.evidencia?`<span class="pill v">${x.evidencia} foto(s)</span>`:'<span class="pill w">—</span>'}</td>
+        <td class="num mono">${money(x.importe||0)}</td></tr>`).join("")}
       <tr style="background:var(--surface-2);font-weight:750"><td colspan="4">Total</td>
         <td class="num mono" style="font-size:15px">${money(f.total)}</td></tr></tbody></table></div>
     ${enviando?`<div class="fld" style="margin-top:13px"><label>Se envía a</label>
       <input id="facMail" value="${esc(c.mail||"")}"></div>
-      <div class="note">Va con el PDF y el detalle por Work Order. Si el cliente reclama una línea, cada una tiene su evidencia detrás.</div>`
+      <div class="note">Va con el PDF y el detalle por concepto. Si el cliente reclama una línea, cada una tiene su evidencia detrás.</div>`
      :`<div class="note" style="margin-top:12px"><b>Enviada el ${esc(f.envio||f.emision)}</b> a ${esc(c.mail||"—")}.</div>`}
   </div>
   <div class="mf"><button class="btn" data-a="cm">Cerrar</button>

@@ -119,6 +119,13 @@ function ingresoWO(w){
   if(base===null && !extra) return null;
   return (base||0) + extra;
 }
+/* Importe del trabajo principal sin mezclar los conceptos de Sub-WO. Esto
+   permite que la factura los muestre como líneas independientes y, cuando
+   corresponde, los mande a una factura separada. */
+function ingresoBaseWO(w){
+  const total=ingresoWO(w);
+  return total===null ? null : total-(w.extraFacturable||0);
+}
 /* Si el touch-up lo hace el mismo tecnico que se equivoco, no se le paga:
    esta rehaciendo su propio trabajo. Si va otro, se paga normal. */
 function egresoWO(w){
@@ -135,6 +142,15 @@ function extrasAprobadosDeWOs(ws){
   const ids = new Set(ws.map(w=>w.id));
   return S.excepciones.filter(x=>x.estado==="Aprobada" && x.tipo==="Pago adicional al técnico" && ids.has(x.wo));
 }
+const tecExtra = x => x.tec || (W(x.wo)&&W(x.wo).tec) || null;
+/* Una Sub-Work Order puede heredar al técnico/fecha de la principal o tener
+   los suyos. Estas funciones son la única fuente para agenda y nómina. */
+const tecSubWO = a => a.tec || (W(a.wo)&&W(a.wo).tec) || null;
+const fechaSubWO = a => a.fecha || (W(a.wo)&&W(a.wo).fecha) || "";
+const subWOsOperativas = () => S.adicionales.filter(a=>a.origen==="Planificada" && a.estado==="Aprobado");
+const subWOsDeTec = tid => subWOsOperativas().filter(a=>tecSubWO(a)===tid && a.estadoTrabajo!=="Canceled");
+const subWOsPendientesDeWO = wid => subWOsOperativas().filter(a=>a.wo===wid && a.estadoTrabajo!=="Canceled"
+  && (a.estadoTrabajo!=="Completed" || !(a.fotosEvidArr||[]).length));
 function utilidadWO(w){ const i=ingresoWO(w); if(i===null) return null; return i-(egresoWO(w)||0)-materialWO(w); }
 function stock(prodId){ return S.movs.filter(m=>m.prod===prodId && !m.cliente).reduce((a,m)=>a+(m.tipo==="entrada"?m.cant:-m.cant),0); }
 function stockCliente(prodId,propId){ return S.movs.filter(m=>m.prod===prodId && m.cliente && m.prop===propId).reduce((a,m)=>a+(m.tipo==="entrada"?m.cant:-m.cant),0); }

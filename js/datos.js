@@ -17,7 +17,7 @@ let S = {
   /* El buscador de Work Orders conserva texto y fecha por separado: cambiar
      uno no borra el otro, que era el problema del Excel. */
   filtroWO:{modo:"todos", sem:33, desde:"", hasta:""},
-  sub:null, tab:null, phone:false, phTec:"T1", phView:"agenda", phWO:null, notis:[],
+  sub:null, tab:null, phone:false, phTec:"T1", phView:"agenda", phWO:null, phSub:null, notis:[],
   coach:true,   // asistente "¿qué hago ahora?" — se puede apagar desde su tarjeta
   /* El celular tiene dos dueños distintos: el técnico ejecuta, el supervisor reporta.
      No es la misma app con otro logo — es otra herramienta. */
@@ -256,5 +256,10 @@ let S = {
     {id:"M5",prod:"PR3",tipo:"salida",cant:3,fecha:"2026-08-11",wo:1040,costo:89.79,tienda:"",quien:"Andrés",evid:false}
   ]
 };
+
+/* Las unidades anteriores a Unit Occupancy no traían el campo. Se adopta la
+   opción conservadora: se consideran ocupadas hasta que oficina confirme que
+   están vacantes, para que el técnico nunca reciba permiso implícito de entrar. */
+S.unidades.forEach(u=>{ if(!u.ocupacion) u.ocupacion="Occupied"; });
 
 S.cat = CAT;   // los catálogos son datos del sistema, no constantes del código

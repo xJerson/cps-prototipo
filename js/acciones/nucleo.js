@@ -96,9 +96,10 @@ Object.assign(ACC, {
     // importar qué período estuviera eligiendo Erika arriba en Nómina
     // (Día/Semana/Rango/Mes) — ahora mira ese mismo período.
     const per = S.periodo, perTxt = periodoTexto(per);
-    const ws = S.wos.filter(w=>w.tec===d.tec && enPeriodo(w.fecha,per) && w.estado==="Completed");
+    const todas = S.wos.filter(w=>enPeriodo(w.fecha,per) && w.estado==="Completed");
+    const ws = todas.filter(w=>w.tec===d.tec);
     const tot = ws.reduce((a,w)=>a+(egresoWO(w)||0),0);
-    const extra = extrasAprobadosDeWOs(ws);
+    const extra = extrasAprobadosDeWOs(todas).filter(x=>tecExtra(x)===d.tec);
     const totExtra = extra.reduce((a,x)=>a+(x.monto||0),0);
     modal(`<div class="mh"><h3>Comprobante de pago</h3>
       <p>${esc(tecN(d.tec))} · ${esc(perTxt)}</p></div>

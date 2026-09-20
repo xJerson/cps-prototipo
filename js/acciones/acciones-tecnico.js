@@ -4,7 +4,7 @@ Object.assign(ACC, {
   verTecnicoCel: () => { S.phRol="tecnico"; S.phView=S.phWO?"wo":"agenda"; S.phone=true; S.gRep=null; render(); },
   /* Elegir de qué técnico se ve el celular */
   phTecPick: () => { const s=document.getElementById("phTecSel");
-    if(s){ S.phTec=s.value; S.phRol="tecnico"; S.phWO=null; S.phView="agenda"; render(); } },
+    if(s){ S.phTec=s.value; S.phRol="tecnico"; S.phWO=null; S.phSub=null; S.phView="agenda"; render(); } },
 
   /* celular */
   fView: d => { S.phView=d.v; if(d.v==="avisos") S.notis.forEach(n=>n.leido=true); if(S.gRep) S.gRep=null;
@@ -14,6 +14,40 @@ Object.assign(ACC, {
     if(["panel","ruta","dia","reportar","devs"].includes(d.v)) S.gvTab=d.v;
     render(); },
   fAbrir: d => { S.phView="wo"; S.phWO=+d.id; render(); },
+  fSubAbrir: d => { S.phView="subwo"; S.phSub=+d.id; render(); },
+  fSubIniciar: d => {
+    const a=S.adicionales.find(x=>x.id===+d.id); if(!a) return;
+    if(tecSubWO(a)!==S.phTec){ toast("Sub-WO reasignada","Esta tarea ya no está asignada a este técnico.","w"); S.phView="agenda"; render(); return; }
+    a.estadoTrabajo="In progress";
+    (a.hist=a.hist||[]).push([hora(),"Trabajo iniciado",tecN(S.phTec)]);
+    const w=W(a.wo); if(w) w.hist.push([hora(),`Sub-WO iniciada · ${a.concepto}`,tecN(S.phTec)]);
+    toast("Sub-WO iniciada",`Ya puedes cargar la evidencia de <b>${esc(a.concepto)}</b>.`,"v"); render();
+  },
+  fSubFoto: d => {
+    const a=S.adicionales.find(x=>x.id===+d.id); if(!a) return;
+    capturarFoto(url=>{
+      (a.fotosEvidArr=a.fotosEvidArr||[]).push(fotoNueva(url,tecN(S.phTec)));
+      (a.hist=a.hist||[]).push([hora(),"Evidencia cargada",tecN(S.phTec)]);
+      const w=W(a.wo); if(w) w.hist.push([hora(),`Evidencia agregada a Sub-WO · ${a.concepto}`,tecN(S.phTec)]);
+      toast("📷 Evidencia recibida",`${a.fotosEvidArr.length} foto(s) en esta Sub-WO.`,"v"); render();
+    });
+  },
+  fSubTerminar: d => {
+    const a=S.adicionales.find(x=>x.id===+d.id); if(!a) return;
+    if(!(a.fotosEvidArr||[]).length){ toast("🚫 Falta la evidencia","Agrega al menos una foto antes de terminar la Sub-WO.","r"); return; }
+    a.estadoTrabajo="Completed";
+    (a.hist=a.hist||[]).push([hora(),"Sub-WO terminada",tecN(S.phTec)]);
+    const w=W(a.wo);
+    if(w){
+      w.hist.push([hora(),`Sub-WO terminada · ${a.concepto} · ${(a.fotosEvidArr||[]).length} evidencia(s)`,tecN(S.phTec)]);
+      const pendientes=subWOsOperativas().some(x=>x.wo===w.id && x.estadoTrabajo!=="Canceled" && (x.estadoTrabajo!=="Completed" || !(x.fotosEvidArr||[]).length));
+      if(w.estado==="Completed" && w.evid>0 && ingresoWO(w)!==null && !pendientes){
+        w.validada=true; w.hist.push([hora(),"Validada automáticamente: WO y Sub-WO completas","Sistema"]);
+      }
+    }
+    avisar("Erika","Sub-WO terminada",`WO-${a.wo} · ${a.concepto} quedó completa con evidencia.`,"v");
+    toast("✓ Sub-WO terminada","Oficina ya recibió el cierre y la evidencia.","v"); render();
+  },
   fLlegue: d => {
     const w=W(+d.id), p=P(w.prop);
     S.reloj += 23;
@@ -151,9 +185,12 @@ Object.assign(ACC, {
     w.hist.push([hora(),`Terminó · ${w.evid} evidencia(s)${w.horas?` · ${w.horas} h en sitio`:""}`,T(w.tec).nombre]);
     // Hoy Erika revisa a mano porque los reportes le llegan en papel.
     // Aquí el dato ya está: si está completo, se valida solo. A ella solo le llega lo que falla.
-    if(w.evid>0 && ingresoWO(w)!==null){
+    const subsPend=subWOsOperativas().some(a=>a.wo===w.id && a.estadoTrabajo!=="Canceled" && (a.estadoTrabajo!=="Completed" || !(a.fotosEvidArr||[]).length));
+    if(w.evid>0 && ingresoWO(w)!==null && !subsPend){
       w.validada=true;
       w.hist.push([hora(),"Validada automáticamente: evidencia y tarifa completas","Sistema"]);
+    } else if(subsPend){
+      w.hist.push([hora(),"Validación pendiente: hay Sub-WO sin terminar o sin evidencia","Sistema"]);
     }
     toast("✓ Work Order terminada",`WO-${w.id} quedó lista. Pasa a supervisión de Gustavo.`,"v"); render(); },
   fLlegadaDecl: d => {

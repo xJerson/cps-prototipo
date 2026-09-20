@@ -129,10 +129,11 @@ Object.assign(ACC, {
           <select id="uTipo" data-a="uniCampoTipo" data-prop="${pid}" data-id="${u?u.id:""}">
             <option ${tipoU==="Residencial"?"selected":""}>Residencial</option>
             <option ${tipoU==="Oficina"?"selected":""}>Oficina</option></select></div>
-        <div class="fld" style="margin-bottom:0"><label>Unit Occupancy</label>
+        <div class="fld" style="margin-bottom:0"><label>Unit Occupancy <span class="req">*</span></label>
           <select id="uOcup">
             <option ${(dr?dr.ocupacion:(u?u.ocupacion:""))!=="Vacant"?"selected":""}>Occupied</option>
-            <option ${(dr?dr.ocupacion:(u?u.ocupacion:""))==="Vacant"?"selected":""}>Vacant</option></select></div>
+            <option ${(dr?dr.ocupacion:(u?u.ocupacion:""))==="Vacant"?"selected":""}>Vacant</option></select>
+          <div style="font-size:10.5px;color:var(--faint);margin-top:4px">El técnico verá este dato antes de entrar. Si está ocupada, deberá tocar y esperar autorización o acompañamiento.</div></div>
       </div>
       ${tipoU==="Residencial"?`<div class="fg c2">
         <div class="fld" style="margin-bottom:0"><label>Bedrooms <span class="req">*</span></label>

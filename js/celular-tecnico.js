@@ -24,13 +24,16 @@ function renderFon(){
   $("#fanm").textContent = "Celular";
   $("#fasu").textContent = t.zona;
   const mias = S.wos.filter(w=>w.tec===t.id && !w.cobrada && w.estado!=="Canceled");
+  const subMias = subWOsDeTec(t.id).filter(a=>{
+    const w=W(a.wo); return w && !w.cobrada;
+  });
   /* Claudia fue clara: el técnico nunca ve dinero de nada — ni su pago, ni
      lo que cuesta un material, ni descuentos. Antes había una pestaña "Mi
      pago" completa; se quitó de raíz, no solo se ocultó el número. */
   $("#fnav").innerHTML = [
     {v:"agenda",n:"Agenda",ic:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>'},
     {v:"avisos",n:"Avisos",ic:'<path d="M18 8A6 6 0 1 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/>'}
-  ].map(b=>`<button class="${S.phView===b.v||(b.v==="agenda"&&S.phView==="wo")?"on":""}" data-a="fView" data-v="${b.v}">
+  ].map(b=>`<button class="${S.phView===b.v||(b.v==="agenda"&&["wo","subwo"].includes(S.phView))?"on":""}" data-a="fView" data-v="${b.v}">
     ${b.v==="avisos"&&notiSinLeer()?`<span style="position:absolute;top:1px;right:6px;min-width:14px;height:14px;padding:0 3px;background:#ff5a5f;color:#fff;border-radius:99px;font-size:8.5px;font-weight:800;display:flex;align-items:center;justify-content:center">${notiSinLeer()}</span>`:""}
     <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${b.ic}</svg>${b.n}</button>`).join("");
 
@@ -42,8 +45,36 @@ function renderFon(){
       <div style="font-size:12px;font-weight:750">${esc(n.t)}</div><div class="ds">${esc(n.b)}</div></div></div>`).join("")
       :`<div style="text-align:center;padding:40px 14px;color:var(--faint);font-size:11.5px">Sin avisos</div>`);
   }
+  else if(S.phView==="subwo" && S.phSub){
+    const a=S.adicionales.find(x=>x.id===S.phSub), w=a&&W(a.wo);
+    if(!a||!w){ S.phView="agenda"; S.phSub=null; return renderFon(); }
+    const p=P(w.prop), u=U(w.unidad), estado=a.estadoTrabajo||"Assigned";
+    const col={Unassigned:"#8a97a4",Assigned:"#1f4e79","In progress":"#8a5a00",Completed:"#1e5c3a",Canceled:"#9b2226"}[estado]||"#8a97a4";
+    const specs=Object.entries(a.specs||{}).filter(([,v])=>v).map(([k,v])=>`<div class="ds"><b>${esc(k)}:</b> ${esc(v)}</div>`).join("");
+    h=`<button class="db g" style="margin:5px 0 9px;padding:7px;font-size:11.5px" data-a="fView" data-v="agenda">‹ Mi agenda</button>
+      <div class="dc"><div style="display:flex;justify-content:space-between;gap:7px">
+        <div><div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--azul)">SUB-WO · WO-${w.id}</div>
+        <div class="dh">${esc(a.concepto)}</div><div class="ds">${esc(p.nombre)} · Unidad ${esc(u.num)}</div></div>
+        <span class="dtag" style="background:${col}22;color:${col};height:fit-content">${esc(estado)}</span></div>
+        <div style="margin-top:9px;padding-top:9px;border-top:1px solid var(--line)">
+          <div class="ds"><b>Fecha:</b> ${esc(fechaSubWO(a)||"Sin fecha")}</div>
+          <div class="ds"><b>Dirección:</b> ${esc(p.dir)}</div>
+          ${a.ubic?`<div class="ds"><b>Location:</b> ${esc(a.ubic)}</div>`:""}
+          <div class="ds"><b>Cantidad:</b> ${a.cant||1}</div>${specs}
+          ${a.desc?`<div class="ds" style="margin-top:5px"><b>Notas:</b> ${esc(a.desc)}</div>`:""}
+        </div></div>
+      ${(a.fotosRefArr||[]).length?`<div class="dc"><div class="dl" style="margin:0 0 6px">Fotos de referencia</div><div style="display:flex;gap:5px;flex-wrap:wrap">${a.fotosRefArr.map(f=>`<img src="${f.url}" style="width:60px;height:45px;object-fit:cover;border-radius:7px">`).join("")}</div></div>`:""}
+      <div class="dc"><div class="dl" style="margin:0 0 6px">Evidencia (${(a.fotosEvidArr||[]).length})</div>
+        ${(a.fotosEvidArr||[]).length?`<div style="display:flex;gap:5px;flex-wrap:wrap">${a.fotosEvidArr.map(f=>`<img src="${f.url}" style="width:60px;height:45px;object-fit:cover;border-radius:7px">`).join("")}</div>`:`<div class="ds">Todavía no hay evidencia.</div>`}
+      </div>
+      ${estado==="Assigned"?`<button class="db p" data-a="fSubIniciar" data-id="${a.id}">Empezar Sub-WO</button>`:""}
+      ${["Assigned","In progress"].includes(estado)?`<button class="db g" data-a="fSubFoto" data-id="${a.id}">📷 Agregar evidencia</button>`:""}
+      ${estado==="In progress"?`<button class="db v" data-a="fSubTerminar" data-id="${a.id}">✓ Terminar Sub-WO</button>`:""}
+      ${estado==="Completed"?`<div class="dc" style="text-align:center;background:var(--verde-cl);border-color:transparent"><div class="dh" style="color:var(--verde)">✓ Sub-WO terminada</div><div class="ds">Oficina ya recibió la evidencia.</div></div>`:""}`;
+  }
   else if(S.phView==="wo" && S.phWO){
     const w=W(S.phWO), p=P(w.prop), u=U(w.unidad);
+    const ocupacion = u.ocupacion||"Occupied";
     const ads=S.adicionales.filter(a=>a.wo===w.id), sols=solsDe(w.id);
     const col={g:"#8a97a4",a:"#1f4e79",m:"#5b21b6",w:"#8a5a00",v:"#1e5c3a",r:"#9b2226"}[estP(w.estado)];
     const dato = (et,v) => v ? `<div class="ds" style="margin-bottom:3px"><b>${et}:</b> ${esc(v)}</div>` : "";
@@ -57,7 +88,15 @@ function renderFon(){
         ${w.ubic?dato("Dónde", w.ubic):""}
         ${dato("Dirección", p.dir)}
         ${dato("Hora", w.horaProg||"9:00")}
+        ${dato("Occupancy", ocupacion)}
       </div></div>
+
+    ${ocupacion==="Occupied"?`<div class="dc" style="background:var(--ambar-cl);border-color:var(--ambar)">
+      <div class="dh" style="color:var(--ambar)">Unidad ocupada</div>
+      <div class="ds" style="margin-top:4px"><b>Toca antes de entrar.</b> No ingreses solo: espera autorización o que alguien te acompañe.</div>
+    </div>`:`<div class="dc" style="background:var(--verde-cl);border-color:transparent">
+      <div class="ds" style="color:var(--verde)"><b>Unidad desocupada.</b> Sigue las instrucciones de acceso de la propiedad.</div>
+    </div>`}
 
     <!--ACCIONES-->
 
@@ -136,8 +175,8 @@ function renderFon(){
              ${dato("Unidad", u.num)}
              ${dato("Bedrooms", u.bedrooms!=null?String(u.bedrooms):(u.rooms==="Studio"?"Studio":"—"))}
              ${dato("Bathrooms", u.bathrooms!=null?String(u.bathrooms):"—")}
-             ${dato("Floors", String(u.pisos))}
-             ${dato("Occupancy", u.ocupacion||"—")}
+             ${dato("Floors", u.pisos!=null?String(u.pisos):"No aplica")}
+             ${dato("Occupancy", ocupacion)}
              <div class="ds" style="margin:6px 0 8px">¿Coincide con lo que ves en la propiedad?</div>
              <button class="db v" data-a="woCorrobora" data-id="${w.id}">${icBtn(IC_CHECK)}Sí, coincide — empezar</button>
              <button class="db g" data-a="woCorroboraNo" data-id="${w.id}">${icBtn(IC_ALERTA)}No coincide — avisar a oficina</button>
@@ -186,7 +225,7 @@ function renderFon(){
     h = h.replace("<!--ACCIONES-->", acciones);
   }
   else {
-    h=`<div class="dl" style="margin-top:5px">Mi agenda</div>`+(mias.length?mias.map(w=>{
+    h=`<div class="dl" style="margin-top:5px">Mi agenda</div>`+((mias.length||subMias.length)?mias.map(w=>{
       const col={g:"#8a97a4",a:"#1f4e79",m:"#5b21b6",w:"#8a5a00",v:"#1e5c3a",r:"#9b2226"}[estP(w.estado)];
       const a=asisDe(w.id);
       return `<div class="dc" data-a="fAbrir" data-id="${w.id}" style="cursor:pointer;${
@@ -202,6 +241,16 @@ function renderFon(){
             <div class="ds" style="font-size:10px">${w.fecha} · ${esc(w.horaProg||"9:00")}</div></div>
           <span class="dtag" style="background:${col}22;color:${col};flex:none;height:fit-content">${esc(w.estado)}</span></div>
         ${a?`<div class="ds" style="margin-top:5px;color:var(--verde)">Llegaste ${a.horaReal} · ${esc(a.puntualidad)}</div>`:""}
+        <div class="ds" style="margin-top:6px;color:var(--azul);font-weight:650">Abrir ›</div></div>`;
+    }).join("")+subMias.map(a=>{
+      const w=W(a.wo), p=P(w.prop), u=U(w.unidad), estado=a.estadoTrabajo||"Assigned";
+      const col={Unassigned:"#8a97a4",Assigned:"#1f4e79","In progress":"#8a5a00",Completed:"#1e5c3a"}[estado]||"#8a97a4";
+      return `<div class="dc" data-a="fSubAbrir" data-id="${a.id}" style="cursor:pointer;border-left:4px solid var(--azul)">
+        <div style="display:flex;justify-content:space-between;gap:7px"><div style="min-width:0">
+          <div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--azul);margin-bottom:2px">SUB-WO · WO-${w.id}</div>
+          <div class="dh">${esc(p.nombre)}</div><div class="ds">${esc(u.num)} · ${esc(a.concepto)}</div>
+          <div class="ds" style="font-size:10px">${esc(fechaSubWO(a)||"Sin fecha")}${a.ubic?` · ${esc(a.ubic)}`:""}</div></div>
+          <span class="dtag" style="background:${col}22;color:${col};height:fit-content">${esc(estado)}</span></div>
         <div class="ds" style="margin-top:6px;color:var(--azul);font-weight:650">Abrir ›</div></div>`;
     }).join("") : `<div style="text-align:center;padding:40px 14px;color:var(--faint);font-size:11.5px">Sin trabajos asignados</div>`)
     + `<div class="dl">Otras cosas</div>

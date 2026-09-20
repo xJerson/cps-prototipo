@@ -146,21 +146,24 @@ function fichaWO(id){
 
       <div class="card"><div class="chd"><h3>Sub-Work Orders</h3>
         <span class="s">trabajos que cuelgan de esta WO — de oficina o encontrados en sitio</span></div>
-        ${sols.length?`<table><thead><tr><th>Tipo</th><th>Origen</th><th>Ubicación</th><th class="num">Cant.</th>${puedeVerDinero?'<th class="num">P. unit.</th><th class="num">Importe</th>':""}<th>Estado</th><th>Fotos</th></tr></thead><tbody>
+        ${sols.length?`<table><thead><tr><th>Tipo</th><th>Origen</th><th>Ubicación</th><th class="num">Cant.</th>${puedeVerDinero?'<th class="num">P. unit.</th><th class="num">Importe</th>':""}<th>Estado</th><th>Fotos</th><th></th></tr></thead><tbody>
         ${sols.map(s=>`
-          <tr><td colspan="${puedeVerDinero?8:6}" style="background:var(--azul-cl);color:var(--azul-s)">
+          <tr><td colspan="${puedeVerDinero?9:7}" style="background:var(--azul-cl);color:var(--azul-s)">
             <b>${s.origen==="Planificada"?"Sub-Work Order planificada":"Un solo aviso del técnico"}</b>${s.desc?" · "+esc(s.desc):""}</td></tr>
           ${s.lineas.map(a=>`<tr><td><b>${esc(a.concepto)}</b></td><td><span class="pill ${a.origen==="Planificada"?"a":"m"}">${esc(a.origen||"Técnico")}</span></td><td>${esc(a.ubic)}</td>
             <td class="num mono">${a.cant||1}</td>
             ${puedeVerDinero?`<td class="num mono">${a.precio?money(a.precio):"—"}</td><td class="num mono">${a.precio?money(a.precio*(a.cant||1)):"—"}</td>`:""}
             <td><span class="pill ${a.estado==="Aprobado"?"v":a.estado==="Rechazado"?"r":"w"}">${a.estado}</span></td>
             <td><div style="display:flex;gap:4px"><button class="btn sm" title="Fotos de referencia" data-a="subwoFotoRef" data-id="${a.id}">📷 Ref ${(a.fotosRefArr||[]).length}</button>
-              <button class="btn sm" title="Fotos de evidencia" data-a="subwoFotoEvid" data-id="${a.id}">📷 Evid ${(a.fotosEvidArr||[]).length}</button></div></td></tr>
-            ${(a.specs&&Object.keys(a.specs).length)||a.tec||a.fecha||(a.aprob&&a.aprob.foto)?`<tr><td colspan="${puedeVerDinero?8:6}" style="padding-top:0;padding-bottom:9px">
+              <button class="btn sm" title="Fotos de evidencia" data-a="subwoFotoEvid" data-id="${a.id}">📷 Evid ${(a.fotosEvidArr||[]).length}</button></div></td>
+            <td>${a.origen==="Planificada"?`<button class="btn sm" data-a="subwoGestionar" data-id="${a.id}">Gestionar</button>`:""}</td></tr>
+            ${(a.specs&&Object.keys(a.specs).length)||a.tec||a.fecha||a.estadoTrabajo||a.facturable||(a.aprob&&a.aprob.foto)?`<tr><td colspan="${puedeVerDinero?9:7}" style="padding-top:0;padding-bottom:9px">
               <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
                 ${Object.entries(a.specs||{}).map(([k,v])=>`<span class="pill">${esc(k)}: ${esc(v)}</span>`).join("")}
-                ${a.tec?`<span class="pill w">Técnico distinto: ${esc(tecN(a.tec))}</span>`:""}
-                ${a.fecha?`<span class="pill w">Fecha distinta: ${esc(a.fecha)}</span>`:""}
+                ${a.origen==="Planificada"?`<span class="pill a">Técnico: ${a.tec?esc(tecN(a.tec)):"hereda de WO-"+a.wo}</span>`:""}
+                ${a.origen==="Planificada"?`<span class="pill a">Fecha: ${esc(fechaSubWO(a)||"sin programar")}</span>`:""}
+                ${a.estadoTrabajo?`<span class="pill ${a.estadoTrabajo==="Completed"?"v":"w"}">Operación: ${esc(a.estadoTrabajo)}</span>`:""}
+                ${a.facturable?`<span class="pill v">Factura: ${a.facturaSeparada?"separada":"concepto adicional"}</span>`:""}
                 ${a.aprob&&a.aprob.foto?`<a href="${a.aprob.foto}" target="_blank" style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--azul)">
                   <img src="${a.aprob.foto}" style="width:28px;height:28px;object-fit:cover;border-radius:5px">Comprobante de la aprobación</a>`:""}
               </div></td></tr>`:""}`).join("")}
@@ -500,7 +503,11 @@ function modalSubWO(woId){
       <div class="fld"><label>Fecha <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional, si es otro día</span></label>
         <input type="date" id="swFecha" value=""></div>
     </div>
-    <div class="note">Técnico y fecha quedan documentados en la Sub-Work Order, pero todavía no mueven la agenda — es solo para saber quién y cuándo, la asignación real sigue siendo la de WO-${w.id}. Sección 5 del feedback: si le ponés precio, la Sub-Work Order queda <b>pendiente de aprobación</b> — aparece espejada en Excepciones, y ahí mismo se decide por qué canal aprobó el cliente y si se le factura a la propiedad. Sin precio no hay nada que aprobar, así que queda directo.</div>
+    <div class="fld"><label>Si el cliente aprueba cobrarla</label><select id="swFacturaModo">
+      <option value="misma">Concepto adicional en la misma factura</option>
+      <option value="separada">Generar una factura separada</option></select>
+      <div class="hint">La decisión de cobrar o no se toma durante la aprobación; aquí solo defines cómo se separará.</div></div>
+    <div class="note">La Sub-Work Order tendrá su propia asignación, fecha, estado y evidencia, pero seguirá ligada a WO-${w.id}. Si tiene precio queda pendiente de aprobación; al aprobarla se activa en el celular del técnico elegido.</div>
     <div class="note">Las fotos (Photos) se agregan después, desde la tarjeta «Sub-Work Orders» de esta WO — hay dos tipos: de referencia (para que el técnico vea con anticipación) y de evidencia (el resultado, para returns).</div>
   </div>
   <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
@@ -516,6 +523,21 @@ function refSubWO(){
     ${campos.map((c,i)=>`<div class="fld" style="margin-bottom:0"><label>${esc(c)}</label>
       <input id="swSpec${i}" data-spec="${esc(c)}" placeholder="${esc(c)}"></div>`).join("")}
   </div>` : "";
+}
+
+function modalGestionSubWO(id){
+  const a=by(S.adicionales,id), w=a&&W(a.wo); if(!a||!w) return;
+  const estado=a.estado==="Pendiente"?"Pending approval":(a.estadoTrabajo||"Unassigned");
+  modal(`<div class="mh"><h3>Gestionar Sub-Work Order</h3><p>WO-${w.id} · ${esc(a.concepto)}</p></div>
+  <div class="mb"><div class="fg c2">
+    <div class="fld"><label>Técnico</label><select id="sgTec"><option value="">— heredar de WO-${w.id} —</option>${S.tecnicos.filter(t=>t.activo).map(t=>`<option value="${t.id}" ${t.id===a.tec?"selected":""}>${esc(tecN(t.id))}</option>`).join("")}</select></div>
+    <div class="fld"><label>Fecha</label><input type="date" id="sgFecha" value="${esc(a.fecha||"")}"></div></div>
+    <div class="fg c2"><div class="fld"><label>Estado operativo</label><select id="sgEstado" ${a.estado==="Pendiente"?"disabled":""}>
+      ${["Unassigned","Assigned","In progress","Completed","Canceled"].map(x=>`<option ${x===estado?"selected":""}>${x}</option>`).join("")}</select>
+      ${a.estado==="Pendiente"?'<div class="hint">Se activa cuando se apruebe.</div>':""}</div>
+    <div class="fld"><label>Facturación</label><select id="sgFactura"><option value="misma" ${!a.facturaSeparada?"selected":""}>Concepto en la misma factura</option><option value="separada" ${a.facturaSeparada?"selected":""}>Factura separada</option></select></div></div>
+    <div class="note">La reasignación afecta la agenda móvil y la nómina de esta Sub-Work Order, no cambia al técnico de la WO principal.</div>
+  </div><div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="subwoGestionGuardar" data-id="${a.id}">Guardar</button></div>`);
 }
 
 /* Punto 8 del feedback: en vez de mostrar más dinero en el costado de la
@@ -668,28 +690,45 @@ function refWO(){
   if(uniTxt){ uniTxt.disabled=false; uniTxt.placeholder="Escribe para buscar…"; }
   const u = (esNueva || !uid) ? null : by(S.unidades, uid), p = P(pid);
   const cajaNueva = document.getElementById("wUniNueva");
-  if(cajaNueva) cajaNueva.innerHTML = esNueva ? (()=>{
-    const tipoN = val("wUniTipo")||"Residencial";
+  if(cajaNueva) cajaNueva.innerHTML = (esNueva||u) ? (()=>{
+    /* Si el editor ya estaba abierto se conserva lo tecleado al cambiar de
+       servicio. Al elegir otra unidad, los handlers vacían este bloque para
+       que se precarguen los datos de la nueva selección. */
+    const campo = (id, inicial) => document.getElementById(id) ? val(id) : (inicial==null?"":String(inicial));
+    const bedRooms = u&&u.bedrooms!=null ? u.bedrooms
+      : u&&u.rooms==="Studio" ? 0
+      : u&&Number.isFinite(parseInt(u.rooms)) ? parseInt(u.rooms) : "";
+    const tipoN = campo("wUniTipo", u&&u.tipo||"Residencial")||"Residencial";
+    const pisosN = campo("wUniPisos", u&&u.pisos);
+    const ocupN = campo("wUniOcup", u&&u.ocupacion||"Occupied")||"Occupied";
+    const bedroomsN = campo("wUniBedrooms", bedRooms);
+    const bathroomsN = campo("wUniBathrooms", u&&u.bathrooms);
     return `
     <div class="note" style="margin:-4px 0 10px"><b>Location:</b> ${p.zona?esc(p.zona):'<span style="color:var(--faint)">sin definir en la propiedad</span>'}</div>
-    <div class="fg c4" style="margin:-4px 0 12px">
+    ${esNueva?`<div class="fg c2" style="margin:-4px 0 12px">
       <div class="fld" style="margin-bottom:0"><label>Building</label>
         <input id="wUniBld" data-a="woUniCampo" placeholder="A, B…" value="${esc(val("wUniBld"))}"></div>
       <div class="fld" style="margin-bottom:0"><label>Unidad <span class="req">*</span></label>
         <input id="wUniNum" data-a="woUniCampo" placeholder="204, 27, 8…" value="${esc(val("wUniNum"))}"></div>
+    </div>`:`<div class="note v" style="margin:-4px 0 12px"><b>Datos precargados de la unidad ${esc(u.num)}.</b> Complétalos o corrígelos aquí; al guardar la Work Order también se actualizará su catálogo.</div>`}
+    <div class="fg c3" style="margin:-4px 0 12px">
       <div class="fld" style="margin-bottom:0"><label>Floors <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— solo si afecta la tarifa</span></label>
-        <select id="wUniPisos" data-a="woUniCampo"><option value="">— no aplica —</option>${activos("pisos").map(pi=>`<option ${String(pi)===val("wUniPisos")?"selected":""}>${pi}</option>`).join("")}</select></div>
+        <select id="wUniPisos" data-a="woUniCampo"><option value="">— no aplica —</option>${activos("pisos").map(pi=>`<option ${String(pi)===pisosN?"selected":""}>${pi}</option>`).join("")}</select></div>
       <div class="fld" style="margin-bottom:0"><label>Tipo <span class="req">*</span></label>
         <select id="wUniTipo" data-a="woUniCampo">
           <option ${tipoN==="Residencial"?"selected":""}>Residencial</option>
           <option ${tipoN==="Oficina"?"selected":""}>Oficina</option></select></div>
+      <div class="fld" style="margin-bottom:0"><label>Unit Occupancy <span class="req">*</span></label>
+        <select id="wUniOcup" data-a="woUniCampo">
+          <option ${ocupN!=="Vacant"?"selected":""}>Occupied</option>
+          <option ${ocupN==="Vacant"?"selected":""}>Vacant</option></select></div>
     </div>
-    ${(tipoN==="Residencial" && !SIN_BEDROOMS.includes(cat))?`<div class="fg c2" style="margin:-4px 0 12px">
-      <div class="fld" style="margin-bottom:0"><label>Bedrooms <span class="req">*</span></label>
-        <input id="wUniBedrooms" data-a="woUniCampo" type="number" min="0" class="mono" placeholder="0 = Studio" value="${esc(val("wUniBedrooms"))}"></div>
+    ${tipoN==="Residencial"?`<div class="fg c2" style="margin:-4px 0 12px">
+      <div class="fld" style="margin-bottom:0"><label>Bedrooms ${SIN_BEDROOMS.includes(cat)?'<span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional para este servicio</span>':'<span class="req">*</span>'}</label>
+        <input id="wUniBedrooms" data-a="woUniCampo" type="number" min="0" class="mono" placeholder="0 = Studio" value="${esc(bedroomsN)}"></div>
       <div class="fld" style="margin-bottom:0"><label>Bathrooms <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— informativo</span></label>
-        <input id="wUniBathrooms" data-a="woUniCampo" type="number" min="0" class="mono" placeholder="opcional" value="${esc(val("wUniBathrooms"))}"></div>
-    </div><div class="tr" style="margin:-2px 0 12px">Studio, balcón y living room no se guardan en la unidad: el técnico los solicita como adicionales solo cuando aplican.</div>`:(tipoN==="Residencial"&&cat?`<div class="tr" style="margin:-6px 0 12px">«${esc(cat)}» se cobra por el trabajo puntual, no por el tamaño de la unidad — no hace falta Bedrooms/Bathrooms.</div>`:"")}`;
+        <input id="wUniBathrooms" data-a="woUniCampo" type="number" min="0" class="mono" placeholder="opcional" value="${esc(bathroomsN)}"></div>
+    </div>${SIN_BEDROOMS.includes(cat)?`<div class="tr" style="margin:-2px 0 12px">Para «${esc(cat)}», Bedrooms y Bathrooms son informativos: puedes completarlos si los conoces, pero no bloquean el agendamiento.</div>`:`<div class="tr" style="margin:-2px 0 12px">Studio, balcón y living room no se guardan en la unidad: el técnico los solicita como adicionales solo cuando aplican.</div>`}`:""}`;
   })() : "";
   // Lo que hoy se reescribe en cada fila de Schedule y aquí sale solo
   document.getElementById("wDeriv").innerHTML = u
@@ -697,8 +736,9 @@ function refWO(){
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
           <span class="pill a">Zona: ${esc(p.zona)}</span>
           <span class="pill a">Dirección: ${esc(p.dir)}</span>
-          <span class="pill a">Rooms: ${esc(u.rooms)}</span>
+          <span class="pill a">Rooms: ${u.rooms?esc(u.rooms):"por completar"}</span>
           ${u.pisos?`<span class="pill a">Pisos: ${u.pisos}</span>`:""}
+          <span class="pill a">Occupancy: ${esc(u.ocupacion||"Occupied")}</span>
           <span class="pill a">Door code: ${esc(p.door)}</span>
         </div>
         <div style="font-size:11px;margin-top:6px;opacity:.85">Hoy estos cinco se vuelven a escribir en cada fila de <code>Schedule</code>.</div></div>`
@@ -736,8 +776,13 @@ function refTarifa(){
   // Con "+ Nueva unidad…" todavía no hay registro en S.unidades: se arma
   // uno al vuelo solo para poder previsualizar el precio con lo que ya
   // se escribió (rooms/pisos), sin esperar a que la WO se guarde.
-  const tipoT = val("wUniTipo")||"Residencial";
-  const u = uid==="__new__" ? {rooms: SIN_BEDROOMS.includes(val("wCat")) ? null : roomsDesde(tipoT, val("wUniBedrooms")), pisos: parseInt(val("wUniPisos"))||null} : by(S.unidades, uid);
+  const guardada = uid==="__new__" ? null : by(S.unidades, uid);
+  const tipoT = val("wUniTipo")||(guardada&&guardada.tipo)||"Residencial";
+  const hayEditor = !!document.getElementById("wUniTipo");
+  const bedT = hayEditor ? val("wUniBedrooms") : "";
+  const u = hayEditor
+    ? {rooms:tipoT==="Residencial"&&bedT===""?null:roomsDesde(tipoT,bedT), pisos:parseInt(val("wUniPisos"))||null}
+    : guardada;
   const t = u ? tarifa(val("wProp"), val("wCat"), serv, u.rooms, u.pisos) : null;
   caja.innerHTML = t
     ? (puedeVerUtilidad()

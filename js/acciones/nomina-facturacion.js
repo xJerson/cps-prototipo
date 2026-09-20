@@ -114,17 +114,24 @@ Object.assign(ACC, {
     ok.forEach(l=>{ l.estado="Aprobado"; l.aprob=sello(d.medio==="Enlace digital"?"72.14.201.38":null);
       (l.hist=l.hist||[]).push([hora(), `Aprobada por ${d.medio.toLowerCase()}`, S.usuario]);
       const monto = (l.precio||0)*(l.cant||1);
+      if(l.origen==="Planificada"){
+        l.estadoTrabajo=tecSubWO(l)?"Assigned":"Unassigned";
+        w.validada=false;
+        (l.hist=l.hist||[]).push([hora(),`Activada para ${tecSubWO(l)?tecN(tecSubWO(l)):"asignación"}`,S.usuario]);
+      }
       if(monto>0){
         pagoTec += monto;
         // Quién PIDIÓ el adicional no siempre es el técnico — una Sub-Work
         // Order planificada (sección 5 del feedback) la pide oficina, no él.
         const quienPidio = s.origen==="Planificada" ? "Oficina" : tecN(w.tec);
-        S.excepciones.push({id:"X"+Date.now()+"_"+l.id, tipo:"Pago adicional al técnico", wo:w.id,
+        const tecnicoPago=tecSubWO(l)||w.tec;
+        S.excepciones.push({id:"X"+Date.now()+"_"+l.id, tipo:"Pago adicional al técnico", wo:w.id, subwo:l.id, tec:tecnicoPago,
           motivo:`Sub-Work Order aprobada · ${l.concepto}${l.ubic?" · "+l.ubic:""}`, monto,
           pide:quienPidio, aprueba:S.usuario, estado:"Aprobada",
           fecha:w.fecha, creada:{quien:quienPidio,hora:hora()}, resol:{quien:S.usuario,hora:hora()}});
         if(cobraSet.has(l.id)){
           cobroCliente += monto;
+          l.facturable=true; l.montoFactura=monto;
           w.extraFacturable = (w.extraFacturable||0) + monto;
           (l.hist=l.hist||[]).push([hora(), `Se suma ${money(monto)} a lo que se le factura a la propiedad`, S.usuario]);
         }
@@ -140,13 +147,13 @@ Object.assign(ACC, {
     const nom = a => a.map(l=>l.concepto).join(", ");
     if(ok.length) w.hist.push([hora(), `Adicional aprobado por ${d.medio.toLowerCase()} · ${nom(ok)}`, S.usuario]);
     if(no.length) w.hist.push([hora(), `Adicional NO aprobado · ${nom(no)}`, S.usuario]);
-    if(pagoTec>0) w.hist.push([hora(), `Nómina: ${money(pagoTec)} de pago adicional para ${tecN(w.tec)}`, S.usuario]);
+    if(pagoTec>0) w.hist.push([hora(), `Nómina: ${money(pagoTec)} de pago adicional asignado según cada Sub-Work Order`, S.usuario]);
     cm();
     const sustento = d.medio==="Enlace digital"
       ? "Queda el clic real del cliente con hora e IP."
       : `Registrado como <b>${esc(d.medio)}</b>: queda quién y cuándo, pero sin clic del cliente.`;
     const plata = pagoTec>0
-      ? `<br><br>💰 Se le suma a la nómina de ${esc(tecN(w.tec))}: <b>${money(pagoTec)}</b>.`
+      ? `<br><br>💰 Se asigna a la nómina del técnico de cada Sub-Work Order: <b>${money(pagoTec)}</b>.`
         + (cobroCliente>0 ? ` Se le agrega a lo que se le factura a la propiedad: <b>${money(cobroCliente)}</b>.`
                           : ` No se le factura nada a la propiedad por esto — queda como costo interno.`)
       : "";
@@ -180,6 +187,7 @@ Object.assign(ACC, {
       const w = W(sa.wo);
       const pend = sa.lineas.filter(l=>l.estado==="Pendiente");
       pend.forEach(l=>{ l.estado="Rechazado"; l.aprob={medio:"—",quien:S.usuario,hora:hora(),ip:null};
+        if(l.origen==="Planificada") l.estadoTrabajo="Canceled";
         (l.hist=l.hist||[]).push([hora(), "Rechazada", S.usuario]); });
       if(w.estado==="Esperando aprobación"
          && !S.adicionales.some(a=>a.wo===w.id && a.estado==="Pendiente")) w.estado="In progress";
@@ -200,7 +208,7 @@ Object.assign(ACC, {
     // Reunión Claudia (feedback prototipo): una excepción ya no frena a todo
     // el mundo — solo a la WO que tiene la excepción. El resto del período
     // se paga igual. Y el período mismo ya no es solo "la semana actual".
-    const todas=S.wos.filter(w=>enPeriodo(w.fecha,S.periodo)&&w.estado==="Completed"&&w.validada&&!w.pagadaTec);
+    const todas=S.wos.filter(w=>enPeriodo(w.fecha,S.periodo)&&w.estado==="Completed"&&w.validada&&!w.pagadaTec&&!subWOsPendientesDeWO(w.id).length);
     const bloqueadas=todas.filter(w=>woBloqueada(w.id));
     const ws=todas.filter(w=>!woBloqueada(w.id));
     if(!ws.length){ toast("🚫 Nada para pagar",
@@ -208,11 +216,12 @@ Object.assign(ACC, {
     // Punto 10: sin esto, lo que queda registrado como "nómina pagada" no
     // incluía los adicionales de Sub-Work Order ya aprobados — se le pagaba
     // de más al técnico (vía comprobante) de lo que el registro decía.
-    const tot=ws.reduce((a,w)=>a+(egresoWO(w)||0),0) + extrasAprobadosDeWOs(ws).reduce((a,x)=>a+(x.monto||0),0);
+    const extrasPago=extrasAprobadosDeWOs(ws);
+    const tot=ws.reduce((a,w)=>a+(egresoWO(w)||0),0) + extrasPago.reduce((a,x)=>a+(x.monto||0),0);
     S.nomina.push({semana:S.semana, periodo:{...S.periodo}, wos:ws.map(w=>w.id), total:tot, quien:S.usuario, fecha:HOY_SUP, hora:hora()});
     ws.forEach(w=>{w.pagadaTec=true; w.hist.push([hora(),`Pagada al técnico en nómina — ${periodoTexto(S.periodo)}`,S.usuario]);});
     toast("✓ Nómina aprobada",
-      `${periodoTexto(S.periodo)} · ${money(tot)} a ${new Set(ws.map(w=>w.tec)).size} técnicos.`
+      `${periodoTexto(S.periodo)} · ${money(tot)} a ${new Set(ws.map(w=>w.tec).filter(Boolean).concat(extrasPago.map(tecExtra).filter(Boolean))).size} técnicos.`
       + (bloqueadas.length?` <b>${bloqueadas.length} WO(s) quedaron afuera</b> por excepción sin resolver — se pagan cuando se resuelva.`:""),"v"); render();
   },
   facturar: d => {
@@ -222,17 +231,32 @@ Object.assign(ACC, {
     if(!ws.length){ toast("🚫 No se puede facturar",
       bloqueadas.length?"Todas las WO listas de esta propiedad tienen una excepción sin resolver.":"No hay Work Orders listas para facturar.","r"); return; }
     if(ws.some(w=>ingresoWO(w)===null)){ toast("🚫 Hay líneas sin tarifa","No se factura con «NA».","r"); return; }
-    const tot=ws.reduce((a,w)=>a+ingresoWO(w),0);
-    const num="INV-2026-"+String(1040+(++ID.f-600)).padStart(4,"0");
-    /* El PDF se genera y queda guardado con la factura. Enviarlo al cliente
-       es otra cosa, y es opcional: puede quedarse archivada sin enviar. */
-    S.facturas.unshift({id:"F"+ID.f,num,prop:d.prop,lineas:ws.map(w=>w.id),total:tot,
-      emision:"2026-08-11",vence:"2026-09-10",estado:"Emitida",
-      pdf:num+".pdf", pdfHora:hora(), pdfQuien:S.usuario, seguimiento:[]});
-    flash("fac:F"+ID.f);
-    ws.forEach(w=>{ w.facturada=true; w.hist.push([hora(),"Facturada en "+num,S.usuario]); });
+    const ids=new Set(ws.map(w=>w.id));
+    const extras=S.adicionales.filter(a=>ids.has(a.wo) && a.estado==="Aprobado" && a.facturable && !a.facturada);
+    const extrasMisma=extras.filter(a=>!a.facturaSeparada), extrasSeparada=extras.filter(a=>a.facturaSeparada);
+    const conceptosBase=ws.map(w=>({tipo:"WO",wo:w.id,subwo:null,unidad:U(w.unidad).num,
+      descripcion:w.serv,cantidad:w.cant||1,importe:ingresoBaseWO(w)||0,evidencia:w.evid||0}));
+    const conceptoExtra=a=>({tipo:"Sub-WO",wo:a.wo,subwo:a.id,unidad:U(W(a.wo).unidad).num,
+      descripcion:a.concepto+(a.ubic?` · ${a.ubic}`:""),cantidad:a.cant||1,
+      importe:a.montoFactura!=null?a.montoFactura:(a.precio||0)*(a.cant||1),evidencia:(a.fotosEvidArr||[]).length});
+    const creadas=[];
+    const crearFactura=(conceptos,separada=false)=>{
+      const num="INV-2026-"+String(1040+(++ID.f-600)).padStart(4,"0"), id="F"+ID.f;
+      const lineas=[...new Set(conceptos.map(c=>c.wo))];
+      const total=conceptos.reduce((n,c)=>n+(c.importe||0),0);
+      S.facturas.unshift({id,num,prop:d.prop,lineas,conceptos,total,separada,
+        emision:"2026-08-11",vence:"2026-09-10",estado:"Emitida",
+        pdf:num+".pdf",pdfHora:hora(),pdfQuien:S.usuario,seguimiento:[]});
+      creadas.push({id,num,total}); return id;
+    };
+    const facPrincipal=crearFactura(conceptosBase.concat(extrasMisma.map(conceptoExtra)));
+    extrasMisma.forEach(a=>{a.facturada=true;a.facturaId=facPrincipal;});
+    extrasSeparada.forEach(a=>{const fid=crearFactura([conceptoExtra(a)],true);a.facturada=true;a.facturaId=fid;});
+    flash(creadas.map(f=>"fac:"+f.id));
+    ws.forEach(w=>{ w.facturada=true; w.hist.push([hora(),`Facturada en ${creadas.filter(f=>by(S.facturas,f.id).lineas.includes(w.id)).map(f=>f.num).join(", ")}`,S.usuario]); });
+    const tot=creadas.reduce((n,f)=>n+f.total,0);
     toast("✓ Factura generada y guardada",
-      `<b>${num}</b> · ${esc(P(d.prop).nombre)} · ${ws.length} líneas · ${money(tot)}.<br><br>`
+      `<b>${creadas.length} ${creadas.length===1?"factura":"facturas"}</b> · ${esc(P(d.prop).nombre)} · ${conceptosBase.length+extras.length} conceptos · ${money(tot)}.<br><br>`
       + `El <b>PDF quedó guardado</b> con la factura. Puedes verlo, descargarlo o enviarlo al cliente `
       + `cuando quieras — enviarlo es opcional.`
       + (bloqueadas.length?`<br><br><b>${bloqueadas.length} WO(s) de esta propiedad quedaron afuera</b> por excepción sin resolver — se facturan aparte cuando se resuelva.`:""),"v"); render();
@@ -241,6 +265,8 @@ Object.assign(ACC, {
      Erika valida antes de que se pueda facturar o pagar (Proceso de Facturación y Nómina) */
   validarModal: d => {
     const w=W(+d.id), ads=S.adicionales.filter(a=>a.wo===w.id), mv=S.movs.filter(m=>m.wo===w.id);
+    const subs=subWOsOperativas().filter(a=>a.wo===w.id && a.estadoTrabajo!=="Canceled");
+    const subsPend=subWOsPendientesDeWO(w.id);
     /* Reunión 2026-09-09: las horas NO bloquean — al técnico se le paga por
        trabajo (pago del tarifario × cantidad), nunca por hora, así que exigir
        "horas trabajadas" para validar no correspondía. Solo evidencia y
@@ -249,6 +275,8 @@ Object.assign(ACC, {
     const falta = [];
     if(!w.evid) falta.push("evidencia del trabajo");
     if(ingresoWO(w)===null) falta.push("tarifa");
+    if(subsPend.length) falta.push(`${subsPend.length} Sub-WO sin terminar o sin evidencia`);
+    const faltaBase=!w.evid || ingresoWO(w)===null;
     modal(`<div class="mh"><h3>Validar WO-${w.id}</h3>
       <p>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)} · ${esc(tecN(w.tec))}</p></div>
     <div class="mb">
@@ -257,6 +285,8 @@ Object.assign(ACC, {
           <td><b>Servicios realizados</b><div style="font-size:11.5px;color:var(--soft)">${esc(w.serv)} × ${w.cant||1}</div></td></tr>
         <tr><td>${ads.length?'<span class="pill v">✓</span>':'<span class="pill g">·</span>'}</td>
           <td><b>Servicios adicionales</b><div style="font-size:11.5px;color:var(--soft)">${ads.length?ads.map(a=>esc(a.concepto||a.desc.slice(0,40))+" ("+a.estado+")").join(", "):"ninguno"}</div></td></tr>
+        <tr><td>${subs.length&&!subsPend.length?'<span class="pill v">✓</span>':subsPend.length?'<span class="pill r">—</span>':'<span class="pill g">·</span>'}</td>
+          <td><b>Sub-Work Orders operativas</b><div style="font-size:11.5px;color:var(--soft)">${subs.length?subs.map(a=>`${esc(a.concepto)} · ${esc(tecN(tecSubWO(a)))} · ${esc(a.estadoTrabajo||"Unassigned")} · ${(a.fotosEvidArr||[]).length} foto(s)`).join("<br>"):"ninguna"}</div></td></tr>
         <tr><td>${mv.length?'<span class="pill v">✓</span>':'<span class="pill g">·</span>'}</td>
           <td><b>Materiales</b><div style="font-size:11.5px;color:var(--soft)">${mv.length?mv.map(m=>esc(by(S.productos,m.prod).nombre)+" ×"+m.cant).join(", ")+" · "+money(materialWO(w)):"ninguno"}</div></td></tr>
         <tr><td><span class="pill g">·</span></td>
@@ -269,7 +299,7 @@ Object.assign(ACC, {
        :`<div class="note v" style="margin-top:12px"><b>Todo completo.</b> Al validar entra a nómina y a facturación.</div>`}
     </div>
     <div class="mf"><button class="btn" data-a="cm">Cerrar</button>
-      ${falta.length?`<button class="btn" data-a="pedirInfo" data-id="${w.id}">Solicitar info al técnico</button>`:""}
+      ${faltaBase?`<button class="btn" data-a="pedirInfo" data-id="${w.id}">Solicitar info al técnico</button>`:""}
       <button class="btn ${falta.length?"":"v"}" data-a="validarOK" data-id="${w.id}" ${falta.length?"disabled":""}>Validar Work Order</button></div>`,true);
   },
   validarOK: d => {
@@ -330,9 +360,15 @@ Object.assign(ACC, {
     f.seguimiento=f.seguimiento||[];
     f.seguimiento.push({tipo:"pago",fecha:HOY_SUP,hora:hora(),quien:S.usuario});
     f.seguimiento.push({tipo:"cierre",fecha:HOY_SUP,hora:hora(),quien:S.usuario});
-    f.lineas.forEach(id=>{const w=W(id); if(w){w.cobrada=true; w.hist.push([hora(),"Cobrada",S.usuario]);}});
+    let quedanAbiertas=0;
+    f.lineas.forEach(id=>{const w=W(id); if(w){
+      const queda=S.facturas.some(otra=>otra.id!==f.id && otra.estado!=="Pagada" && (otra.lineas||[]).includes(id));
+      if(queda) quedanAbiertas++;
+      if(!queda) w.cobrada=true;
+      w.hist.push([hora(),`Cobrada ${f.num}${queda?" · quedan otras facturas abiertas":""}`,S.usuario]);
+    }});
     cm();
-    toast("✓ Pago registrado",`${esc(f.num)} · ${money(f.total)}. Las Work Orders pasaron a «Paid» — Invoice y Work Orders quedaron cerrados.`,"v"); render();
+    toast("✓ Pago registrado",`${esc(f.num)} · ${money(f.total)}. ${quedanAbiertas?"La factura quedó cerrada; la Work Order seguirá abierta hasta cobrar sus otras facturas.":"Invoice y Work Orders quedaron cerrados."}`,"v"); render();
   },
   cobGestionar: d => modalCobranza(d.id),
   /* Escalera de cobranza del flujograma: Reminder → Correo Overdue → Llamada.
