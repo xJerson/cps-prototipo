@@ -64,7 +64,7 @@ function renderFonSup(){
 function hojaSup(g){
   const r = REP[g.tipo];
   const us = S.unidades.filter(u=>u.prop===g.prop);
-  const total = g.lotes.reduce((t,l)=>t+l.n,0);
+  const total = g.lotes.reduce((t,l)=>t+(l.fotosArr||[]).length,0);
   return `<div class="fscrim" data-a="gRepNo"><div class="fsheet" data-stop>
     <div class="grab"></div>
     <h4 style="color:${r.c}">${r.n}</h4>
@@ -165,8 +165,10 @@ function hojaSup(g){
       <div style="border-bottom:1px solid var(--line);padding:7px 0">
         <div class="glote" style="border:none;padding:0">
           <span><b>${esc(l.amb)}</b>${l.etapa?` · <span style="color:var(--azul)">${esc(l.etapa)}</span>`:""}${l.cond?` · ${esc(l.cond)}`:""}</span>
-          <span><b>${l.n}</b> foto(s)
+          <span><b>${(l.fotosArr||[]).length}</b> foto(s)
             <button class="adx" style="height:23px;width:23px;font-size:14px;margin-left:5px" data-a="gRepQuita" data-i="${i}">−</button></span></div>
+        ${(l.fotosArr||[]).length?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">${l.fotosArr.map(f=>
+          `<a href="${f.url}" target="_blank"><img src="${f.url}" style="width:44px;height:44px;object-fit:cover;border-radius:5px;border:1px solid var(--line)"></a>`).join("")}</div>`:""}
         <input id="loD${i}" value="${esc(l.desc||"")}" placeholder="Qu\u00e9 se ve en estas fotos" style="margin-top:5px">
       </div>`).join("")}
       </div>`:`<div class="dc" style="border-style:dashed;margin-top:7px"><div class="ds" style="text-align:center">Sin fotos todavía</div></div>`}

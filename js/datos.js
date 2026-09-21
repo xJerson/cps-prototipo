@@ -2,6 +2,11 @@
 /* ══════════ DATOS SEMILLA ══════════ */
 let ID = {p:100,u:200,c:300,t:400,w:1044,e:500,f:600,pr:700,mv:800,cl:900,ad:950,cm:960};
 const nid = k => ++ID[k];
+/* Fotos semilla: no hay cámara real en el arranque del prototipo, pero la
+   galería/miniatura necesita una URL de imagen real (no un contador ni
+   url:null) para poder probarse desde que abre la demo. */
+const FOTO_SEED = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='80' height='60'%3E%3Crect width='80' height='60' fill='%237fa8c9'/%3E%3C/svg%3E";
+const loteSeed = (amb,cond,n,hora) => ({amb,cond,fotosArr:Array.from({length:n},()=>({url:FOTO_SEED,quien:"T6",hora}))});
 let ultimoSubwoTocado = null;   // WO de la última Sub-Work Order a la que se le tocó una foto — lo lee AUD_POST.subwoFoto
 let ultimoEstTocado = null;     // num del último estimado aprobado/rechazado — lo lee AUD_POST.estMedioOK
 
@@ -146,7 +151,12 @@ let S = {
      hist:[["8:20","Creada","Thalia"],["8:21","Asignada a Marcos Ayala","Thalia"],
            ["14:10","Devuelta por supervisión: Quedó pintura en el marco de la puerta y el zócalo sin retocar.","Gustavo"]]},
     {id:1042,prop:"P2",unidad:"U5",cat:"Clean",serv:"Deep clean",tec:null,estado:"Scheduled",semana:33,fecha:"2026-08-12",horaProg:"9:00",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",hist:[["7:50","Creada","Claudia"]]},
-    {id:1043,prop:"P3",unidad:"U7",cat:"Repair",serv:"Drywall repair",tec:"T4",estado:"Scheduled",semana:33,fecha:"2026-08-12",horaProg:"10:00",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",hist:[["8:25","Creada","Thalia"],["8:26","Asignada a Andrés Solís","Thalia"]]},
+    {id:1043,prop:"P3",unidad:"U7",cat:"Repair",serv:"Drywall repair",tec:"T4",estado:"Scheduled",semana:33,fecha:"2026-08-12",horaProg:"10:00",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",
+     /* Fotos de referencia: lo que hay que reparar, para que el técnico lo vea
+        antes de ir — Work to Be Performed, sembrado para que la galería no
+        arranque siempre vacía. */
+     fotosPrevias:[{url:FOTO_SEED,quien:"Thalia",hora:"8:25"},{url:FOTO_SEED,quien:"Thalia",hora:"8:25"}],
+     hist:[["8:25","Creada","Thalia"],["8:26","Asignada a Andrés Solís","Thalia"]]},
     {id:1044,prop:"P1",unidad:"U3",cat:"Clean",serv:"Full clean",tec:"T1",estado:"Scheduled",semana:33,fecha:"2026-08-13",horaProg:"9:00",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",hist:[["8:30","Creada","Claudia"]]}
   ],
   adicionales:[], facturas:[], pagos:[], nomina:[], bitacora:[], audSeq:0, avisos:[], campana:false,
@@ -158,8 +168,8 @@ let S = {
   reportes:[
     {id:"R1", tipo:"previo", prop:"P1", unidad:"U2", wo:null,
      fecha:"2026-08-08", hora:"8:40", quien:"T6", antesDe:"Full paint",
-     lotes:[{amb:"Sala",cond:"Accesorios",n:6},{amb:"Sala",cond:"Pared / drywall",n:9},
-            {amb:"Bano",cond:"Accesorios",n:11},{amb:"Room",cond:"Pisos",n:7}],
+     lotes:[loteSeed("Sala","Accesorios",6,"8:40"),loteSeed("Sala","Pared / drywall",9,"8:41"),
+            loteSeed("Bano","Accesorios",11,"8:42"),loteSeed("Room","Pisos",7,"8:43")],
      nota:"Interruptores de la sala ya venian manchados de pintura del trabajo anterior. Golpe en la pared del bano, junto al lavamanos.",
      medidas:"", servicios:[], estado:"Archivado", accion:"Archivado en la unidad"},
   ],

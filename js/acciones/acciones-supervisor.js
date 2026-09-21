@@ -362,16 +362,21 @@ Object.assign(ACC, {
     if(i>-1) S.gRep.servicios.splice(i,1); else S.gRep.servicios.push(d.c); render(); },
 
   /* Disparar: se acumula en el lote del ambiente activo. Cien fotos sueltas
-     no sirven; agrupadas por ambiente, Claudia las puede revisar. */
+     no sirven; agrupadas por ambiente, Claudia las puede revisar.
+     Punto 7 del feedback: foto real (cámara/galería), no un contador — mismo
+     capturarFoto/fotoNueva que usa el resto de la app. */
   gRepFoto: () => {
     leerSup(); const g=S.gRep;
-    /* El lote agrupa por ambiente + condicion + etapa: asi el antes y el
-       despues del mismo bano no terminan en la misma pila. */
-    const l = g.lotes.find(x=>x.amb===g.amb && (x.cond||null)===(g.cond||null)
-                              && (x.etapa||null)===(g.etapa||null));
-    if(l) l.n++; else g.lotes.push({amb:g.amb, cond:g.cond||null, etapa:g.etapa||null, desc:"", n:1});
-    S.reloj += 1;
-    render();
+    capturarFoto(url=>{
+      /* El lote agrupa por ambiente + condicion + etapa: asi el antes y el
+         despues del mismo bano no terminan en la misma pila. */
+      const l = g.lotes.find(x=>x.amb===g.amb && (x.cond||null)===(g.cond||null)
+                                && (x.etapa||null)===(g.etapa||null));
+      const f = fotoNueva(url, GUSTAVO);
+      if(l) l.fotosArr.push(f); else g.lotes.push({amb:g.amb, cond:g.cond||null, etapa:g.etapa||null, desc:"", fotosArr:[f]});
+      S.reloj += 1;
+      render();
+    });
   },
   gRepQuita: d => { leerSup(); S.gRep.lotes.splice(+d.i,1); render(); },
 
@@ -386,7 +391,7 @@ Object.assign(ACC, {
     }
     if(!g.lotes.length && !noEntro){ toast("Sin fotos","Toma al menos una antes de enviar.","r"); return; }
     if(!g.unidad){ toast("Falta la unidad","Esta propiedad no tiene unidades registradas.","r"); return; }
-    const n = g.lotes.reduce((t,l)=>t+l.n,0);
+    const n = g.lotes.reduce((t,l)=>t+(l.fotosArr||[]).length,0);
     const r = {id:"R"+Date.now(), tipo:g.tipo, prop:g.prop, unidad:g.unidad, wo:null,
       fecha:"2026-08-11", hora:hora(), quien:GUSTAVO,
       antesDe:g.tipo==="previo"?g.antesDe:"",

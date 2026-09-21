@@ -190,13 +190,13 @@ function vCampoRep(){
           ${r.servicios.map(x=>`<span class="pill a" style="margin:3px 3px 0 0">${esc(x)}</span>`).join("")}</div>`:""}
 
         <div class="galeria">
-        ${(r.lotes||[]).map(l=>`<div class="glot">
+        ${(r.lotes||[]).map(l=>{ const fs=l.fotosArr||[]; return `<div class="glot">
           <div class="glot-h"><b>${esc(l.amb)}</b>${l.etapa?` <span class="pill ${l.etapa==="Antes"?"a":l.etapa==="Final"?"v":"m"}" style="margin-left:4px">${esc(l.etapa)}</span>`:""}${l.cond?` <span style="color:var(--faint)">· ${esc(l.cond)}</span>`:""}
-            <span class="pill g" style="float:right">${l.n}</span>
+            <span class="pill g" style="float:right">${fs.length}</span>
             ${l.desc?`<div style="font-size:10.5px;color:var(--soft);font-weight:400;margin-top:3px">${esc(l.desc)}</div>`:""}</div>
-          <div class="glot-f">${Array.from({length:Math.min(l.n,6)}).map(()=>`<div class="fmini">📷</div>`).join("")}
-            ${l.n>6?`<div class="fmini mas">+${l.n-6}</div>`:""}</div>
-        </div>`).join("")}
+          <div class="glot-f">${fs.slice(0,6).map(f=>`<a href="${f.url}" target="_blank" class="fmini" style="overflow:hidden;padding:0"><img src="${f.url}" style="width:100%;height:100%;object-fit:cover;display:block"></a>`).join("")}
+            ${fs.length>6?`<div class="fmini mas">+${fs.length-6}</div>`:""}</div>
+        </div>`;}).join("")}
         </div>
 
         ${r.medidas?`<div style="margin-top:9px;font-size:12px"><b>Medidas:</b> ${esc(r.medidas)}</div>`:""}
@@ -268,12 +268,12 @@ function vPrevio(pid){
             <span style="color:var(--faint);font-size:11.5px">· ${r.fecha} ${esc(r.hora)} · ${esc(tecN(r.quien))}</span></div>
           <span class="pill v">${fotosDe(r)} fotos</span></div>
         <div class="galeria">
-        ${(r.lotes||[]).map(l=>`<div class="glot">
+        ${(r.lotes||[]).map(l=>{ const fs=l.fotosArr||[]; return `<div class="glot">
           <div class="glot-h"><b>${esc(l.amb)}</b>${l.etapa?` <span class="pill ${l.etapa==="Antes"?"a":l.etapa==="Final"?"v":"m"}" style="margin-left:4px">${esc(l.etapa)}</span>`:""}${l.cond?` <span style="color:var(--faint)">· ${esc(l.cond)}</span>`:""}
-            <span class="pill g" style="float:right">${l.n}</span>
+            <span class="pill g" style="float:right">${fs.length}</span>
             ${l.desc?`<div style="font-size:10.5px;color:var(--soft);font-weight:400;margin-top:3px">${esc(l.desc)}</div>`:""}</div>
-          <div class="glot-f">${Array.from({length:Math.min(l.n,6)}).map(()=>`<div class="fmini">📷</div>`).join("")}
-            ${l.n>6?`<div class="fmini mas">+${l.n-6}</div>`:""}</div></div>`).join("")}
+          <div class="glot-f">${fs.slice(0,6).map(f=>`<a href="${f.url}" target="_blank" class="fmini" style="overflow:hidden;padding:0"><img src="${f.url}" style="width:100%;height:100%;object-fit:cover;display:block"></a>`).join("")}
+            ${fs.length>6?`<div class="fmini mas">+${fs.length-6}</div>`:""}</div></div>`;}).join("")}
         </div>
         ${r.nota?`<div class="tr" style="margin-top:9px">«${esc(r.nota)}»</div>`:""}
       </div>`).join("")}

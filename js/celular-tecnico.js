@@ -397,7 +397,7 @@ const fichaRep = k => { const r = REP[k];
   </div>`; };
 const GUSTAVO = "T6";
 const repsDe = q => S.reportes.filter(r=>r.quien===q);
-const fotosDe = r => (r.lotes||[]).reduce((t,l)=>t+l.n,0);
+const fotosDe = r => (r.lotes||[]).reduce((t,l)=>t+(l.fotosArr||[]).length,0);
 /* El estado previo no se decide: se queda pegado a la unidad para siempre */
 const previosDe = uid => S.reportes.filter(r=>r.tipo==="previo" && r.unidad===uid);
 const repPend = () => S.reportes.filter(r=>r.estado==="Nuevo");
@@ -858,7 +858,7 @@ function gustavoScreenHTML(view){
                   <div class="dh" style="font-size:12px">${esc((REP[b.tipo]||{n:b.tipo}).n)}</div>
                   <span class="dtag" style="background:var(--ambar);color:#fff;flex:none">guardado ${esc(b.guardado)}</span></div>
                 <div class="ds" style="margin-top:3px">${esc(P(b.prop).nombre)}${b.unidad&&U(b.unidad)?" · "+esc(U(b.unidad).num):""}
-                  · ${(b.lotes||[]).reduce((t,l)=>t+l.n,0)} foto(s)</div>
+                  · ${(b.lotes||[]).reduce((t,l)=>t+(l.fotosArr||[]).length,0)} foto(s)</div>
                 <div style="display:flex;gap:6px;margin-top:7px">
                   <button class="db p" style="margin:0;padding:8px;font-size:11.5px" data-a="gRepRetomar" data-id="${b.id}">Seguir</button>
                   <button class="db g" style="margin:0;padding:8px;font-size:11.5px" data-a="gRepBorrarBorrador" data-id="${b.id}">Descartar</button>
