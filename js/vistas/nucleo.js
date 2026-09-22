@@ -256,8 +256,21 @@ function modalFotos(){
     <button class="btn p" data-a="fotoModalAgregar">📷 Agregar foto</button></div>`);
 }
 
-/* Categorías donde la ubicación es obligatoria (Claudia: «que no poner solamente Repair») */
-const EXIGE_UBIC = ["Repair","Cabinet","Resurface","Installation","Ceramica"];
+/* La ubicación no es una lista plana: cada tipo de trabajo define si hace
+   falta y qué espacios tienen sentido. La tabla permite ampliar reglas sin
+   rearmar el formulario. */
+const REGLAS_UBICACION = {
+  Repair:       {obligatoria:true},
+  Cabinet:      {obligatoria:true, opciones:["Bano","Kitchen"], detalle:true},
+  Resurface:    {obligatoria:true, opciones:["Bano","Kitchen"], detalle:true},
+  Installation: {obligatoria:true},
+  Ceramica:     {obligatoria:true}
+};
+const reglaUbicacion = cat => {
+  const regla=REGLAS_UBICACION[cat]||{};
+  return {obligatoria:!!regla.obligatoria, opciones:regla.opciones||activos("ubicaciones"), detalle:!!regla.detalle};
+};
+const EXIGE_UBIC = Object.keys(REGLAS_UBICACION);
 /* Reunión Claudia (feedback prototipo): "Repair no necesita habitaciones, baños
    ni floors. Tampoco resurfacing" — son las mismas categorías que ya cobran
    por arreglo puntual (Tub only, Per trailer…), no por tamaño del apartamento. */
@@ -280,8 +293,8 @@ const CAMPOS = {
   precio:"Se cobra al cliente", pago:"Se paga al técnico",
   desc:"Description", tax:"Tax", descuento:"Total Discount", cantidad:"Quantity",
   unidad:"Unidad", fecha:"Fecha", horaProg:"Hora", semana:"Semana",
-  cant:"Cantidad", po:"PO", notasTec:"Notas al técnico",
-  ubic:"Ubicación del trabajo"
+  cant:"Cantidad", po:"PO", notasTec:"Notas al técnico", notasOficina:"Notas internas de oficina",
+  ubic:"Ubicación del trabajo", ubicDetalle:"Detalle de ubicación"
 };
 /* Un id crudo («P3», «T2») no le dice nada a nadie leyendo la bitácora */
 function legible(k,v){

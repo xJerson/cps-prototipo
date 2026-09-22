@@ -5,6 +5,16 @@ Object.assign(ACC, {
   woVer: d => { S.mod="wo"; S.sub=+d.id; render(); },
   woVerDesdeModal: d => { cm(); S.mod="wo"; S.sub=+d.id; render(); },
   woNueva: () => modalWO(),
+  woFotoRefAgregar: () => {
+    capturarFoto(url=>{
+      (S.woFotosPreviasDraft ||= []).push(fotoNueva(url));
+      refFotosPreviasWO();
+    });
+  },
+  woFotoRefQuitar: d => {
+    (S.woFotosPreviasDraft ||= []).splice(+d.i,1);
+    refFotosPreviasWO();
+  },
   woCat: () => refWO(),
   /* Reunión Claudia (feedback prototipo): Propiedad y Unidad se ESCRIBEN,
      con sugerencias en vivo — no se eligen de una lista precargada. */
@@ -63,6 +73,7 @@ Object.assign(ACC, {
   // recalcula el precio de vista previa, adentro de refWO.
   woUniCampo: () => refWO(),
   woServ: () => refTarifa(),
+  woFecha: () => refAgendaNuevaWO(),
 
   woEditar: d => { const w=W(+d.id);
     if(!woEditable(w)){
@@ -70,7 +81,8 @@ Object.assign(ACC, {
     modalWO(w); },
   woGuardar: d => {
     const pid=val("wProp"), cat=val("wCat"), serv=val("wServ"), ubic=val("wUbic"), fecha=val("wFecha");
-    const horaProg=val("wHora"), cantN=parseFloat(val("wCant")), po=val("wPO"), notasTec=val("wNotas");
+    const horaProg=val("wHora"), cantN=parseFloat(val("wCant")), po=val("wPO"), notasTec=val("wNotas"), notasOficina=val("wNotasOficina"), ubicDetalle=val("wUbicDetalle");
+    const exige=reglaUbicacion(cat).obligatoria;
     let uid=val("wUni");
     const esNueva = uid==="__new__";
     const faltan=[];
@@ -85,11 +97,12 @@ Object.assign(ACC, {
     if(!esNueva && u && requiereBedrooms && val("wUniBedrooms")==="") faltan.push("bedrooms de la unidad");
     if(!cat) faltan.push("tipo de servicio");
     if(!serv) faltan.push("servicio");
+    if(!(d&&d.id) && !fecha) faltan.push("fecha");
     if(!(cantN>0)) faltan.push("cantidad");
     if(EXIGE_UBIC.includes(cat) && !ubic) faltan.push("ubicación dentro de la unidad");
     if(faltan.length){
-      marcaFalta(["wProp","wUni","wCat","wServ","wCant"].concat(esNueva?["wUniNum"]:[]).concat(requiereBedrooms?["wUniBedrooms"]:[]).concat(EXIGE_UBIC.includes(cat)?["wUbic"]:[]));
-      toast("🚫 No se puede guardar", `Falta: <b>${faltan.join(", ")}</b>.${EXIGE_UBIC.includes(cat)&&!ubic?" Una reparación sin ubicación hace que el técnico la busque por toda la unidad.":""}`,"r");
+      marcaFalta(["wProp","wUni","wCat","wServ","wCant"].concat(!(d&&d.id)&&!fecha?["wFecha"]:[]).concat(esNueva?["wUniNum"]:[]).concat(requiereBedrooms?["wUniBedrooms"]:[]).concat(exige?["wUbic"]:[]));
+      toast("🚫 No se puede guardar", `Falta: <b>${faltan.join(", ")}</b>.${exige&&!ubic?" El técnico necesita saber exactamente dónde trabajar.":""}`,"r");
       return;
     }
     /* Se captura antes de abrir una posible confirmación de duplicado: ese
@@ -128,8 +141,8 @@ Object.assign(ACC, {
         }
       }
       if(yo){
-        const datosWO={prop:pid, unidad:uid, cat, serv, ubic, fecha, semana:fecha?semanaDe(fecha):null,
-          horaProg, cant:cantN, po, notasTec};
+        const datosWO={prop:pid, unidad:uid, cat, serv, ubic, ubicDetalle, fecha, semana:fecha?semanaDe(fecha):null,
+          horaProg, cant:cantN, po, notasTec, notasOficina};
         if(!diffCampos(yo,datosWO).length && cambiosUnidad.length){
           cm(); toast("✓ Unidad actualizada",`Los datos de <b>${esc(uNueva.num)}</b> quedaron guardados para las próximas Work Orders.`,"v"); render(); return;
         }
@@ -145,10 +158,13 @@ Object.assign(ACC, {
       }
       const id = nid("w");
       flash("wo:"+id);
-      const nueva = {id, prop:pid, unidad:uid, cat, serv, ubic, tec:null, estado:"Scheduled", horaProg, cant:cantN,
+      const nueva = {id, prop:pid, unidad:uid, cat, serv, ubic, ubicDetalle, tec:null, estado:"Scheduled", horaProg, cant:cantN,
         semana:fecha?semanaDe(fecha):null, fecha, po, asistencia:false, evid:0, mats:[],
-        notas:"", notasTec, hist:[[hora(),"Creada",S.usuario]]};
+        notas:"", notasTec, notasOficina, fotosPrevias:(S.woFotosPreviasDraft||[]).slice(),
+        propuestas:[{fecha,medio:"Registro de WO",contacto:S.usuario,respuesta:"Fecha programada",nota:"",motivo:"",quien:S.usuario,hora:hora(),dia:HOY_SUP}],
+        hist:[[hora(),"Creada · fecha programada para "+fecha,S.usuario]]};
       S.wos.push(nueva);
+      S.woFotosPreviasDraft=[];
       /* Si esta WO nace de "Programar" en una Solicitud, recién AHORA que de
          verdad se guardó algo se marca la solicitud "Programada" y se liga
          una con la otra — no al abrir el modal (ver solProgramar). */
@@ -171,7 +187,7 @@ Object.assign(ACC, {
     if(!esNueva){
       const dup = S.wos.find(w2 => w2.unidad===uid && w2.serv===serv && w2.fecha===fecha
         && w2.estado!=="Canceled" && (!yo || w2.id!==yo.id)
-        && (!EXIGE_UBIC.includes(cat) || w2.ubic===ubic));
+        && (!exige || (w2.ubic===ubic&&w2.ubicDetalle===ubicDetalle)));
       if(dup){
         S._woPendienteGuardar = procederGuardado;
         modalDupWO(dup);
@@ -236,6 +252,7 @@ Object.assign(ACC, {
     const pendiente = chk("pgP");
     const resp = pendiente ? "Quedó en confirmar después" : "Fecha acordada";
     if(!f){ marcaFalta(["pgF"]); toast("Falta la fecha","Pon la fecha que quedaron.","r"); return; }
+    if(w.fecha && !motivo){ marcaFalta(["pgMotivo"]); toast("Falta el resultado","Registra qué pasó con la fecha anterior antes de reagendar.","r"); return; }
 
     /* Si ya hay técnico asignado, mover la fecha le puede quitar el cupo a
        otro día lleno — antes esto solo se revisaba en "Reagendar". */
@@ -623,6 +640,12 @@ Object.assign(ACC, {
   woReasignarOK: d => {
     const w = W(+d.id), antes = w.tec, nuevo = val("raT");
     if(antes===nuevo){ cm(); toast("Sin cambios","Es el mismo t\u00e9cnico.",""); return; }
+    const bloqueoNuevo=bloqueo(nuevo,w.fecha), cargaNueva=capacidadDia(nuevo,w.fecha);
+    if(bloqueoNuevo || cargaNueva>=CAP){
+      toast("🚫 No se puede reasignar",bloqueoNuevo
+        ? `<b>${esc(tecN(nuevo))}</b> no está disponible: ${esc(bloqueoNuevo.motivo)}.`
+        : `<b>${esc(tecN(nuevo))}</b> ya tiene ${cargaNueva}/${CAP} Work Orders el ${w.fecha}.`,"r"); return;
+    }
     w.tec = nuevo;
     w.hist.push([hora(), "Reasignada de "+tecN(antes)+" a "+tecN(nuevo), S.usuario]);
     if(w.touchup){
@@ -643,6 +666,24 @@ Object.assign(ACC, {
         : ""), "v");
     noti("Te reasignaron un trabajo", `${P(w.prop).nombre} ${U(w.unidad)?U(w.unidad).num:""} — WO-${w.id}`);
     render();
+  },
+  woCancelar: d => {
+    const w=W(+d.id); if(!w) return;
+    modal(`<div class="mh"><h3>Cancelar WO-${w.id}</h3><p>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)} · ${esc(w.fecha)}</p></div>
+      <div class="mb"><div class="fld"><label>¿Por qué se cancela? <span class="req">*</span></label><select id="wcMotivo">
+        <option value="">— selecciona —</option><option>Plagas</option><option>No abrieron la unidad</option><option>La unidad no era la correcta</option><option>El cliente canceló</option><option>Ya no se requiere el trabajo</option><option>Otro</option></select></div>
+        <div class="fld"><label>Nota interna</label><textarea id="wcNota" placeholder="Detalle para oficina e historial"></textarea></div>
+        <div class="note r">La WO no se borra: queda cancelada con el motivo en su historial y no entra a nómina ni facturación.</div></div>
+      <div class="mf"><button class="btn" data-a="cm">Volver</button><button class="btn r" data-a="woCancelarOK" data-id="${w.id}">Cancelar WO</button></div>`);
+  },
+  woCancelarOK: d => {
+    const w=W(+d.id), motivo=val("wcMotivo"), nota=val("wcNota");
+    if(!motivo){ marcaFalta(["wcMotivo"]); toast("Falta el motivo","Indica por qué se canceló esta Work Order.","r"); return; }
+    w.estado="Canceled"; w.motivoCancel=motivo; w.notaCancel=nota;
+    w.propuestas=(w.propuestas||[]).concat([{fecha:w.fecha,medio:"Oficina",contacto:S.usuario,respuesta:"Cancelada",nota,motivo,quien:S.usuario,hora:hora(),dia:HOY_SUP}]);
+    w.hist.push([hora(),`Cancelada: ${motivo}${nota?" — "+nota:""}`,S.usuario]);
+    flash("wo:"+w.id); cm();
+    toast("WO cancelada",`WO-${w.id} queda en historial con el motivo: <b>${esc(motivo)}</b>. No se agregará a nómina ni facturación.`,"w"); render();
   },
   /* Desde el detalle web de una WO: abrir esa orden en el celular del técnico
      que la tiene asignada (así no hay que buscar a mano de quién es). */

@@ -98,13 +98,15 @@ function fichaWO(id){
       <a href="#" data-a="verEnAgenda" data-id="${w.id}" style="color:var(--azul);font-weight:650">semana ${w.semana} — ver en la agenda</a></p></div>
     <div class="act">
       ${woEditable(w)?`<button class="btn" data-a="woEditar" data-id="${w.id}">Editar datos</button>`:""}
-      ${!["Completed","Canceled","Invoiced","Paid"].includes(w.estado)
-        ?`<button class="btn ${w.confirmCliente?"":"p"}" data-a="progCliente" data-id="${w.id}">
-            ${w.confirmCliente?"Ver coordinación con el cliente":"Programar con el cliente"}</button>`:""}
+      ${esAgendada(w.estado)
+        ?`<button class="btn p" data-a="progCliente" data-id="${w.id}">
+            ${w.fecha?"Reagendar":"Definir fecha con cliente"}</button>`:""}
       ${!w.tec?`<button class="btn ${w.confirmCliente?"p":""}" data-a="asigModal" data-id="${w.id}">Asignar técnico</button>`:""}
       ${w.estado==="Completed"&&!w.supervisada?`<button class="btn v" data-a="supervisar" data-id="${w.id}">Aprobar supervisión</button>`:""}
       ${w.tec && !["Canceled","Invoiced","Paid"].includes(w.estado)
         ?`<button class="btn" data-a="woReasignar" data-id="${w.id}">Reasignar técnico</button>`:""}
+      ${esAgendada(w.estado)
+        ?`<button class="btn r" data-a="woCancelar" data-id="${w.id}">Cancelar WO</button>`:""}
       ${w.tec && !["Canceled","Invoiced","Paid","Completed"].includes(w.estado)
         ?`<button class="btn ${((esAgendada(w.estado)&&!asisDe(w.id))||w.infoPedida)?"pulso p":""}" data-a="verWoEnCel" data-id="${w.id}">📱 Ver en el celular de ${esc(T(w.tec)?T(w.tec).nombre:"el técnico")}</button>`:""}
       ${["In progress","Esperando aprobación"].includes(w.estado)
@@ -134,13 +136,14 @@ function fichaWO(id){
           <tr><td style="color:var(--faint);width:170px">Propiedad</td><td>${esc(p.nombre)} · ${esc(p.zona)}</td></tr>
           <tr><td style="color:var(--faint)">Dirección</td><td>${esc(p.dir)}</td></tr>
           <tr><td style="color:var(--faint)">Unidad · Rooms · Pisos</td><td>${esc(u.num)} · ${esc(u.rooms)} · ${u.pisos}</td></tr>
-          <tr><td style="color:var(--faint)">Ubicación del trabajo</td><td>${w.ubic?esc(w.ubic):'<span class="pill w">sin especificar</span>'}</td></tr>
+          <tr><td style="color:var(--faint)">Ubicación del trabajo</td><td>${w.ubic?esc(w.ubic)+(w.ubicDetalle?" · "+esc(w.ubicDetalle):""):'<span class="pill w">sin especificar</span>'}</td></tr>
           <tr><td style="color:var(--faint)">Código de puerta</td><td class="mono">${esc(p.door)}</td></tr>
           <tr><td style="color:var(--faint)">Técnico</td><td>${w.tec?esc(tecN(w.tec)):'<span class="pill w">sin asignar</span>'}</td></tr>
           <tr><td style="color:var(--faint)">Cantidad</td><td class="mono">${w.cant||1}${puedeVerDinero&&(w.cant||1)>1&&t?` × ${money(t.precio)} = ${money(ingresoWO(w))}`:""}</td></tr>
           <tr><td style="color:var(--faint)">PO</td><td class="mono">${esc(w.po)||"—"}</td></tr>
           <tr><td style="color:var(--faint)">Asistencia</td><td>${w.asistencia?'<span class="pill v">Sí</span>':'<span class="pill g">No registrada</span>'}</td></tr>
           <tr><td style="color:var(--faint)">Notas al técnico</td><td>${esc(w.notasTec)||"—"}</td></tr>
+          <tr><td style="color:var(--faint)">Notas internas de oficina</td><td>${esc(w.notasOficina)||"—"}</td></tr>
           <tr><td style="color:var(--faint)">Qué hizo el técnico</td><td>${esc(w.notas)||'<span style="color:var(--faint)">sin describir</span>'}</td></tr>
         </tbody></table></div>
 
@@ -662,6 +665,8 @@ const SUBWO_SPECS = {
 
 function modalWO(w){
   const opts = (a,v) => a.map(x=>`<option ${x===v?"selected":""}>${esc(x)}</option>`).join("");
+  // Las fotos se acumulan solo mientras se crea la WO; se guardan junto con ella.
+  if(!w) S.woFotosPreviasDraft=[];
   modal(`
   <div class="mh"><h3>${w?`Editar WO-${w.id}`:"Nueva Work Order"}</h3><p>${w?"Lo que se tecleó mal se arregla aquí. Cada campo que cambies queda en la Bitácora y en el historial de la orden.":"Completa los datos del trabajo. La fecha y la hora se pueden coordinar después."}</p></div>
   <div class="mb">
@@ -690,15 +695,21 @@ function modalWO(w){
     <div id="wSugerencia"></div>
     <div class="fg c2">
       <div class="fld"><label>Ubicación dentro de la unidad <span id="wUbicReq"></span></label>
-        <select id="wUbic"><option value="">— sin especificar —</option>${opts(activos("ubicaciones"), w?w.ubic:"")}</select>
-        <div class="hint" id="wUbicHint"></div></div>
-      <div class="fld"><label>Fecha y hora <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcionales</span></label><div style="display:flex;gap:7px"><input type="date" id="wFecha" value="${w?esc(w.fecha||""):""}" style="flex:2"><input id="wHora" value="${w?esc(w.horaProg||""):""}" class="mono" style="flex:1" placeholder="9:00"></div></div>
+        <select id="wUbic" data-value="${w?esc(w.ubic||""):""}"></select>
+        <div id="wUbicDetalleBox" data-value="${w?esc(w.ubicDetalle||""):""}"></div><div class="hint" id="wUbicHint"></div></div>
+      <div class="fld"><label>Fecha <span class="req">*</span> <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">· hora opcional</span></label><div style="display:flex;gap:7px"><input type="date" id="wFecha" data-a="woFecha" value="${w?esc(w.fecha||""):""}" style="flex:2"><input id="wHora" data-a="woFecha" value="${w?esc(w.horaProg||""):""}" class="mono" style="flex:1" placeholder="9:00"></div><div id="wAgendaDisponibilidad"></div></div>
     </div>
     <div class="fg c2">
       <div class="fld"><label>Cantidad <span class="req">*</span></label><input id="wCant" value="${w?(w.cant||1):""}" placeholder="1" class="mono"></div>
       <div class="fld"><label>PO</label><input id="wPO" placeholder="opcional" value="${w?esc(w.po||""):""}"></div>
     </div>
     <div class="fld"><label>Notas al técnico</label><textarea id="wNotas" placeholder="lo que el técnico necesita saber antes de llegar">${w?esc(w.notasTec||""):""}</textarea></div>
+    <div class="fld"><label>Notas internas de oficina <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— no las ve el técnico</span></label><textarea id="wNotasOficina" placeholder="Ej. motivo de reprogramación, acuerdo con cliente…">${w?esc(w.notasOficina||""):""}</textarea></div>
+    ${!w?`<div class="fld"><label>Fotos de referencia <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label>
+      <div id="wFotosPrevias"></div>
+      <button type="button" class="btn sm" data-a="woFotoRefAgregar">📷 Agregar foto</button>
+      <div class="hint">El técnico las verá antes de llegar. Puedes agregar varias fotos.</div>
+    </div>`:""}
     <div id="wTarifa"></div>
   </div>
   <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
@@ -707,6 +718,14 @@ function modalWO(w){
   // lista — en blanco caería en el placeholder en vez de lo que ya elegiste.
   if(w) document.getElementById("wServ").innerHTML = `<option selected>${esc(w.serv)}</option>`;
   refWO();
+  if(!w) refFotosPreviasWO();
+}
+function refFotosPreviasWO(){
+  const caja=document.getElementById("wFotosPrevias"); if(!caja) return;
+  const fotos=S.woFotosPreviasDraft||[];
+  caja.innerHTML=fotos.length
+    ? `<div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:9px">${fotos.map((f,i)=>`<div style="position:relative"><img src="${f.url}" alt="Foto de referencia ${i+1}" style="width:82px;height:64px;object-fit:cover;border-radius:7px;border:1px solid var(--line)"><button type="button" class="btn sm" data-a="woFotoRefQuitar" data-i="${i}" title="Quitar foto" style="position:absolute;top:3px;right:3px;min-width:24px;padding:2px 5px">×</button></div>`).join("")}</div>`
+    : `<div class="hint" style="margin-bottom:8px">Todavía no hay fotos de referencia.</div>`;
 }
 /* Ajuste al punto 2 después de hablar con Claudia: no se bloquea, se
    avisa — a veces sí piden el mismo trabajo meses después (una limpieza,
@@ -742,11 +761,19 @@ function refWO(){
       + lista.map(s=>`<option ${s===prevS?"selected":""}>${esc(s)}</option>`).join("");
     if(lista.includes(prevS)) selS.value = prevS;
   }
-  const exige = EXIGE_UBIC.includes(cat);
+  const regla=reglaUbicacion(cat), exige=regla.obligatoria;
+  const selUbic=document.getElementById("wUbic"), ubicAnterior=selUbic.value||selUbic.dataset.value||"";
+  const opciones=ubicAnterior&&!regla.opciones.includes(ubicAnterior)?[...regla.opciones,ubicAnterior]:regla.opciones;
+  selUbic.innerHTML=`<option value="">— sin especificar —</option>${opciones.map(x=>`<option value="${esc(x)}" ${x===ubicAnterior?"selected":""}>${esc(x)}</option>`).join("")}`;
+  selUbic.dataset.value="";
   document.getElementById("wUbicReq").innerHTML = exige? '<span class="req">*</span>' : '';
-  document.getElementById("wUbicHint").innerHTML = exige
-    ? `<span style="color:var(--ambar)">Obligatoria para ${esc(cat)}: «imagínate que la reparación está en el closet y el técnico no la encuentra».</span>`
-    : "opcional para este tipo de servicio";
+  document.getElementById("wUbicHint").innerHTML = cat==="Resurface"
+    ? `<span style="color:var(--ambar)">Obligatoria: Resurface solo se agenda en Bathroom o Kitchen. Indica cuál si hay más de uno.</span>`
+    : exige ? `<span style="color:var(--ambar)">Obligatoria para ${esc(cat)}: el técnico necesita saber exactamente dónde trabajar.</span>` : "opcional para este tipo de servicio";
+  const detalle=document.getElementById("wUbicDetalleBox");
+  const detalleAnterior=document.getElementById("wUbicDetalle")?val("wUbicDetalle"):detalle.dataset.value||"";
+  detalle.innerHTML=regla.detalle?`<input id="wUbicDetalle" placeholder="Especifica cuál (ej. baño master, segundo baño)" value="${esc(detalleAnterior)}" style="margin-top:7px">`:"";
+  detalle.dataset.value="";
   /* Reunión Claudia (feedback prototipo): nada viene elegido de entrada —
      el usuario tiene que ESCRIBIR y elegir de una sugerencia en vivo, no
      de una lista precargada. Si todavía no hay propiedad, ni se puede
@@ -838,12 +865,30 @@ function refWO(){
       : "";
   }
   refTarifa();
+  refAgendaNuevaWO();
+}
+
+function refAgendaNuevaWO(){
+  const caja=document.getElementById("wAgendaDisponibilidad"); if(!caja) return;
+  const fecha=val("wFecha"), horaProg=val("wHora");
+  if(!fecha){ caja.innerHTML=`<div class="hint" style="margin-top:7px">Elige una fecha para ver la disponibilidad del equipo.</div>`; return; }
+  const filas=S.tecnicos.filter(t=>t.activo).map(t=>{
+    const permiso=bloqueo(t.id,fecha), carga=capacidadDia(t.id,fecha), disponible=!permiso&&carga<CAP;
+    return `<span class="pill ${disponible?"v":"w"}">${esc(tecN(t.id))}: ${permiso?"no disponible":carga+"/"+CAP+" WO"}</span>`;
+  });
+  const libres=S.tecnicos.filter(t=>t.activo&&!bloqueo(t.id,fecha)&&capacidadDia(t.id,fecha)<CAP).length;
+  const enHora=horaProg?S.wos.filter(w=>w.fecha===fecha&&w.horaProg===horaProg&&w.estado!=="Canceled").length:0;
+  caja.innerHTML=`<div class="note ${libres?"v":"w"}" style="margin-top:8px"><b>${libres} técnico(s) disponible(s)</b> para esta fecha${horaProg?` · ${enHora} WO(s) a las ${esc(horaProg)}`:""}.<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">${filas.join("")}</div></div>`;
 }
 
 /* Solo el precio: se llama al cambiar el servicio, sin tocar los desplegables */
 function refTarifa(){
   const caja = document.getElementById("wTarifa");
   if(!caja) return;
+  /* La tarifa no forma parte de crear una WO para operación. Solo Claudia y
+     Erika pueden ver el preview — los demás guardan la orden sin números ni
+     mensajes sobre si existe o falta una tarifa. */
+  if(!puedeVerUtilidad()){ caja.innerHTML = ""; return; }
   const uid = val("wUni"), serv = val("wServ");
   if(!uid || !serv){ caja.innerHTML = ""; return; }   // todavía no eligió todo — no hay nada que avisar
   // Con "+ Nueva unidad…" todavía no hay registro en S.unidades: se arma
@@ -858,9 +903,7 @@ function refTarifa(){
     : guardada;
   const t = u ? tarifa(val("wProp"), val("wCat"), serv, u.rooms, u.pisos) : null;
   caja.innerHTML = t
-    ? (puedeVerUtilidad()
-      ? `<div class="note v"><b>Tarifa ${t.nivel} (${esc(t.detalle)}):</b> se cobra ${money(t.precio)} y se le paga ${money(t.pago)} al técnico. Utilidad ${money(t.precio-t.pago)}.</div>`
-      : `<div class="note v"><b>Tarifa ${t.nivel} (${esc(t.detalle)}) configurada.</b></div>`)
+    ? `<div class="note v"><b>Tarifa ${t.nivel} (${esc(t.detalle)}):</b> se cobra ${money(t.precio)} y se le paga ${money(t.pago)} al técnico. Utilidad ${money(t.precio-t.pago)}.</div>`
     : `<div class="note w"><b>Sin tarifa para esta combinación.</b> Se puede guardar, pero saldrá «NA» y quedará una <b>excepción</b> para que Erika la defina.</div>`;
 }
 
@@ -869,15 +912,21 @@ function refTarifa(){
    mostrarle quien esta libre mientras habla, y guardar la fecha que quedaron. */
 function modalProg(id){
   const w = W(id), p = P(w.prop);
+  const reagendando=!!w.fecha;
   const f = S.progF || w.fecha;
   const libres = libresEse(f, w.prop);
   const ok = libres.filter(x=>x.libre);
   const cs = contactosDe(w.prop);
-  const prev = w.propuestas || [];
+  const prev = (w.propuestas&&w.propuestas.length) ? w.propuestas : (w.fecha
+    ? [{fecha:w.fecha, medio:"Registro anterior", contacto:"—", respuesta:"Fecha programada", nota:"", motivo:"", quien:"Sistema", hora:"—"}]
+    : []);
   modal(`
-  <div class="mh"><h3>Programar WO-${id} con el cliente</h3>
+  <div class="mh"><h3>${reagendando?"Reagendar":"Definir fecha"} · WO-${id}</h3>
     <p>${esc(p.nombre)} · ${esc(U(w.unidad).num)} · ${esc(w.serv)}</p></div>
   <div class="mb">
+    <div class="note" style="margin-bottom:12px">${reagendando
+      ? "Esta WO ya tenía una fecha. Registra qué pasó y la nueva fecha; el historial conserva ambas."
+      : "Primero se acuerda la fecha con el cliente; después se asigna el técnico."}</div>
     <div class="fld"><label>Fecha acordada <span class="req">*</span></label>
       <input type="date" id="pgF" value="${esc(f)}" data-a="progFecha"></div>
 
@@ -905,16 +954,17 @@ function modalProg(id){
       <table style="margin:5px 0 0"><thead><tr><th>Fecha</th><th>Medio</th><th>Con quién</th><th>Cómo quedó</th></tr></thead>
       <tbody>${prev.map(x=>`<tr><td>${esc(x.fecha)}</td><td>${esc(x.medio)}</td>
         <td>${esc(x.contacto)}</td>
-        <td><span class="pill ${x.respuesta.startsWith("Fecha")?"v":"a"}">${esc(x.respuesta)}</span>
+        <td><span class="pill ${x.fecha===w.fecha&&w.asistencia?"v":x.respuesta.startsWith("Fecha")?"v":"a"}">${x.fecha===w.fecha&&w.asistencia?"Fecha cumplida":esc(x.respuesta)}</span>
           ${x.motivo?`<div style="font-size:10px;color:var(--faint)">${esc(x.motivo)}</div>`:""}
           <div style="font-size:10px;color:var(--faint)">${esc(x.quien)} · ${esc(x.hora)}</div></td></tr>`).join("")}
       </tbody></table></div>`:""}
 
-    ${w.tec?`<div class="fld"><label>¿Qué pasó? <span style="text-transform:none;font-weight:500;color:var(--faint)">— opcional, solo si estás moviendo una fecha ya tomada</span></label>
-      <select id="pgMotivo"><option value="">— es la primera coordinación, nada que reportar —</option>
-        <option>Se volvió a coordinar con el cliente</option>
+    ${reagendando?`<div class="fld"><label>¿Qué pasó con la fecha anterior? <span class="req">*</span></label>
+      <select id="pgMotivo"><option value="">— selecciona —</option>
+        <option>El cliente pidió moverla</option>
         <option>No asistió el técnico</option><option>Trabajo incompleto</option>
-        <option>El cliente pidió moverla</option><option>No había acceso a la unidad</option></select></div>`:""}
+        <option>No había acceso a la unidad</option><option>Plagas</option>
+        <option>La unidad no era la correcta</option><option>Otro</option></select></div>`:""}
 
     <div class="fg c2">
       <div class="fld"><label>Cómo lo coordinaste <span class="req">*</span></label>
@@ -931,8 +981,8 @@ function modalProg(id){
       <span style="font-size:12px">Quedó en confirmarme después
         <span style="color:var(--faint)">— la fecha no es firme todavía</span></span></label>
 
-    <div class="note" style="margin-top:11px">La llamada la sigues haciendo tú. Lo que cambia es que
-      <b>queda registrado</b> qué fecha quedaron, con quién hablaste y por qué medio.
+    <div class="note" style="margin-top:11px">La llamada la sigues haciendo tú. El sistema no envía una confirmación automática:
+      <b>deja trazable</b> la fecha, el resultado, con quién hablaste y por qué medio.
       ${w.tec?` Como ya tiene técnico asignado, también se revisa que <b>${tecN(w.tec)}</b> tenga cupo ese día antes de moverla.`:""}</div>
   </div>
   <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
