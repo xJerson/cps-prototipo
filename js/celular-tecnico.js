@@ -23,7 +23,13 @@ function renderFon(){
      entren sin apretar. */
   $("#fanm").textContent = "Celular";
   $("#fasu").textContent = t.zona;
-  const mias = S.wos.filter(w=>w.tec===t.id && !w.cobrada && w.estado!=="Canceled");
+  /* Claudia: "el técnico no debe ver [la WO] si no está confirmada porque es
+     posible que no quieran ir" — antes aparecía igual, con solo un aviso de
+     que la fecha podía moverse. Ahora una WO en Scheduled sin confirmCliente
+     directamente no entra en su agenda; en cuanto se confirma (pasa a
+     Confirmed) aparece sola, sin que nadie tenga que avisarle. */
+  const mias = S.wos.filter(w=>w.tec===t.id && !w.cobrada && w.estado!=="Canceled"
+    && !(w.estado==="Scheduled" && !w.confirmCliente));
   const subMias = subWOsDeTec(t.id).filter(a=>{
     const w=W(a.wo); return w && !w.cobrada;
   });
@@ -80,6 +86,14 @@ function renderFon(){
     const ads=S.adicionales.filter(a=>a.wo===w.id), sols=solsDe(w.id);
     const col={g:"#8a97a4",a:"#1f4e79",m:"#5b21b6",w:"#8a5a00",v:"#1e5c3a",r:"#9b2226"}[estP(w.estado)];
     const dato = (et,v) => v ? `<div class="ds" style="margin-bottom:3px"><b>${et}:</b> ${esc(v)}</div>` : "";
+    /* Antes mostraba "9:00" fijo aunque nadie la haya definido — Claudia:
+       "la hora no aparezca a menos de que sí se agende una hora". dato() ya
+       omite la fila entera si el valor viene vacío, así que pasarle
+       w.horaProg sin el `||"9:00"` de antes alcanza.
+       PENDIENTE para el desarrollo real (no aplica a este prototipo, que no
+       tiene backend ni push): en cuanto w.horaProg quede definido, ese es el
+       momento de programarle al técnico un recordatorio/notificación para
+       ese día a esa hora, con las notas de la WO (w.notasTec). */
     h=`<button class="db g" style="margin:5px 0 9px;padding:7px;font-size:11.5px" data-a="fView" data-v="agenda">‹ Mi agenda</button>
     <div class="dc"><div style="display:flex;justify-content:space-between;gap:7px">
       <div style="min-width:0"><div class="dh">${esc(p.nombre)}</div><div class="ds">Unidad ${esc(u.num)} · ${esc(u.rooms)} · ${u.pisos} piso(s)</div></div>
@@ -89,7 +103,7 @@ function renderFon(){
         ${dato("Servicio", w.serv)}
         ${w.ubic?dato("Dónde", w.ubic):""}
         ${dato("Dirección", p.dir)}
-        ${dato("Hora", w.horaProg||"9:00")}
+        ${dato("Hora", w.horaProg)}
         ${dato("Occupancy", ocupacion)}
       </div></div>
 
@@ -155,6 +169,7 @@ function renderFon(){
     const IC_CAJA = '<path d="M21 8 12 3 3 8l9 5 9-5Z"/><path d="M3 8v8l9 5 9-5V8"/><path d="M12 13v8"/>';
     const IC_ALERTA = '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/>';
     const IC_CHECK = '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="M22 4 12 14.01l-3-3"/>';
+    const IC_TICKET = '<path d="M4 3v18l2.5-1.5L9 21l2.5-1.5L14 21l2.5-1.5L19 21V3l-2.5 1.5L14 3l-2.5 1.5L9 3 6.5 4.5Z"/><path d="M8 8h8M8 12h8M8 16h5"/>';
     const icBtn = (ic,extra="") => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"${extra}>${ic}</svg>`;
     /* Reunión 2026-09-09: se sacó "Pausar" — al técnico no se le paga por
        hora, se le paga por trabajo, así que pausar no correspondía a nada
@@ -188,6 +203,8 @@ function renderFon(){
            <button class="db g" data-a="fFoto" data-id="${w.id}">${icBtn(IC_FOTO)}Tomar foto</button>
            <button class="db g" data-a="fMaterial" data-id="${w.id}">${icBtn(IC_CAJA)}Materiales${(S.movs.some(m=>m.wo===w.id&&m.tipo==="salida")?` · registrado`:"")}</button>
            <div class="ds" style="margin:-4px 0 7px;padding:0 2px">Lo que usaste en este trabajo — queda registrado en la orden.</div>
+           <button class="db g" data-a="fCompraMaterial" data-id="${w.id}">${icBtn(IC_TICKET)}Compra de materiales</button>
+           <div class="ds" style="margin:-4px 0 7px;padding:0 2px">¿Vas a Home Depot/Lowe's con la tarjeta de la empresa? Acá tenés el teléfono para el cajero y subís la foto del ticket.</div>
            <button class="db g" data-a="fAdic" data-id="${w.id}">${icBtn(IC_ALERTA)}Necesito aprobación</button>
            <div class="ds" style="margin:-4px 0 7px;padding:0 2px">Algo que encontraste y no estaba en la orden — le llega a oficina al instante.</div>
            <div class="fld" style="margin:4px 0 9px">
@@ -237,10 +254,9 @@ function renderFon(){
           <div style="min-width:0">
             ${w.infoPedida?`<div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--ambar);margin-bottom:2px">TE FALTA ${esc(w.infoPedida.falta.join(" Y ").toUpperCase())}</div>`
              :w.nueva?`<div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--azul);margin-bottom:2px">NUEVO</div>`:""}
-            ${fechaSinConfirmar(w)?`<div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--ambar);margin-bottom:2px">⏳ CLIENTE TODAVÍA NO CONFIRMÓ ESTA FECHA</div>`:""}
             <div class="dh">${esc(P(w.prop).nombre)}</div>
             <div class="ds">${esc(U(w.unidad).num)} · ${esc(w.serv)}</div>
-            <div class="ds" style="font-size:10px">${w.fecha} · ${esc(w.horaProg||"9:00")}</div></div>
+            <div class="ds" style="font-size:10px">${w.fecha}${w.horaProg?` · ${esc(w.horaProg)}`:""}</div></div>
           <span class="dtag" style="background:${col}22;color:${col};flex:none;height:fit-content">${esc(w.estado)}</span></div>
         ${a?`<div class="ds" style="margin-top:5px;color:var(--verde)">Llegaste ${a.horaReal} · ${esc(a.puntualidad)}</div>`:""}
         ${(w.fotosPrevias||[]).length?`<div class="ds" style="margin-top:5px;color:var(--azul);font-weight:700">📷 ${(w.fotosPrevias||[]).length} foto(s) para prepararte antes de ir</div>`:""}
@@ -363,6 +379,12 @@ function leerMaterial(){
     const p=document.getElementById("mtP"+i), c=document.getElementById("mtC"+i);
     if(p) f.prod=p.value; if(c) f.cant=c.value;
   });
+}
+function leerCompra(){
+  const sh=S.phSheet; if(!sh||sh.t!=="compra") return;
+  const t=document.getElementById("cpTienda"), n=document.getElementById("cpNombre"),
+        c=document.getElementById("cpCant"), co=document.getElementById("cpCosto");
+  if(t) sh.tienda=t.value; if(n) sh.nombre=n.value; if(c) sh.cant=c.value; if(co) sh.costo=co.value;
 }
 
 

@@ -95,6 +95,10 @@ const ROLES = {
   "Gustavo":{i:"GA",r:"Supervisión",   m:["tablero","wo","calendario","supervision","gustavoweb","inventario","tecnicos","excepciones","reportes","alertas"]},
   "Erika":  {i:"EM",r:"Administración",m:["tablero","wo","nomina","facturacion","cobranza","tarifario","inventario","excepciones","reportes","alertas","bitacora"]}
 };
+/* Teléfono que se le da al cajero cuando el técnico compra material en
+   tienda con la tarjeta de la empresa — lo usa la tarjeta "Compra de
+   materiales" del celular del técnico. */
+const CLAUDIA_TEL = "850-555-0100";
 const MODS = [
   {g:"Operación"},
   {id:"tablero",   n:"Tablero",              ic:'<path d="M3 13h8V3H3zM13 21h8V11h-8zM13 7h8V3h-8zM3 21h8v-4H3z"/>'},

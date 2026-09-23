@@ -144,6 +144,36 @@ Object.assign(ACC, {
       n?`${n} línea(s) — quedaron en el costo de WO-${w.id}.`:"Se guardaron las observaciones.","v");
     render();
   },
+  fCompraMaterial: d => { S.phSheet={t:"compra", wo:+d.id, tienda:CAT.tiendas[0], nombre:"", cant:"1", costo:"", foto:null}; render(); },
+  fCompraFoto: () => { leerCompra(); const sh=S.phSheet; if(!sh||sh.t!=="compra") return;
+    capturarFoto(url=>{ sh.foto=url; render(); }); },
+  /* La compra en tienda no siempre es un producto que ya está en el
+     catálogo interno — se reutiliza uno existente si el nombre coincide, o
+     se crea uno "de tienda" al vuelo, mismo patrón que ya existe para
+     material del cliente (ver materialGuardar). Entra a S.movs como
+     cualquier otro material, con el ticket adjunto como comprobante.
+     PENDIENTE de decidir con Claudia/Erika: si esto debe conciliarse contra
+     inventario automáticamente por ticket, o si alguien de oficina lo revisa
+     y lo carga a mano cada vez — por ahora queda visible en Materials de la
+     WO con la foto, para que oficina lo revise. */
+  fCompraOK: d => {
+    leerCompra();
+    const sh=S.phSheet, w=W(+d.id), tec=T(w.tec);
+    const nombre=(sh.nombre||"").trim();
+    if(!nombre){ toast("Falta decir qué compraste","Escribe qué material compraste.","r"); return; }
+    const cant=parseFloat(sh.cant)||1, costo=parseFloat(sh.costo)||0;
+    let p=S.productos.find(x=>!x.cliente && x.nombre.toLowerCase()===nombre.toLowerCase());
+    if(!p){ p={id:"PT"+nid("mv"), nombre, um:"unidad", min:0, costo:cant?+(costo/cant).toFixed(2):0}; S.productos.push(p); }
+    S.movs.push({id:"MT"+nid("mv"), prod:p.id, tipo:"salida", cant, fecha:w.fecha, wo:w.id,
+      costo, tienda:sh.tienda, quien:tec?tec.nombre:S.usuario,
+      notas:"Comprado en tienda con tarjeta de la empresa", recibo:sh.foto||null, evid:!!sh.foto});
+    w.hist.push([hora(), `Compró en tienda (${sh.tienda}): ${nombre} × ${cant}${sh.foto?" · con foto del ticket":" · sin foto del ticket"}`, tec?tec.nombre:S.usuario]);
+    S.phSheet=null; flash("wo:"+w.id);
+    toast(sh.foto?"✓ Compra registrada":"✓ Registrada — falta la foto del ticket",
+      sh.foto?"Quedó con el comprobante adjunto para oficina.":"Oficina va a necesitar la foto del ticket para poder facturarlo.",
+      sh.foto?"v":"w");
+    render();
+  },
   fSheetNo: () => { S.phSheet=null; render(); },
   fPermiso: () => { S.phSheet={t:"permiso"}; render(); },
   fPermisoOK: () => {

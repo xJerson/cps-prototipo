@@ -48,6 +48,7 @@ const AUD = {
   fFoto:{a:"Cargó evidencia", m:"Campo"},
   fAdicOK:{a:"Pidió aprobación de adicional", m:"Campo"},
   fMaterialOK:{a:"Registró material usado", m:"Campo"},
+  fCompraOK:{a:"Registró una compra de materiales en tienda", m:"Campo"},
   subwoGuardar:{a:"Creó una Sub-Work Order", m:"Work Orders"},
   subwoFotoRef:{a:"Agregó foto de referencia a una Sub-Work Order", m:"Work Orders"},
   subwoFotoEvid:{a:"Agregó foto de evidencia a una Sub-Work Order", m:"Work Orders"},

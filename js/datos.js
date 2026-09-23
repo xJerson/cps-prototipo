@@ -155,12 +155,18 @@ let S = {
      hist:[["8:20","Creada","Thalia"],["8:21","Asignada a Marcos Ayala","Thalia"],
            ["14:10","Devuelta por supervisión: Quedó pintura en el marco de la puerta y el zócalo sin retocar.","Gustavo"]]},
     {id:1042,prop:"P2",unidad:"U5",cat:"Clean",serv:"Deep clean",tec:null,estado:"Scheduled",semana:33,fecha:"2026-08-12",horaProg:"9:00",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",hist:[["7:50","Creada","Claudia"]]},
-    {id:1043,prop:"P3",unidad:"U7",cat:"Repair",serv:"Drywall repair",tec:"T4",estado:"Scheduled",semana:33,fecha:"2026-08-12",horaProg:"10:00",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",
+    {id:1043,prop:"P3",unidad:"U7",cat:"Repair",serv:"Drywall repair",tec:"T4",estado:"Confirmed",semana:33,fecha:"2026-08-12",horaProg:"10:00",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",
+     /* Confirmada con el cliente: así Andrés SÍ la ve en su agenda — ejemplo
+        de contraste con la 1044 (sin confirmar), que a propósito no la ve. */
+     confirmCliente:{fecha:"2026-08-12",medio:"Llamada",contacto:"Property Manager",quien:"Thalia",hora:"8:40"},
      /* Fotos de referencia: lo que hay que reparar, para que el técnico lo vea
         antes de ir — Work to Be Performed, sembrado para que la galería no
         arranque siempre vacía. */
      fotosPrevias:[{url:FOTO_SEED,quien:"Thalia",hora:"8:25"},{url:FOTO_SEED,quien:"Thalia",hora:"8:25"}],
      hist:[["8:25","Creada","Thalia"],["8:26","Asignada a Andrés Solís","Thalia"]]},
+    /* A propósito sin confirmCliente: es el ejemplo de que Diego NO la ve
+       todavía en su "Mi agenda" del celular — recién aparece cuando alguien
+       la confirme desde Reagendar. */
     {id:1044,prop:"P1",unidad:"U3",cat:"Clean",serv:"Full clean",tec:"T1",estado:"Scheduled",semana:33,fecha:"2026-08-13",horaProg:"9:00",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",hist:[["8:30","Creada","Claudia"]]},
     /* Terminada y con evidencia, pero todavía sin que nadie la revise — a
        diferencia de la 1039 (sin evidencia), a ésta SÍ se le puede tocar

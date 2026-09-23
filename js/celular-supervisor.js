@@ -427,6 +427,44 @@ function hojaCel(sh){
   </div></div>`;
   }
 
+  /* Erika: a veces el técnico tiene que comprar algo en Home Depot/Lowe's y
+     dar el teléfono de Claudia para que carguen el cobro a la tarjeta de la
+     empresa — no tenía dónde ver esos datos ni cómo dejar el ticket
+     registrado. Esta tarjeta le da lo que necesita mostrar en caja (en
+     inglés, para el cajero) y una foto de comprobante, igual que ya existe
+     para el resto de las fotos de la WO. */
+  if(sh.t==="compra"){ const p=P(w.prop), u=U(w.unidad);
+    return `<div class="fscrim" data-a="fSheetNo"><div class="fsheet" data-stop>
+    <div class="grab"></div>
+    <h4>Compra de materiales</h4>
+    <div class="sub">Si vas a comprar algo para este trabajo con la tarjeta de la empresa.</div>
+
+    <div class="dc" style="background:var(--azul-cl);border-color:transparent">
+      <div class="dl" style="margin:0 0 6px;color:var(--azul)">Dale esto al cajero</div>
+      <div class="ds"><b>Teléfono para autorizar el cobro:</b> ${esc(CLAUDIA_TEL)}</div>
+      <div class="ds"><b>Propiedad:</b> ${esc(p.nombre)}</div>
+      <div class="ds"><b>Unidad:</b> ${esc(u.num)}</div>
+      <div class="ds" style="margin-top:6px;padding-top:6px;border-top:1px solid var(--line);font-style:italic">
+        "Please call this number to charge this purchase to our company card: ${esc(CLAUDIA_TEL)}."
+      </div>
+    </div>
+
+    <label>¿Dónde compraste?</label>
+    <select id="cpTienda">${CAT.tiendas.map(t=>`<option ${t===sh.tienda?"selected":""}>${esc(t)}</option>`).join("")}</select>
+    <label>¿Qué compraste?</label>
+    <input id="cpNombre" value="${esc(sh.nombre)}" placeholder="Ej. sellador de grout">
+    <label>Cantidad</label>
+    <input id="cpCant" value="${esc(String(sh.cant))}" inputmode="decimal">
+    <label>Costo total <span style="font-weight:500;color:var(--faint)">— si lo tenés a mano</span></label>
+    <input id="cpCosto" value="${esc(sh.costo||"")}" inputmode="decimal" placeholder="0.00">
+    <button type="button" class="db g" style="margin-top:7px" data-a="fCompraFoto">${sh.foto
+      ?`<img src="${sh.foto}" style="width:16px;height:16px;object-fit:cover;border-radius:3px"> Foto agregada — tocá para cambiar`
+      :"📷 Agregar foto del ticket"}</button>
+    <button class="db p" style="margin-top:11px" data-a="fCompraOK" data-id="${sh.wo}">Enviar a oficina</button>
+    <button class="db g" data-a="fSheetNo">Cancelar</button>
+  </div></div>`;
+  }
+
   if(sh.t==="llegada") return `<div class="fscrim" data-a="fSheetNo"><div class="fsheet" data-stop>
     <div class="grab"></div>
     <h4>No marcaste tu llegada</h4>
