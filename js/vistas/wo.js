@@ -989,27 +989,34 @@ function modalProg(id){
     <button class="btn p" data-a="progOK" data-id="${id}">Guardar</button></div>`);
 }
 
+/* Tarjeta de un técnico candidato — compartida entre Asignar y Reasignar,
+   así las dos pantallas muestran siempre la misma disponibilidad, carga,
+   zona/especialidad y última ubicación conocida (en vez de un <select> con
+   solo el nombre). `opts.actionSi/actionNo` cambian qué acción dispara el
+   clic en cada pantalla; `opts.actualId`/`opts.tecOriginalId` solo agregan
+   una etiqueta aclaratoria a la tarjeta que corresponda. */
+function candidatoCardHTML(c, id, espReq, opts={}){
+  const dis = c.est==="bloq"||c.est==="lleno";
+  const col = dis?"r":c.est==="warn"?"w":"v";
+  const actionSi = opts.actionSi||"asigSi", actionNo = opts.actionNo||"asigNo";
+  const etiqueta = opts.actualId&&c.t.id===opts.actualId ? " — técnico actual"
+    : opts.tecOriginalId&&c.t.id===opts.tecOriginalId ? " — el responsable, la corrige gratis" : "";
+  return `<button class="btn" style="width:100%;justify-content:flex-start;margin-bottom:7px;padding:10px 12px;${dis?"opacity:.6":""}"
+    data-a="${dis?actionNo:actionSi}" data-id="${id}" data-tec="${c.t.id}">
+    <div class="av" style="background:var(--surface-3);color:var(--soft)">${esc(c.t.nombre[0]+c.t.apellido[0])}</div>
+    <div style="flex:1;text-align:left;min-width:0">
+      <div style="font-weight:700">${esc(tecN(c.t.id))}${esc(etiqueta)}</div>
+      <div style="font-size:11px;color:var(--faint)">${esc(c.m)}</div>
+      <div style="font-size:11px;color:var(--soft);margin-top:2px">📍 ${c.ubic?esc(c.ubic):`sin marcar aún — base: ${esc(c.t.zona)}`}</div>
+      <div style="margin-top:4px">${c.t.esp.map(e=>`<span class="pill ${e===espReq?"v":"g"}" style="margin:0 3px 3px 0">${e===espReq?"★ ":""}${esc(e)}</span>`).join("")}</div></div>
+    <span class="pill ${col}"><span class="dot"></span>${c.est==="bloq"?"No disponible":c.est==="lleno"?"Cupo lleno":c.est==="warn"?"Revisar":"Disponible"}</span>
+  </button>`;
+}
+
 function modalAsig(id){
   const w=W(id), p=P(w.prop);
   const espReq = ESP_REQ[w.cat] || "Tecnico";
-  const cand = S.tecnicos.filter(t=>t.activo && !t.esp.includes("Supervisor")).map(t=>{
-    const b=bloqueo(t.id,w.fecha), carga=capacidadDia(t.id,w.fecha);
-    let est="ok", m=`${carga}/${CAP} el ${w.fecha.slice(5)} · ${t.zona}`;
-    if(b){ est="bloq"; m=`${b.motivo} · ${b.desde} al ${b.hasta}`; }
-    else if(carga>=CAP){ est="lleno"; m=`Ya tiene ${carga} propiedades ese día`; }
-    else {
-      /* Distinta zona no es igual de grave si el técnico "se mueve de zona"
-         (t.movimiento) — ese campo ya existía en su ficha pero no se cruzaba
-         con nada. Al que sí se mueve no se le avisa por zona. */
-      const distinta = t.zona!==p.zona;
-      const zonaOk = !distinta || t.movimiento;
-      if(distinta) m = t.movimiento
-        ? `${carga}/${CAP} el ${w.fecha.slice(5)} · ${t.zona} — se mueve de zona`
-        : `${carga}/${CAP} el ${w.fecha.slice(5)} — vive en ${t.zona} y no se mueve de zona, la propiedad está en ${p.zona}`;
-      if(!zonaOk || !especialidadOk(t,w.cat)) est="warn";
-    }
-    return {t,est,m};
-  }).sort((a,b)=>({ok:0,warn:1,lleno:2,bloq:3})[a.est]-({ok:0,warn:1,lleno:2,bloq:3})[b.est]);
+  const cand = candidatosTec(w);
   modal(`
   <div class="mh"><h3>Asignar WO-${id}</h3><p>${esc(p.nombre)} · ${esc(U(w.unidad).num)} · ${esc(w.serv)}</p></div>
   <div class="mb">
@@ -1022,19 +1029,30 @@ function modalAsig(id){
       : `<div class="note w" style="margin:0 0 12px"><b>Esta fecha todavía no la confirmó el cliente.</b>
           Puedes asignar igual, pero si después la mueven, el técnico ya tenía el día tomado.
           <button class="btn sm" data-a="progCliente" data-id="${id}" style="margin-left:7px">Coordinar ahora</button></div>`}
-    ${cand.map(c=>{
-    const dis = c.est==="bloq"||c.est==="lleno";
-    const col = c.est==="bloq"||c.est==="lleno"?"r":c.est==="warn"?"w":"v";
-    return `<button class="btn" style="width:100%;justify-content:flex-start;margin-bottom:7px;padding:10px 12px;${dis?"opacity:.6":""}"
-      data-a="${dis?"asigNo":"asigSi"}" data-id="${id}" data-tec="${c.t.id}">
-      <div class="av" style="background:var(--surface-3);color:var(--soft)">${esc(c.t.nombre[0]+c.t.apellido[0])}</div>
-      <div style="flex:1;text-align:left;min-width:0">
-        <div style="font-weight:700">${esc(tecN(c.t.id))}</div>
-        <div style="font-size:11px;color:var(--faint)">${esc(c.m)}</div>
-        <div style="margin-top:4px">${c.t.esp.map(e=>`<span class="pill ${e===espReq?"v":"g"}" style="margin:0 3px 3px 0">${e===espReq?"★ ":""}${esc(e)}</span>`).join("")}</div></div>
-      <span class="pill ${col}"><span class="dot"></span>${c.est==="bloq"?"No disponible":c.est==="lleno"?"Cupo lleno":c.est==="warn"?"Revisar":"Disponible"}</span>
-    </button>`;}).join("")}
-    <div class="tr">Necesita <span class="pill v">★ ${esc(espReq)}</span> para este trabajo — se resalta en verde en quien la tenga. También cruza zona, carga del día y permisos antes de dejarte asignar.</div></div>
+    ${cand.map(c=>candidatoCardHTML(c,id,espReq)).join("")}
+    <div class="tr">Necesita <span class="pill v">★ ${esc(espReq)}</span> para este trabajo — se resalta en verde en quien la tenga. También cruza zona, carga del día, permisos y última ubicación conocida antes de dejarte asignar.</div></div>
+  <div class="mf"><button class="btn" data-a="cm">Cancelar</button></div>`);
+}
+
+/* Reasignar mostraba un <select> con solo el nombre del técnico — Erika pidió
+   ver acá la misma disponibilidad (permiso, carga del día, zona/especialidad)
+   y la última ubicación marcada que ya usa Asignar, para saber de un vistazo
+   quién puede y quién está más cerca sin tener que abrir Técnicos aparte. */
+function modalReasignar(id){
+  const w=W(id), p=P(w.prop);
+  const espReq = ESP_REQ[w.cat] || "Tecnico";
+  const cand = candidatosTec(w);
+  modal(`
+  <div class="mh"><h3>Reasignar WO-${id}</h3>
+    <p>${esc(p.nombre)} · ${U(w.unidad)?esc(U(w.unidad).num):""} · ${esc(w.serv)}${w.touchup?" — touch-up de corrección":""}</p></div>
+  <div class="mb">
+    ${w.touchup?`<div class="note w" style="margin:0 0 12px">Al cambiar de técnico, la Work Order pasa a ser de él:
+      <b>${esc(tecN(w.tec))} deja de verla en su celular</b>.<br><br>
+      Y el descuento se recalcula solo: si la corrige el propio
+      <b>${esc(tecN(w.tecOriginal))}</b> no se paga ni se descuenta; si va otro, se le paga a ese
+      y se le descuenta a <b>${esc(tecN(w.tecOriginal))}</b>.</div>`:""}
+    ${cand.map(c=>candidatoCardHTML(c,id,espReq,{actionSi:"woReasignarOK",actionNo:"woReasignarNo",actualId:w.tec,tecOriginalId:w.touchup?w.tecOriginal:null})).join("")}
+    <div class="tr">Necesita <span class="pill v">★ ${esc(espReq)}</span> para este trabajo. También cruza zona, carga del día, permisos y última ubicación conocida antes de dejarte reasignar.</div></div>
   <div class="mf"><button class="btn" data-a="cm">Cancelar</button></div>`);
 }
 

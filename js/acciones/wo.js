@@ -617,35 +617,21 @@ Object.assign(ACC, {
   },
 
   /* Reasignar: la WO pasa al nuevo tecnico y el anterior deja de verla.
-     El descuento siempre apunta al que hizo mal el trabajo, no al que corrige. */
-  woReasignar: d => {
-    const w = W(+d.id);
-    modal(`<div class="mh"><h3>Reasignar WO-${w.id}</h3>
-        <p>${esc(P(w.prop).nombre)} · ${U(w.unidad)?esc(U(w.unidad).num):""}${w.touchup?" — touch-up de correcci\u00f3n":""}</p></div>
-      <div class="mb">
-        <div class="fld"><label>Nuevo t\u00e9cnico <span class="req">*</span></label>
-          <select id="raT">${S.tecnicos.filter(t=>t.activo!==false && t.id!==GUSTAVO).map(t=>
-            `<option value="${t.id}" ${t.id===w.tec?"selected":""}>${esc(tecN(t.id))}${
-              w.touchup&&t.id===w.tecOriginal?" — el responsable, la corrige gratis":""}</option>`).join("")}</select></div>
-        ${w.touchup?`<div class="note w">Al cambiar de t\u00e9cnico, la Work Order pasa a ser de \u00e9l:
-          <b>${esc(tecN(w.tec))} deja de verla en su celular</b>.<br><br>
-          Y el descuento se recalcula solo: si la corrige el propio
-          <b>${esc(tecN(w.tecOriginal))}</b> no se paga ni se descuenta; si va otro, se le paga a ese
-          y se le descuenta a <b>${esc(tecN(w.tecOriginal))}</b>.</div>`:""}
-      </div>
-      <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
-        <button class="btn p" data-a="woReasignarOK" data-id="${w.id}">Reasignar</button></div>`);
+     El descuento siempre apunta al que hizo mal el trabajo, no al que corrige.
+     Mismo patrón de un clic que Asignar (asigSi/asigNo): la tarjeta ya viene
+     deshabilitada si no puede, así que acá solo falta el caso "mismo técnico". */
+  woReasignar: d => modalReasignar(+d.id),
+
+  woReasignarNo: d => {
+    const w=W(+d.id), b=bloqueo(d.tec,w.fecha);
+    toast("🚫 No se puede reasignar", b
+      ? `<b>${esc(tecN(d.tec))}</b> no está disponible: ${esc(b.motivo)}.`
+      : `<b>${esc(tecN(d.tec))}</b> ya tiene ${CAP} Work Orders el ${w.fecha}.`,"r");
   },
 
   woReasignarOK: d => {
-    const w = W(+d.id), antes = w.tec, nuevo = val("raT");
-    if(antes===nuevo){ cm(); toast("Sin cambios","Es el mismo t\u00e9cnico.",""); return; }
-    const bloqueoNuevo=bloqueo(nuevo,w.fecha), cargaNueva=capacidadDia(nuevo,w.fecha);
-    if(bloqueoNuevo || cargaNueva>=CAP){
-      toast("🚫 No se puede reasignar",bloqueoNuevo
-        ? `<b>${esc(tecN(nuevo))}</b> no está disponible: ${esc(bloqueoNuevo.motivo)}.`
-        : `<b>${esc(tecN(nuevo))}</b> ya tiene ${cargaNueva}/${CAP} Work Orders el ${w.fecha}.`,"r"); return;
-    }
+    const w = W(+d.id), antes = w.tec, nuevo = d.tec;
+    if(antes===nuevo){ cm(); toast("Sin cambios","Es el mismo técnico.",""); return; }
     w.tec = nuevo;
     w.hist.push([hora(), "Reasignada de "+tecN(antes)+" a "+tecN(nuevo), S.usuario]);
     if(w.touchup){

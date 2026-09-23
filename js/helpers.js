@@ -177,6 +177,36 @@ function bloqueo(tecId,fecha){
   return d||null;
 }
 
+/* Candidatos técnico para una WO — cruza disponibilidad, carga del día, zona,
+   especialidad y última ubicación conocida (la misma que UC-09 usa para
+   sugerir el técnico más cercano). Una sola vez, así Asignar y Reasignar
+   siempre muestran lo mismo en lugar de un <select> con solo el nombre. */
+function candidatosTec(w){
+  const p = P(w.prop);
+  return S.tecnicos.filter(t=>t.activo && !t.esp.includes("Supervisor")).map(t=>{
+    const b=bloqueo(t.id,w.fecha);
+    /* Reasignar mira esta misma WO todavía puesta en su técnico actual —
+       sin este descuento, a ese técnico le contaría su propia WO como si
+       fuera una carga extra y aparecería con cupo lleno por su propio trabajo. */
+    const carga=Math.max(0, capacidadDia(t.id,w.fecha) - (t.id===w.tec?1:0));
+    let est="ok", m=`${carga}/${CAP} el ${w.fecha.slice(5)} · ${t.zona}`;
+    if(b){ est="bloq"; m=`${b.motivo} · ${b.desde} al ${b.hasta}`; }
+    else if(carga>=CAP){ est="lleno"; m=`Ya tiene ${carga} propiedades ese día`; }
+    else {
+      /* Distinta zona no es igual de grave si el técnico "se mueve de zona"
+         (t.movimiento) — ese campo ya existía en su ficha pero no se cruzaba
+         con nada. Al que sí se mueve no se le avisa por zona. */
+      const distinta = t.zona!==p.zona;
+      const zonaOk = !distinta || t.movimiento;
+      if(distinta) m = t.movimiento
+        ? `${carga}/${CAP} el ${w.fecha.slice(5)} · ${t.zona} — se mueve de zona`
+        : `${carga}/${CAP} el ${w.fecha.slice(5)} — vive en ${t.zona} y no se mueve de zona, la propiedad está en ${p.zona}`;
+      if(!zonaOk || !especialidadOk(t,w.cat)) est="warn";
+    }
+    return {t, est, m, ubic: ultUbic(t.id)};
+  }).sort((a,b)=>({ok:0,warn:1,lleno:2,bloq:3})[a.est]-({ok:0,warn:1,lleno:2,bloq:3})[b.est]);
+}
+
 /* ── ADICIONALES ──────────────────────────────────────────────────────────
    En su Excel la celda «Aditional» (Schedule!U) es un desplegable de UNA sola
    opción. Pero en 13 de las 32 filas con contenido escribieron varias separadas
