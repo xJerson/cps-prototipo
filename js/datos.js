@@ -139,11 +139,15 @@ let S = {
   wos:[
     {id:1038,prop:"P1",unidad:"U1",cat:"Clean",serv:"Full clean",tec:"T1",estado:"Completed",semana:33,fecha:"2026-08-10",horaProg:"9:00",po:"PO-8841",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T1",hora:"11:40"}],supervisada:true,validada:true,pagadaTec:false,facturada:false,mats:[],notas:"",notasTec:"",hist:[["8:10","Creada","Thalia"],["8:12","Asignada a Diego Ramírez","Thalia"],["9:02","Llegó a la propiedad","Diego"],["11:40","Terminó · 1 evidencia","Diego"],["12:00","Revisión operativa completada","Oficina"]]},
     {id:1039,prop:"P2",unidad:"U4",cat:"Paint",serv:"Touch up paint",tec:"T2",estado:"Completed",semana:33,fecha:"2026-08-10",horaProg:"8:30",po:"PO-8842",asistencia:true,evid:0,mats:[],notas:"",notasTec:"",hist:[["8:15","Creada","Thalia"],["8:16","Asignada a Marcos Ayala","Thalia"],["9:30","Llegó a la propiedad","Marcos"],["13:20","Terminó — sin cargar evidencia","Marcos"]]},
-    {id:1040,prop:"P3",unidad:"U6",cat:"Carpet",serv:"Carpet clean",tec:"T4",estado:"In progress",semana:33,fecha:"2026-08-11",horaProg:"8:00",po:"",asistencia:true,evid:0,mats:[],notas:"",notasTec:"",
+    /* corroborado:true a propósito — así "Mientras trabajas" (con el botón
+       nuevo "Compra de materiales") se ve directo, sin tener que primero
+       tocar "Sí, coincide — empezar" en el celular de Andrés. */
+    {id:1040,prop:"P3",unidad:"U6",cat:"Carpet",serv:"Carpet clean",tec:"T4",estado:"In progress",semana:33,fecha:"2026-08-11",horaProg:"8:00",po:"",asistencia:true,evid:0,corroborado:true,mats:[],notas:"",notasTec:"",
      hist:[["8:05","Creada","Thalia"],["8:06","Asignada a Andrés Solís","Thalia"],["8:52","Llegó a la propiedad","Andrés"],
            ["8:55","Sub-WO planificada creada: Sheetrock","Andrés Solís"],
            ["9:15","Aprobada por el cliente vía Llamada","Claudia"],
-           ["9:20","Initial finding agregado a Sub-WO · Sheetrock (desde oficina)","Claudia"]]},
+           ["9:20","Initial finding agregado a Sub-WO · Sheetrock (desde oficina)","Claudia"],
+           ["9:30","Compró en tienda (Home Depot): Sellador de grout × 2 · con foto del ticket","Andrés"]]},
     /* Estado "Returned" y devuelta:1 a propósito: es la WO que trae la
        devolución DV1 sembrada más abajo — así queda un ejemplo real y
        visible desde que abre el prototipo, sin tener que armar uno a
@@ -300,14 +304,25 @@ let S = {
     {id:"PR1",cat:"Pintura",nombre:"ProMar 200 eggshell",um:"galón",costo:32.5,min:12},
     {id:"PR2",cat:"Pintura",nombre:"Primer PVA",um:"galón",costo:24.0,min:8},
     {id:"PR3",cat:"Limpieza",nombre:"Líquido carpeta",um:"galón",costo:29.93,min:6},
-    {id:"PR4",cat:"Repuesto",nombre:"Drywall 4x8",um:"unidad",costo:18.75,min:10}
+    {id:"PR4",cat:"Repuesto",nombre:"Drywall 4x8",um:"unidad",costo:18.75,min:10},
+    /* Creado "al vuelo" cuando Andrés lo compró en tienda desde su celular —
+       el técnico nunca pone el costo, por eso arranca en 0 hasta que oficina
+       lo complete mirando la foto del ticket (ver movs M6, más abajo). */
+    {id:"PT1",cat:"Compra en tienda",nombre:"Sellador de grout",um:"unidad",costo:0,min:0}
   ],
   movs:[
     {id:"M1",prod:"PR1",tipo:"entrada",cant:24,fecha:"2026-08-03",wo:null,costo:780,tienda:"Sherwin Williams",quien:"Erika",evid:true},
     {id:"M2",prod:"PR3",tipo:"entrada",cant:8,fecha:"2026-07-20",wo:null,costo:239.44,tienda:"Home Depot",quien:"Gustavo",evid:true},
     {id:"M3",prod:"PR1",tipo:"salida",cant:2,fecha:"2026-08-10",wo:1039,costo:65,tienda:"",quien:"Marcos",evid:false},
     {id:"M4",prod:"PR4",tipo:"entrada",cant:12,fecha:"2026-08-05",wo:null,costo:225,tienda:"Home Depot",quien:"Gustavo",evid:true},
-    {id:"M5",prod:"PR3",tipo:"salida",cant:3,fecha:"2026-08-11",wo:1040,costo:89.79,tienda:"",quien:"Andrés",evid:false}
+    {id:"M5",prod:"PR3",tipo:"salida",cant:3,fecha:"2026-08-11",wo:1040,costo:89.79,tienda:"",quien:"Andrés",evid:false},
+    /* Ejemplo de "Compra de materiales" desde el celular del técnico: Andrés
+       compró esto en Home Depot con la tarjeta de la empresa y subió la foto
+       del ticket él mismo — costo en 0 porque a él nunca se le pide el monto;
+       falta que oficina lo complete mirando el comprobante. */
+    {id:"M6",prod:"PT1",tipo:"salida",cant:2,fecha:"2026-08-11",wo:1040,costo:0,tienda:"Home Depot",quien:"Andrés",
+     notas:"Comprado en tienda con tarjeta de la empresa — falta que oficina cargue el costo del ticket",
+     recibo:FOTO_SEED,evid:true}
   ]
 };
 
