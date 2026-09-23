@@ -952,11 +952,19 @@ function modalProg(id){
     ${prev.length?`<div style="margin:0 0 12px">
       <b style="font-size:11px;color:var(--faint);text-transform:uppercase">Fechas anteriores</b>
       <table style="margin:5px 0 0"><thead><tr><th>Fecha</th><th>Medio</th><th>Con quién</th><th>Cómo quedó</th></tr></thead>
-      <tbody>${prev.map(x=>`<tr><td>${esc(x.fecha)}</td><td>${esc(x.medio)}</td>
+      <tbody>${prev.map((x,i)=>{
+        /* La última propuesta es la vigente; cualquier otra fue pisada por una
+           más nueva — antes las dos se veían igual ("Fecha acordada" en verde),
+           sin forma de saber cuál seguía valiendo. */
+        const cumplida = x.fecha===w.fecha && w.asistencia;
+        const esUltima = i===prev.length-1;
+        const texto = cumplida?"Fecha cumplida":esUltima?x.respuesta:"Reemplazada";
+        const col = cumplida?"v":!esUltima?"g":x.respuesta.startsWith("Fecha")?"v":"a";
+        return `<tr${esUltima?"":' style="opacity:.65"'}><td>${esc(x.fecha)}</td><td>${esc(x.medio)}</td>
         <td>${esc(x.contacto)}</td>
-        <td><span class="pill ${x.fecha===w.fecha&&w.asistencia?"v":x.respuesta.startsWith("Fecha")?"v":"a"}">${x.fecha===w.fecha&&w.asistencia?"Fecha cumplida":esc(x.respuesta)}</span>
+        <td><span class="pill ${col}">${esc(texto)}</span>
           ${x.motivo?`<div style="font-size:10px;color:var(--faint)">${esc(x.motivo)}</div>`:""}
-          <div style="font-size:10px;color:var(--faint)">${esc(x.quien)} · ${esc(x.hora)}</div></td></tr>`).join("")}
+          <div style="font-size:10px;color:var(--faint)">${esc(x.quien)} · ${esc(x.hora)}</div></td></tr>`;}).join("")}
       </tbody></table></div>`:""}
 
     ${reagendando?`<div class="fld"><label>¿Qué pasó con la fecha anterior? <span class="req">*</span></label>
