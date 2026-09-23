@@ -424,7 +424,7 @@ Object.assign(ACC, {
       `${esc(P(r.prop).nombre)} · ${esc(U(r.unidad).num)} — <b>${n} foto(s)</b> en ${r.lotes.length} ambiente(s).`
       + (g.tipo==="previo"
          ? ` Queda <b>pegado a la unidad</b>: si algún día reclaman un daño, está la foto con su fecha.`
-         : ` Le llegó a <b>Claudia</b> para que decida.`), "v");
+         : ` Le llegó a <b>Claudia</b> para que decida — aparece en <b>Supervisión → De campo</b>.`), "v");
     /* Claudia pidió poder mandar copia a scheduling o al cliente, no solo a
        ella — antes el informe SIEMPRE se quedaba solo con ella. */
     if(r.copiaThalia){

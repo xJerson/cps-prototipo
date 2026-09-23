@@ -517,6 +517,17 @@ VIEWS.facturacion = () => {
   const frenadas = S.wos.filter(w=>enPeriodo(w.fecha,S.periodo) && w.estado==="Completed" && !w.facturada && bloqueadaPorDev(w));
   const porProp = {};
   listas.forEach(w=>(porProp[w.prop]=porProp[w.prop]||[]).push(w));
+  const pendientes = S.wos.filter(w=>enPeriodo(w.fecha,S.periodo) && w.estado==="Completed" && !w.facturada).map(w=>{
+    const razones=[];
+    if(!w.supervisada) razones.push("pendiente de revisión operativa");
+    if(!w.validada) razones.push("pendiente de validación");
+    if(subWOsPendientesDeWO(w.id).length) razones.push("tiene una Sub-WO pendiente");
+    if(clienteRevisionPendienteDeWO(w.id)) razones.push("falta confirmación o corrección del cliente");
+    if(woBloqueada(w.id)) razones.push("tiene una Approval Request pendiente");
+    if(bloqueadaPorDev(w)) razones.push("tiene una devolución abierta");
+    if(!ingresoWO(w)) razones.push("no tiene tarifa o importe definido");
+    return {w,razones};
+  }).filter(x=>x.razones.length);
   return `
   <div class="ph"><div><h2>Facturación — ${periodoTexto(S.periodo)}</h2>
     <p>De Work Orders terminadas a factura, sin volver a escribir nada. El número y el vencimiento se calculan.</p></div></div>
@@ -536,6 +547,11 @@ VIEWS.facturacion = () => {
     <div style="margin-top:6px;font-size:11.5px">
       ${frenadasExc.map(w=>`WO-${w.id} · ${esc(P(w.prop).nombre)} ${U(w.unidad)?esc(U(w.unidad).num):""}`).join("<br>")}</div>
     <button class="btn sm" data-a="ir" data-m="excepciones" style="margin-top:7px">View Approval Requests</button></div>`:""}
+
+  ${pendientes.length?`<div class="card" style="border-color:var(--ambar);margin-bottom:14px"><div class="chd" style="background:var(--ambar-cl)"><h3 style="color:var(--ambar)">Por qué todavía no aparecen algunas WO</h3><span class="s">${pendientes.length} terminada(s) fuera de la lista de facturación</span></div>
+    <table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Motivo</th></tr></thead><tbody>
+      ${pendientes.map(x=>`<tr><td class="mono">WO-${x.w.id}</td><td>${esc(P(x.w.prop).nombre)} · ${esc(U(x.w.unidad).num)}</td><td>${x.razones.map(r=>`<span class="pill w" style="margin:0 4px 4px 0">${esc(r)}</span>`).join("")}</td></tr>`).join("")}
+    </tbody></table><div class="cp"><div class="tr" style="margin:0">Una WO solo aparece para generar factura cuando cumple todos los requisitos: terminada, validada, revisada, sin pendientes y con importe definido.</div></div></div>`:""}
 
   ${Object.keys(porProp).length?Object.entries(porProp).map(([pid,arr])=>{
     const tot=arr.reduce((a,w)=>a+(ingresoWO(w)||0),0);

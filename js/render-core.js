@@ -57,6 +57,40 @@ function ayudaContexto(){
     return null;
   }
 
+  /* A2 · Adentro del celular de Gustavo — guía paso a paso de su jornada.
+     No mira S.mod (la pantalla web de atrás): mientras el celular está
+     abierto, la ayuda sigue lo que él está haciendo ahí adentro. */
+  if(S.phone && S.phRol==="supervisor"){
+    if(!diarioHoy())
+      return {sel:'[data-a="fView"][data-v="dia"]',
+        txt:"Todavía no abriste tu reporte de hoy. Andá a «Mi día» y tocá «Abrir mi reporte de hoy» — se va llenando solo con todo lo que hagas de acá en más."};
+    const ag = agendaHoy();
+    const sinLlegar = ag.find(a=>!["Visitada","No completada"].includes(a.estado));
+    if(sinLlegar){
+      if(S.phView!=="ruta")
+        return {sel:'[data-a="fView"][data-v="ruta"]',
+          txt:`Te falta llegar a ${esc(P(sinLlegar.prop).nombre)}. Andá a «Mi ruta» y marcá cuando llegues.`};
+      return {sel:`[data-a="gLlegue"][data-id="${sinLlegar.id}"]`,
+        txt:`Tocá «Llegué» cuando estés en ${esc(P(sinLlegar.prop).nombre)}.`};
+    }
+    if(S.gRep)
+      return {sel:'[data-a="gRepOK"]',
+        txt:"Cargá las fotos que hagan falta y tocá el botón de enviar — le llega a Claudia al instante, con la propiedad, la hora y las fotos ya ordenadas."};
+    const sinReportar = ag.find(a=>a.estado==="Visitada"
+      && !S.reportes.some(r=>r.prop===a.prop && r.fecha===HOY_SUP));
+    if(sinReportar){
+      if(S.phView!=="reportar")
+        return {sel:'[data-a="fView"][data-v="reportar"]',
+          txt:`Ya llegaste a ${esc(P(sinReportar.prop).nombre)}. Andá a «Reportar» y contá qué encontraste.`};
+      return {sel:`[data-a="gRepPro"][data-prop="${sinReportar.prop}"]`,
+        txt:"Tocá esta propiedad para empezar el reporte."};
+    }
+    if(diarioHoy().estado!=="Completado")
+      return {sel:'[data-a="fView"][data-v="dia"]',
+        txt:"Ya recorriste tu ruta y reportaste todo. Andá a «Mi día» y cerrá tu reporte para terminar la jornada."};
+    return null;
+  }
+
   /* B · Adentro de una propiedad */
   if(S.mod==="propiedades" && S.sub){
     const pid = S.sub, tab = S.tab||"datos";
@@ -181,8 +215,9 @@ function renderCoach(){
   const a = ayudaContexto();
   if(!a){ box.innerHTML = `<button class="coach-mini" data-a="coachOff" title="Apagar la ayuda">💡 Ayuda activa</button>`; S._guiaSel=""; return; }
 
-  // Marcar el elemento (dentro del modal si hay uno, si no en la pantalla)
-  const scope = $("#mroot").innerHTML.trim() ? $("#mroot") : $("#main");
+  // Marcar el elemento: dentro del modal si hay uno, si no en el celular
+  // (sus botones viven en #fbody/#fnav, no en #main) o si no en la pantalla.
+  const scope = $("#mroot").innerHTML.trim() ? $("#mroot") : (S.phone ? document.querySelector(".drw") : $("#main"));
   let el = a.el || null;
   if(!el && a.sel){ for(const s of a.sel.split(",")){ el = scope.querySelector(s.trim()); if(el) break; } }
   if(el && !el.disabled){
@@ -215,7 +250,7 @@ const AYUDA_VISTA = {
   despacho:{t:"Disponibilidad del equipo", d:"Un solo objetivo: antes de prometerle una fecha a un cliente, ver si el equipo tiene lugar ese día. La regla de la que sale todo: 2 trabajos por técnico y por día.",
     tips:["<b>Cupo del equipo</b> de un día = técnicos disponibles ese día × 2. Un técnico con permiso aprobado no cuenta.","<b>Trabajos del día</b> = todas las Work Orders con esa fecha. Si pasan el cupo, la fila se pone roja: hay que mover alguna a otro día.","La barra muestra cuánto del cupo ya está en uso (con técnico) y cuánto queda libre.","<b>Cerrar el día</b>: cuando ya no se juntan más trabajos y se empiezan a repartir a los técnicos.","«+ Registrar permiso» marca a un técnico como no disponible unos días — Gustavo lo aprueba, y esos días le baja el cupo al equipo."]},
   supervision:{t:"Supervisión", d:"La jornada de Gustavo: a dónde ir, qué revisar, las devoluciones y lo que quedó acordado con cada propiedad.",
-    tips:["Las pestañas separan cada parte: de campo, ruta del día, devoluciones, por revisar."]},
+    tips:["«De campo»: lo que Gustavo mandó desde el celular, esperando que decidas qué hacer con eso.","«Ruta del día»: las propiedades que le armaste para hoy.","«Por revisar»: Work Orders terminadas por el técnico, esperando que Gustavo apruebe o devuelva.","«Devoluciones»: lo que se mandó a corregir por calidad, con su motivo y estado.","«Reporte diario»: el resumen del día de Gustavo, se arma solo.","«Ver su celular» abre el simulador — ahí es donde se prueban todas estas acciones de verdad."]},
   reportes:{t:"Reportes", d:"Los números del trabajo cruzados como quieras: por semana, por zona, por servicio.",
     tips:["Tocá un número de la tabla para ver qué órdenes hay detrás."]},
   clientes:{t:"Management", d:"Las empresas administradoras (property management). Se registra una vez y todas sus propiedades cuelgan de ahí.",
@@ -233,9 +268,9 @@ const AYUDA_VISTA = {
   catalogos:{t:"Catálogos", d:"Las listas que llenan cada desplegable del sistema: zonas, tipos de servicio, ubicaciones, estados de la orden.",
     tips:["Se agregan y se quitan acá, sin tocar nada más."]},
   nomina:{t:"Nómina", d:"Se arma sola con las órdenes validadas. Las completas se validan solas; acá solo aparecen las que les falta algo. El período (semana / día / rango / mes) se elige arriba.",
-    tips:["«Revisar y validar» abre el detalle de una orden.","Una WO con Approval Request pendiente no se paga hasta que se resuelva — el resto del período sí."]},
+    tips:["Regla para pagarle al técnico: alcanza con que Erika la valide acá — no hace falta esperar que Gustavo la haya aprobado.","«Revisar y validar» abre el detalle de una orden.","Una WO con Approval Request pendiente no se paga hasta que se resuelva — el resto del período sí."]},
   facturacion:{t:"Facturación", d:"De órdenes terminadas a factura, agrupadas por propiedad, sin volver a escribir nada. El período (semana / día / rango / mes) se elige arriba.",
-    tips:["«Generar factura» crea la factura de esa propiedad.","Se frena solo la WO con Approval Request pendiente o sin tarifa, no toda la propiedad."]},
+    tips:["Regla para poder facturar: hacen falta las DOS cosas juntas — aprobada por Gustavo (Supervisión) y validada por Erika (Nómina). Si falta una, no aparece.","La tabla «Por qué todavía no aparecen algunas WO» explica el motivo exacto de cada una que quedó afuera.","«Generar factura» crea la factura de esa propiedad.","Se frena solo la WO con Approval Request pendiente o sin tarifa, no toda la propiedad."]},
   cobranza:{t:"Cobranza", d:"El seguimiento de las facturas emitidas. Pasados 30 días sin pago, arranca la secuencia de reclamo.",
     tips:[]},
   inventario:{t:"Inventario de materiales", d:"Los materiales. El stock no se edita: es la suma de las compras menos las salidas.",
@@ -249,16 +284,40 @@ const AYUDA_VISTA = {
   gustavoweb:{t:"Vista de Gustavo (web)", d:"Lo mismo que Gustavo ve en su celular, como página web — de referencia para cuando se construya la app real.",
     tips:[]}
 };
+
+/* Lo mismo que AYUDA_VISTA, pero para las 5 pantallas del celular de
+   Gustavo (S.phView, con S.phRol==="supervisor"). Antes esta ayuda se
+   apagaba entera al abrir el celular — acá adentro es donde más perdida
+   queda una persona que nunca lo usó. */
+const AYUDA_FON_SUP = {
+  panel:{t:"Hoy", d:"La pantalla de inicio del celular de Gustavo: un resumen de su día — cuántas paradas tiene, cuántas ya visitó, devoluciones y materiales pendientes.",
+    tips:["Cada número lleva a su propia pantalla — tocalo para ver el detalle.","Es solo un resumen: las acciones reales están en «Mi ruta» y «Reportar»."]},
+  ruta:{t:"Mi ruta", d:"Las propiedades que le tocan hoy, ya ordenadas por zona. Esta ruta la arma Claudia — Gustavo no elige a dónde va, solo marca cómo le va yendo.",
+    tips:["«Voy en camino» y «Llegué» actualizan su estado en vivo — Claudia lo ve al instante.","«No pude completarla» pide un motivo: queda igual el registro de que fue, aunque no haya podido entrar.","Una vez que marca «Llegué», ahí mismo aparece el botón «Reportar desde aquí»."]},
+  reportar:{t:"Reportar", d:"Acá es donde Gustavo registra lo que encontró y sube las fotos. Se elige primero la propiedad, después qué tipo de reporte es.",
+    tips:["Los 4 tipos: inspección para un estimado, estado previo (cómo estaba antes de empezar), revisión de un trabajo del técnico, o falta de material.","Cada uno pide fotos agrupadas por ambiente — no se puede enviar sin al menos una.","Apenas toca enviar, el reporte le llega a Claudia al instante: aparece en la pantalla web «Supervisión», pestaña «De campo»."]},
+  dia:{t:"Mi día", d:"Un solo reporte por jornada. Se abre solo con la primera actividad y se va llenando; nada se escribe a mano salvo lo que nadie más puede saber.",
+    tips:["Una vez que lo cierra, no se puede editar — si falta algo, se agrega como nota aparte.","Esto es lo mismo que ve Claudia en la web, en «Supervisión → Reporte diario»."]},
+  devs:{t:"Devoluciones", d:"Los trabajos que Gustavo mandó a corregir por calidad. Acá verifica si la corrección que hizo el técnico ya quedó bien.",
+    tips:["Hace falta una foto del después para poder cerrarla.","Hasta que no se cierra, esa Work Order no se puede facturar."]}
+};
+
 function renderAyudaVista(){
   const box = $("#ayudaVBox"); if(!box) return;
-  if(window.__R || S.phone){ box.innerHTML=""; return; }
-  let info = AYUDA_VISTA[S.mod];
-  if(S.mod==="wo" && S.sub) info = {t:"Detalle de la Work Order",
-    d:"Todo lo de esta orden: el trabajo, el dinero, la evidencia, el historial. Los botones de arriba son los pasos que faltan según el estado.",
-    tips:["«Asignar técnico» / «Programar con el cliente»: los dos pasos antes de que arranque el trabajo.","«Ver en el celular de …»: abre esta orden en el celular del técnico que la tiene — desde ahí él marca llegada, sube fotos y cierra.","«Detener trabajo»: si empezó pero no puede seguir por algo externo (falta material, no hay acceso…)."]};
-  if(S.mod==="propiedades" && S.sub) info = {t:"Ficha de la propiedad",
-    d:"Todo lo de esta propiedad, en pestañas. Se completan en cualquier orden; el «Expediente» te va marcando lo que falta.",
-    tips:["«Datos» son los datos generales — «Editar datos» los modifica.","«Expediente»: la lista de control. Sin completarla no se puede transferir a programación.","«Contactos», «Documentos» (el seguro), «Price List» y «Unidades» se cargan cada uno en su pestaña.","«Comunicación»: anotá cada llamada o correo con esta propiedad, para que quede el registro."]};
+  if(window.__R){ box.innerHTML=""; return; }
+  let info;
+  if(S.phone){
+    if(S.phRol!=="supervisor"){ box.innerHTML=""; return; }
+    info = AYUDA_FON_SUP[S.phView];
+  } else {
+    info = AYUDA_VISTA[S.mod];
+    if(S.mod==="wo" && S.sub) info = {t:"Detalle de la Work Order",
+      d:"Todo lo de esta orden: el trabajo, el dinero, la evidencia, el historial. Los botones de arriba son los pasos que faltan según el estado.",
+      tips:["«Asignar técnico» / «Programar con el cliente»: los dos pasos antes de que arranque el trabajo.","«Ver en el celular de …»: abre esta orden en el celular del técnico que la tiene — desde ahí él marca llegada, sube fotos y cierra.","«Detener trabajo»: si empezó pero no puede seguir por algo externo (falta material, no hay acceso…)."]};
+    if(S.mod==="propiedades" && S.sub) info = {t:"Ficha de la propiedad",
+      d:"Todo lo de esta propiedad, en pestañas. Se completan en cualquier orden; el «Expediente» te va marcando lo que falta.",
+      tips:["«Datos» son los datos generales — «Editar datos» los modifica.","«Expediente»: la lista de control. Sin completarla no se puede transferir a programación.","«Contactos», «Documentos» (el seguro), «Price List» y «Unidades» se cargan cada uno en su pestaña.","«Comunicación»: anotá cada llamada o correo con esta propiedad, para que quede el registro."]};
+  }
   const btn = `<button class="avb" data-a="ayudaVistaToggle">❔ ¿Qué es esta pantalla?</button>`;
   if(!S.ayudaVista || !info){ box.innerHTML = btn; return; }
   box.innerHTML = `<div class="avpanel">
