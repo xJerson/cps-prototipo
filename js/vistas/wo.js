@@ -158,7 +158,8 @@ function fichaWO(id){
             ${puedeVerDinero?`<td class="num mono">${a.precio?money(a.precio):"—"}</td><td class="num mono">${a.precio?money(a.precio*(a.cant||1)):"—"}</td>`:""}
             <td><span class="pill ${a.estado==="Aprobado"?"v":a.estado==="Rechazado"?"r":"w"}">${a.estado}</span></td>
             <td><div style="display:flex;gap:4px"><button class="btn sm" title="Fotos de referencia" data-a="subwoFotoRef" data-id="${a.id}">📷 Ref ${(a.fotosRefArr||[]).length}</button>
-              <button class="btn sm" title="Fotos de evidencia" data-a="subwoFotoEvid" data-id="${a.id}">📷 Evid ${(a.fotosEvidArr||[]).length}</button></div></td>
+              <button class="btn sm" title="Fotos de evidencia" data-a="subwoFotoEvid" data-id="${a.id}">📷 Evid ${(a.fotosEvidArr||[]).length}</button>
+              <button class="btn sm" title="Hallazgo inicial — por si el técnico no pudo cargarlo" data-a="subwoFotoHallazgo" data-id="${a.id}">📷 Hallazgo${a.hallazgoFoto?" ✓":""}</button></div></td>
             <td>${a.origen==="Planificada"?`<button class="btn sm" data-a="subwoGestionar" data-id="${a.id}">Gestionar</button>`:""}</td></tr>
             ${(a.specs&&Object.keys(a.specs).length)||a.tec||a.fecha||a.estadoTrabajo||a.facturable||(a.aprob&&a.aprob.foto)?`<tr><td colspan="${puedeVerDinero?9:7}" style="padding-top:0;padding-bottom:9px">
               <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">

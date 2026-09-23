@@ -239,6 +239,8 @@ function fotoModalInfo(m){
     return {titulo:"Fotos de referencia", sub:esc(a.concepto), arr:(a.fotosRefArr=a.fotosRefArr||[])}; }
   if(m.tipo==="subwoEvid"){ const a=by(S.adicionales,m.id);
     return {titulo:"Fotos de evidencia", sub:esc(a.concepto), arr:(a.fotosEvidArr=a.fotosEvidArr||[])}; }
+  if(m.tipo==="subwoHallazgo"){ const a=by(S.adicionales,m.id);
+    return {titulo:"Hallazgo inicial (Initial finding)", sub:esc(a.concepto), arr:a.hallazgoFoto?[a.hallazgoFoto]:[]}; }
   return {titulo:"Fotos", sub:"", arr:[]};
 }
 function modalFotos(){

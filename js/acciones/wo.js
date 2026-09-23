@@ -845,6 +845,16 @@ Object.assign(ACC, {
     S.fotoModal={tipo:"subwoEvid", id:a.id};
     modalFotos();
   },
+  /* Antes solo el celular del técnico podía cargar esta foto (fSubHallazgo).
+     Erika pidió una salida desde oficina para cuando el técnico no puede
+     adjuntarla — mismo dato final (a.hallazgoFoto), quien lo carga queda
+     igual de trazable en el historial. */
+  subwoFotoHallazgo: d => {
+    const a=S.adicionales.find(x=>x.id===+d.id); if(!a) return;
+    ultimoSubwoTocado = a.wo;
+    S.fotoModal={tipo:"subwoHallazgo", id:a.id};
+    modalFotos();
+  },
   materialAgregar: d => modalMaterial(+d.id),
   materialOrigen: () => refMaterial(),
   materialClienteRef: () => refMaterial(),
