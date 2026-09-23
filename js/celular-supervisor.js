@@ -432,7 +432,10 @@ function hojaCel(sh){
      empresa — no tenía dónde ver esos datos ni cómo dejar el ticket
      registrado. Esta tarjeta le da lo que necesita mostrar en caja (en
      inglés, para el cajero) y una foto de comprobante, igual que ya existe
-     para el resto de las fotos de la WO. */
+     para el resto de las fotos de la WO.
+     Mismo criterio que "material" arriba: el técnico nunca ve ni ingresa
+     dinero — no hay campo de costo. El monto lo completa oficina después,
+     leyendo la foto del ticket. */
   if(sh.t==="compra"){ const p=P(w.prop), u=U(w.unidad);
     return `<div class="fscrim" data-a="fSheetNo"><div class="fsheet" data-stop>
     <div class="grab"></div>
@@ -455,8 +458,6 @@ function hojaCel(sh){
     <input id="cpNombre" value="${esc(sh.nombre)}" placeholder="Ej. sellador de grout">
     <label>Cantidad</label>
     <input id="cpCant" value="${esc(String(sh.cant))}" inputmode="decimal">
-    <label>Costo total <span style="font-weight:500;color:var(--faint)">— si lo tenés a mano</span></label>
-    <input id="cpCosto" value="${esc(sh.costo||"")}" inputmode="decimal" placeholder="0.00">
     <button type="button" class="db g" style="margin-top:7px" data-a="fCompraFoto">${sh.foto
       ?`<img src="${sh.foto}" style="width:16px;height:16px;object-fit:cover;border-radius:3px"> Foto agregada — tocá para cambiar`
       :"📷 Agregar foto del ticket"}</button>
