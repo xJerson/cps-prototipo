@@ -1,6 +1,6 @@
 "use strict";
 /* ══════════ DATOS SEMILLA ══════════ */
-let ID = {p:100,u:200,c:300,t:400,w:1047,e:500,f:601,pr:700,mv:800,cl:900,ad:950,cm:960};
+let ID = {p:100,u:200,c:300,t:400,w:1047,e:500,f:601,pr:700,mv:800,cl:900,ad:951,cm:960};
 const nid = k => ++ID[k];
 /* Fotos semilla: no hay cámara real en el arranque del prototipo, pero la
    galería/miniatura necesita una URL de imagen real (no un contador ni
@@ -139,7 +139,11 @@ let S = {
   wos:[
     {id:1038,prop:"P1",unidad:"U1",cat:"Clean",serv:"Full clean",tec:"T1",estado:"Completed",semana:33,fecha:"2026-08-10",horaProg:"9:00",po:"PO-8841",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T1",hora:"11:40"}],supervisada:true,validada:true,pagadaTec:false,facturada:false,mats:[],notas:"",notasTec:"",hist:[["8:10","Creada","Thalia"],["8:12","Asignada a Diego Ramírez","Thalia"],["9:02","Llegó a la propiedad","Diego"],["11:40","Terminó · 1 evidencia","Diego"],["12:00","Revisión operativa completada","Oficina"]]},
     {id:1039,prop:"P2",unidad:"U4",cat:"Paint",serv:"Touch up paint",tec:"T2",estado:"Completed",semana:33,fecha:"2026-08-10",horaProg:"8:30",po:"PO-8842",asistencia:true,evid:0,mats:[],notas:"",notasTec:"",hist:[["8:15","Creada","Thalia"],["8:16","Asignada a Marcos Ayala","Thalia"],["9:30","Llegó a la propiedad","Marcos"],["13:20","Terminó — sin cargar evidencia","Marcos"]]},
-    {id:1040,prop:"P3",unidad:"U6",cat:"Carpet",serv:"Carpet clean",tec:"T4",estado:"In progress",semana:33,fecha:"2026-08-11",horaProg:"8:00",po:"",asistencia:true,evid:0,mats:[],notas:"",notasTec:"",hist:[["8:05","Creada","Thalia"],["8:06","Asignada a Andrés Solís","Thalia"],["8:52","Llegó a la propiedad","Andrés"]]},
+    {id:1040,prop:"P3",unidad:"U6",cat:"Carpet",serv:"Carpet clean",tec:"T4",estado:"In progress",semana:33,fecha:"2026-08-11",horaProg:"8:00",po:"",asistencia:true,evid:0,mats:[],notas:"",notasTec:"",
+     hist:[["8:05","Creada","Thalia"],["8:06","Asignada a Andrés Solís","Thalia"],["8:52","Llegó a la propiedad","Andrés"],
+           ["8:55","Sub-WO planificada creada: Sheetrock","Andrés Solís"],
+           ["9:15","Aprobada por el cliente vía Llamada","Claudia"],
+           ["9:20","Initial finding agregado a Sub-WO · Sheetrock (desde oficina)","Claudia"]]},
     /* Estado "Returned" y devuelta:1 a propósito: es la WO que trae la
        devolución DV1 sembrada más abajo — así queda un ejemplo real y
        visible desde que abre el prototipo, sin tener que armar uno a
@@ -171,7 +175,22 @@ let S = {
        y ya facturada — su factura está sembrada más abajo (S.facturas). */
     {id:1047,prop:"P3",unidad:"U7",cat:"Repair",serv:"Drywall repair",tec:"T4",estado:"Completed",semana:33,fecha:"2026-08-08",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T4",hora:"11:20"}],supervisada:true,validada:true,pagadaTec:true,facturada:true,mats:[],notas:"",notasTec:"",hist:[["8:00","Creada","Thalia"],["8:02","Asignada a Andrés Solís","Thalia"],["9:05","Llegó a la propiedad","Andrés"],["11:20","Terminó · 1 evidencia","Andrés"],["11:40","Revisión operativa completada","Gustavo"],["14:00","Validada y pagada en nómina","Erika"],["15:00","Facturada — INV-2026-1041","Erika"]]}
   ],
-  adicionales:[], facturas:[{id:"F601",num:"INV-2026-1041",prop:"P3",lineas:[1047],
+  /* Hallazgo real encontrado en sitio (WO-1040, en progreso): Andrés reportó
+     la humedad desde su celular pero no pudo cargar la foto (mala señal).
+     Queda sembrado ya aprobado y con la foto cargada desde oficina — el
+     ejemplo pedido para mostrar el botón nuevo sin tener que armarlo a mano. */
+  adicionales:[
+    {id:951, sol:"SOL20260811A", wo:1040, desc:"Manchas de humedad y olor en el techo del baño — no estaba en el pedido original.", ubic:"Bano",
+     concepto:"Sheetrock", cant:1, precio:85, pago:45, precioOrigen:"manual", catalogoId:null,
+     estado:"Aprobado", aprob:{medio:"Llamada", quien:"Claudia", hora:"9:15"}, origen:"Técnico",
+     fotosRefArr:[], fotosEvidArr:[],
+     hallazgoFoto:{url:FOTO_SEED, quien:"Claudia", hora:"9:20"},
+     specs:{}, tec:null, fecha:null, facturaSeparada:false, facturable:true,
+     hist:[["8:55","Creada por el técnico en sitio: Sheetrock · precio manual pendiente","Andrés Solís"],
+           ["9:15","Aprobada por el cliente vía Llamada","Claudia"],
+           ["9:20","Initial finding cargado desde oficina — el técnico no pudo adjuntarlo desde el celular","Claudia"]]}
+  ],
+  facturas:[{id:"F601",num:"INV-2026-1041",prop:"P3",lineas:[1047],
     conceptos:[{tipo:"WO",wo:1047,subwo:null,unidad:"U7",descripcion:"Drywall repair",cantidad:1,importe:220,evidencia:1}],
     total:220,separada:false,emision:"2026-08-09",vence:"2026-09-08",estado:"Emitida",
     pdf:"INV-2026-1041.pdf",pdfHora:"15:00",pdfQuien:"Erika",seguimiento:[]}],
