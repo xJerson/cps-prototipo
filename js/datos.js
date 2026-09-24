@@ -1,6 +1,6 @@
 "use strict";
 /* ══════════ DATOS SEMILLA ══════════ */
-let ID = {p:100,u:200,c:300,t:400,w:1047,e:500,f:601,pr:700,mv:800,cl:900,ad:951,cm:960};
+let ID = {p:100,u:200,c:300,t:400,w:1051,e:500,f:601,pr:700,mv:800,cl:900,ad:957,cm:960};
 const nid = k => ++ID[k];
 /* Fotos semilla: no hay cámara real en el arranque del prototipo, pero la
    galería/miniatura necesita una URL de imagen real (no un contador ni
@@ -22,7 +22,12 @@ let S = {
   /* El buscador de Work Orders conserva texto y fecha por separado: cambiar
      uno no borra el otro, que era el problema del Excel. */
   filtroWO:{modo:"todos", sem:33, desde:"", hasta:""},
-  sub:null, tab:null, phone:false, phTec:"T1", phView:"agenda", phWO:null, phSub:null, notis:[],
+  sub:null, tab:null, phone:false, phTec:"T1", phView:"agenda", phWO:null, phSub:null,
+  // Avisos sembrados para que la pestaña del celular no arranque vacía: uno sin leer, uno ya leído.
+  notis:[
+    {t:"Nueva Work Order confirmada", b:"WO-1048 · Bayside Landing A-105 quedó confirmada por el cliente.", h:"8:15", leido:false},
+    {t:"Recordatorio", b:"No olvides la foto del antes en cada unidad antes de empezar.", h:"7:30", leido:true}
+  ],
   coach:true,   // asistente "¿qué hago ahora?" — se puede apagar desde su tarjeta
   /* El celular tiene dos dueños distintos: el técnico ejecuta, el supervisor reporta.
      No es la misma app con otro logo — es otra herramienta. */
@@ -141,13 +146,14 @@ let S = {
     {id:1039,prop:"P2",unidad:"U4",cat:"Paint",serv:"Touch up paint",tec:"T2",estado:"Completed",semana:33,fecha:"2026-08-10",horaProg:"8:30",po:"PO-8842",asistencia:true,evid:0,mats:[],notas:"",notasTec:"",hist:[["8:15","Creada","Thalia"],["8:16","Asignada a Marcos Ayala","Thalia"],["9:30","Llegó a la propiedad","Marcos"],["13:20","Terminó — sin cargar evidencia","Marcos"]]},
     /* corroborado:true a propósito — así "Mientras trabajas" (con el botón
        nuevo "Compra de materiales") se ve directo, sin tener que primero
-       tocar "Sí, coincide — empezar" en el celular de Andrés. */
-    {id:1040,prop:"P3",unidad:"U6",cat:"Carpet",serv:"Carpet clean",tec:"T4",estado:"In progress",semana:33,fecha:"2026-08-11",horaProg:"8:00",po:"",asistencia:true,evid:0,corroborado:true,mats:[],notas:"",notasTec:"",
-     hist:[["8:05","Creada","Thalia"],["8:06","Asignada a Andrés Solís","Thalia"],["8:52","Llegó a la propiedad","Andrés"],
-           ["8:55","Sub-WO planificada creada: Sheetrock","Andrés Solís"],
+       tocar "Sí, coincide — empezar" en el celular de Diego (técnico por
+       defecto del celular, para que Claudia lo vea sin buscar). */
+    {id:1040,prop:"P3",unidad:"U6",cat:"Carpet",serv:"Carpet clean",tec:"T1",estado:"In progress",semana:33,fecha:"2026-08-11",horaProg:"8:00",po:"",asistencia:true,evid:0,corroborado:true,mats:[],notas:"",notasTec:"",
+     hist:[["8:05","Creada","Thalia"],["8:06","Asignada a Diego Ramírez","Thalia"],["8:52","Llegó a la propiedad","Diego"],
+           ["8:55","Sub-WO planificada creada: Sheetrock","Diego Ramírez"],
            ["9:15","Aprobada por el cliente vía Llamada","Claudia"],
            ["9:20","Initial finding agregado a Sub-WO · Sheetrock (desde oficina)","Claudia"],
-           ["9:30","Compró en tienda (Home Depot): Sellador de grout × 3 · usó 2 · sobró 1 (queda en inventario) · con foto del ticket","Andrés"]]},
+           ["9:30","Compró en tienda (Home Depot): Sellador de grout × 3 · usó 2 · sobró 1 (queda en inventario) · con foto del ticket","Diego"]]},
     /* Estado "Returned" y devuelta:1 a propósito: es la WO que trae la
        devolución DV1 sembrada más abajo — así queda un ejemplo real y
        visible desde que abre el prototipo, sin tener que armar uno a
@@ -177,16 +183,39 @@ let S = {
        «Aprobar supervisión» y va a funcionar: sirve para probar el flujo de
        Gustavo de punta a punta, en vivo, sin que se bloquee. */
     // antesFotos: foto del "antes" sembrada aparte de evidFotos, para mostrar los dos grupos en oficina
-    {id:1045,prop:"P2",unidad:"U5",cat:"Clean",serv:"Deep clean",tec:"T4",estado:"Completed",semana:33,fecha:"2026-08-12",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T4",hora:"12:15"}],antesFotos:[{url:FOTO_SEED,quien:"T4",hora:"9:10"}],mats:[],notas:"",notasTec:"",hist:[["8:00","Creada","Thalia"],["8:01","Asignada a Andrés Solís","Thalia"],["9:05","Llegó a la propiedad","Andrés"],["12:15","Terminó · 1 evidencia","Andrés"]]},
+    {id:1045,prop:"P2",unidad:"U5",cat:"Clean",serv:"Deep clean",tec:"T1",estado:"Completed",semana:33,fecha:"2026-08-12",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T1",hora:"12:15"}],antesFotos:[{url:FOTO_SEED,quien:"T1",hora:"9:10"}],mats:[],notas:"",notasTec:"",hist:[["8:00","Creada","Thalia"],["8:01","Asignada a Diego Ramírez","Thalia"],["9:05","Llegó a la propiedad","Diego"],["12:15","Terminó · 1 evidencia","Diego"]]},
     /* Ya la aprobó Gustavo (supervisada:true) pero Erika todavía no la validó
        en Nómina — el paso intermedio entre las dos personas, que hasta ahora
-       no tenía ejemplo propio. */
-    {id:1046,prop:"P1",unidad:"U3",cat:"Clean",serv:"Full clean",tec:"T1",estado:"Completed",semana:33,fecha:"2026-08-12",horaProg:"9:30",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T1",hora:"12:40"}],supervisada:true,pagadaTec:false,facturada:false,mats:[],notas:"",notasTec:"",hist:[["8:20","Creada","Thalia"],["8:22","Asignada a Diego Ramírez","Thalia"],["9:35","Llegó a la propiedad","Diego"],["12:40","Terminó · 1 evidencia","Diego"],["13:00","Revisión operativa completada","Gustavo"]]},
+       no tenía ejemplo propio. infoPedida: oficina le pidió resolver la
+       tarifa antes de que entre a su pago (bloque "Te falta completar esto"). */
+    {id:1046,prop:"P1",unidad:"U3",cat:"Clean",serv:"Full clean",tec:"T1",estado:"Completed",semana:33,fecha:"2026-08-12",horaProg:"9:30",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T1",hora:"12:40"}],supervisada:true,pagadaTec:false,facturada:false,mats:[],notas:"",notasTec:"",
+     infoPedida:{quien:"Erika",fecha:"2026-08-13",hora:"9:10",falta:["tarifa"]},
+     hist:[["8:20","Creada","Thalia"],["8:22","Asignada a Diego Ramírez","Thalia"],["9:35","Llegó a la propiedad","Diego"],["12:40","Terminó · 1 evidencia","Diego"],["13:00","Revisión operativa completada","Gustavo"],["13:10","Erika pidió resolver la tarifa","Erika"]]},
     /* El circuito ya cerrado del todo: aprobada, validada, pagada al técnico
        y ya facturada — su factura está sembrada más abajo (S.facturas). */
-    {id:1047,prop:"P3",unidad:"U7",cat:"Repair",serv:"Drywall repair",tec:"T4",estado:"Completed",semana:33,fecha:"2026-08-08",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T4",hora:"11:20"}],supervisada:true,validada:true,pagadaTec:true,facturada:true,mats:[],notas:"",notasTec:"",hist:[["8:00","Creada","Thalia"],["8:02","Asignada a Andrés Solís","Thalia"],["9:05","Llegó a la propiedad","Andrés"],["11:20","Terminó · 1 evidencia","Andrés"],["11:40","Revisión operativa completada","Gustavo"],["14:00","Validada y pagada en nómina","Erika"],["15:00","Facturada — INV-2026-1041","Erika"]]}
+    {id:1047,prop:"P3",unidad:"U7",cat:"Repair",serv:"Drywall repair",tec:"T4",estado:"Completed",semana:33,fecha:"2026-08-08",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T4",hora:"11:20"}],supervisada:true,validada:true,pagadaTec:true,facturada:true,mats:[],notas:"",notasTec:"",hist:[["8:00","Creada","Thalia"],["8:02","Asignada a Andrés Solís","Thalia"],["9:05","Llegó a la propiedad","Andrés"],["11:20","Terminó · 1 evidencia","Andrés"],["11:40","Revisión operativa completada","Gustavo"],["14:00","Validada y pagada en nómina","Erika"],["15:00","Facturada — INV-2026-1041","Erika"]]},
+    /* Confirmada esperando "Ya llegué": ejemplo del técnico por defecto (Diego)
+       con una WO agendada y confirmada, sin marcar llegada todavía. */
+    {id:1048,prop:"P1",unidad:"U9",cat:"Clean",serv:"Full clean",tec:"T1",estado:"Confirmed",semana:33,fecha:"2026-08-13",horaProg:"10:30",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",
+     confirmCliente:{fecha:"2026-08-13",medio:"Texto",contacto:"Danielle Pratt",quien:"Thalia",hora:"8:15"},
+     hist:[["8:00","Creada","Thalia"],["8:05","Asignada a Diego Ramírez","Thalia"],["8:15","Confirmada por el cliente vía Texto","Thalia"]]},
+    /* En progreso SIN corroborar todavía: para ver la tarjeta "corrobora la
+       unidad" antes de que se destrabe "Mientras trabajas". */
+    {id:1049,prop:"P2",unidad:"U13",cat:"Clean",serv:"Full clean",tec:"T1",estado:"In progress",semana:33,fecha:"2026-08-12",horaProg:"13:00",po:"",asistencia:true,evid:0,mats:[],notas:"",notasTec:"",
+     hist:[["12:40","Creada","Thalia"],["12:41","Asignada a Diego Ramírez","Thalia"],["13:05","Llegó a la propiedad","Diego"]]},
+    /* Estado "Esperando aprobación" (frenada por un adicional), ya corroborada:
+       trae los adicionales pendiente/rechazado/parcial sembrados más abajo. */
+    {id:1050,prop:"P1",unidad:"U10",cat:"Repair",serv:"Drywall repair",tec:"T1",estado:"Esperando aprobación",semana:33,fecha:"2026-08-12",horaProg:"14:00",po:"",asistencia:true,evid:0,corroborado:true,mats:[],notas:"",notasTec:"",
+     hist:[["13:40","Creada","Thalia"],["13:41","Asignada a Diego Ramírez","Thalia"],["14:05","Llegó a la propiedad","Diego"],
+           ["14:10","Confirmó la unidad","Diego"],["14:30","Pidió aprobación de un adicional · Sheetrock","Diego"]]},
+    /* Touch-up de corrección (w.touchup): Diego rehaciendo su propia WO-1038
+       por la devolución DV2 — no se le paga por ser su propio error. */
+    {id:1051,prop:"P1",unidad:"U1",cat:"Clean",serv:"Full clean",tec:"T1",estado:"Confirmed",semana:33,fecha:"2026-08-13",horaProg:"9:00",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",
+     touchup:true,facturable:false,devOrigen:"DV2",woOrigen:1038,tecOriginal:"T1",avance:0,
+     confirmCliente:{fecha:"2026-08-13",medio:"Llamada",contacto:"Danielle Pratt",quien:"Thalia",hora:"9:20"},
+     hist:[["9:15","Touch-up creado desde la devolución — no facturable","Gustavo Andrade"],["9:16","Asignado a Diego Ramírez","Gustavo Andrade"],["9:20","Confirmada por el cliente vía Llamada","Thalia"]]}
   ],
-  /* Hallazgo real encontrado en sitio (WO-1040, en progreso): Andrés reportó
+  /* Hallazgo real encontrado en sitio (WO-1040, en progreso): Diego reportó
      la humedad desde su celular pero no pudo cargar la foto (mala señal).
      Queda sembrado ya aprobado y con la foto cargada desde oficina — el
      ejemplo pedido para mostrar el botón nuevo sin tener que armarlo a mano. */
@@ -197,9 +226,59 @@ let S = {
      fotosRefArr:[], fotosEvidArr:[],
      hallazgoFoto:{url:FOTO_SEED, quien:"Claudia", hora:"9:20"},
      specs:{}, tec:null, fecha:null, facturaSeparada:false, facturable:true,
-     hist:[["8:55","Creada por el técnico en sitio: Sheetrock · precio manual pendiente","Andrés Solís"],
+     hist:[["8:55","Creada por el técnico en sitio: Sheetrock · precio manual pendiente","Diego Ramírez"],
            ["9:15","Aprobada por el cliente vía Llamada","Claudia"],
-           ["9:20","Initial finding cargado desde oficina — el técnico no pudo adjuntarlo desde el celular","Claudia"]]}
+           ["9:20","Initial finding cargado desde oficina — el técnico no pudo adjuntarlo desde el celular","Claudia"]]},
+    /* Pendiente: adicional recién enviado por Diego en WO-1050, todavía sin
+       decidir — el ejemplo que faltaba para Approval Requests. */
+    {id:952, sol:"SOL20260812P", wo:1050, desc:"Grieta en el techo de la sala, no estaba en el pedido original.", ubic:"Sala",
+     concepto:"Sheetrock", cant:1, precio:85, pago:45, precioOrigen:"manual", catalogoId:null,
+     estado:"Pendiente", aprob:null, origen:"Técnico",
+     fotosRefArr:[], fotosEvidArr:[], hallazgoFoto:{url:FOTO_SEED, quien:"Diego", hora:"14:25"},
+     specs:{}, tec:null, fecha:null, facturaSeparada:false, facturable:true,
+     hist:[["14:25","Creada por el técnico en sitio: Sheetrock · precio manual pendiente","Diego Ramírez"]]},
+    /* Rechazado: el cliente no autorizó el cambio de color. */
+    {id:953, sol:"SOL20260812R", wo:1050, desc:"Cambio de color solicitado por el inquilino, no estaba en el contrato.", ubic:"Dormitorio",
+     concepto:"Color change", cant:1, precio:120, pago:60, precioOrigen:"manual", catalogoId:null,
+     estado:"Rechazado", aprob:{medio:"Correo", quien:"Danielle Pratt", hora:"15:10"}, origen:"Técnico",
+     fotosRefArr:[], fotosEvidArr:[], hallazgoFoto:null,
+     specs:{}, tec:null, fecha:null, facturaSeparada:false, facturable:true,
+     hist:[["14:50","Creada por el técnico en sitio: Color change · precio manual pendiente","Diego Ramírez"],
+           ["15:10","Rechazada por el cliente vía Correo","Thalia"]]},
+    /* Parcial: dos líneas del mismo envío — una aprobada, otra rechazada. */
+    {id:954, sol:"SOL20260812X", wo:1050, desc:"Grieta secundaria cerca de la ventana; pidió aprobar solo el tape, no la masa extra.", ubic:"Sala",
+     concepto:"Tape", cant:1, precio:40, pago:20, precioOrigen:"manual", catalogoId:null,
+     estado:"Aprobado", aprob:{medio:"Llamada", quien:"Danielle Pratt", hora:"15:40"}, origen:"Técnico",
+     fotosRefArr:[], fotosEvidArr:[], hallazgoFoto:null,
+     specs:{}, tec:null, fecha:null, facturaSeparada:false, facturable:true,
+     hist:[["15:20","Creada por el técnico en sitio: Tape · precio manual pendiente","Diego Ramírez"],
+           ["15:40","Aprobada por el cliente vía Llamada","Danielle Pratt"]]},
+    {id:955, sol:"SOL20260812X", wo:1050, desc:"Grieta secundaria cerca de la ventana; pidió aprobar solo el tape, no la masa extra.", ubic:"Sala",
+     concepto:"Masa", cant:1, precio:35, pago:18, precioOrigen:"manual", catalogoId:null,
+     estado:"Rechazado", aprob:{medio:"Llamada", quien:"Danielle Pratt", hora:"15:40"}, origen:"Técnico",
+     fotosRefArr:[], fotosEvidArr:[], hallazgoFoto:null,
+     specs:{}, tec:null, fecha:null, facturaSeparada:false, facturable:true,
+     hist:[["15:20","Creada por el técnico en sitio: Masa · precio manual pendiente","Diego Ramírez"],
+           ["15:40","Rechazada por el cliente vía Llamada","Danielle Pratt"]]},
+    /* Sub-WO planificada asignada al técnico, sin empezar todavía — sin
+       initial finding ni evidencia (botón "Empezar Sub-WO"). */
+    {id:956, sol:"SUBP-1040A", wo:1040, desc:"Reparación de sheetrock en la pared del pasillo, planificada aparte del carpet clean.", ubic:"Pasillo",
+     concepto:"Sheetrock", cant:1, precio:85, pago:45, precioOrigen:"manual", catalogoId:null,
+     estado:"Aprobado", aprob:{medio:"Llamada", quien:"Rick Halloway", hora:"9:00"}, origen:"Planificada",
+     fotosRefArr:[], fotosEvidArr:[], hallazgoFoto:null,
+     specs:{}, tec:null, fecha:"2026-08-12", facturaSeparada:false, facturable:true,
+     estadoTrabajo:"Assigned", cantRealizada:0, cantPendiente:0, parcial:false, facturada:false,
+     hist:[["9:00","Sub-WO planificada aprobada: Sheetrock","Claudia"]]},
+    /* Sub-WO planificada ya terminada, CON initial finding y evidencia. */
+    {id:957, sol:"SUBP-1040B", wo:1040, desc:"Reemplazo de bisagra de puerta del clóset, hallada floja durante el carpet clean.", ubic:"Dormitorio",
+     concepto:"Door", cant:1, precio:60, pago:30, precioOrigen:"manual", catalogoId:null,
+     estado:"Aprobado", aprob:{medio:"Correo", quien:"Rick Halloway", hora:"9:05"}, origen:"Planificada",
+     fotosRefArr:[], fotosEvidArr:[{url:FOTO_SEED, quien:"T1", hora:"9:50"}],
+     hallazgoFoto:{url:FOTO_SEED, quien:"T1", hora:"9:10"},
+     specs:{}, tec:null, fecha:"2026-08-12", facturaSeparada:false, facturable:true,
+     estadoTrabajo:"Completed", cantRealizada:1, cantPendiente:0, parcial:false, facturada:false,
+     hist:[["9:05","Sub-WO planificada aprobada: Door","Claudia"],["9:10","Initial finding cargado","Diego Ramírez"],
+           ["9:50","Evidencia cargada","Diego Ramírez"],["9:55","Sub-WO terminada","Diego Ramírez"]]}
   ],
   facturas:[{id:"F601",num:"INV-2026-1041",prop:"P3",lineas:[1047],
     conceptos:[{tipo:"WO",wo:1047,subwo:null,unidad:"U7",descripcion:"Drywall repair",cantidad:1,importe:220,evidencia:1}],
@@ -268,7 +347,16 @@ let S = {
      prioridad:"Alta", fechaRep:"2026-08-09", fechaLimite:"2026-08-12",
      estado:"Abierta", lotesAntes:[{amb:"Baño",n:4}], lotesDespues:[],
      verifica:null, quien:"T6",
-     hist:[["8:52","Devolución creada desde informe de supervisión","Gustavo Andrade"]]}
+     hist:[["8:52","Devolución creada desde informe de supervisión","Gustavo Andrade"]]},
+    /* Genera el touch-up WO-1051, del propio Diego corrigiendo su propia WO-1038. */
+    {id:"DV2", prop:"P1", unidad:"U1", wo:1038, area:"Cocina",
+     desc:"Faltó limpiar el interior del refrigerador y el microondas.",
+     causa:"Trabajo mal ejecutado por el técnico", responsable:"T1",
+     prioridad:"Media", fechaRep:"2026-08-11", fechaLimite:"2026-08-14",
+     estado:"Abierta", lotesAntes:[{amb:"Cocina",n:2}], lotesDespues:[],
+     verifica:null, quien:"T6", touchup:1051,
+     hist:[["9:10","Devolución creada desde informe de supervisión","Gustavo Andrade"],
+           ["9:15","Se creó el touch-up WO-1051 para Diego Ramírez","Gustavo Andrade"]]}
   ],
 
   /* ── REPORTE DIARIO ───────────────────────────────────────────────────
@@ -316,14 +404,14 @@ let S = {
     {id:"M2",prod:"PR3",tipo:"entrada",cant:8,fecha:"2026-07-20",wo:null,costo:239.44,tienda:"Home Depot",quien:"Gustavo",evid:true},
     {id:"M3",prod:"PR1",tipo:"salida",cant:2,fecha:"2026-08-10",wo:1039,costo:65,tienda:"",quien:"Marcos",evid:false},
     {id:"M4",prod:"PR4",tipo:"entrada",cant:12,fecha:"2026-08-05",wo:null,costo:225,tienda:"Home Depot",quien:"Gustavo",evid:true},
-    {id:"M5",prod:"PR3",tipo:"salida",cant:3,fecha:"2026-08-11",wo:1040,costo:89.79,tienda:"",quien:"Andrés",evid:false},
-    /* Ejemplo de "Compra de materiales" desde el celular del técnico: Andrés
+    {id:"M5",prod:"PR3",tipo:"salida",cant:3,fecha:"2026-08-11",wo:1040,costo:89.79,tienda:"",quien:"Diego",evid:false},
+    /* Ejemplo de "Compra de materiales" desde el celular del técnico: Diego
        compró 3 en Home Depot, usó 2 en la unidad y 1 quedó en inventario. */
     {id:"M6",prod:"PT1",tipo:"entrada",cant:3,fecha:"2026-08-11",wo:null,compraWo:1040,costo:0,costoPend:true,
-     tienda:"Home Depot",quien:"Andrés",
+     tienda:"Home Depot",quien:"Diego",
      notas:"Comprado en tienda con tarjeta de la empresa — falta cargar el costo del ticket",
      recibo:FOTO_SEED,evid:true},
-    {id:"M7",prod:"PT1",tipo:"salida",cant:2,fecha:"2026-08-11",wo:1040,costo:0,compra:"M6",tienda:"",quien:"Andrés",evid:false}
+    {id:"M7",prod:"PT1",tipo:"salida",cant:2,fecha:"2026-08-11",wo:1040,costo:0,compra:"M6",tienda:"",quien:"Diego",evid:false}
   ]
 };
 
