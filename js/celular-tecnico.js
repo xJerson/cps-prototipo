@@ -441,9 +441,7 @@ const REP = {
   previo:{n:"Estado previo", d:"Lo que ya estaba dañado antes de empezar", c:"#8a5a00",
           ic:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'},
   revision:{n:"Informe de supervisión", mod:1, d:"Revisar lo que hizo el técnico", c:"#1e5c3a",
-            ic:'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>'},
-  material:{n:"Falta material", d:"Avisar a oficina lo que hace falta", c:"#9b2226",
-            ic:'<path d="M20 7h-9M14 17H5"/><circle cx="17" cy="17" r="3"/><circle cx="7" cy="7" r="3"/>'}
+            ic:'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>'}
 };
 const fichaRep = k => { const r = REP[k];
   return `<div class="dc" data-a="gRepNuevo" data-t="${k}" style="cursor:pointer;display:flex;gap:10px;align-items:center">
@@ -547,11 +545,7 @@ function diasAbierta(d){
 const devVencida = d => d.estado!=="Cerrada" && d.fechaLimite < HOY_SUP;
 const devDeTec   = t => S.devoluciones.filter(d=>d.responsable===t);
 
-/* ── Los ocho contadores del panel de Gustavo ──
-   Ninguno se digita: los seis primeros salen de datos que ya existen y los
-   dos ultimos son estados calculados. Eso responde su pregunta de "de donde
-   salen materiales pendientes y unidades listas": de aqui, solos. */
-const matPend      = () => S.reportes.filter(r=>r.tipo==="material" && r.estado==="Nuevo");
+/* ── Contadores del panel de Gustavo ── */
 const porSupervisar= () => S.wos.filter(w=>w.estado==="Completed" && !w.supervisada);
 const enProceso    = () => S.wos.filter(w=>["In progress","Esperando aprobaci\u00f3n","Detenido"].includes(w.estado));
 
@@ -589,14 +583,13 @@ function unidadesListas(){
 }
 const pendDia = () => { const r=diarioHoy(); return r ? r.entradas.filter(e=>e.tipo==="pendiente") : []; };
 
-/* ── Touch-up, facturacion bloqueada y descuentos ─────────────────
-   Claudia: "si se mando a corregir no se cobra al cliente, es nuestra
-   responsabilidad corregirlo". Entonces la WO original no se puede facturar
-   mientras la devolucion siga abierta, y el touch-up nunca se factura. */
+/* ── Touch-up, correcciones y descuentos ──────────────────────────
+   La devolución crea una corrección separada. No reabre ni frena la WO
+   original si Erika ya validó su expediente; el touch-up nunca se factura. */
 const devAbiertaDeWO = wid => S.devoluciones.find(d=>d.wo===wid && d.estado!=="Cerrada");
 const bloqueadaPorDev = w => !!devAbiertaDeWO(w.id);
 const esFacturable    = w => w.facturable!==false && !w.touchup;
-const puedeFacturar   = w => esFacturable(w) && !bloqueadaPorDev(w);
+const puedeFacturar   = w => esFacturable(w);
 const touchupDe       = did => S.wos.find(w=>w.devOrigen===did);
 /* Servicios que de verdad tienen tarifa para esta propiedad, categoria y
    tipo de unidad. Sin esto el touch-up nace sin precio y el descuento se
@@ -732,7 +725,7 @@ function gustavoScreenHTML(view){
     const ag = agendaHoy(), vis = ag.filter(a=>a.estado==="Visitada").length;
     const colgado = diarioColgado();
     const ruta = rutaGustavo();
-    const dvPend = devAbiertas(), mat = matPend();
+    const dvPend = devAbiertas();
 
     /* Grid de 2 columnas, \u00edcono + n\u00famero + etiqueta. Los que llevan a otra
        pantalla se distinguen con borde de color y flecha; los que son puro
@@ -756,7 +749,6 @@ function gustavoScreenHTML(view){
     const IC_DIA = '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>';
     const IC_SUPERVISAR = '<circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/>';
     const IC_INSPECCION = '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>';
-    const IC_MATERIAL = '<path d="M21 16V8l-9-5-9 5v8l9 5z"/><path d="M3.3 7L12 12l8.7-5M12 22V12"/>';
     const IC_LISTA = '<path d="M20 6L9 17l-5-5"/>';
 
     h = `<div class="dc" style="background:var(--azul-cl);border-color:transparent">
@@ -785,7 +777,6 @@ function gustavoScreenHTML(view){
            ${panelCell(IC_DIA, pendDia().length, "Actividades pendientes del reporte diario", "#8a5a00", "fView", 'data-v="dia"')}
            ${panelCell(IC_SUPERVISAR, porSupervisar().length, "Unidades pendientes de supervisión", "#1e5c3a")}
            ${panelCell(IC_INSPECCION, inspPend().length, "Inspecciones para estimados", "#5b3a8a")}
-           ${panelCell(IC_MATERIAL, mat.length, "Materiales pendientes de compra", "#b45309")}
            ${panelCell(IC_LISTA, unidadesListas().length, "Unidades listas para entregar", "#1f4e79")}
          </div>`
 
@@ -799,7 +790,7 @@ function gustavoScreenHTML(view){
   else if(view==="ruta"){
     const ag = agendaHoy();
     const ruta = rutaGustavo();
-    const dvPend = devAbiertas(), mat = matPend();
+    const dvPend = devAbiertas();
 
     h = `<div class="dl" style="margin-top:5px">Mi ruta · ${ag.length} parada(s) que te arm\u00f3 Claudia</div>`
       + (ag.length? ruta.map((z,i)=>`
@@ -830,7 +821,7 @@ function gustavoScreenHTML(view){
             Claudia todav\u00eda no te arm\u00f3 la ruta de hoy.</div></div>`)
 
       /* Lo que también tiene pendiente y no es una parada */
-      + ((dvPend.length || mat.length)
+      + (dvPend.length
         ? `<div class="dl" style="margin-top:12px">Adem\u00e1s tienes que</div>`
           + dvPend.map(d=>`<div class="dc" style="border-left:3px solid ${devVencida(d)?"var(--rojo)":"var(--ambar)"};cursor:pointer"
                data-a="gDevVer" data-id="${d.id}">
@@ -838,10 +829,6 @@ function gustavoScreenHTML(view){
                 <div class="dh" style="font-size:12px">Verificar correcci\u00f3n</div>
                 <span class="dtag" style="background:${devVencida(d)?"var(--rojo)":"var(--ambar)"};color:#fff;flex:none">${diasAbierta(d)} d\u00eda(s)</span></div>
               <div class="ds" style="margin-top:3px">${esc(P(d.prop).nombre)} ${U(d.unidad)?esc(U(d.unidad).num):""} · ${esc(d.area)}</div>
-            </div>`).join("")
-          + mat.map(r=>`<div class="dc" style="border-left:3px solid #b45309">
-              <div class="dh" style="font-size:12px">Material por comprar</div>
-              <div class="ds" style="margin-top:3px">${esc(P(r.prop).nombre)} · ${esc(r.material||r.nota||"")}</div>
             </div>`).join("")
         : "");
   }

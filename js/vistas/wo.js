@@ -132,7 +132,7 @@ function fichaWO(id){
             <b>Esta Work Order tiene una devolución abierta</b> — ${esc(d.area)}: ${esc(d.desc)}.
             ${tu?`Ya tiene un touch-up de corrección: <b>WO-${tu.id}</b> con ${esc(tecN(tu.tec))}.`
                 :`Todavía no se le creó un touch-up de corrección.`}
-            No se puede facturar mientras siga así.
+            La corrección se gestiona aparte y no reabre la nómina ni la factura original.
             <button class="btn sm" style="margin-top:6px" data-a="ir" data-m="supervision">Ver devolución</button></div></div>`;
         })()}
         <table><tbody>

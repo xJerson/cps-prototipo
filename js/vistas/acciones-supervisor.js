@@ -1,7 +1,7 @@
 "use strict";
 VIEWS.supervision = () => {
   const t = S.tab || "campo";
-  const rev = S.wos.filter(w=>w.estado==="Completed" && !w.supervisada);
+  const rev = S.wos.filter(w=>w.estado==="Completed" && (!w.revisionCalidad || w.revisionCalidad.estado==="No se pudo supervisar"));
   const insp = S.visitas.filter(v=>v.tipo==="Inspección" && v.estado==="Pendiente");
   return `
   <div class="ph"><div><h2>Supervisión</h2>
@@ -9,7 +9,7 @@ VIEWS.supervision = () => {
     <div class="act"><button class="btn" data-a="verGustavoCel">Ver su celular</button></div></div>
   <div class="tabs">${[["campo",`De campo (${repPend().length})`],["ruta","Ruta del día"],
       ["devs",`Devoluciones (${devAbiertas().length})`],["diario","Reporte diario"],
-      ["revisar",`Por revisar (${rev.length})`],
+      ["revisar",`Seguimiento de calidad (${rev.length})`],
       ["insp",`Inspecciones (${insp.length})`],["calidad","Calidad por técnico"],["reporte","Resumen del día"]]
     .map(([k,n])=>`<button class="tab ${t===k?"on":""}" data-a="tab" data-t="${k}">${n}</button>`).join("")}</div>
   ${t==="campo"?vCampoRep():t==="ruta"?vRuta():t==="devs"?vDevoluciones():t==="diario"?vDiarioWeb()
@@ -393,20 +393,22 @@ function vRutaCalc(){
 /* UC-12 — aprobar O DEVOLVER, con la devolución medida por técnico (H-10) */
 function vRevisar(rev){
   return `
-  <div class="card"><div class="chd"><h3>Terminadas, esperando tu revisión</h3>
-    <span class="s">hasta que las apruebes no se pueden facturar</span></div>
+  <div class="card"><div class="chd"><h3>Seguimiento de calidad</h3>
+    <span class="s">la visita no frena nómina ni facturación; Erika valida el expediente final</span></div>
     ${rev.length?`<table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Servicio</th><th>Técnico</th><th>Evidencia</th><th></th></tr></thead>
     <tbody>${rev.map(w=>`<tr class="${fl("wo:"+w.id)}"><td class="mono" style="font-weight:700">WO-${w.id}</td>
       <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}<div style="font-size:10.5px;color:var(--faint)">${esc(P(w.prop).zona)}</div></td>
       <td>${esc(w.serv)}</td><td>${esc(tecN(w.tec))}</td>
       <td>${w.evid?`<span class="pill v">${w.evid} foto(s)</span>`:'<span class="pill r"><span class="dot"></span>sin evidencia</span>'}
+        ${w.revisionCalidad?`<div><span class="pill w">${esc(w.revisionCalidad.estado)}</span>${w.revisionCalidad.motivo?`<div style="font-size:10px;color:var(--faint)">${esc(w.revisionCalidad.motivo)}</div>`:""}</div>`:""}
         ${w.devuelta?`<div><span class="pill w">devuelta ${w.devuelta}×</span></div>`:""}</td>
       <td style="text-align:right;white-space:nowrap">
         <button class="btn sm" data-a="devolverModal" data-id="${w.id}">Devolver</button>
-        <button class="btn sm ${w.evid?"v":""}" data-a="supervisar" data-id="${w.id}">Aprobar</button></td></tr>`).join("")}
+        <button class="btn sm" data-a="noSupervisarModal" data-id="${w.id}">No se pudo supervisar</button>
+        <button class="btn sm ${w.evid?"v":""}" data-a="supervisar" data-id="${w.id}">Revisada sin observaciones</button></td></tr>`).join("")}
     </tbody></table>`:`<div class="empty"><div class="b">✓</div>Nada pendiente de revisar</div>`}
   </div>
-  <div class="tr">Devolver no es castigo: es lo que hoy no tiene tratamiento. Cada devolución queda contada por técnico y con su motivo.</div>`;
+  <div class="tr">Si no hubo acceso, registra el motivo y reagenda cuando corresponda. Una devolución crea una corrección asignable sin reabrir la WO original.</div>`;
 }
 
 /* UC-04b — inspecciones que le manda Claudia */

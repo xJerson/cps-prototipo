@@ -548,20 +548,18 @@ VIEWS.nomina = () => {
 
 /* ── FACTURACIÓN ── */
 VIEWS.facturacion = () => {
-  /* Una unidad mandada a corregir no se le cobra al cliente hasta que
-     Gustavo verifique. Y el touch-up jamas se factura: es costo de la casa.
-     Reunión Claudia (feedback prototipo): mismo período que Nómina — antes
-     esto mostraba TODO lo listo sin importar la fecha, ahora se puede acotar. */
-  const candidatas = S.wos.filter(w=>enPeriodo(w.fecha,S.periodo) && w.estado==="Completed" && w.supervisada && w.validada && !subWOsPendientesDeWO(w.id).length && !clienteRevisionPendienteDeWO(w.id)
+  /* Erika valida el expediente final. La revisión de calidad puede ocurrir
+     después y nunca frena una nómina o una factura ya correctamente validada.
+     El touch-up de corrección sigue sin ser facturable. */
+  const candidatas = S.wos.filter(w=>enPeriodo(w.fecha,S.periodo) && w.estado==="Completed" && w.validada && !subWOsPendientesDeWO(w.id).length && !clienteRevisionPendienteDeWO(w.id)
                                      && !w.facturada && puedeFacturar(w));
   const listas = candidatas.filter(w=>!woBloqueada(w.id));
   const frenadasExc = candidatas.filter(w=>woBloqueada(w.id));
-  const frenadas = S.wos.filter(w=>enPeriodo(w.fecha,S.periodo) && w.estado==="Completed" && !w.facturada && bloqueadaPorDev(w));
+  const frenadas = [];
   const porProp = {};
   listas.forEach(w=>(porProp[w.prop]=porProp[w.prop]||[]).push(w));
   const pendientes = S.wos.filter(w=>enPeriodo(w.fecha,S.periodo) && w.estado==="Completed" && !w.facturada).map(w=>{
     const razones=[];
-    if(!w.supervisada) razones.push("pendiente de revisión operativa");
     if(!w.validada) razones.push("pendiente de validación");
     if(subWOsPendientesDeWO(w.id).length) razones.push("tiene una Sub-WO pendiente");
     if(clienteRevisionPendienteDeWO(w.id)) razones.push("falta confirmación o corrección del cliente");
@@ -603,7 +601,7 @@ VIEWS.facturacion = () => {
   ${pendientes.length?`<div class="card" style="border-color:var(--ambar);margin-bottom:14px"><div class="chd" style="background:var(--ambar-cl)"><h3 style="color:var(--ambar)">Por qué todavía no aparecen algunas WO</h3><span class="s">${pendientes.length} terminada(s) fuera de la lista de facturación</span></div>
     <table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Motivo</th></tr></thead><tbody>
       ${pendientes.map(x=>`<tr><td class="mono">WO-${x.w.id}</td><td>${esc(P(x.w.prop).nombre)} · ${esc(U(x.w.unidad).num)}</td><td>${x.razones.map(r=>`<span class="pill w" style="margin:0 4px 4px 0">${esc(r)}</span>`).join("")}</td></tr>`).join("")}
-    </tbody></table><div class="cp"><div class="tr" style="margin:0">Una WO solo aparece para generar factura cuando cumple todos los requisitos: terminada, validada, revisada, sin pendientes y con importe definido.</div></div></div>`:""}
+    </tbody></table><div class="cp"><div class="tr" style="margin:0">Una WO solo aparece para generar factura cuando está terminada, validada por Erika, sin pendientes que afecten el importe y con tarifa definida. La revisión de calidad se registra aparte.</div></div></div>`:""}
 
   ${Object.keys(porProp).length?Object.entries(porProp).map(([pid,arr])=>{
     const tot=arr.reduce((a,w)=>a+(ingresoWO(w)||0),0);
@@ -738,6 +736,7 @@ function abrirPDF(fid, imprimir){
 function modalFactura(fid, enviando){
   const f=by(S.facturas,fid), p=P(f.prop), c=CLI(p.cliente);
   const conceptos=conceptosFactura(f);
+  const expediente = resumenExpedienteFactura(f);
   modal(`<div class="mh"><h3>Factura ${esc(f.num)}</h3><p>${esc(p.nombre)} · ${esc(c.nombre)}</p></div>
   <div class="mb">
     <div style="border:1px solid var(--line);border-radius:10px;overflow:hidden">
@@ -754,13 +753,26 @@ function modalFactura(fid, enviando){
         <td class="num mono">${money(x.importe||0)}</td></tr>`).join("")}
       <tr style="background:var(--surface-2);font-weight:750"><td colspan="4">Total</td>
         <td class="num mono" style="font-size:15px">${money(f.total)}</td></tr></tbody></table></div>
-    ${enviando?`<div class="fld" style="margin-top:13px"><label>Se envía a</label>
+    ${enviando?`<div class="note v" style="margin-top:13px"><b>Expediente incluido con la factura:</b> ${expediente.antes} foto(s) de referencia/antes, ${expediente.despues} foto(s) post-work y ${expediente.aprobaciones} validación(es) o aprobación(es) registrada(s).<br><span style="font-size:11px">El PDF de la factura y estos respaldos quedan asociados a cada WO enviada.</span></div>
+      <div class="fld" style="margin-top:13px"><label>Se envía a</label>
       <input id="facMail" value="${esc(c.mail||"")}"></div>
-      <div class="note">Va con el PDF y el detalle por concepto. Si el cliente reclama una línea, cada una tiene su evidencia detrás.</div>`
+      <div class="note">Va con el PDF, fotos antes/después y aprobaciones registradas. Si el cliente reclama una línea, cada una conserva su evidencia.</div>`
      :`<div class="note" style="margin-top:12px"><b>Enviada el ${esc(f.envio||f.emision)}</b> a ${esc(c.mail||"—")}.</div>`}
   </div>
   <div class="mf"><button class="btn" data-a="cm">Cerrar</button>
     ${enviando?`<button class="btn p" data-a="facEnviarOK" data-id="${fid}">Enviar factura</button>`:""}</div>`,true);
+}
+
+function resumenExpedienteFactura(f){
+  const ws=(f.lineas||[]).map(W).filter(Boolean);
+  const antes=ws.reduce((n,w)=>n+(w.antesFotos||w.fotosRef||[]).length,0);
+  const despues=ws.reduce((n,w)=>n+(w.evidFotos||[]).length,0)
+    +(f.conceptos||[]).filter(x=>x.tipo==="Sub-WO").reduce((n,x)=>{
+      const a=by(S.adicionales,x.subwo); return n+((a&&a.fotosEvidArr)||[]).length;
+    },0);
+  const aprobaciones=ws.reduce((n,w)=>n+(w.validada?1:0)
+    +solsDe(w.id).flatMap(s=>s.lineas).filter(a=>a.estado==="Aprobado").length,0);
+  return {antes,despues,aprobaciones};
 }
 
 /* ── COBRANZA ──────────────────────────────────────────────

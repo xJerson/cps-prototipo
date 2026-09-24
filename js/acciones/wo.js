@@ -333,8 +333,27 @@ Object.assign(ACC, {
   supervisar: d => {
     const w=W(+d.id);
     if(!w.evid){ toast("🚫 No se puede aprobar","Esta Work Order no tiene ninguna evidencia cargada. Claudia: «no me consta lo que me estás diciendo».","r"); return; }
-    w.supervisada=true; w.hist.push([hora(),"Supervisión aprobada",S.usuario]); flash("wo:"+w.id);
-    toast("✓ Supervisada",`WO-${w.id} aprobada por ${S.usuario}. Queda lista para facturar.`,"v"); render();
+    w.supervisada=true;
+    w.revisionCalidad={estado:"Revisada sin observaciones",fecha:HOY_SUP,hora:hora(),quien:S.usuario};
+    w.hist.push([hora(),"Revisión de calidad sin observaciones",S.usuario]); flash("wo:"+w.id);
+    toast("✓ Revisión registrada",`WO-${w.id} quedó registrada como revisada. Erika valida el expediente para nómina y facturación.`,"v"); render();
+  },
+
+  noSupervisarModal: d => {
+    const w=W(+d.id);
+    modal(`<div class="mh"><h3>No se pudo supervisar WO-${w.id}</h3><p>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</p></div>
+      <div class="mb"><div class="fld"><label>Motivo <span class="req">*</span></label><select id="nsMotivo"><option>La unidad estaba ocupada</option><option>No hubo acceso a la unidad</option><option>La unidad ya no estaba disponible</option><option>La visita se tuvo que mover</option><option>Otro</option></select></div>
+        <div class="fld"><label>Detalle <span style="color:var(--faint);font-weight:500;text-transform:none">— opcional</span></label><input id="nsDetalle" placeholder="Qué pasó o qué falta coordinar"></div>
+        <div class="fld"><label>Reagendar para <span style="color:var(--faint);font-weight:500;text-transform:none">— opcional</span></label><input type="date" id="nsFecha"></div>
+        <div class="note">Esto solo deja trazabilidad de la visita de calidad. No frena la validación de Erika, la nómina ni la factura.</div></div>
+      <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="noSupervisarOK" data-id="${w.id}">Registrar</button></div>`);
+  },
+  noSupervisarOK: d => {
+    const w=W(+d.id), motivo=val("nsMotivo")+(val("nsDetalle")?" — "+val("nsDetalle"):"");
+    w.revisionCalidad={estado:"No se pudo supervisar",fecha:HOY_SUP,hora:hora(),quien:S.usuario,motivo,reagendar:val("nsFecha")||null};
+    w.hist.push([hora(),`No se pudo supervisar: ${motivo}${val("nsFecha")?" · reagendar "+val("nsFecha"):""}`,S.usuario]);
+    cm(); flash("wo:"+w.id);
+    toast("Visita de calidad registrada",`WO-${w.id}: ${esc(motivo)}. No se modificó su flujo de nómina ni facturación.`,"w"); render();
   },
 
   permisoModal: () => modalPermiso(),
@@ -396,7 +415,8 @@ Object.assign(ACC, {
   devolverOK: d => {
     const w=W(+d.id), m=val("dvM"), area=val("dvA"), causa=val("dvC");
     if(!m){ marcaFalta(["dvM"]); toast("Falta el motivo","Sin decir qué está mal, el técnico no sabe qué corregir.","r"); return; }
-    w.estado="Returned"; w.devuelta=(w.devuelta||0)+1; w.motivoDev=m;
+    w.devuelta=(w.devuelta||0)+1; w.motivoDev=m;
+    w.revisionCalidad={estado:"Devolución creada",fecha:HOY_SUP,hora:hora(),quien:S.usuario,motivo:m};
     (w.evidFotos=w.evidFotos||[]).push(fotoNueva(S._dvFoto||null, S.usuario));
     w.evid=w.evidFotos.length; S._dvFoto=null; flash("wo:"+w.id);
     w.hist.push([hora(),`Devuelta por supervisión: ${m}`,S.usuario]);
@@ -409,7 +429,7 @@ Object.assign(ACC, {
       hist:[[hora(),"Devolución creada desde revisión de supervisión",S.usuario]]};
     S.devoluciones.push(dv); flash("dv:"+dv.id);
     cm();
-    toast("Trabajo devuelto",`WO-${w.id} le llegó a <b>Thalia</b> para corregir o reagendar. Va como devolución ${w.devuelta} de <b>${esc(tecN(w.tec))}</b>. ${causaDe(causa).ex}`,"w");
+    toast("Corrección creada",`WO-${w.id} conserva su cierre original. La devolución queda disponible para crear y asignar una corrección a cualquier técnico.`,"w");
     noti("Trabajo devuelto",`${P(w.prop).nombre} · ${U(w.unidad).num}: ${m}`);
     render();
   },

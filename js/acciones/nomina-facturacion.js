@@ -278,7 +278,7 @@ function pagarNomina(tec){
 }
 Object.assign(ACC, {
   facturar: d => {
-    const todas=S.wos.filter(w=>enPeriodo(w.fecha,S.periodo)&&w.estado==="Completed"&&w.supervisada&&w.validada&&!w.facturada&&w.prop===d.prop);
+    const todas=S.wos.filter(w=>enPeriodo(w.fecha,S.periodo)&&w.estado==="Completed"&&w.validada&&!w.facturada&&w.prop===d.prop&&puedeFacturar(w));
     const bloqueadas=todas.filter(w=>woBloqueada(w.id));
     const ws=todas.filter(w=>!woBloqueada(w.id));
     if(!ws.length){ toast("🚫 No se puede facturar",
@@ -404,6 +404,7 @@ Object.assign(ACC, {
   facEnviarOK: d => {
     const f=by(S.facturas,d.id), p=P(f.prop), c=CLI(p.cliente);
     f.estado="Enviada"; f.envio="2026-08-11"; f.mail=val("facMail")||c.mail;
+    f.expediente=resumenExpedienteFactura(f);
     f.lineas.forEach(id=>{const w=W(id); if(w) w.hist.push([hora(),`Factura ${f.num} enviada al cliente`,S.usuario]);});
     cm();
     toast("✓ Factura enviada",`<b>${esc(f.num)}</b> · ${money(f.total)} a ${esc(f.mail||"—")}. El plazo de cobranza corre desde hoy: vence ${esc(f.vence)}.`,"v");
