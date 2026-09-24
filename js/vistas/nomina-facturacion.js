@@ -23,12 +23,12 @@ function excAuto(){
   S.asistencias.filter(a=>a.declarada).forEach(a=>{
     out.push(conAsignacion({id:"AUTO-D"+a.wo, tipo:"Llegada declarada", wo:a.wo, auto:true,
       motivo:`${tecN(a.tec)} cerró WO-${a.wo} sin haber marcado llegada; declaró las ${a.horaReal}. No está verificada.`,
-      monto:null, pide:"Sistema", aprueba:"Gustavo", estado:"Pendiente", fecha:a.fecha, resol:null}));
+      monto:null, pide:"Sistema", aprueba:"Thalia", estado:"Pendiente", fecha:a.fecha, resol:null}));
   });
   S.wos.filter(w=>w.estado==="Completed" && !w.evid && !w.evidExcusada).forEach(w=>{
     out.push(conAsignacion({id:"AUTO-E"+w.id, tipo:"Cierre sin evidencia", wo:w.id, auto:true,
       motivo:`WO-${w.id} se cerró sin ninguna foto. No hay con qué sustentar el cobro si el cliente reclama.`,
-      monto:null, pide:"Sistema", aprueba:"Gustavo", estado:"Pendiente", fecha:w.fecha, resol:null}));
+      monto:null, pide:"Sistema", aprueba:"Thalia", estado:"Pendiente", fecha:w.fecha, resol:null}));
   });
   // Una excepción por SOLICITUD, no por concepto: el técnico mandó un aviso,
   // no tres. Claudia lo abre una vez y adentro decide línea por línea.
