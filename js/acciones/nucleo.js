@@ -142,6 +142,9 @@ Object.assign(ACC, {
       } else if(m.tipo==="woPrevia"){
         const w=W(m.id);
         (w.fotosPrevias=w.fotosPrevias||[]).push(fotoNueva(url, w.tec?T(w.tec).nombre:S.usuario));
+      } else if(m.tipo==="woAntes"){
+        const w=W(m.id);
+        (w.antesFotos=w.antesFotos||[]).push(fotoNueva(url, w.tec?T(w.tec).nombre:S.usuario));
       } else if(m.tipo==="subwoRef" || m.tipo==="subwoEvid"){
         const a=S.adicionales.find(x=>x.id===m.id); if(!a) return;
         const campo = m.tipo==="subwoRef" ? "fotosRefArr" : "fotosEvidArr";

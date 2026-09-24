@@ -95,6 +95,14 @@ Object.assign(ACC, {
       toast("📷 Evidencia recibida",`WO-${w.id} ya tiene ${w.evid} foto(s).`,"v"); render();
     });
   },
+  // "Antes" es como se encontró la unidad — separado de evidFotos/evid, no cuenta para cerrar el trabajo.
+  fFotoAntes: d => { const w=W(+d.id); S.reloj+=5;
+    capturarFoto(url=>{
+      (w.antesFotos=w.antesFotos||[]).push(fotoNueva(url, T(w.tec).nombre));
+      w.hist.push([hora(),"Cargó foto del antes",T(w.tec).nombre]);
+      toast("📷 Antes guardado","No cuenta como evidencia de cierre.","v"); render();
+    });
+  },
   fAdic: d => { S.phSheet={t:"adic", wo:+d.id,
     desc:"Hueco en el sheetrock del bano. Hay que poner masa y pintar antes del clean.",
     ubic:"Bano", filas:[{c:"Sheetrock",q:"1"}]}; render(); },

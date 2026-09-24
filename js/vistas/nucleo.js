@@ -235,6 +235,8 @@ function fotoModalInfo(m){
     return {titulo:`Evidencia del trabajo — WO-${w.id}`, sub:"Lo que el técnico cargó al cerrar.", arr:(w.evidFotos=w.evidFotos||[])}; }
   if(m.tipo==="woPrevia"){ const w=W(m.id);
     return {titulo:`Fotos de referencia — WO-${w.id}`, sub:"Lo que hay que hacer, en foto — no en texto.", arr:(w.fotosPrevias=w.fotosPrevias||[])}; }
+  if(m.tipo==="woAntes"){ const w=W(m.id);
+    return {titulo:`Antes — WO-${w.id}`, sub:"Cómo se encontró la unidad — no cuenta como evidencia de cierre.", arr:(w.antesFotos=w.antesFotos||[])}; }
   if(m.tipo==="subwoRef"){ const a=by(S.adicionales,m.id);
     return {titulo:"Fotos de referencia", sub:esc(a.concepto), arr:(a.fotosRefArr=a.fotosRefArr||[])}; }
   if(m.tipo==="subwoEvid"){ const a=by(S.adicionales,m.id);

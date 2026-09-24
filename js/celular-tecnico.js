@@ -153,11 +153,14 @@ function renderFon(){
       ${e==="Rechazado"?`<div class="ds" style="margin-top:5px;color:var(--rojo)"><b>No autorizado</b> — no lo ejecutes</div>`:""}
       ${e==="Parcial"?`<div class="ds" style="margin-top:5px;color:var(--ambar)"><b>Haz solo ${esc(oks.map(l=>l.concepto).join(", "))}.</b> ${esc(nos.map(l=>l.concepto).join(", "))} no te lo autorizaron.</div>`:""}</div>`;
     }).join("")}
+    ${(w.antesFotos||[]).length?`<div class="dc"><div class="dl" style="margin:0 0 6px">Antes</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap">${w.antesFotos.map(f=>
+          `<img src="${f.url}" style="width:100px;height:72px;object-fit:cover;border-radius:7px">`).join("")}</div></div>`:""}
     ${w.evid?`<div class="dc"><div class="dl" style="margin:0 0 6px">Evidencia del trabajo (${w.evid})</div>
       <div style="display:flex;gap:5px;flex-wrap:wrap">${fotosConRelleno(w.evidFotos,w.evid).map(f=>f.url
           ?`<img src="${f.url}" style="width:60px;height:45px;object-fit:cover;border-radius:7px">`
           :`<div class="dph s" style="width:60px;flex:none;margin:0">📷</div>`).join("")}</div></div>`
-      :(w.estado!=="Scheduled"?`<div class="dc" style="border-style:dashed"><div class="ds" style="text-align:center">Todavía sin evidencia del trabajo${ads.some(a=>a.hallazgoFoto||(a.fotosRefArr&&a.fotosRefArr.length)||(a.fotosEvidArr&&a.fotosEvidArr.length))?"<br><span style='font-size:10px'>(la foto de la Sub-Work Order no cuenta para cerrar)</span>":""}</div></div>`:"")}`;
+      :(w.estado!=="Scheduled"?`<div class="dc" style="border-style:dashed"><div class="ds" style="text-align:center">Todavía sin evidencia del trabajo${ads.some(a=>a.hallazgoFoto||(a.fotosRefArr&&a.fotosRefArr.length)||(a.fotosEvidArr&&a.fotosEvidArr.length))?"<br><span style='font-size:10px'>(la foto de la Sub-Work Order no cuenta para cerrar)</span>":(w.antesFotos||[]).length?"<br><span style='font-size:10px'>(las fotos del antes no cuentan para cerrar)</span>":""}</div></div>`:"")}`;
 
     /* Los 4 botones de "mientras trabajas" se veían todos iguales — mismo
        gris, solo texto, sin ícono — y había que leer cada uno para saber
@@ -200,7 +203,9 @@ function renderFon(){
            </div>` : "")
     + (["In progress","Esperando aprobación"].includes(w.estado) && w.corroborado
         ? `<div class="dl" style="margin-top:10px">Mientras trabajas</div>
-           <button class="db g" data-a="fFoto" data-id="${w.id}">${icBtn(IC_FOTO)}Tomar foto</button>
+           <button class="db g" data-a="fFotoAntes" data-id="${w.id}">${icBtn(IC_FOTO)}Foto del antes</button>
+           <div class="ds" style="margin:-4px 0 7px;padding:0 2px">Cómo encontraste la unidad — no cuenta para cerrar el trabajo.</div>
+           <button class="db g" data-a="fFoto" data-id="${w.id}">${icBtn(IC_FOTO)}Foto de cómo quedó</button>
            <button class="db g" data-a="fMaterial" data-id="${w.id}">${icBtn(IC_CAJA)}Materiales${(S.movs.some(m=>m.wo===w.id&&m.tipo==="salida")?` · registrado`:"")}</button>
            <div class="ds" style="margin:-4px 0 7px;padding:0 2px">Lo que usaste en este trabajo — queda registrado en la orden.</div>
            <button class="db g" data-a="fCompraMaterial" data-id="${w.id}">${icBtn(IC_TICKET)}Compra de materiales</button>
@@ -215,7 +220,8 @@ function renderFon(){
            <button class="db v" data-a="fTermine" data-id="${w.id}">${icBtn(IC_CHECK)}Terminé</button>` : "")
     // Sin llegada marcada, todo lo demás queda apagado: la información sí se ve, las acciones no
     + (esAgendada(w.estado) && w.tec && !asisDe(w.id)
-        ? `<button class="db g" disabled>${icBtn(IC_FOTO)}Tomar foto</button>
+        ? `<button class="db g" disabled>${icBtn(IC_FOTO)}Foto del antes</button>
+           <button class="db g" disabled>${icBtn(IC_FOTO)}Foto de cómo quedó</button>
            <button class="db g" disabled>${icBtn(IC_ALERTA)}Necesito aprobación</button>
            <button class="db v" disabled>${icBtn(IC_CHECK)}Terminé</button>
            <div class="ds" style="text-align:center;margin-top:2px">Marca tu llegada para poder cerrar el trabajo</div>` : "")

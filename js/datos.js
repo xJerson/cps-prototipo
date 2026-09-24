@@ -176,7 +176,8 @@ let S = {
        diferencia de la 1039 (sin evidencia), a ésta SÍ se le puede tocar
        «Aprobar supervisión» y va a funcionar: sirve para probar el flujo de
        Gustavo de punta a punta, en vivo, sin que se bloquee. */
-    {id:1045,prop:"P2",unidad:"U5",cat:"Clean",serv:"Deep clean",tec:"T4",estado:"Completed",semana:33,fecha:"2026-08-12",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T4",hora:"12:15"}],mats:[],notas:"",notasTec:"",hist:[["8:00","Creada","Thalia"],["8:01","Asignada a Andrés Solís","Thalia"],["9:05","Llegó a la propiedad","Andrés"],["12:15","Terminó · 1 evidencia","Andrés"]]},
+    // antesFotos: foto del "antes" sembrada aparte de evidFotos, para mostrar los dos grupos en oficina
+    {id:1045,prop:"P2",unidad:"U5",cat:"Clean",serv:"Deep clean",tec:"T4",estado:"Completed",semana:33,fecha:"2026-08-12",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T4",hora:"12:15"}],antesFotos:[{url:FOTO_SEED,quien:"T4",hora:"9:10"}],mats:[],notas:"",notasTec:"",hist:[["8:00","Creada","Thalia"],["8:01","Asignada a Andrés Solís","Thalia"],["9:05","Llegó a la propiedad","Andrés"],["12:15","Terminó · 1 evidencia","Andrés"]]},
     /* Ya la aprobó Gustavo (supervisada:true) pero Erika todavía no la validó
        en Nómina — el paso intermedio entre las dos personas, que hasta ahora
        no tenía ejemplo propio. */
