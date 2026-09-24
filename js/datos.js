@@ -1,6 +1,6 @@
 "use strict";
 /* ══════════ DATOS SEMILLA ══════════ */
-let ID = {p:100,u:200,c:300,t:400,w:1051,e:500,f:601,pr:700,mv:800,cl:900,ad:958,cm:960};
+let ID = {p:100,u:200,c:300,t:400,w:1054,e:500,f:601,pr:700,mv:800,cl:900,ad:958,cm:960};
 const nid = k => ++ID[k];
 /* Fotos semilla: no hay cámara real en el arranque del prototipo, pero la
    galería/miniatura necesita una URL de imagen real (no un contador ni
@@ -194,6 +194,14 @@ let S = {
     /* El circuito ya cerrado del todo: aprobada, validada, pagada al técnico
        y ya facturada — su factura está sembrada más abajo (S.facturas). */
     {id:1047,prop:"P3",unidad:"U7",cat:"Repair",serv:"Drywall repair",tec:"T4",estado:"Completed",semana:33,fecha:"2026-08-08",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T4",hora:"11:20"}],supervisada:true,validada:true,pagadaTec:true,facturada:true,mats:[],notas:"",notasTec:"",hist:[["8:00","Creada","Thalia"],["8:02","Asignada a Andrés Solís","Thalia"],["9:05","Llegó a la propiedad","Andrés"],["11:20","Terminó · 1 evidencia","Andrés"],["11:40","Revisión operativa completada","Gustavo"],["14:00","Validada y pagada en nómina","Erika"],["15:00","Facturada — INV-2026-1041","Erika"]]},
+    /* Nómina por técnico: trabajos listos para pagar de varios técnicos, para
+       marcar pagado a uno sin tocar a los demás (Marcos además tiene la 1039 frenada). */
+    {id:1052,prop:"P1",unidad:"U1",cat:"Clean",serv:"Full clean",tec:"T3",estado:"Completed",semana:33,fecha:"2026-08-11",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T3",hora:"11:30"}],supervisada:true,validada:true,pagadaTec:false,facturada:false,mats:[],notas:"",notasTec:"",
+     hist:[["8:00","Creada","Thalia"],["8:02","Asignada a Luz","Thalia"],["9:05","Llegó a la propiedad","Luz"],["11:30","Terminó · 1 evidencia","Luz"],["12:00","Revisión operativa completada","Gustavo"],["13:00","Validada","Erika"]]},
+    {id:1053,prop:"P2",unidad:"U5",cat:"Clean",serv:"Deep clean",tec:"T5",estado:"Completed",semana:33,fecha:"2026-08-11",horaProg:"10:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T5",hora:"13:10"}],supervisada:true,validada:true,pagadaTec:false,facturada:false,mats:[],notas:"",notasTec:"",
+     hist:[["8:10","Creada","Thalia"],["8:12","Asignada a Reyna","Thalia"],["10:05","Llegó a la propiedad","Reyna"],["13:10","Terminó · 1 evidencia","Reyna"],["13:30","Revisión operativa completada","Gustavo"],["14:00","Validada","Erika"]]},
+    {id:1054,prop:"P1",unidad:"U1",cat:"Clean",serv:"Full clean",tec:"T2",estado:"Completed",semana:33,fecha:"2026-08-12",horaProg:"8:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T2",hora:"10:40"}],supervisada:true,validada:true,pagadaTec:false,facturada:false,mats:[],notas:"",notasTec:"",
+     hist:[["7:30","Creada","Thalia"],["7:32","Asignada a Marcos Ayala","Thalia"],["8:05","Llegó a la propiedad","Marcos"],["10:40","Terminó · 1 evidencia","Marcos"],["11:00","Revisión operativa completada","Gustavo"],["11:30","Validada","Erika"]]},
     /* Confirmada esperando "Ya llegué": ejemplo del técnico por defecto (Diego)
        con una WO agendada y confirmada, sin marcar llegada todavía. */
     {id:1048,prop:"P1",unidad:"U9",cat:"Clean",serv:"Full clean",tec:"T1",estado:"Confirmed",semana:33,fecha:"2026-08-13",horaProg:"10:30",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",

@@ -252,11 +252,14 @@ Object.assign(ACC, {
     toast("Excepción rechazada","Queda registrado que no se autorizó.","w"); render();
   },
 
-  pagarSemana: () => {
-    // Reunión Claudia (feedback prototipo): una excepción ya no frena a todo
-    // el mundo — solo a la WO que tiene la excepción. El resto del período
-    // se paga igual. Y el período mismo ya no es solo "la semana actual".
-    const todas=S.wos.filter(w=>enPeriodo(w.fecha,S.periodo)&&w.estado==="Completed"&&w.validada&&!w.pagadaTec&&!subWOsPendientesDeWO(w.id).length&&!clienteRevisionPendienteDeWO(w.id));
+  pagarTec: d => pagarNomina(d.tec),
+  pagarSemana: () => pagarNomina(null),
+});
+/* Claudia: se puede marcar pagado por técnico; lo que le quede pendiente
+   (Approval Request, Sub-WO, cliente) queda afuera y se paga después. */
+function pagarNomina(tec){
+  {
+    const todas=S.wos.filter(w=>enPeriodo(w.fecha,S.periodo)&&w.estado==="Completed"&&(!tec||w.tec===tec)&&w.validada&&!w.pagadaTec&&!subWOsPendientesDeWO(w.id).length&&!clienteRevisionPendienteDeWO(w.id));
     const bloqueadas=todas.filter(w=>woBloqueada(w.id));
     const ws=todas.filter(w=>!woBloqueada(w.id));
     if(!ws.length){ toast("🚫 Nada para pagar",
@@ -266,12 +269,14 @@ Object.assign(ACC, {
     // de más al técnico (vía comprobante) de lo que el registro decía.
     const extrasPago=extrasAprobadosDeWOs(ws);
     const tot=ws.reduce((a,w)=>a+(egresoWO(w)||0),0) + extrasPago.reduce((a,x)=>a+(x.monto||0),0);
-    S.nomina.push({semana:S.semana, periodo:{...S.periodo}, wos:ws.map(w=>w.id), total:tot, quien:S.usuario, fecha:HOY_SUP, hora:hora()});
+    S.nomina.push({semana:S.semana, periodo:{...S.periodo}, tec:tec||null, wos:ws.map(w=>w.id), total:tot, quien:S.usuario, fecha:HOY_SUP, hora:hora()});
     ws.forEach(w=>{w.pagadaTec=true; w.hist.push([hora(),`Pagada al técnico en nómina — ${periodoTexto(S.periodo)}`,S.usuario]);});
-    toast("✓ Nómina aprobada",
-      `${periodoTexto(S.periodo)} · ${money(tot)} a ${new Set(ws.map(w=>w.tec).filter(Boolean).concat(extrasPago.map(tecExtra).filter(Boolean))).size} técnicos.`
+    toast(tec?`✓ ${esc(tecN(tec))} marcado como pagado`:"✓ Nómina aprobada",
+      `${periodoTexto(S.periodo)} · ${money(tot)}${tec?"":` a ${new Set(ws.map(w=>w.tec).filter(Boolean).concat(extrasPago.map(tecExtra).filter(Boolean))).size} técnicos`}.`
       + (bloqueadas.length?` <b>${bloqueadas.length} WO(s) quedaron afuera</b> por excepción sin resolver — se pagan cuando se resuelva.`:""),"v"); render();
-  },
+  }
+}
+Object.assign(ACC, {
   facturar: d => {
     const todas=S.wos.filter(w=>enPeriodo(w.fecha,S.periodo)&&w.estado==="Completed"&&w.supervisada&&w.validada&&!w.facturada&&w.prop===d.prop);
     const bloqueadas=todas.filter(w=>woBloqueada(w.id));

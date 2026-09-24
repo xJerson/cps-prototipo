@@ -384,10 +384,11 @@ function modalDefinirPrecio(id){
    perder la relación con ella (Main WO Full Paint → Sub-WO Door paint,
    Sub-WO Garage paint...). Oficina la crea acá ya aprobada — la que
    aprobar es la que descubre el técnico en sitio (fAdic / fAdicOK). */
+const woPagable = w => w.validada && !w.pagadaTec && !woBloqueada(w.id) && !subWOsPendientesDeWO(w.id).length && !clienteRevisionPendienteDeWO(w.id);
 VIEWS.nomina = () => {
   const ws = S.wos.filter(w=>enPeriodo(w.fecha,S.periodo) && w.estado==="Completed");
   const bloqSemana = ws.filter(w=>!w.pagadaTec && woBloqueada(w.id)).length;
-  const pagables = ws.filter(w=>w.validada && !w.pagadaTec && !woBloqueada(w.id) && !subWOsPendientesDeWO(w.id).length && !clienteRevisionPendienteDeWO(w.id)).length;
+  const pagables = ws.filter(woPagable).length;
   const extrasPeriodo=extrasAprobadosDeWOs(ws);
   const porTec = {};
   ws.forEach(w=>{ if(!w.tec) return; (porTec[w.tec]=porTec[w.tec]||[]).push(w); });
@@ -402,8 +403,9 @@ VIEWS.nomina = () => {
   ${S.periodo.tipo==="semana"?resumenDosSemanas(S.periodo.sem):""}
 
   ${S.nomina.length?`<div class="card" style="margin-bottom:14px"><div class="chd"><h3>Historial de nóminas</h3><span class="s">Registro de pagos ya aprobados</span></div>
-    <table><thead><tr><th>Período</th><th>Fecha de pago</th><th>Registró</th><th class="num">WO</th><th class="num">Total</th></tr></thead><tbody>
+    <table><thead><tr><th>Período</th><th>Técnico</th><th>Fecha de pago</th><th>Registró</th><th class="num">WO</th><th class="num">Total</th></tr></thead><tbody>
       ${S.nomina.slice().reverse().map(n=>`<tr><td>${esc(periodoTexto(n.periodo||{tipo:"semana",sem:n.semana}))}</td>
+        <td>${n.tec?esc(tecN(n.tec)):"Todos"}</td>
         <td class="mono">${esc(n.fecha||"—")} ${esc(n.hora||"")}</td><td>${esc(n.quien||"—")}</td>
         <td class="num mono">${(n.wos||[]).length}</td><td class="num mono" style="font-weight:700">${money(n.total||0)}</td></tr>`).join("")}
     </tbody></table></div>`:""}
@@ -458,11 +460,14 @@ VIEWS.nomina = () => {
     // con el comprobante real que se le da al técnico.
     const extras=extrasPeriodo.filter(x=>tecExtra(x)===tid);
     const egr=egrBase+extras.reduce((a,x)=>a+(x.monto||0),0);
+    const pagTec=arr.filter(woPagable).length, pendTec=arr.filter(w=>!w.pagadaTec && !woPagable(w)).length;
     return `<div class="card"><div class="chd"><h3>${esc(tecN(tid))}</h3>
-      <span class="s">${arr.length} WO${extras.length?` + ${extras.length} Sub-WO`:""}</span>
+      <span class="s">${arr.length} WO${extras.length?` + ${extras.length} Sub-WO`:""}${pendTec?` · <b style="color:var(--ambar)">${pendTec} pendiente(s) — se pagan después</b>`:""}</span>
       <span class="r"><span style="font-size:11px;color:var(--faint)">se le paga</span>
         <span class="mono" style="font-size:16px;font-weight:750">${money(egr)}</span>
-        <button class="btn sm" data-a="comprobante" data-tec="${tid}">Ver comprobante</button></span></div>
+        <button class="btn sm" data-a="comprobante" data-tec="${tid}">Ver comprobante</button>
+        ${pagTec?`<button class="btn sm v" data-a="pagarTec" data-tec="${tid}">Marcar pagado (${pagTec})</button>`
+          :arr.length&&!pendTec?`<span class="pill v">✓ Pagado</span>`:""}</span></div>
       <table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Servicio</th><th>Rooms</th><th>Floors</th><th>Pagado</th><th class="num">Ingreso</th><th class="num">Egreso</th><th class="num">Material</th>${puedeVerUtilidad()?`<th class="num">Utilidad</th>`:""}</tr></thead>
       <tbody>${arr.map(w=>`<tr><td class="mono" style="font-weight:700">WO-${w.id}</td>
         <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td><td>${esc(w.serv)}</td><td>${esc(U(w.unidad).rooms)}</td>
@@ -536,7 +541,7 @@ VIEWS.nomina = () => {
                ${money(sinAplicar)} no se pudo descontar: supera lo que ganó esta semana — queda como Approval Request</div>`:""}`
           : `<div class="mono" style="font-size:24px;font-weight:750">${money(bruto)}</div>`;})()}</div>
     <button class="btn ${!pagables||yaPag?"":"v"}" data-a="pagarSemana" style="margin-left:auto" ${!pagables||yaPag?"disabled":""}>
-      ${yaPag?"Semana ya pagada":pagables?"Aprobar y marcar como pagada":"Nada pagable — todo frenado por Approval Requests"}</button>
+      ${yaPag?"Semana ya pagada":pagables?"Marcar pagados a todos":"Nada pagable — todo frenado por Approval Requests"}</button>
   </div></div>`:""}
   <div class="tr">Erika: «todo lo que está en la semana 29 tiene que pagarse este viernes». El sistema agrupa por la misma semana con la que ya filtran.</div>`;
 };
