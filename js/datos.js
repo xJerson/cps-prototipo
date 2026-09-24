@@ -147,7 +147,7 @@ let S = {
            ["8:55","Sub-WO planificada creada: Sheetrock","Andrés Solís"],
            ["9:15","Aprobada por el cliente vía Llamada","Claudia"],
            ["9:20","Initial finding agregado a Sub-WO · Sheetrock (desde oficina)","Claudia"],
-           ["9:30","Compró en tienda (Home Depot): Sellador de grout × 2 · con foto del ticket","Andrés"]]},
+           ["9:30","Compró en tienda (Home Depot): Sellador de grout × 3 · usó 2 · sobró 1 (queda en inventario) · con foto del ticket","Andrés"]]},
     /* Estado "Returned" y devuelta:1 a propósito: es la WO que trae la
        devolución DV1 sembrada más abajo — así queda un ejemplo real y
        visible desde que abre el prototipo, sin tener que armar uno a
@@ -307,7 +307,7 @@ let S = {
     {id:"PR4",cat:"Repuesto",nombre:"Drywall 4x8",um:"unidad",costo:18.75,min:10},
     /* Creado "al vuelo" cuando Andrés lo compró en tienda desde su celular —
        el técnico nunca pone el costo, por eso arranca en 0 hasta que oficina
-       lo complete mirando la foto del ticket (ver movs M6, más abajo). */
+       lo complete mirando la foto del ticket (ver movs M6/M7, más abajo). */
     {id:"PT1",cat:"Compra en tienda",nombre:"Sellador de grout",um:"unidad",costo:0,min:0}
   ],
   movs:[
@@ -317,12 +317,12 @@ let S = {
     {id:"M4",prod:"PR4",tipo:"entrada",cant:12,fecha:"2026-08-05",wo:null,costo:225,tienda:"Home Depot",quien:"Gustavo",evid:true},
     {id:"M5",prod:"PR3",tipo:"salida",cant:3,fecha:"2026-08-11",wo:1040,costo:89.79,tienda:"",quien:"Andrés",evid:false},
     /* Ejemplo de "Compra de materiales" desde el celular del técnico: Andrés
-       compró esto en Home Depot con la tarjeta de la empresa y subió la foto
-       del ticket él mismo — costo en 0 porque a él nunca se le pide el monto;
-       falta que oficina lo complete mirando el comprobante. */
-    {id:"M6",prod:"PT1",tipo:"salida",cant:2,fecha:"2026-08-11",wo:1040,costo:0,tienda:"Home Depot",quien:"Andrés",
-     notas:"Comprado en tienda con tarjeta de la empresa — falta que oficina cargue el costo del ticket",
-     recibo:FOTO_SEED,evid:true}
+       compró 3 en Home Depot, usó 2 en la unidad y 1 quedó en inventario. */
+    {id:"M6",prod:"PT1",tipo:"entrada",cant:3,fecha:"2026-08-11",wo:null,compraWo:1040,costo:0,costoPend:true,
+     tienda:"Home Depot",quien:"Andrés",
+     notas:"Comprado en tienda con tarjeta de la empresa — falta cargar el costo del ticket",
+     recibo:FOTO_SEED,evid:true},
+    {id:"M7",prod:"PT1",tipo:"salida",cant:2,fecha:"2026-08-11",wo:1040,costo:0,compra:"M6",tienda:"",quien:"Andrés",evid:false}
   ]
 };
 

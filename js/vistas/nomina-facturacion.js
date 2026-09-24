@@ -791,13 +791,17 @@ VIEWS.inventario = () => `
       <td class="num mono" style="font-weight:700">${s}</td><td class="num mono">${p.min}</td>
       <td>${s<p.min?'<span class="pill r"><span class="dot"></span>Stock bajo</span>':'<span class="pill v">OK</span>'}</td>
       <td class="num mono">${money(p.costo)}</td></tr>`;}).join("")}</tbody></table></div>
+  ${(()=>{ const nPend=S.movs.filter(m=>m.costoPend).length; return nPend?`
+  <div class="card" style="border-color:var(--ambar)"><div class="chd"><h3>Compras sin costo</h3></div>
+    <div class="cp"><span class="pill w">Falta costo</span> ${nPend} compra(s) de técnicos en tienda están esperando el costo del ticket.</div></div>`:""; })()}
   <div class="card"><div class="chd"><h3>Movimientos</h3><span class="s">cada uno con quién lo registró</span></div>
     <table><thead><tr><th>Fecha</th><th>Producto</th><th>Tipo</th><th class="num">Cant.</th><th>Work Order</th><th>Tienda</th><th>Quién</th><th class="num">Costo</th></tr></thead>
     <tbody>${S.movs.slice().reverse().map(m=>`<tr class="${fl("mov:"+m.id)}"><td class="mono">${m.fecha.slice(5)}</td>
       <td>${esc(by(S.productos,m.prod).nombre)}</td>
-      <td><span class="pill ${m.tipo==="entrada"?"v":"w"}">${m.tipo}</span></td>
-      <td class="num mono">${m.cant}</td><td class="mono">${m.wo?`WO-${m.wo}`:"—"}</td>
-      <td>${esc(m.tienda)||"—"}</td><td>${esc(m.quien)}</td><td class="num mono">${money(m.costo)}</td></tr>`).join("")}
+      <td><span class="pill ${m.tipo==="entrada"?"v":"w"}">${m.tipo}</span>${m.costoPend?' <span class="pill w">Falta costo</span>':""}</td>
+      <td class="num mono">${m.cant}</td><td class="mono">${m.wo?`WO-${m.wo}`:m.compraWo?`WO-${m.compraWo} (compra)`:"—"}</td>
+      <td>${esc(m.tienda)||"—"}</td><td>${esc(m.quien)}</td>
+      <td class="num mono">${m.costoPend?`<button type="button" class="btn sm" data-a="movCosto" data-id="${m.id}">Cargar costo del ticket</button>`:money(m.costo)}</td></tr>`).join("")}
     </tbody></table></div>`;
 
 /* ── SUPERVISIÓN — el panel de Gustavo (UC-12, UC-12b, UC-04b) ── */

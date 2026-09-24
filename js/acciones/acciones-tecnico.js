@@ -144,34 +144,36 @@ Object.assign(ACC, {
       n?`${n} línea(s) — quedaron en el costo de WO-${w.id}.`:"Se guardaron las observaciones.","v");
     render();
   },
-  fCompraMaterial: d => { S.phSheet={t:"compra", wo:+d.id, tienda:CAT.tiendas[0], nombre:"", cant:"1", foto:null}; render(); },
+  fCompraMaterial: d => { S.phSheet={t:"compra", wo:+d.id, tienda:CAT.tiendas[0], nombre:"", cant:"1", uso:"todo", usado:"", foto:null}; render(); },
   fCompraFoto: () => { leerCompra(); const sh=S.phSheet; if(!sh||sh.t!=="compra") return;
     capturarFoto(url=>{ sh.foto=url; render(); }); },
-  /* La compra en tienda no siempre es un producto que ya está en el
-     catálogo interno — se reutiliza uno existente si el nombre coincide, o
-     se crea uno "de tienda" al vuelo, mismo patrón que ya existe para
-     material del cliente (ver materialGuardar). Entra a S.movs como
-     cualquier otro material, con el ticket adjunto como comprobante.
-     El técnico nunca ve ni ingresa dinero (mismo criterio que "Materiales"),
-     así que esto entra con costo:0 — oficina lo completa leyendo la foto del
-     ticket. Hoy no hay una acción para editar el costo de un material ya
-     guardado (tampoco la tenía "Materiales"); es la misma limitación, no una
-     nueva. PENDIENTE de decidir con Claudia/Erika: si esto debe conciliarse
-     contra inventario automáticamente por ticket, o si oficina lo revisa y
-     carga el monto a mano cada vez. */
+  fCompraUso: d => { leerCompra(); const sh=S.phSheet; if(!sh||sh.t!=="compra") return;
+    sh.uso=d.v; render(); },
+  /* Regla del cliente: TODO lo comprado entra a inventario (entrada); lo
+     usado en esta unidad sale (salida) y lo que sobra queda en stock. */
   fCompraOK: d => {
     leerCompra();
     const sh=S.phSheet, w=W(+d.id), tec=T(w.tec);
     const nombre=(sh.nombre||"").trim();
     if(!nombre){ toast("Falta decir qué compraste","Escribe qué material compraste.","r"); return; }
-    const cant=parseFloat(sh.cant)||1;
+    const comprado=parseFloat(sh.cant)||1;
+    const usado=sh.uso==="todo" ? comprado : parseFloat(sh.usado);
+    if(sh.uso==="sobro" && (!Number.isFinite(usado) || usado<0 || usado>=comprado)){
+      toast("Revisa la cantidad usada","Debe ser menor a lo que compraste.","r"); return;
+    }
     let p=S.productos.find(x=>!x.cliente && x.nombre.toLowerCase()===nombre.toLowerCase());
-    if(!p){ p={id:"PT"+nid("mv"), nombre, um:"unidad", min:0, costo:0}; S.productos.push(p); }
-    S.movs.push({id:"MT"+nid("mv"), prod:p.id, tipo:"salida", cant, fecha:w.fecha, wo:w.id,
-      costo:0, tienda:sh.tienda, quien:tec?tec.nombre:S.usuario,
-      notas:"Comprado en tienda con tarjeta de la empresa — falta que oficina cargue el costo del ticket",
-      recibo:sh.foto||null, evid:!!sh.foto});
-    w.hist.push([hora(), `Compró en tienda (${sh.tienda}): ${nombre} × ${cant}${sh.foto?" · con foto del ticket":" · sin foto del ticket"}`, tec?tec.nombre:S.usuario]);
+    if(!p){ p={id:"PT"+nid("mv"), cat:"Compra en tienda", nombre, um:"unidad", min:0, costo:0}; S.productos.push(p); }
+    const entrada={id:"MT"+nid("mv"), prod:p.id, tipo:"entrada", cant:comprado, fecha:w.fecha, wo:null,
+      compraWo:w.id, costo:0, costoPend:true, tienda:sh.tienda, quien:tec?tec.nombre:S.usuario,
+      notas:"Comprado en tienda con tarjeta de la empresa — falta cargar el costo del ticket",
+      recibo:sh.foto||null, evid:!!sh.foto};
+    S.movs.push(entrada);
+    if(usado>0){
+      S.movs.push({id:"MT"+nid("mv"), prod:p.id, tipo:"salida", cant:usado, fecha:w.fecha, wo:w.id,
+        costo:0, compra:entrada.id, tienda:"", quien:tec?tec.nombre:S.usuario, evid:false});
+    }
+    const sobro=comprado-usado;
+    w.hist.push([hora(), `Compró en tienda (${sh.tienda}): ${nombre} × ${comprado} · usó ${usado}${sobro>0?` · sobró ${sobro} (queda en inventario)`:""}${sh.foto?" · con foto del ticket":" · sin foto del ticket"}`, tec?tec.nombre:S.usuario]);
     S.phSheet=null; flash("wo:"+w.id);
     toast(sh.foto?"✓ Compra registrada":"✓ Registrada — falta la foto del ticket",
       sh.foto?"Quedó con el comprobante adjunto para oficina.":"Oficina va a necesitar la foto del ticket para poder facturarlo.",

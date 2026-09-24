@@ -89,7 +89,10 @@ VIEWS.wo = () => {
 function fichaWO(id){
   const w=W(id), p=P(w.prop), u=U(w.unidad), t=tarifaWO(w), puedeVerDinero=puedeVerUtilidad();
   const ads=S.adicionales.filter(a=>a.wo===id), sols=solsDe(id), rev=revisionClienteDeWO(id);
-  const mv=S.movs.filter(m=>m.wo===id);
+  /* Una "Compra de materiales" del técnico deja el comprobante en la entrada
+     (wo:null, compraWo:id), no en la salida — hay que incluirla para no
+     perder el link al recibo en esta WO. */
+  const mv=S.movs.filter(m=>m.wo===id || m.compraWo===id);
   return `
   <div class="ph"><div>
     <button class="btn sm" data-a="ir" data-m="wo" style="margin-bottom:7px">‹ Work Orders</button>

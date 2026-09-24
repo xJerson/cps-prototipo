@@ -437,4 +437,37 @@ Object.assign(ACC, {
     const p=by(S.productos,prod), s=stock(prod);
     toast("✓ Movimiento registrado",`${esc(p.nombre)}: quedan <b>${s}</b> ${esc(p.um)}.${s<p.min?" <b>Stock bajo</b> — ya salió la alerta.":""}`, s<p.min?"w":"v");
     render();
+  },
+  movCosto: d => {
+    const m=S.movs.find(x=>x.id===d.id); if(!m) return;
+    const p=by(S.productos,m.prod), w=m.compraWo?W(m.compraWo):null;
+    modal(`<div class="mh"><h3>Cargar costo del ticket</h3><p>${esc(p.nombre)} · ${m.cant} ${esc(p.um)}</p></div>
+    <div class="mb">
+      <div class="fld"><label>Tienda</label><input value="${esc(m.tienda)||"—"}" disabled></div>
+      <div class="fld"><label>Quién compró</label><input value="${esc(m.quien)}" disabled></div>
+      <div class="fld"><label>Work Order</label><input value="${w?`WO-${w.id}`:"—"}" disabled></div>
+      <div class="fld"><label>Foto del ticket</label>${m.recibo
+        ?`<img src="${m.recibo}" style="max-width:100%;border-radius:6px">`
+        :`<div class="hint">Sin foto del ticket</div>`}</div>
+      <div class="fld"><label>Total del ticket para este material <span class="req">*</span></label><input id="mcT" class="mono"></div>
+    </div>
+    <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="movCostoOK" data-id="${m.id}">Guardar</button></div>`);
+  },
+  movCostoOK: d => {
+    if(marcaFalta(["mcT"])){ toast("Falta el costo","Escribe el total del ticket.","r"); return; }
+    const total=parseFloat(val("mcT"));
+    if(!(total>0)){ toast("Costo inválido","El total debe ser mayor a 0.","r"); return; }
+    const m=S.movs.find(x=>x.id===d.id); if(!m) return;
+    const round2 = x => Math.round(x*100)/100;
+    m.costo=total; delete m.costoPend;
+    const unit=total/m.cant;
+    S.movs.filter(x=>x.compra===m.id).forEach(x=>{ x.costo=round2(unit*x.cant); });
+    const p=by(S.productos,m.prod);
+    if(p && p.costo===0) p.costo=round2(unit);
+    m.notas="Comprado en tienda con tarjeta de la empresa";
+    const w=m.compraWo?W(m.compraWo):null;
+    if(w) w.hist.push([hora(), "Oficina cargó el costo del ticket: "+money(total), S.usuario]);
+    cm(); flash("mov:"+m.id);
+    toast("✓ Costo cargado", `${esc(p?p.nombre:"")} quedó con el costo cargado.`, "v");
+    render();
   },});

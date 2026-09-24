@@ -456,8 +456,15 @@ function hojaCel(sh){
     <select id="cpTienda">${CAT.tiendas.map(t=>`<option ${t===sh.tienda?"selected":""}>${esc(t)}</option>`).join("")}</select>
     <label>¿Qué compraste?</label>
     <input id="cpNombre" value="${esc(sh.nombre)}" placeholder="Ej. sellador de grout">
-    <label>Cantidad</label>
+    <label>¿Cuánto compraste?</label>
     <input id="cpCant" value="${esc(String(sh.cant))}" inputmode="decimal">
+    <div class="db-seg" style="display:flex;gap:6px;margin-top:7px">
+      <button type="button" class="db ${sh.uso==="todo"?"p":"g"}" style="flex:1" data-a="fCompraUso" data-v="todo">Usé todo</button>
+      <button type="button" class="db ${sh.uso==="sobro"?"p":"g"}" style="flex:1" data-a="fCompraUso" data-v="sobro">Sobró material</button>
+    </div>
+    ${sh.uso==="sobro"?`<label>¿Cuánto usaste en esta unidad?</label>
+    <input id="cpUsado" value="${esc(String(sh.usado||""))}" inputmode="decimal">
+    <div class="sub">Lo que sobró queda en inventario para otro trabajo.</div>`:""}
     <button type="button" class="db g" style="margin-top:7px" data-a="fCompraFoto">${sh.foto
       ?`<img src="${sh.foto}" style="width:16px;height:16px;object-fit:cover;border-radius:3px"> Foto agregada — tocá para cambiar`
       :"📷 Agregar foto del ticket"}</button>
