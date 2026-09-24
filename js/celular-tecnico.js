@@ -33,11 +33,11 @@ function renderFon(){
   const subMias = subWOsDeTec(t.id).filter(a=>{
     const w=W(a.wo); return w && !w.cobrada;
   });
-  /* Claudia fue clara: el técnico nunca ve dinero de nada — ni su pago, ni
-     lo que cuesta un material, ni descuentos. Antes había una pestaña "Mi
-     pago" completa; se quitó de raíz, no solo se ocultó el número. */
+  /* Claudia: el técnico ve el desglose de SU pago, pero nunca lo que se le
+     factura al cliente ni el costo de materiales. */
   $("#fnav").innerHTML = [
     {v:"agenda",n:"Agenda",ic:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>'},
+    {v:"pago",n:"Mi pago",ic:'<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>'},
     {v:"avisos",n:"Avisos",ic:'<path d="M18 8A6 6 0 1 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/>'}
   ].map(b=>`<button class="${S.phView===b.v||(b.v==="agenda"&&["wo","subwo"].includes(S.phView))?"on":""}" data-a="fView" data-v="${b.v}">
     ${b.v==="avisos"&&notiSinLeer()?`<span style="position:absolute;top:1px;right:6px;min-width:14px;height:14px;padding:0 3px;background:#ff5a5f;color:#fff;border-radius:99px;font-size:8.5px;font-weight:800;display:flex;align-items:center;justify-content:center">${notiSinLeer()}</span>`:""}
@@ -50,6 +50,34 @@ function renderFon(){
       <div style="min-width:0"><div style="display:flex;justify-content:space-between;font-size:9px;color:var(--faint)"><span>Cordova Ops</span><span>${n.h}</span></div>
       <div style="font-size:12px;font-weight:750">${esc(n.t)}</div><div class="ds">${esc(n.b)}</div></div></div>`).join("")
       :`<div style="text-align:center;padding:40px 14px;color:var(--faint);font-size:11.5px">Sin avisos</div>`);
+  }
+  else if(S.phView==="pago"){
+    const sem=S.semana;
+    const ws=S.wos.filter(w=>w.tec===t.id && w.semana===sem && w.estado==="Completed");
+    const extra=extrasAprobadosDeWOs(S.wos.filter(w=>w.semana===sem)).filter(x=>tecExtra(x)===t.id);
+    const desc=descDe(t.id,sem);
+    const base=ws.reduce((a,w)=>a+(egresoWO(w)||0),0);
+    const totExtra=extra.reduce((a,x)=>a+(x.monto||0),0);
+    const totDesc=desc.reduce((a,x)=>a+x.monto,0);
+    const total=base+totExtra-totDesc;
+    const fila=(izq,sub,der,col)=>`<div style="display:flex;justify-content:space-between;gap:8px;padding:7px 0;border-top:1px solid var(--line)">
+      <div style="min-width:0"><div style="font-size:12px;font-weight:650">${izq}</div>${sub?`<div class="ds">${sub}</div>`:""}</div>
+      <div class="mono" style="font-size:12.5px;font-weight:700;flex:none;${col?`color:${col}`:""}">${der}</div></div>`;
+    h=`<div class="dl" style="margin-top:5px">Mi pago · semana ${sem}</div>
+      <div class="dc" style="background:var(--azul);border-color:transparent;color:#fff">
+        <div style="font-size:10.5px;opacity:.85">Total a recibir esta semana</div>
+        <div class="mono" style="font-size:24px;font-weight:800">${money(total)}</div>
+        <div style="font-size:10.5px;opacity:.85">${ws.length} trabajo(s) terminado(s)</div></div>
+      <div class="dc"><div class="dl" style="margin:0 0 2px">Trabajos</div>
+        ${ws.map(w=>fila(`${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}`,
+            `${esc(w.fecha.slice(5))} · ${esc(w.serv)}${w.touchup&&egresoWO(w)===0?" · corrección, no se paga":""}${w.pagadaTec?" · ya pagado":""}`,
+            egresoWO(w)!==null?money(egresoWO(w)):"Por definir", egresoWO(w)===null?"var(--ambar)":"")).join("")
+          ||`<div class="ds" style="padding:8px 0">Todavía no tienes trabajos terminados esta semana.</div>`}</div>
+      ${extra.length?`<div class="dc"><div class="dl" style="margin:0 0 2px">Pagos adicionales aprobados</div>
+        ${extra.map(x=>fila(`Adicional · WO-${x.wo}`,esc((x.motivo||"").slice(0,60)),"+"+money(x.monto),"var(--verde)")).join("")}</div>`:""}
+      ${desc.length?`<div class="dc"><div class="dl" style="margin:0 0 2px">Descuentos</div>
+        ${desc.map(x=>fila(esc(x.motivo||x.concepto||"Descuento"),x.wo?`WO-${x.wo}`:"","−"+money(x.monto),"var(--rojo)")).join("")}</div>`:""}
+      ${ws.some(w=>egresoWO(w)===null)?`<div class="ds" style="text-align:center;margin-top:4px">"Por definir": oficina todavía no carga el pago de ese trabajo.</div>`:""}`;
   }
   else if(S.phView==="subwo" && S.phSub){
     const a=S.adicionales.find(x=>x.id===S.phSub), w=a&&W(a.wo);

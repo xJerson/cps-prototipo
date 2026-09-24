@@ -124,7 +124,7 @@ Object.assign(ACC, {
         <tr style="background:var(--surface-2);font-weight:750"><td colspan="3">Total ${esc(perTxt)}</td>
           <td class="num mono" style="font-size:15px">${money(tot+totExtra)}</td></tr></tbody></table>
       </div>
-      <div class="note" style="margin-top:12px">Solo para uso interno de oficina — el técnico no ve montos en su celular.</div>
+      <div class="note" style="margin-top:12px">El técnico ve este mismo desglose en su celular, en «Mi pago». Nunca ve lo que se le factura al cliente.</div>
     </div>
     <div class="mf"><button class="btn p" data-a="cm">Cerrar</button></div>`,true);
   },
