@@ -15,7 +15,7 @@ VIEWS.tablero = () => {
     <div class="kpi"><div class="l">Esperando aprobación</div><div class="v ${cnt("Esperando aprobación")?"w":""}">${cnt("Esperando aprobación")}</div></div>
     <div class="kpi"><div class="l">En progreso</div><div class="v">${cnt("In progress")}</div></div>
     <div class="kpi"><div class="l">Terminadas</div><div class="v g">${cnt("Completed")}</div></div>
-    <div class="kpi"><div class="l">Ingreso semana</div><div class="v mono">${money(ing)}</div></div>
+    ${puedeVerIngreso()?`<div class="kpi"><div class="l">Ingreso semana</div><div class="v mono">${money(ing)}</div></div>`:""}
   </div>
 
   ${vPendientes()}

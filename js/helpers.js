@@ -29,9 +29,11 @@ const W = id => by(S.wos,id);
 const money = n => "$"+(Math.round(n*100)/100).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 const hora = () => { const h=Math.floor(S.reloj/60),m=S.reloj%60; return h+":"+String(m).padStart(2,"0"); };
 const puede = m => { const r=ROLES[S.usuario]; return r.m==="*" || r.m.includes(m); };
-/* Los datos financieros son sensibles: solo Claudia y Erika pueden verlos,
-   sin importar en qué pantalla aparezcan. */
+/* Los datos financieros sensibles (utilidad, costos y pagos) solo los ven
+   Claudia y Erika. El ingreso del tablero es un dato operativo más amplio:
+   también lo puede consultar Lydia. */
 const puedeVerUtilidad = () => ["Claudia","Erika"].includes(S.usuario);
+const puedeVerIngreso = () => ["Lydia","Erika","Claudia"].includes(S.usuario);
 
 /* Íconos de composición de unidad — compartidos entre el Price List
    (Tarifario) y el selector de Unidad del Estimado, para que la misma
