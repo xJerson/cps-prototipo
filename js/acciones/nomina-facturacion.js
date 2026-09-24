@@ -26,6 +26,28 @@ function asignarApprovalRequest(id, quien){
 function registrarHistorialApproval(x, evento, detalle){
   (x.historial||=([])).push({evento,quien:S.usuario,hora:hora(),fecha:HOY_SUP,detalle:detalle||""});
 }
+/* Único lugar que decide qué le entra a nómina y qué se le factura al
+   cliente por un concepto adicional ya aprobado y con precio — lo usan
+   tanto la aprobación normal (medioOK) como el resolver "Definir precio del
+   adicional" (precioDefGuardar), para no duplicar la regla en dos lados. */
+function aplicarPagoFacturaAdicional(l, w, s, cobrar){
+  const monto = (l.precio||0)*(l.cant||1);
+  if(!(monto>0)) return {pagoTec:0, cobroCliente:0};
+  const quienPidio = s.origen==="Planificada" ? "Oficina" : tecN(w.tec);
+  const tecnicoPago = tecSubWO(l)||w.tec;
+  S.excepciones.push({id:"X"+Date.now()+"_"+l.id, tipo:"Pago adicional al técnico", wo:w.id, subwo:l.id, tec:tecnicoPago,
+    motivo:`Sub-Work Order aprobada · ${l.concepto}${l.ubic?" · "+l.ubic:""}`, monto,
+    pide:quienPidio, aprueba:S.usuario, estado:"Aprobada",
+    fecha:w.fecha, creada:{quien:quienPidio,hora:hora()}, resol:{quien:S.usuario,hora:hora()}});
+  let cobroCliente = 0;
+  if(cobrar){
+    cobroCliente = monto;
+    l.facturable=true; l.montoFactura=monto;
+    w.extraFacturable = (w.extraFacturable||0) + monto;
+    (l.hist=l.hist||[]).push([hora(), `Se suma ${money(monto)} a lo que se le factura a la propiedad`, S.usuario]);
+  }
+  return {pagoTec:monto, cobroCliente};
+}
 Object.assign(ACC, {
 
 
@@ -96,7 +118,9 @@ Object.assign(ACC, {
     if(!s || (s.aprobador && s.aprobador!==S.usuario)){ toast("Aprobación delegada",`Esta solicitud debe aprobarla <b>${esc(s&&s.aprobador||"Thalia")}</b>. Si está fuera de su alcance, asígnala a Gustavo u otra persona antes de decidir.`,"w"); return; }
     const pend = s.lineas.filter(l=>l.estado==="Pendiente");
     document.querySelectorAll(".adprecio").forEach(e=>{ const l=pend.find(x=>x.id===+e.dataset.lid); if(l){ const p=parseFloat(e.value); if(Number.isFinite(p)&&p>=0){ l.precio=p; l.precioOrigen="manual-aprobado"; } } });
-    if(pend.some(l=>l.precio==null)){ toast("Falta precio","Los trabajos complejos necesitan un precio manual antes de aprobarlos.","r"); return; }
+    // Aprobar y ponerle precio son decisiones distintas (Claudia): el precio
+    // es opcional acá — si queda sin él, se resuelve después como Approval
+    // Request "Definir precio del adicional" (ver excAuto / precioDefGuardar).
     // Con un solo concepto no hay tildes que leer: se aprueba entero.
     const chks = Array.from(document.querySelectorAll(".adchk"));
     const marc = new Set(chks.filter(c=>c.checked).map(c=>+c.dataset.lid));
@@ -118,31 +142,22 @@ Object.assign(ACC, {
     // decide acá, apruebe o rechace.
     const fotoAprob = S._aprobFoto||null; S._aprobFoto=null;
     const sello = ip => ({medio:d.medio, quien:S.usuario, hora:hora(), ip, foto:fotoAprob});
-    let pagoTec = 0, cobroCliente = 0;
+    let pagoTec = 0, cobroCliente = 0; const sinPrecio = [];
     ok.forEach(l=>{ l.estado="Aprobado"; l.aprob=sello(d.medio==="Enlace digital"?"72.14.201.38":null);
       (l.hist=l.hist||[]).push([hora(), `Aprobada por ${d.medio.toLowerCase()}`, S.usuario]);
-      const monto = (l.precio||0)*(l.cant||1);
       if(l.origen==="Planificada"){
         l.estadoTrabajo=tecSubWO(l)?"Assigned":"Unassigned";
         w.validada=false;
         (l.hist=l.hist||[]).push([hora(),`Activada para ${tecSubWO(l)?tecN(tecSubWO(l)):"asignación"}`,S.usuario]);
       }
-      if(monto>0){
-        pagoTec += monto;
-        // Quién PIDIÓ el adicional no siempre es el técnico — una Sub-Work
-        // Order planificada (sección 5 del feedback) la pide oficina, no él.
-        const quienPidio = s.origen==="Planificada" ? "Oficina" : tecN(w.tec);
-        const tecnicoPago=tecSubWO(l)||w.tec;
-        S.excepciones.push({id:"X"+Date.now()+"_"+l.id, tipo:"Pago adicional al técnico", wo:w.id, subwo:l.id, tec:tecnicoPago,
-          motivo:`Sub-Work Order aprobada · ${l.concepto}${l.ubic?" · "+l.ubic:""}`, monto,
-          pide:quienPidio, aprueba:S.usuario, estado:"Aprobada",
-          fecha:w.fecha, creada:{quien:quienPidio,hora:hora()}, resol:{quien:S.usuario,hora:hora()}});
-        if(cobraSet.has(l.id)){
-          cobroCliente += monto;
-          l.facturable=true; l.montoFactura=monto;
-          w.extraFacturable = (w.extraFacturable||0) + monto;
-          (l.hist=l.hist||[]).push([hora(), `Se suma ${money(monto)} a lo que se le factura a la propiedad`, S.usuario]);
-        }
+      if(l.precio==null){
+        // Thalia aprobó hablando con la propiedad, pero el cliente no dio
+        // precio — queda pendiente de pago y factura hasta que se defina.
+        l.precioPend=true; sinPrecio.push(l);
+        (l.hist=l.hist||[]).push([hora(), "Aprobada sin precio — falta definirlo para pago y factura", S.usuario]);
+      } else {
+        const r = aplicarPagoFacturaAdicional(l, w, s, cobraSet.has(l.id));
+        pagoTec += r.pagoTec; cobroCliente += r.cobroCliente;
       }
     });
     no.forEach(l=>{ l.estado="Rechazado"; l.aprob=sello(null);
@@ -166,14 +181,38 @@ Object.assign(ACC, {
         + (cobroCliente>0 ? ` Se le agrega a lo que se le factura a la propiedad: <b>${money(cobroCliente)}</b>.`
                           : ` No se le factura nada a la propiedad por esto — queda como costo interno.`)
       : "";
+    const notaPrecio = sinPrecio.length
+      ? `<br><br>⏳ <b>${sinPrecio.length} concepto(s) aprobado(s) sin precio</b>: ${esc(nom(sinPrecio))}. Queda una Approval Request "Definir precio del adicional" — hasta que se resuelva no entra a nómina ni a factura.`
+      : "";
     toast(no.length ? (ok.length?"Adicional aprobado en parte":"Adicional no aprobado") : "✓ Adicional aprobado",
-      `${ok.length?`Sí: <b>${esc(nom(ok))}</b>. `:""}${no.length?`No: <b>${esc(nom(no))}</b>. `:""}${sustento}${plata} `
+      `${ok.length?`Sí: <b>${esc(nom(ok))}</b>. `:""}${no.length?`No: <b>${esc(nom(no))}</b>. `:""}${sustento}${plata}${notaPrecio} `
       + (quedan
           ? `<br><br><b>Ojo: el pago/factura de WO-${w.id} sigue frenado</b> — hay otra solicitud del técnico sin decidir.`
+          : sinPrecio.length
+          ? `<br><br>El pago/factura de WO-${w.id} sigue frenado hasta definir el precio.`
           : `<br><br>El pago/factura de WO-${w.id} ya puede seguir su curso.`),
-      (no.length||quedan)?"w":"v");
+      (no.length||quedan||sinPrecio.length)?"w":"v");
     noti(no.length ? (ok.length?"Adicional aprobado en parte":"Adicional NO aprobado") : "Adicional aprobado",
       `${ok.length?`Haz: ${nom(ok)}. `:""}${no.length?`NO hagas: ${nom(no)}. `:""}Lo decidió ${S.usuario} (${d.medio.toLowerCase()}).`, false);
+    render();
+  },
+  excDefinirPrecio: d => modalDefinirPrecio(d.id),
+  precioDefGuardar: d => {
+    const lid = +String(d.id).slice(6);
+    const l = by(S.adicionales,lid), w = l&&W(l.wo), s = l&&solTodas().find(x=>x.sol===l.sol);
+    if(!l||!w||!s) return;
+    if(marcaFalta(["dpP"])){ toast("Falta el precio","Escribe cuánto se le cobra al cliente.","r"); return; }
+    const precio = parseFloat(val("dpP"));
+    if(!(precio>=0)){ toast("Precio inválido","Tiene que ser 0 o más.","r"); return; }
+    const chkCobra = document.getElementById("dpCobra"), cobrar = !!(chkCobra&&chkCobra.checked);
+    l.precio = precio; l.precioOrigen="manual-resuelto"; delete l.precioPend;
+    (l.hist=l.hist||[]).push([hora(), `Precio definido por ${S.usuario}`, S.usuario]);
+    const r = aplicarPagoFacturaAdicional(l, w, s, cobrar);
+    cm(); flash("wo:"+w.id);
+    toast("✓ Precio definido",
+      `${esc(l.concepto)} · ${money(precio)}. Entra a la nómina del técnico`
+      + (r.cobroCliente>0 ? ` y se le agrega ${money(r.cobroCliente)} a lo que se le factura a la propiedad.` : "; no se le factura nada a la propiedad por esto."),
+      "v");
     render();
   },
   aprobFoto: d => {

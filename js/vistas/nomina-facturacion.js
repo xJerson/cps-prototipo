@@ -43,6 +43,17 @@ function excAuto(){
       monto:p.reduce((t,l)=>t+(l.precio||0)*(l.cant||1),0),
       pide:esPlanificada?"Oficina":"Técnico", aprueba:s.aprobador||"Thalia", estado:"Pendiente", fecha:"", resol:null}));
   });
+  // Aprobar el adicional y ponerle precio son decisiones distintas (Claudia):
+  // Thalia puede aprobarlo hablando con la propiedad sin dar precio. Mientras
+  // quede precioPend no entra a nómina ni a factura, así que frena su WO
+  // igual que cualquier otra Approval Request — por línea, no por solicitud.
+  solTodas().forEach(s=>{
+    s.lineas.filter(l=>l.estado==="Aprobado" && l.precioPend).forEach(l=>{
+      out.push(conAsignacion({id:"AUTO-P"+l.id, tipo:"Definir precio del adicional", wo:s.wo, auto:true,
+        motivo:`${l.concepto}${(l.cant||1)>1?` ×${l.cant}`:""} · WO-${s.wo} — aprobado ${l.aprob?`por ${l.aprob.medio.toLowerCase()} (${l.aprob.quien})`:"sin registro"} sin precio.`,
+        monto:null, pide:"Sistema", aprueba:"Erika", estado:"Pendiente", fecha:"", resol:null}));
+    });
+  });
   // La primera vez que el sistema detecta cada una queda su hora — así se ve
   // desde cuándo está esperando, no solo cuándo se resolvió.
   out.forEach(x=>{
@@ -136,6 +147,8 @@ VIEWS.excepciones = () => {
           ? `<button class="btn sm p" data-a="excUnidadRevisar" data-id="${x.id}">Review correction</button>`
           : x.tipo==="Tarifa no encontrada"
           ? `<button class="btn sm p" data-a="excTarifa" data-id="${x.id}" data-wo="${x.wo}">Definir tarifa</button>`
+          : x.tipo==="Definir precio del adicional"
+          ? `<button class="btn sm p" data-a="excDefinirPrecio" data-id="${x.id}">Definir precio</button>`
           : `<button class="btn sm" data-a="excRech" data-id="${x.id}">Rechazar</button>
              <button class="btn sm v" data-a="excAprob" data-id="${x.id}">Aprobar</button>`) : '<span style="font-size:10px;color:var(--faint)">Assigned owner or approver resolves</span>'}
       </td></tr>`; }).join("")}
@@ -259,19 +272,20 @@ function modalMedio(sol){
     ${pend.length>1?`<div class="fld" style="margin-bottom:12px">
       <label>¿Qué le autorizas?</label>
       <div class="hint">Destilda lo que el cliente no aprobó. Al técnico le llega el detalle: qué sí hace y qué no.
-        Lo aprobado con precio le queda pendiente de pago al técnico solo; tildá «Cobrar al cliente» aparte, por cada concepto, si además hay que facturárselo — a veces se hace de cortesía.</div>
+        Lo aprobado con precio le queda pendiente de pago al técnico solo; tildá «Cobrar al cliente» aparte, por cada concepto, si además hay que facturárselo — a veces se hace de cortesía.
+        El precio es opcional: si Thalia ya aprobó pero el cliente no dijo cuánto, déjalo en blanco — queda una Approval Request para que Erika o Claudia lo definan antes de que entre a nómina y factura.</div>
       <table style="margin-top:6px"><tbody>
       <tr><td></td><td></td><td class="num">Precio</td><td style="text-align:center">Cobrar<br>al cliente</td></tr>
       ${pend.map(l=>`<tr>
         <td style="width:34px"><input type="checkbox" class="adchk" data-lid="${l.id}" checked style="width:16px;height:16px"></td>
         <td><b>${esc(l.concepto)}</b>${(l.cant||1)>1?` <span style="color:var(--faint)">× ${l.cant}</span>`:""}
           ${l.ubic?`<div style="font-size:11.5px;color:var(--faint)">${esc(l.ubic)}</div>`:""}</td>
-        <td class="num mono">${l.precio?money(l.precio*(l.cant||1)):`<input class="adprecio mono" data-lid="${l.id}" placeholder="Precio manual" style="width:92px">`}</td>
+        <td class="num mono">${l.precio?money(l.precio*(l.cant||1)):`<input class="adprecio mono" data-lid="${l.id}" placeholder="Precio — opcional" style="width:92px">`}</td>
         <td style="text-align:center">${l.precio?`<input type="checkbox" class="adcobra" data-lid="${l.id}" style="width:16px;height:16px">`:"—"}</td></tr>`).join("")}
       <tr><td></td><td style="color:var(--faint)">Total pedido</td><td class="num mono" style="font-weight:750">${money(tot)}</td><td></td></tr>
       </tbody></table></div>`
     :`<div class="note" style="margin-bottom:12px"><b>${esc(pend[0].concepto)}</b>${(pend[0].cant||1)>1?` × ${pend[0].cant}`:""}
-        ${pend[0].precio?` · ${money(pend[0].precio*(pend[0].cant||1))}`:` · <input class="adprecio mono" data-lid="${pend[0].id}" placeholder="Precio manual" style="width:120px">`}${pend[0].ubic?` · ${esc(pend[0].ubic)}`:""}
+        ${pend[0].precio?` · ${money(pend[0].precio*(pend[0].cant||1))}`:` · <input class="adprecio mono" data-lid="${pend[0].id}" placeholder="Precio — opcional, si el cliente lo dio" style="width:200px">`}${pend[0].ubic?` · ${esc(pend[0].ubic)}`:""}
         ${pend[0].precio?`<label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-weight:500">
           <input type="checkbox" class="adcobra" data-lid="${pend[0].id}" style="width:16px;height:16px"> Cobrar esto al cliente (además de pagárselo al técnico)</label>`:""}</div>`}
 
@@ -340,6 +354,29 @@ function modalTarifaExc(woId, xid){
       ? `<button class="btn p" data-a="tarifaGuardar" data-wo="${woId}" data-x="${xid}">Guardar tarifa</button>`
       : `<button class="btn p" data-a="tarifaAvisarClaudia" data-wo="${woId}" data-x="${xid}">Avisarle a Claudia</button>`}
   </div>`);
+}
+
+/* Aprobar el adicional y ponerle precio son decisiones distintas (Claudia):
+   Thalia puede aprobar hablando con la propiedad sin dar precio. Este es el
+   segundo paso — Erika lo sabe, o si no, lo escala a Claudia (reasignando
+   esta misma Approval Request), que es quien estima el precio caso por caso. */
+function modalDefinirPrecio(id){
+  const lid = +String(id).slice(6);
+  const l = by(S.adicionales,lid), w = l&&W(l.wo), s = l&&solTodas().find(x=>x.sol===l.sol);
+  if(!l||!w||!s) return;
+  const p = P(w.prop), u = U(w.unidad);
+  modal(`<div class="mh"><h3>Definir precio del adicional</h3>
+    <p>WO-${w.id} · ${esc(p.nombre)} ${esc(u.num)} · ${esc(l.concepto)}${(l.cant||1)>1?` × ${l.cant}`:""}</p></div>
+  <div class="mb">
+    ${l.ubic?`<div class="note" style="margin-bottom:10px"><b>Ubicación:</b> ${esc(l.ubic)}</div>`:""}
+    ${l.aprob?`<div class="note v" style="margin-bottom:10px"><b>Ya aprobado por ${esc((l.aprob.medio||"—").toLowerCase())}:</b> ${esc(l.aprob.quien)} · ${esc(l.aprob.hora)}. Solo falta el precio.</div>`:""}
+    ${l.hallazgoFoto?`<div class="note" style="margin-bottom:10px"><img src="${l.hallazgoFoto.url}" style="width:100%;max-height:130px;object-fit:cover;border-radius:9px;display:block"></div>`:""}
+    <div class="fld"><label>Precio al cliente <span class="req">*</span></label><input id="dpP" class="mono" placeholder="0.00"></div>
+    <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-weight:500">
+      <input type="checkbox" id="dpCobra" style="width:16px;height:16px"> Cobrar esto al cliente (además de pagárselo al técnico)</label>
+    <div class="hint" style="margin-top:8px">Este es el mismo precio que se le paga al técnico — igual que cuando se aprueba con precio desde el inicio.</div>
+  </div>
+  <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="precioDefGuardar" data-id="${id}">Guardar precio</button></div>`);
 }
 
 /* ── SUB-WORK ORDERS ──────────────────────────────────────────────────

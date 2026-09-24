@@ -1,6 +1,6 @@
 "use strict";
 /* ══════════ DATOS SEMILLA ══════════ */
-let ID = {p:100,u:200,c:300,t:400,w:1051,e:500,f:601,pr:700,mv:800,cl:900,ad:957,cm:960};
+let ID = {p:100,u:200,c:300,t:400,w:1051,e:500,f:601,pr:700,mv:800,cl:900,ad:958,cm:960};
 const nid = k => ++ID[k];
 /* Fotos semilla: no hay cámara real en el arranque del prototipo, pero la
    galería/miniatura necesita una URL de imagen real (no un contador ni
@@ -278,7 +278,17 @@ let S = {
      specs:{}, tec:null, fecha:"2026-08-12", facturaSeparada:false, facturable:true,
      estadoTrabajo:"Completed", cantRealizada:1, cantPendiente:0, parcial:false, facturada:false,
      hist:[["9:05","Sub-WO planificada aprobada: Door","Claudia"],["9:10","Initial finding cargado","Diego Ramírez"],
-           ["9:50","Evidencia cargada","Diego Ramírez"],["9:55","Sub-WO terminada","Diego Ramírez"]]}
+           ["9:50","Evidencia cargada","Diego Ramírez"],["9:55","Sub-WO terminada","Diego Ramírez"]]},
+    /* Aprobado SIN precio (Claudia): Thalia habló con la propiedad y aprobó,
+       pero el cliente no dijo cuánto — queda como Approval Request "Definir
+       precio del adicional" para Erika (o Claudia, si hay que estimarlo). */
+    {id:958, sol:"SOL20260811B", wo:1040, desc:"Manchas de moho detrás del refrigerador — no estaba en el pedido original.", ubic:"Cocina",
+     concepto:"Moho", cant:1, precio:null, pago:null, precioOrigen:null, catalogoId:null,
+     estado:"Aprobado", precioPend:true, aprob:{medio:"Llamada", quien:"Thalia", hora:"9:35"}, origen:"Técnico",
+     fotosRefArr:[], fotosEvidArr:[], hallazgoFoto:{url:FOTO_SEED, quien:"Diego", hora:"9:30"},
+     specs:{}, tec:null, fecha:null, facturaSeparada:false, facturable:false,
+     hist:[["9:30","Creada por el técnico en sitio: Moho · precio manual pendiente","Diego Ramírez"],
+           ["9:35","Aprobada por llamada — sin precio, falta definirlo","Thalia"]]}
   ],
   facturas:[{id:"F601",num:"INV-2026-1041",prop:"P3",lineas:[1047],
     conceptos:[{tipo:"WO",wo:1047,subwo:null,unidad:"U7",descripcion:"Drywall repair",cantidad:1,importe:220,evidencia:1}],
