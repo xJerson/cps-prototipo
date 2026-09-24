@@ -221,7 +221,31 @@ let S = {
     {id:1051,prop:"P1",unidad:"U1",cat:"Clean",serv:"Full clean",tec:"T1",estado:"Confirmed",semana:33,fecha:"2026-08-13",horaProg:"9:00",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",
      touchup:true,facturable:false,devOrigen:"DV2",woOrigen:1038,tecOriginal:"T1",avance:0,
      confirmCliente:{fecha:"2026-08-13",medio:"Llamada",contacto:"Danielle Pratt",quien:"Thalia",hora:"9:20"},
-     hist:[["9:15","Touch-up creado desde la devolución — no facturable","Gustavo Andrade"],["9:16","Asignado a Diego Ramírez","Gustavo Andrade"],["9:20","Confirmada por el cliente vía Llamada","Thalia"]]}
+     hist:[["9:15","Touch-up creado desde la devolución — no facturable","Gustavo Andrade"],["9:16","Asignado a Diego Ramírez","Gustavo Andrade"],["9:20","Confirmada por el cliente vía Llamada","Thalia"]]},
+    /* Más ejemplos para probar Facturación y Cobranza (pedido de Claudia): Harbor
+       Pointe lista para facturar con 2 WO, una con Sub-WO facturable en la misma
+       factura y otra en factura separada. */
+    {id:1055,prop:"P3",unidad:"U14",cat:"Clean",serv:"Full clean",tec:"T3",estado:"Completed",semana:33,fecha:"2026-08-12",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T3",hora:"11:05"}],supervisada:true,validada:true,pagadaTec:false,facturada:false,mats:[],notas:"",notasTec:"",
+     hist:[["8:30","Creada","Thalia"],["8:32","Asignada a Luz Ferrer","Thalia"],["9:05","Llegó a la propiedad","Luz"],["11:05","Terminó · 1 evidencia","Luz"],["11:30","Revisión operativa completada","Gustavo"],["12:00","Validada","Erika"]]},
+    {id:1056,prop:"P3",unidad:"U15",cat:"Clean",serv:"Full clean",tec:"T4",estado:"Completed",semana:33,fecha:"2026-08-13",horaProg:"9:30",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T4",hora:"12:10"}],supervisada:true,validada:true,pagadaTec:false,facturada:false,mats:[],notas:"",notasTec:"",
+     hist:[["9:00","Creada","Thalia"],["9:02","Asignada a Andrés Solís","Thalia"],["9:35","Llegó a la propiedad","Andrés"],["10:20","Encontró una fuga bajo el lavamanos de la cocina","Andrés"],["12:10","Terminó · 1 evidencia","Andrés"],["12:30","Revisión operativa completada","Gustavo"],["13:00","Validada","Erika"]]},
+    /* Cobranza — un ejemplo por cada estado que distingue la pantalla: enviada
+       dentro de plazo, vencida hace pocos días con reminder, vencida hace más
+       de un mes con correo overdue y llamada con promesa, y pagada. */
+    {id:1057,prop:"P2",unidad:"U12",cat:"Clean",serv:"Full clean",tec:"T5",estado:"Completed",semana:33,fecha:"2026-08-09",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T5",hora:"11:15"}],supervisada:true,validada:true,pagadaTec:true,facturada:true,mats:[],notas:"",notasTec:"",
+     hist:[["8:15","Creada","Thalia"],["8:16","Asignada a Reyna Bonilla","Thalia"],["9:05","Llegó a la propiedad","Reyna"],["11:15","Terminó · 1 evidencia","Reyna"],["11:40","Revisión operativa completada","Gustavo"],["12:00","Validada","Erika"],["13:00","Pagada al técnico en nómina — semana 33","Erika"],["14:00","Facturada — INV-2026-1042","Erika"]]},
+    /* Vencida hace pocos días, con reminder ya enviado (INV-2026-1043). */
+    {id:1058,prop:"P1",unidad:"U11",cat:"Clean",serv:"Full clean",tec:"T2",estado:"Completed",semana:27,fecha:"2026-07-01",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T2",hora:"11:20"}],supervisada:true,validada:true,pagadaTec:true,facturada:true,mats:[],notas:"",notasTec:"",
+     hist:[["8:10","Creada","Thalia"],["8:12","Asignada a Marcos Ayala","Thalia"],["9:05","Llegó a la propiedad","Marcos"],["11:20","Terminó · 1 evidencia","Marcos"],["11:45","Revisión operativa completada","Gustavo"],["12:00","Validada","Erika"],["13:00","Pagada al técnico en nómina — semana 27","Erika"],["14:00","Facturada — INV-2026-1043","Erika"]]},
+    /* Vencida hace más de un mes, con correo overdue y llamada con promesa
+       (INV-2026-1044). Con un plazo normal de 30 días esto no entra en las
+       semanas 31–33 — HOY_SUP está fijo en 2026-08-11, así que "vencida hace
+       30+ días" obliga a una WO bastante anterior; ver nota en el reporte. */
+    {id:1059,prop:"P2",unidad:"U13",cat:"Clean",serv:"Full clean",tec:"T1",estado:"Completed",semana:23,fecha:"2026-06-04",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T1",hora:"11:30"}],supervisada:true,validada:true,pagadaTec:true,facturada:true,mats:[],notas:"",notasTec:"",
+     hist:[["8:00","Creada","Thalia"],["8:02","Asignada a Diego Ramírez","Thalia"],["9:05","Llegó a la propiedad","Diego"],["11:30","Terminó · 1 evidencia","Diego"],["11:50","Revisión operativa completada","Gustavo"],["12:10","Validada","Erika"],["13:00","Pagada al técnico en nómina","Erika"],["14:00","Facturada — INV-2026-1044","Erika"]]},
+    /* Pagada, con su registro de pago (INV-2026-1045). */
+    {id:1060,prop:"P1",unidad:"U9",cat:"Clean",serv:"Full clean",tec:"T1",estado:"Completed",semana:33,fecha:"2026-08-10",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T1",hora:"11:00"}],supervisada:true,validada:true,pagadaTec:true,facturada:true,cobrada:true,mats:[],notas:"",notasTec:"",
+     hist:[["8:00","Creada","Thalia"],["8:02","Asignada a Diego Ramírez","Thalia"],["9:05","Llegó a la propiedad","Diego"],["11:00","Terminó · 1 evidencia","Diego"],["11:20","Revisión operativa completada","Gustavo"],["11:40","Validada","Erika"],["12:00","Pagada al técnico en nómina — semana 33","Erika"],["12:30","Facturada — INV-2026-1045","Erika"],["15:00","Cobrada INV-2026-1045","Claudia"]]}
   ],
   /* Hallazgo real encontrado en sitio (WO-1040, en progreso): Diego reportó
      la humedad desde su celular pero no pudo cargar la foto (mala señal).
@@ -298,10 +322,34 @@ let S = {
      hist:[["9:30","Creada por el técnico en sitio: Moho · precio manual pendiente","Diego Ramírez"],
            ["9:35","Aprobada por llamada — sin precio, falta definirlo","Thalia"]]}
   ],
-  facturas:[{id:"F601",num:"INV-2026-1041",prop:"P3",lineas:[1047],
-    conceptos:[{tipo:"WO",wo:1047,subwo:null,unidad:"U7",descripcion:"Drywall repair",cantidad:1,importe:220,evidencia:1}],
-    total:220,separada:false,emision:"2026-08-09",vence:"2026-09-08",estado:"Emitida",
-    pdf:"INV-2026-1041.pdf",pdfHora:"15:00",pdfQuien:"Erika",seguimiento:[]}],
+  /* Facturación y Cobranza arrancan con ejemplos completos: una factura dentro
+     del plazo, otra vencida con reminder, otra escalada hasta llamada y una ya
+     pagada/cerrada. Así cada estado y su próximo paso se puede probar. */
+  facturas:[
+    {id:"F601",num:"INV-2026-1041",prop:"P3",lineas:[1047],
+      conceptos:[{tipo:"WO",wo:1047,subwo:null,unidad:"U7",descripcion:"Drywall repair",cantidad:1,importe:220,evidencia:1}],
+      total:220,separada:false,emision:"2026-08-09",vence:"2026-09-08",estado:"Emitida",
+      pdf:"INV-2026-1041.pdf",pdfHora:"15:00",pdfQuien:"Erika",seguimiento:[]},
+    {id:"F602",num:"INV-2026-1042",prop:"P2",lineas:[1057],
+      conceptos:[{tipo:"WO",wo:1057,subwo:null,unidad:"U12",descripcion:"Full clean",cantidad:1,importe:140,evidencia:1}],
+      total:140,separada:false,emision:"2026-08-09",vence:"2026-09-08",estado:"Emitida",
+      pdf:"INV-2026-1042.pdf",pdfHora:"14:00",pdfQuien:"Erika",seguimiento:[]},
+    {id:"F603",num:"INV-2026-1043",prop:"P1",lineas:[1058],
+      conceptos:[{tipo:"WO",wo:1058,subwo:null,unidad:"U11",descripcion:"Full clean",cantidad:1,importe:125,evidencia:1}],
+      total:125,separada:false,emision:"2026-07-02",vence:"2026-08-02",estado:"Enviada",
+      pdf:"INV-2026-1043.pdf",pdfHora:"14:00",pdfQuien:"Erika",
+      seguimiento:[{tipo:"reminder",fecha:"2026-08-05",hora:"9:15",quien:"Erika",nota:"Recordatorio enviado al contacto de la propiedad."}]},
+    {id:"F604",num:"INV-2026-1044",prop:"P2",lineas:[1059],
+      conceptos:[{tipo:"WO",wo:1059,subwo:null,unidad:"U13",descripcion:"Full clean",cantidad:1,importe:125,evidencia:1}],
+      total:125,separada:false,emision:"2026-06-06",vence:"2026-07-06",estado:"Enviada",
+      pdf:"INV-2026-1044.pdf",pdfHora:"14:00",pdfQuien:"Erika",
+      seguimiento:[{tipo:"reminder",fecha:"2026-07-09",hora:"9:20",quien:"Erika"},{tipo:"overdue",fecha:"2026-07-15",hora:"10:00",quien:"Erika"},{tipo:"llamada",fecha:"2026-08-04",hora:"11:30",quien:"Claudia",nota:"El cliente confirmó que el pago está en proceso.",promesa:"2026-08-15"}]},
+    {id:"F605",num:"INV-2026-1045",prop:"P1",lineas:[1060],
+      conceptos:[{tipo:"WO",wo:1060,subwo:null,unidad:"U9",descripcion:"Full clean",cantidad:1,importe:125,evidencia:1}],
+      total:125,separada:false,emision:"2026-08-10",vence:"2026-09-09",estado:"Pagada",
+      pdf:"INV-2026-1045.pdf",pdfHora:"12:30",pdfQuien:"Erika",
+      seguimiento:[{tipo:"pago",fecha:"2026-08-11",hora:"15:00",quien:"Claudia",nota:"Pago recibido y conciliado."},{tipo:"cierre",fecha:"2026-08-11",hora:"15:00",quien:"Claudia"}]}
+  ],
   pagos:[], nomina:[], bitacora:[], audSeq:0, avisos:[], campana:false,
   /* Expedientes post-work enviados al cliente: se conserva el token para
      que el enlace pueda abrirse en otra pestaña del mismo origen. */

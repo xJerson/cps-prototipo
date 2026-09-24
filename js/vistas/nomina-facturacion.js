@@ -573,6 +573,16 @@ VIEWS.facturacion = () => {
   return `
   <div class="ph"><div><h2>Facturación — ${periodoTexto(S.periodo)}</h2>
     <p>De Work Orders terminadas a factura, sin volver a escribir nada. El número y el vencimiento se calculan.</p></div></div>
+  <div class="card" style="margin-bottom:14px"><div class="cp" style="display:flex;gap:10px;flex-wrap:wrap;align-items:stretch">
+    <div style="font-weight:750;align-self:center;min-width:110px">Qué hacer aquí</div>
+    ${[["1","Elige la semana","Con el selector de abajo o las flechas ‹ ›."],
+       ["2","Revisa las propiedades","Cada tarjeta junta los trabajos listos para cobrar."],
+       ["3","Toca «Generar factura»","Se crea la factura de esa propiedad con su PDF."],
+       ["4","Toca «Enviar al cliente»","En «Facturas emitidas», al final. El pago se sigue en Cobranza."]]
+      .map(([n,t,d])=>`<div style="flex:1;min-width:150px;display:flex;gap:8px">
+        <div style="width:22px;height:22px;border-radius:99px;background:var(--azul);color:#fff;font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:center;flex:none">${n}</div>
+        <div><div style="font-weight:700;font-size:12.5px">${t}</div><div style="font-size:11px;color:var(--faint)">${d}</div></div></div>`).join("")}
+  </div></div>
   ${renderSelectorPeriodo()}
   ${S.periodo.tipo==="semana"?resumenDosSemanas(S.periodo.sem):""}
   ${frenadas.length?`<div class="note w" style="margin-bottom:14px">
@@ -614,7 +624,17 @@ VIEWS.facturacion = () => {
       <div class="mf" style="border-top:1px solid var(--line)">
         <button class="btn ${sinT?"":"p"}" data-a="facturar" data-prop="${pid}" ${sinT?"disabled":""}>Generar factura</button></div>
     </div>`;
-  }).join(""):`<div class="card"><div class="empty">Nada por facturar</div></div>`}
+  }).join(""):(()=>{
+    const terminadas=S.wos.filter(w=>enPeriodo(w.fecha,S.periodo) && w.estado==="Completed");
+    const motivo = !terminadas.length
+      ? `No hay trabajos terminados en ${esc(periodoTexto(S.periodo))}. Prueba otra semana con las flechas ‹ › del selector.`
+      : pendientes.length||frenadas.length
+        ? `Hay ${terminadas.filter(w=>!w.facturada).length} trabajo(s) terminado(s), pero todavía no se pueden cobrar. Arriba, en «Por qué todavía no aparecen algunas WO», está el motivo de cada uno y qué hay que resolver.`
+        : `Todos los trabajos terminados de ${esc(periodoTexto(S.periodo))} ya están facturados. Míralos en «Facturas emitidas».`;
+    return `<div class="card"><div class="cp" style="text-align:center;padding:26px 18px">
+      <div style="font-weight:750;margin-bottom:4px">No hay nada listo para facturar en este período</div>
+      <div style="font-size:12px;color:var(--soft);max-width:520px;margin:0 auto">${motivo}</div></div></div>`;
+  })()}
 
   ${S.facturas.length?`<div class="card"><div class="chd"><h3>Facturas emitidas</h3></div>
     <table><thead><tr><th>Número</th><th>Propiedad</th><th class="num">Líneas</th><th>Emisión</th><th>Vence</th><th>Estado</th><th class="num">Total</th><th></th></tr></thead>
@@ -760,6 +780,7 @@ VIEWS.cobranza = () => {
   const vencidas=S.facturas.filter(facVencida);
   return `
   <div class="ph"><div><h2>Cobranza</h2><p>Pasados 30 días sin pago, queda «Vencida» y arranca la escalera: reminder → correo overdue → llamada.</p></div></div>
+  <div class="note" style="margin-bottom:14px"><b>Cómo leer esta vista:</b> «Emitida» todavía está dentro del plazo; «Vencida» ya requiere seguimiento; «Pagada» quedó cerrada. Abre <b>Gestionar cobranza</b> para ver el historial y el siguiente paso de cada factura.</div>
   <div class="kpis">
     <div class="kpi"><div class="l">Por cobrar</div><div class="v mono">${money(abiertas.reduce((a,f)=>a+f.total,0))}</div></div>
     <div class="kpi"><div class="l">Facturas abiertas</div><div class="v">${abiertas.length}</div></div>
