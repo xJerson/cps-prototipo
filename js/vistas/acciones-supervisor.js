@@ -9,7 +9,7 @@ VIEWS.supervision = () => {
     <div class="act"><button class="btn" data-a="verGustavoCel">Ver su celular</button></div></div>
   <div class="tabs">${[["campo",`De campo (${repPend().length})`],["ruta","Ruta del día"],
       ["devs",`Devoluciones (${devAbiertas().length})`],["diario","Reporte diario"],
-      ["revisar",`Seguimiento de calidad (${rev.length})`],
+      ["revisar",`Por revisar (${rev.length})`],
       ["insp",`Inspecciones (${insp.length})`],["calidad","Calidad por técnico"],["reporte","Resumen del día"]]
     .map(([k,n])=>`<button class="tab ${t===k?"on":""}" data-a="tab" data-t="${k}">${n}</button>`).join("")}</div>
   ${t==="campo"?vCampoRep():t==="ruta"?vRuta():t==="devs"?vDevoluciones():t==="diario"?vDiarioWeb()
@@ -443,7 +443,7 @@ function vRutaCalc(){
 /* UC-12 — aprobar O DEVOLVER, con la devolución medida por técnico (H-10) */
 function vRevisar(rev){
   return `
-  <div class="card"><div class="chd"><h3>Seguimiento de calidad</h3>
+  <div class="card"><div class="chd"><h3>Por revisar</h3>
     <span class="s">la visita no frena nómina ni facturación; Erika valida el expediente final</span></div>
     ${rev.length?`<table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Servicio</th><th>Técnico</th><th>Evidencia</th><th></th></tr></thead>
     <tbody>${rev.map(w=>`<tr class="${fl("wo:"+w.id)}"><td class="mono" style="font-weight:700">WO-${w.id}</td>
