@@ -395,7 +395,20 @@ let S = {
     {id:"AS1", fecha:"2026-08-11", prop:"P1", motivo:"Supervisar", nota:"Revisar el clean de A-204 antes de que llegue el manager",
      estado:"Pendiente", hora:null, quien:"Claudia"},
     {id:"AS2", fecha:"2026-08-11", prop:"P3", motivo:"Inspección para estimado", nota:"El manager pidió cotizar dos unidades más",
+     estado:"Pendiente", hora:null, quien:"Claudia"},
+    {id:"AS3", fecha:"2026-08-12", prop:"P2", motivo:"Supervisar", nota:"Cierre de limpieza profunda",
+     estado:"Pendiente", hora:null, quien:"Claudia"},
+    {id:"AS4", fecha:"2026-08-14", prop:"P3", motivo:"Inspección para estimado", nota:"Revisar pisos del edificio B",
      estado:"Pendiente", hora:null, quien:"Claudia"}
+  ],
+  /* Thalia pide la visita con fecha tentativa; Claudia la agenda en un día de la ruta de Gustavo. */
+  solicitudesSup:[
+    {id:"SS1", tipo:"Estimado", prop:"P2", unidad:"", fechaTentativa:"2026-08-13", nota:"El manager quiere cotizar pintura de pasillos",
+     estado:"Por agendar", pide:"Thalia", hora:"8:55", fecha:"2026-08-11", hist:[["8:55","Solicitud creada","Thalia"]]},
+    {id:"SS2", tipo:"Supervisión", prop:"P1", unidad:"", fechaTentativa:"2026-08-14", nota:"Revisar el trabajo terminado esta semana",
+     estado:"Por agendar", pide:"Thalia", hora:"9:10", fecha:"2026-08-11", hist:[["9:10","Solicitud creada","Thalia"]]},
+    {id:"SS3", tipo:"Estimado", prop:"P3", unidad:"", fechaTentativa:"2026-08-18", nota:"",
+     estado:"Por agendar", pide:"Thalia", hora:"9:25", fecha:"2026-08-11", hist:[["9:25","Solicitud creada","Thalia"]]}
   ],
   /* ── DEVOLUCIONES ─────────────────────────────────────────────────────
      Hasta ahora una devolucion era solo un estado de la Work Order que

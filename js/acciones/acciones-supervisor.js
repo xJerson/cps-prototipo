@@ -3,9 +3,11 @@ Object.assign(ACC, {
 
 
   /* ── AGENDA DE SUPERVISIÓN: Claudia arma el día de Gustavo ── */
-  agSupNueva: () => modal(`<div class="mh"><h3>Agregar parada a la ruta de Gustavo</h3>
+  agSupNueva: d => modal(`<div class="mh"><h3>Agregar parada a la ruta de Gustavo</h3>
       <p>Lo que hoy se le dice por teléfono cada mañana</p></div>
     <div class="mb">
+      <div class="fld"><label>Día de la visita <span class="req">*</span></label>
+        <input type="date" id="asF" value="${esc((d&&d.f)||HOY_SUP)}"></div>
       <div class="fld"><label>Propiedad <span class="req">*</span></label>
         <select id="asP">${S.propiedades.filter(p=>p.activa).map(p=>
           `<option value="${p.id}">${esc(p.nombre)} — ${esc(p.zona)}</option>`).join("")}</select></div>
@@ -18,20 +20,76 @@ Object.assign(ACC, {
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
       <button class="btn p" data-a="agSupOK">Agregar a su ruta</button></div>`),
   agSupOK: () => {
-    const pid=val("asP");
-    if(agendaHoy().some(a=>a.prop===pid)){
-      toast("Ya está en su ruta",`<b>${esc(P(pid).nombre)}</b> ya figura hoy. Si cambió el motivo, quita la parada y vuelve a agregarla.`,"w"); return; }
-    const a={id:"AS"+Date.now(), fecha:HOY_SUP, prop:pid, motivo:val("asM"), nota:val("asN"),
+    const pid=val("asP"), f=val("asF")||HOY_SUP, hoy=f===HOY_SUP;
+    if(S.agendaSup.some(a=>a.prop===pid && a.fecha===f)){
+      toast("Ya está en su ruta",`<b>${esc(P(pid).nombre)}</b> ya figura ${hoy?"hoy":"el "+esc(f)}. Si cambió el motivo, quita la parada y vuelve a agregarla.`,"w"); return; }
+    const a={id:"AS"+Date.now(), fecha:f, prop:pid, motivo:val("asM"), nota:val("asN"),
              estado:"Pendiente", hora:null, quien:S.usuario};
     S.agendaSup.push(a); flash("ags:"+a.id);
     cm();
-    toast("✓ Agregada a su ruta",`<b>${esc(P(pid).nombre)}</b> · ${esc(a.motivo)}. Le aparece en el celular al instante.`,"v");
-    noti("Nueva parada en tu ruta", `${P(pid).nombre} — ${a.motivo}${a.nota?": "+a.nota:""}`);
+    toast("✓ Agregada a su ruta",`<b>${esc(P(pid).nombre)}</b> · ${esc(a.motivo)}. ${hoy?"Le aparece en el celular al instante.":"Quedó agendada para el "+esc(f)+"."}`,"v");
+    if(hoy) noti("Nueva parada en tu ruta", `${P(pid).nombre} — ${a.motivo}${a.nota?": "+a.nota:""}`);
     render();
   },
   agSupQuita: d => { const a=by(S.agendaSup,d.id);
     S.agendaSup.splice(S.agendaSup.indexOf(a),1);
-    toast("Parada quitada",`<b>${esc(P(a.prop).nombre)}</b> ya no está en su ruta de hoy.`,"w"); render(); },
+    toast("Parada quitada",`<b>${esc(P(a.prop).nombre)}</b> ya no está en su ruta ${a.fecha===HOY_SUP?"de hoy":"del "+esc(a.fecha)}.`,"w"); render(); },
+
+  /* ── CALENDARIO DE GUSTAVO: Thalia pide, Claudia agenda y acomoda ── */
+  supCalNav: d => { S.supSem = +d.s; render(); },
+  supSolNueva: () => modal(`<div class="mh"><h3>Solicitar visita de Gustavo</h3>
+      <p>Claudia la agenda en alguna de sus rutas</p></div>
+    <div class="mb">
+      <div class="fld"><label>Tipo <span class="req">*</span></label>
+        <select id="ssT"><option>Estimado</option><option>Supervisión</option></select></div>
+      <div class="fld"><label>Propiedad <span class="req">*</span></label>
+        <select id="ssP">${S.propiedades.filter(p=>p.activa).map(p=>
+          `<option value="${p.id}">${esc(p.nombre)} — ${esc(p.zona)}</option>`).join("")}</select></div>
+      <div class="fld"><label>Fecha tentativa <span class="req">*</span></label>
+        <input type="date" id="ssF" value="${HOY_SUP}"></div>
+      <div class="fld"><label>Nota</label>
+        <input id="ssN" placeholder="Qué necesitas que vea o con quién hablar"></div>
+      <div class="note">La fecha es una sugerencia: <b>Claudia</b> decide el día final según su ruta.</div>
+    </div>
+    <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
+      <button class="btn p" data-a="supSolOK">Enviar solicitud</button></div>`),
+  supSolOK: () => {
+    if(marcaFalta(["ssF"])){ toast("Falta la fecha","Indica una fecha tentativa.","r"); return; }
+    const s={id:"SS"+Date.now(), tipo:val("ssT"), prop:val("ssP"), unidad:"", fechaTentativa:val("ssF"),
+             nota:val("ssN"), estado:"Por agendar", pide:S.usuario, hora:hora(), fecha:HOY_SUP,
+             hist:[[hora(),"Solicitud creada",S.usuario]]};
+    S.solicitudesSup.push(s); flash("sols:"+s.id);
+    cm();
+    toast("✓ Solicitud enviada",`<b>${esc(s.tipo)}</b> en ${esc(P(s.prop).nombre)}, tentativa <b>${esc(s.fechaTentativa)}</b>. Queda esperando que Claudia la agende.`,"v");
+    render();
+  },
+  supAgendar: d => {
+    if(S.usuario!=="Claudia"){ toast("Solo Claudia agenda","Ella decide en qué día de la ruta entra la visita.","w"); return; }
+    const s=by(S.solicitudesSup,d.id);
+    if(!s || s.estado!=="Por agendar") return;
+    const f=val("sag-"+s.id)||s.fechaTentativa;
+    if(!f){ toast("Falta el día","Elige la fecha en la que va Gustavo.","r"); return; }
+    const a={id:"AS"+Date.now(), fecha:f, prop:s.prop, motivo:s.tipo==="Estimado"?"Inspección para estimado":"Supervisar",
+             nota:s.nota, estado:"Pendiente", hora:null, quien:S.usuario, solicitud:s.id};
+    S.agendaSup.push(a);
+    Object.assign(s,{estado:"Agendada", agendadaPara:f, aprobo:S.usuario, horaAprob:hora()});
+    s.hist.push([hora(),"Agendada para el "+f,S.usuario]);
+    flash("ags:"+a.id);
+    toast("✓ Visita agendada",`<b>${esc(P(s.prop).nombre)}</b> · ${esc(a.motivo)} quedó en la ruta de Gustavo el <b>${esc(f)}</b>.`,"v");
+    render();
+  },
+  supMover: d => {
+    if(S.usuario!=="Claudia"){ toast("Solo Claudia acomoda","Ella decide en qué día va cada parada.","w"); return; }
+    const a=by(S.agendaSup,d.id), f=val("smv-"+d.id);
+    if(!a || !f) { toast("Falta el día","Elige la nueva fecha de la parada.","r"); return; }
+    if(f===a.fecha) return;
+    a.fecha=f;
+    const s=a.solicitud && by(S.solicitudesSup,a.solicitud);
+    if(s){ s.agendadaPara=f; s.hist.push([hora(),"Movida al "+f,S.usuario]); }
+    flash("ags:"+a.id);
+    toast("Parada movida",`<b>${esc(P(a.prop).nombre)}</b> ahora va el <b>${esc(f)}</b>.`,"v");
+    render();
+  },
 
   /* Gustavo marca llegada. No es para vigilarlo: es para que Claudia sepa si
      la ruta que le armó era realista o le puso siete paradas imposibles. */

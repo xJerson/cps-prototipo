@@ -285,12 +285,62 @@ function vPrevio(pid){
     Es el mismo problema de «no me consta lo que me estás diciendo», pero al revés.</div>`;
 }
 
+/* Calendario semanal de Gustavo: Thalia pide visitas, Claudia las agenda y las acomoda por día. */
+function vCalGustavo(){
+  const sem = S.supSem || 33, dias = diasDeSemana(sem);
+  const esClaudia = S.usuario==="Claudia";
+  const pend = (S.solicitudesSup||[]).filter(s=>s.estado==="Por agendar");
+  const hechas = (S.solicitudesSup||[]).filter(s=>s.estado!=="Por agendar");
+  const pilE = {"Visitada":"v","En camino":"a","No completada":"w","Pendiente":"g"};
+  const col = (f,i) => {
+    const paradas = S.agendaSup.filter(a=>a.fecha===f);
+    return `<div style="border:1px solid ${f===HOY_SUP?"var(--azul)":"var(--line)"};border-radius:9px;padding:9px;min-width:0">
+      <div style="font-size:10.5px;color:var(--faint);letter-spacing:.05em">${DIAS_SEM[i]}</div>
+      <div style="font-weight:700;font-size:12.5px;margin-bottom:6px">${esc(f.slice(5).split("-").reverse().join("/"))}${f===HOY_SUP?` <span class="pill a">hoy</span>`:""}</div>
+      ${paradas.map(a=>`<div class="${fl("ags:"+a.id)}" style="border:1px solid var(--line);border-radius:7px;padding:7px;margin-bottom:6px">
+        <div style="font-weight:650;font-size:12px">${esc(P(a.prop).nombre)}</div>
+        <div style="font-size:11px;color:var(--soft);margin:2px 0">${esc(a.motivo)}</div>
+        <span class="pill ${pilE[a.estado]||"g"}">${esc(a.estado==="Pendiente"?"pendiente":a.estado.toLowerCase())}</span>
+        ${esClaudia && a.estado==="Pendiente"?`<div style="display:flex;gap:4px;margin-top:6px">
+          <input type="date" id="smv-${a.id}" value="${a.fecha}" style="min-width:0;flex:1">
+          <button class="btn sm" data-a="supMover" data-id="${a.id}">Mover</button></div>`:""}
+      </div>`).join("") || `<div style="font-size:11px;color:var(--faint)">Sin paradas</div>`}
+      ${esClaudia?`<button class="btn sm" data-a="agSupNueva" data-f="${f}" style="margin-top:2px">+ Parada</button>`:""}
+    </div>`;
+  };
+  return `
+  <div class="card"><div class="chd"><h3>Calendario de Gustavo</h3>
+    <span class="s">Semana ${sem} · Thalia pide la visita, Claudia la agenda y la acomoda en su ruta</span>
+    <span class="r"><button class="btn sm" data-a="supCalNav" data-s="${sem-1}">← Anterior</button>
+      <button class="btn sm" data-a="supCalNav" data-s="${sem+1}">Siguiente →</button>
+      ${S.usuario!=="Gustavo"?`<button class="btn sm p" data-a="supSolNueva">Solicitar visita de Gustavo</button>`:""}</span></div>
+    <div class="cp" style="display:grid;grid-template-columns:minmax(0,3fr) minmax(240px,1fr);gap:14px;align-items:start">
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px">${dias.map(col).join("")}</div>
+      <div>
+        <div style="font-weight:700;font-size:12.5px;margin-bottom:7px">Solicitudes por agendar <span class="pill a">${pend.length}</span></div>
+        ${pend.map(s=>`<div class="${fl("sols:"+s.id)}" style="border:1px solid var(--line);border-radius:8px;padding:9px;margin-bottom:8px">
+          <div style="font-weight:650;font-size:12px">${esc(P(s.prop).nombre)} <span class="pill a">${esc(s.tipo)}</span></div>
+          <div style="font-size:11px;color:var(--soft);margin-top:3px">Fecha tentativa: <b>${esc(s.fechaTentativa)}</b> · pide ${esc(s.pide)}</div>
+          ${s.nota?`<div style="font-size:11px;color:var(--faint);margin-top:2px">${esc(s.nota)}</div>`:""}
+          ${esClaudia?`<div style="display:flex;gap:4px;margin-top:7px">
+            <input type="date" id="sag-${s.id}" value="${esc(s.fechaTentativa)}" style="min-width:0;flex:1">
+            <button class="btn sm p" data-a="supAgendar" data-id="${s.id}">Agendar</button></div>`
+          :`<div style="margin-top:6px"><span class="pill g">${esc(s.estado)}</span></div>`}
+        </div>`).join("") || `<div style="font-size:11.5px;color:var(--faint)">Nada pendiente.</div>`}
+        ${hechas.length?`<div style="font-size:11px;color:var(--faint);margin:6px 0 4px">Ya agendadas</div>
+          ${hechas.map(s=>`<div style="font-size:11.5px;margin-bottom:3px">${esc(P(s.prop).nombre)} · ${esc(s.tipo)} → <b>${esc(s.agendadaPara||"")}</b> <span class="pill v">${esc(s.estado)}</span></div>`).join("")}`:""}
+      </div>
+    </div>
+  </div>`;
+}
+
 /* UC-12b — «el sistema le arma la ruta del día, ordenadas por zona» */
 function vRuta(){
   const ag = agendaHoy();
   const hechas = ag.filter(a=>a.estado==="Visitada");
   const ruta = rutaGustavo();
   return `
+  ${vCalGustavo()}
   <div class="card"><div class="chd"><h3>Agenda de Gustavo — ${HOY_SUP}</h3>
     <span class="s">«Recibir agendamiento diario de Claudia» — el primer paso de su flujograma</span>
     <span class="r"><span class="pill ${hechas.length===ag.length&&ag.length?"v":"a"}">${hechas.length} de ${ag.length} visitadas</span>
