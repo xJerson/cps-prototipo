@@ -1,4 +1,5 @@
 "use strict";
+let ultimoDescDecidido = null;
 function asignarApprovalRequest(id, quien){
   if(!quien) return;
   const manual=by(S.excepciones,id);
@@ -254,6 +255,34 @@ Object.assign(ACC, {
 
   pagarTec: d => pagarNomina(d.tec),
   pagarSemana: () => pagarNomina(null),
+  /* Descuento por devolución: quien paga decide si se aplica o no. */
+  descAplicar: d => {
+    const x = by(S.descuentos,d.id);
+    if(!x || x.estado!=="Por decidir") return;
+    ultimoDescDecidido = x.id;
+    Object.assign(x,{estado:"Aplicado", decidio:S.usuario, horaDecision:hora(), fechaDecision:HOY_SUP, motivoDecision:""});
+    flash("desc:"+x.id);
+    toast("Descuento aplicado",`Se le descuenta <b>${money(x.monto)}</b> a <b>${esc(tecN(x.tec))}</b> en su pago de la semana ${x.semana}.`,"v"); render();
+  },
+  descNoAplicar: d => {
+    const x = by(S.descuentos,d.id);
+    if(!x || x.estado!=="Por decidir") return;
+    modal(`<div class="mh"><h3>No aplicar descuento</h3>
+      <p>${esc(tecN(x.tec))} · ${money(x.monto)} · WO-${x.wo}</p></div>
+    <div class="mb"><div class="fld"><label>Motivo <span class="req">*</span></label>
+      <input id="dnM" placeholder="Ej. no fue su culpa, el daño ya estaba"></div>
+      <div class="note">Queda registrado con tu nombre. El técnico no ve este descuento en su pago.</div></div>
+    <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="descNoAplicarOK" data-id="${x.id}">No aplicar</button></div>`);
+  },
+  descNoAplicarOK: d => {
+    const x = by(S.descuentos,d.id);
+    if(!x || x.estado!=="Por decidir"){ cm(); return; }
+    if(marcaFalta(["dnM"])){ toast("Falta el motivo","Escribe por qué no se aplica el descuento.","r"); return; }
+    ultimoDescDecidido = x.id;
+    Object.assign(x,{estado:"No aplicado", decidio:S.usuario, horaDecision:hora(), fechaDecision:HOY_SUP, motivoDecision:val("dnM").trim()});
+    flash("desc:"+x.id); cm();
+    toast("Descuento no aplicado",`A <b>${esc(tecN(x.tec))}</b> no se le descuenta <b>${money(x.monto)}</b>. Queda el motivo registrado.`,"w"); render();
+  },
 });
 /* Claudia: se puede marcar pagado por técnico; lo que le quede pendiente
    (Approval Request, Sub-WO, cliente) queda afuera y se paga después. */
@@ -268,7 +297,15 @@ function pagarNomina(tec){
     // incluía los adicionales de Sub-Work Order ya aprobados — se le pagaba
     // de más al técnico (vía comprobante) de lo que el registro decía.
     const extrasPago=extrasAprobadosDeWOs(ws);
-    const tot=ws.reduce((a,w)=>a+(egresoWO(w)||0),0) + extrasPago.reduce((a,x)=>a+(x.monto||0),0);
+    let tot=ws.reduce((a,w)=>a+(egresoWO(w)||0),0) + extrasPago.reduce((a,x)=>a+(x.monto||0),0);
+    /* Neto por técnico y solo con descuentos Aplicados (igual que la vista de Nómina). */
+    if(S.periodo.tipo==="semana"){
+      const tecs=[...new Set(ws.map(w=>w.tec).filter(Boolean).concat(extrasPago.map(tecExtra).filter(Boolean)))];
+      tot=tecs.reduce((a,t)=>{
+        const b=ws.filter(w=>w.tec===t).reduce((s,w)=>s+(egresoWO(w)||0),0)+extrasPago.filter(x=>tecExtra(x)===t).reduce((s,x)=>s+(x.monto||0),0);
+        return a+Math.max(0,b-totalDesc(t,S.periodo.sem));
+      },0);
+    }
     S.nomina.push({semana:S.semana, periodo:{...S.periodo}, tec:tec||null, wos:ws.map(w=>w.id), total:tot, quien:S.usuario, fecha:HOY_SUP, hora:hora()});
     ws.forEach(w=>{w.pagadaTec=true; w.hist.push([hora(),`Pagada al técnico en nómina — ${periodoTexto(S.periodo)}`,S.usuario]);});
     toast(tec?`✓ ${esc(tecN(tec))} marcado como pagado`:"✓ Nómina aprobada",

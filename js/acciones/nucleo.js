@@ -101,6 +101,10 @@ Object.assign(ACC, {
     const tot = ws.reduce((a,w)=>a+(egresoWO(w)||0),0);
     const extra = extrasAprobadosDeWOs(todas).filter(x=>tecExtra(x)===d.tec);
     const totExtra = extra.reduce((a,x)=>a+(x.monto||0),0);
+    /* Solo descuentos Aplicados, y solo en período «Semana» (se llevan por semana); nunca baja de cero. */
+    const descs = per.tipo==="semana" ? descDe(d.tec,per.sem) : [];
+    const totDesc = Math.min(tot+totExtra, descs.reduce((a,x)=>a+x.monto,0));
+    const neto = tot+totExtra-totDesc;
     modal(`<div class="mh"><h3>Comprobante de pago</h3>
       <p>${esc(tecN(d.tec))} · ${esc(perTxt)}</p></div>
     <div class="mb">
@@ -111,7 +115,7 @@ Object.assign(ACC, {
             <div style="font-size:11px;opacity:.85">Resumen de trabajo · ${esc(perTxt)}</div></div>
           <div style="margin-left:auto;text-align:right">
             <div style="font-size:10.5px;opacity:.85">Total a pagar</div>
-            <div class="mono" style="font-size:20px;font-weight:750">${money(tot+totExtra)}</div></div></div>
+            <div class="mono" style="font-size:20px;font-weight:750">${money(neto)}</div></div></div>
         <table><thead><tr><th>Fecha</th><th>Propiedad · Unidad</th><th>Servicio</th><th class="num">Pago</th></tr></thead>
         <tbody>${ws.map(w=>`<tr><td class="mono">${w.fecha.slice(5)}</td>
           <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td>
@@ -121,8 +125,11 @@ Object.assign(ACC, {
         ${extra.map(x=>`<tr style="background:var(--ambar-cl)"><td class="mono">—</td>
           <td colspan="2">Pago adicional aprobado · WO-${x.wo}<div style="font-size:10.5px;color:var(--ambar)">${esc(x.motivo.slice(0,70))}</div></td>
           <td class="num mono">${money(x.monto)}</td></tr>`).join("")}
+        ${descs.map(x=>`<tr style="background:var(--rojo-cl)"><td class="mono">—</td>
+          <td colspan="2">Descuento por devolución · WO-${x.wo}<div style="font-size:10.5px;color:var(--rojo)">${esc((x.motivo||"").slice(0,70))}</div></td>
+          <td class="num mono">−${money(x.monto)}</td></tr>`).join("")}
         <tr style="background:var(--surface-2);font-weight:750"><td colspan="3">Total ${esc(perTxt)}</td>
-          <td class="num mono" style="font-size:15px">${money(tot+totExtra)}</td></tr></tbody></table>
+          <td class="num mono" style="font-size:15px">${money(neto)}</td></tr></tbody></table>
       </div>
       <div class="note" style="margin-top:12px">El técnico ve este mismo desglose en su celular, en «Mi pago». Nunca ve lo que se le factura al cliente.</div>
     </div>

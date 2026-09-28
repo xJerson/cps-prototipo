@@ -126,6 +126,8 @@ const AUD = {
   cobLlamadaGuardar:{a:"Registró una llamada de cobranza", m:"Cobranza"},
   pagarSemana:{a:"Aprobó la nómina", m:"Nómina"},
   pagarTec:{a:"Marcó como pagado a un técnico", m:"Nómina"},
+  descAplicar:{a:"Aplicó un descuento por devolución", m:"Nómina"},
+  descNoAplicarOK:{a:"Decidió no aplicar un descuento por devolución", m:"Nómina"},
   movGuardar:{a:"Registró movimiento de inventario", m:"Inventario"},
   materialGuardar:{a:"Agregó un material a una Work Order", m:"Work Orders"},
   materialRecibo:{a:"Adjuntó comprobante de un material", m:"Work Orders"},
@@ -133,6 +135,8 @@ const AUD = {
   apruebaPermiso:{a:"Aprobó un permiso", m:"Disponibilidad"}
 };
 /* En las altas el identificador nace dentro de la acción: se lee después */
+/* El descuento recién decidido (lo fija la acción en acciones/nomina-facturacion.js). */
+const descRef = () => { const x=by(S.descuentos,ultimoDescDecidido); return x ? tecN(x.tec)+" · WO-"+x.wo : ""; };
 const AUD_POST = {
   woGuardar:   () => S.wos.length     ? "WO-"+S.wos[S.wos.length-1].id : "",
   propGuardar: () => S.propiedades.length ? S.propiedades[S.propiedades.length-1].nombre : "",
@@ -147,6 +151,8 @@ const AUD_POST = {
   movGuardar:  () => { const m=S.movs[S.movs.length-1]; return m? by(S.productos,m.prod).nombre : ""; },
   pagarSemana: () => periodoTexto(S.periodo),
   pagarTec:    () => { const n=S.nomina[S.nomina.length-1]; return n&&n.tec ? tecN(n.tec)+" · "+periodoTexto(S.periodo) : ""; },
+  descAplicar:     () => descRef(),
+  descNoAplicarOK: () => descRef(),
   excGuardar:  () => S.excepciones.length ? S.excepciones[S.excepciones.length-1].tipo : "",
   subwoFotoRef:  () => ultimoSubwoTocado!=null ? "WO-"+ultimoSubwoTocado : "",
   subwoFotoEvid: () => ultimoSubwoTocado!=null ? "WO-"+ultimoSubwoTocado : "",

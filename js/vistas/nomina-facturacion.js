@@ -495,24 +495,33 @@ VIEWS.nomina = () => {
     if(!ds.length) return "";
     return `<div class="card" style="border-color:var(--rojo)">
       <div class="chd" style="background:var(--rojo-cl)"><h3 style="color:var(--rojo)">Descuentos por devolución</h3>
-        <span class="s">${ds.length} línea(s) · se descuenta a quien hizo el trabajo que hubo que corregir</span></div>
+        <span class="s">${ds.length} línea(s)${ds.some(x=>x.estado==="Por decidir")?` · <b>${ds.filter(x=>x.estado==="Por decidir").length} por decidir</b>`:""} · los pendientes no se descuentan hasta que se decida</span></div>
       <table><thead><tr><th>Técnico</th><th>Motivo</th><th>Devolución</th><th>Touch-up</th>
-        <th>Evidencia</th><th class="num">Monto</th></tr></thead>
+        <th>Evidencia</th><th class="num">Monto</th><th>Decisión</th></tr></thead>
       <tbody>${ds.map(x=>{ const dv=DV(x.dev);
-        return `<tr><td style="font-weight:650">${esc(tecN(x.tec))}</td>
+        return `<tr class="${fl("desc:"+x.id)}"><td style="font-weight:650">${esc(tecN(x.tec))}</td>
           <td>${esc(x.motivo)}</td>
           <td>${dv?`${esc(P(dv.prop).nombre)} ${U(dv.unidad)?esc(U(dv.unidad).num):""}
                 <div style="font-size:10.5px;color:var(--faint)">${esc(dv.desc.slice(0,60))}</div>`:"—"}</td>
           <td class="mono">WO-${x.wo}</td>
           <td>${dv?`<span class="pill m">${(dv.lotesAntes||[]).reduce((t,l)=>t+l.n,0)} foto(s) del antes</span>`:"—"}</td>
-          <td class="num mono" style="color:var(--rojo)">−${money(x.monto)}
+          <td class="num mono" style="color:${x.estado==="Aplicado"?"var(--rojo)":"var(--faint)"}${x.estado==="No aplicado"?";text-decoration:line-through":""}">−${money(x.monto)}
             ${x.tope?`<div style="font-size:10px;color:var(--faint);font-weight:400">
-              la corrección costó ${money(x.montoReal)}<br>se limitó a lo que ganó</div>`:""}</td></tr>`;}).join("")}
+              la corrección costó ${money(x.montoReal)}<br>se limitó a lo que ganó</div>`:""}</td>
+          <td>${x.estado==="Por decidir"
+              ?`<span class="pill w">Por decidir</span>
+                <div style="display:flex;gap:6px;margin-top:6px">
+                  <button class="btn sm v" data-a="descAplicar" data-id="${x.id}">Aplicar descuento</button>
+                  <button class="btn sm" data-a="descNoAplicar" data-id="${x.id}">No aplicar</button></div>`
+              :`<span class="pill ${x.estado==="Aplicado"?"v":"g"}">${esc(x.estado)}</span>
+                ${x.decidio?`<div style="font-size:10.5px;color:var(--faint);margin-top:3px">${esc(x.decidio)} · ${esc(x.fechaDecision||"")} ${esc(x.horaDecision||"")}</div>`:""}
+                ${x.motivoDecision?`<div style="font-size:10.5px;color:var(--faint)">${esc(x.motivoDecision)}</div>`:""}`}</td></tr>`;}).join("")}
       </tbody></table>
       <div class="cp" style="border-top:1px solid var(--line)"><div class="tr" style="margin:0">
         Claudia: <i>«cada unidad tiene a su técnico responsable y él tiene que corregir su trabajo»</i>.
         Si no fue él a corregir, se le paga al que fue y se le descuenta a él el mismo monto.
-        El descuento nunca aparece sin la devolución que lo origina.</div></div>
+        El descuento nunca aparece sin la devolución que lo origina.
+        Solo los «Aplicado» restan del pago; «Por decidir» y «No aplicado» no.</div></div>
     </div>`;})()}
 
   ${Object.keys(porTec).length?`<div class="card"><div class="cp" style="display:flex;align-items:center;gap:12px">
@@ -532,7 +541,7 @@ VIEWS.nomina = () => {
           neto += Math.max(0, b-dd);
           aplicado += Math.min(b, dd);
         });
-        const total=S.descuentos.filter(x=>x.semana===S.periodo.sem).reduce((a,x)=>a+x.monto,0);
+        const total=S.descuentos.filter(x=>x.semana===S.periodo.sem && x.estado==="Aplicado").reduce((a,x)=>a+x.monto,0);
         const sinAplicar = total - aplicado;
         return total
           ? `<div class="mono" style="font-size:24px;font-weight:750">${money(neto)}</div>

@@ -1,6 +1,6 @@
 "use strict";
 /* ══════════ DATOS SEMILLA ══════════ */
-let ID = {p:100,u:200,c:300,t:400,w:1054,e:500,f:601,pr:700,mv:800,cl:900,ad:958,cm:960};
+let ID = {p:100,u:200,c:300,t:400,w:1061,e:500,f:605,pr:700,mv:800,cl:900,ad:958,cm:960};
 const nid = k => ++ID[k];
 /* Fotos semilla: no hay cámara real en el arranque del prototipo, pero la
    galería/miniatura necesita una URL de imagen real (no un contador ni
@@ -245,7 +245,11 @@ let S = {
      hist:[["8:00","Creada","Thalia"],["8:02","Asignada a Diego Ramírez","Thalia"],["9:05","Llegó a la propiedad","Diego"],["11:30","Terminó · 1 evidencia","Diego"],["11:50","Revisión operativa completada","Gustavo"],["12:10","Validada","Erika"],["13:00","Pagada al técnico en nómina","Erika"],["14:00","Facturada — INV-2026-1044","Erika"]]},
     /* Pagada, con su registro de pago (INV-2026-1045). */
     {id:1060,prop:"P1",unidad:"U9",cat:"Clean",serv:"Full clean",tec:"T1",estado:"Completed",semana:33,fecha:"2026-08-10",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T1",hora:"11:00"}],supervisada:true,validada:true,pagadaTec:true,facturada:true,cobrada:true,mats:[],notas:"",notasTec:"",
-     hist:[["8:00","Creada","Thalia"],["8:02","Asignada a Diego Ramírez","Thalia"],["9:05","Llegó a la propiedad","Diego"],["11:00","Terminó · 1 evidencia","Diego"],["11:20","Revisión operativa completada","Gustavo"],["11:40","Validada","Erika"],["12:00","Pagada al técnico en nómina — semana 33","Erika"],["12:30","Facturada — INV-2026-1045","Erika"],["15:00","Cobrada INV-2026-1045","Claudia"]]}
+     hist:[["8:00","Creada","Thalia"],["8:02","Asignada a Diego Ramírez","Thalia"],["9:05","Llegó a la propiedad","Diego"],["11:00","Terminó · 1 evidencia","Diego"],["11:20","Revisión operativa completada","Gustavo"],["11:40","Validada","Erika"],["12:00","Pagada al técnico en nómina — semana 33","Erika"],["12:30","Facturada — INV-2026-1045","Erika"],["15:00","Cobrada INV-2026-1045","Claudia"]]},
+    /* Touch-up de DV1 hecho por Andrés (no por Marcos, el responsable): origina el descuento DS-SEED1. */
+    {id:1061,prop:"P1",unidad:"U2",cat:"Paint",serv:"Touch up paint",tec:"T4",estado:"Completed",semana:33,fecha:"2026-08-11",horaProg:"14:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T4",hora:"15:30"}],supervisada:true,validada:true,pagadaTec:false,facturada:false,pago:60,mats:[],notas:"",notasTec:"",
+     touchup:true,facturable:false,devOrigen:"DV1",woOrigen:1041,tecOriginal:"T2",avance:100,
+     hist:[["8:55","Touch-up creado desde la devolución — no facturable","Gustavo Andrade"],["8:56","Asignado a Andrés Solís","Gustavo Andrade"],["15:30","Terminó · 1 evidencia","Andrés"],["15:45","Validada","Erika"]]}
   ],
   /* Hallazgo real encontrado en sitio (WO-1040, en progreso): Diego reportó
      la humedad desde su celular pero no pudo cargar la foto (mala señal).
@@ -425,8 +429,9 @@ let S = {
      causa:"Trabajo mal ejecutado por el técnico", responsable:"T2",
      prioridad:"Alta", fechaRep:"2026-08-09", fechaLimite:"2026-08-12",
      estado:"Abierta", lotesAntes:[{amb:"Baño",n:4}], lotesDespues:[],
-     verifica:null, quien:"T6",
-     hist:[["8:52","Devolución creada desde informe de supervisión","Gustavo Andrade"]]},
+     verifica:null, quien:"T6", touchup:1061,
+     hist:[["8:52","Devolución creada desde informe de supervisión","Gustavo Andrade"],
+           ["8:56","Se creó el touch-up WO-1061 para Andrés Solís","Gustavo Andrade"]]},
     /* Genera el touch-up WO-1051, del propio Diego corrigiendo su propia WO-1038. */
     {id:"DV2", prop:"P1", unidad:"U1", wo:1038, area:"Cocina",
      desc:"Faltó limpiar el interior del refrigerador y el microondas.",
@@ -452,7 +457,11 @@ let S = {
   /* Borradores de informe: Claudia pidio "Guardar borrador". Si entra a una
      unidad sin senal o lo interrumpen, no pierde lo que llevaba escrito. */
   borradores:[],
-  descuentos:[],
+  /* Ejemplo: Marcos hizo mal WO-1041, Andrés lo corrigió (WO-1061); Erika/Claudia decide si se descuenta. */
+  descuentos:[
+    {id:"DS-SEED1", tec:"T2", wo:1061, dev:"DV1", monto:60, montoReal:60, tope:false, semana:33, fecha:"2026-08-11", estado:"Por decidir",
+     motivo:"Corrección de Baño en la unidad A-211 — lo corrigió Andrés Solís"}
+  ],
   repDiario:[],
   phDev:null,      // devolución abierta en el celular
   phDiaId:null,    // si mira un reporte de otro día

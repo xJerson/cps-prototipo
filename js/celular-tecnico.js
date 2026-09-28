@@ -614,6 +614,7 @@ function servTouchup(prop, cat, unidadId, servOriginal){
    a manos del responsable. Nunca queda huerfano. */
 function aplicarDescuento(dv, w){
   if(!w || w.tec===dv.responsable) return null;     // la corrige el mismo: nada que descontar
+  if(S.descuentos.some(x=>x.dev===dv.id)) return null; // ya decidido: no se duplica
   const monto = egresoWO(w);
   /* Sin tarifa no hay monto, y un descuento perdido en silencio es peor que
      no descontar: se levanta excepcion para que alguien la resuelva. */
@@ -638,17 +639,20 @@ function aplicarDescuento(dv, w){
   if(ganoPorEse > 0 && monto > ganoPorEse){ montoFinal = ganoPorEse; tope = true; }
 
   const d = {id:"DS"+Date.now()+Math.floor(Math.random()*99), tec:dv.responsable,
-    wo:w.id, dev:dv.id, monto:montoFinal, montoReal:monto, tope, semana:w.semana, fecha:HOY_SUP,
+    wo:w.id, dev:dv.id, monto:montoFinal, montoReal:monto, tope, semana:w.semana, fecha:HOY_SUP, estado:"Por decidir",
     motivo:"Correcci\u00f3n de "+dv.area+" en "+(U(dv.unidad)?U(dv.unidad).num:"la unidad")+" — lo corrigi\u00f3 "+tecN(w.tec)
            +(tope?" (limitado a lo que gan\u00f3 por WO-"+dv.wo+")":"")};
   S.descuentos.push(d);
   return d;
 }
 function quitarDescuento(dv){
-  const i = S.descuentos.findIndex(x=>x.dev===dv.id);
+  /* Solo se retira si aún está por decidir: una decisión tomada queda como registro. */
+  const i = S.descuentos.findIndex(x=>x.dev===dv.id && x.estado==="Por decidir");
   if(i>-1) S.descuentos.splice(i,1);
 }
-const descDe    = (tec,sem) => S.descuentos.filter(x=>x.tec===tec && x.semana===sem);
+/* Solo los Aplicados restan plata; Por decidir y No aplicado nunca. */
+const descTodos = (tec,sem) => S.descuentos.filter(x=>x.tec===tec && x.semana===sem);
+const descDe    = (tec,sem) => descTodos(tec,sem).filter(x=>x.estado==="Aplicado");
 const totalDesc = (tec,sem) => descDe(tec,sem).reduce((a,x)=>a+x.monto,0);
 
 /* ── Helpers del reporte diario ── */
