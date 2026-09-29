@@ -23,13 +23,9 @@ function renderFon(){
      entren sin apretar. */
   $("#fanm").textContent = "Celular";
   $("#fasu").textContent = t.zona;
-  /* Claudia: "el técnico no debe ver [la WO] si no está confirmada porque es
-     posible que no quieran ir" — antes aparecía igual, con solo un aviso de
-     que la fecha podía moverse. Ahora una WO en Scheduled sin confirmCliente
-     directamente no entra en su agenda; en cuanto se confirma (pasa a
-     Confirmed) aparece sola, sin que nadie tenga que avisarle. */
-  const mias = S.wos.filter(w=>w.tec===t.id && !w.cobrada && w.estado!=="Canceled"
-    && !(w.estado==="Scheduled" && !w.confirmCliente));
+  /* La confirmación del cliente ayuda a coordinar, pero una WO asignada debe
+     seguir visible para el técnico: ocultarla era un bloqueo operativo. */
+  const mias = S.wos.filter(w=>w.tec===t.id && !w.cobrada && w.estado!=="Canceled");
   const subMias = subWOsDeTec(t.id).filter(a=>{
     const w=W(a.wo); return w && !w.cobrada;
   });
@@ -130,8 +126,9 @@ function renderFon(){
       <div style="margin-top:9px;padding-top:9px;border-top:1px solid var(--line)">
         ${dato("Servicio", w.serv)}
         ${w.ubic?dato("Dónde", w.ubic):""}
+        ${dato("Unit location", u.ubicacionUnidad)}
         ${dato("Dirección", p.dir)}
-        ${dato("Hora", w.horaProg)}
+        ${dato("Hora", w.horaFin?`${w.horaProg} – ${w.horaFin}`:w.horaProg)}
         ${dato("Occupancy", ocupacion)}
       </div></div>
 
@@ -290,7 +287,7 @@ function renderFon(){
              :w.nueva?`<div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--azul);margin-bottom:2px">NUEVO</div>`:""}
             <div class="dh">${esc(P(w.prop).nombre)}</div>
             <div class="ds">${esc(U(w.unidad).num)} · ${esc(w.serv)}</div>
-            <div class="ds" style="font-size:10px">${w.fecha}${w.horaProg?` · ${esc(w.horaProg)}`:""}</div></div>
+            <div class="ds" style="font-size:10px">${w.fecha}${w.horaProg?` · ${esc(w.horaFin?`${w.horaProg}–${w.horaFin}`:w.horaProg)}`:""}${!w.confirmCliente?" · client confirmation pending":""}</div></div>
           <span class="dtag" style="background:${col}22;color:${col};flex:none;height:fit-content">${esc(w.estado)}</span></div>
         ${a?`<div class="ds" style="margin-top:5px;color:var(--verde)">Llegaste ${a.horaReal} · ${esc(a.puntualidad)}</div>`:""}
         ${(w.fotosPrevias||[]).length?`<div class="ds" style="margin-top:5px;color:var(--azul);font-weight:700">📷 ${(w.fotosPrevias||[]).length} foto(s) para prepararte antes de ir</div>`:""}

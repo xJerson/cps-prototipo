@@ -315,42 +315,61 @@ function pagarNomina(tec){
 }
 Object.assign(ACC, {
   facturar: d => {
-    const todas=S.wos.filter(w=>enPeriodo(w.fecha,S.periodo)&&w.estado==="Completed"&&w.validada&&!w.facturada&&w.prop===d.prop&&puedeFacturar(w));
-    const bloqueadas=todas.filter(w=>woBloqueada(w.id));
-    const ws=todas.filter(w=>!woBloqueada(w.id));
-    if(!ws.length){ toast("🚫 No se puede facturar",
-      bloqueadas.length?"Todas las WO listas de esta propiedad tienen una excepción sin resolver.":"No hay Work Orders listas para facturar.","r"); return; }
-    if(ws.some(w=>ingresoWO(w)===null)){ toast("🚫 Hay líneas sin tarifa","No se factura con «NA».","r"); return; }
-    const ids=new Set(ws.map(w=>w.id));
-    const extras=S.adicionales.filter(a=>ids.has(a.wo) && a.estado==="Aprobado" && a.facturable && !a.facturada);
-    const extrasMisma=extras.filter(a=>!a.facturaSeparada), extrasSeparada=extras.filter(a=>a.facturaSeparada);
-    const conceptosBase=ws.map(w=>({tipo:"WO",wo:w.id,subwo:null,unidad:U(w.unidad).num,
-      descripcion:w.serv,cantidad:w.cant||1,importe:ingresoBaseWO(w)||0,evidencia:w.evid||0}));
-    const conceptoExtra=a=>({tipo:"Sub-WO",wo:a.wo,subwo:a.id,unidad:U(W(a.wo).unidad).num,
-      descripcion:a.concepto+(a.ubic?` · ${a.ubic}`:""),cantidad:cantSubWO(a),
-      importe:a.montoFactura!=null?a.montoFactura*(cantSubWO(a)/(a.cant||1)):(a.precio||0)*cantSubWO(a),evidencia:(a.fotosEvidArr||[]).length});
-    const creadas=[];
-    const crearFactura=(conceptos,separada=false)=>{
-      const num="INV-2026-"+String(1040+(++ID.f-600)).padStart(4,"0"), id="F"+ID.f;
-      const lineas=[...new Set(conceptos.map(c=>c.wo))];
-      const total=conceptos.reduce((n,c)=>n+(c.importe||0),0);
-      S.facturas.unshift({id,num,prop:d.prop,lineas,conceptos,total,separada,
-        emision:"2026-08-11",vence:"2026-09-10",estado:"Emitida",
-        pdf:num+".pdf",pdfHora:hora(),pdfQuien:S.usuario,seguimiento:[]});
-      creadas.push({id,num,total}); return id;
-    };
-    const facPrincipal=crearFactura(conceptosBase.concat(extrasMisma.map(conceptoExtra)));
-    extrasMisma.forEach(a=>{a.facturada=true;a.facturaId=facPrincipal;});
-    extrasSeparada.forEach(a=>{const fid=crearFactura([conceptoExtra(a)],true);a.facturada=true;a.facturaId=fid;});
-    flash(creadas.map(f=>"fac:"+f.id));
-    ws.forEach(w=>{ w.facturada=true; w.hist.push([hora(),`Facturada en ${creadas.filter(f=>by(S.facturas,f.id).lineas.includes(w.id)).map(f=>f.num).join(", ")}`,S.usuario]); });
-    const tot=creadas.reduce((n,f)=>n+f.total,0);
-    toast("✓ Factura generada y guardada",
-      `<b>${creadas.length} ${creadas.length===1?"factura":"facturas"}</b> · ${esc(P(d.prop).nombre)} · ${conceptosBase.length+extras.length} conceptos · ${money(tot)}.<br><br>`
-      + `El <b>PDF quedó guardado</b> con la factura. Puedes verlo, descargarlo o enviarlo al cliente `
-      + `cuando quieras — enviarlo es opcional.`
-      + (bloqueadas.length?`<br><br><b>${bloqueadas.length} WO(s) de esta propiedad quedaron afuera</b> por excepción sin resolver — se facturan aparte cuando se resuelva.`:""),"v"); render();
+    const prop=+d.prop;
+    if(!lineasFacturablesFactura(prop).length){
+      toast("No hay conceptos disponibles","Esta propiedad no tiene WO o Sub-WO validadas y sin facturar.","r"); return;
+    }
+    abrirBorradorFactura(prop);
   },
+  facBorradorCambiar: () => {
+    const b=S.facturaBorrador; if(!b) return;
+    b.limite=val("fbLimite");
+    b.lineas.forEach(l=>{
+      const id=idLineaBorrador(l.clave), sel=document.getElementById(id+"_sel");
+      if(!sel) return;
+      l.seleccionada=sel.checked;
+      l.nombre=val(id+"_nom"); l.descripcion=val(id+"_des");
+      l.precio=parseFloat(val(id+"_pre"))||0; l.cantidad=parseFloat(val(id+"_can"))||0;
+      l.importe=l.precio*l.cantidad;
+    });
+    modalBorradorFactura();
+  },
+  facBorradorAgregarLinea: () => {
+    ACC.facBorradorCambiar(); const b=S.facturaBorrador; if(!b) return;
+    const n=(b.lineas||[]).filter(l=>l.tipo==="Manual").length+1;
+    b.lineas.push({clave:"manual:"+Date.now()+":"+n,tipo:"Manual",wo:null,subwo:null,unidad:"—",nombre:"Adjustment",descripcion:"",precio:0,cantidad:1,importe:0,evidencia:0,fecha:HOY_SUP,seleccionada:true});
+    modalBorradorFactura();
+  },
+  facBorradorGuardar: () => {
+    ACC.facBorradorCambiar();
+    const b=S.facturaBorrador, conceptos=b&&b.lineas.filter(l=>l.seleccionada).map(l=>({...l,importe:(+l.precio||0)*(+l.cantidad||0)}));
+    if(!conceptos||!conceptos.length){ toast("Elige un concepto","Selecciona al menos una WO o Sub-WO.","r"); return; }
+    let f=b.id&&by(S.facturas,b.id);
+    if(f){
+      (f.conceptos||[]).forEach(c=>{
+        if(c.tipo==="WO"){const w=W(c.wo); if(w) w.facturada=false;}
+        else {const a=by(S.adicionales,c.subwo); if(a){a.facturada=false; delete a.facturaId;}}
+      });
+      f.conceptos=conceptos;
+    } else {
+      const num="INV-2026-"+String(1040+(++ID.f-600)).padStart(4,"0"), id="F"+ID.f;
+      f={id,num,prop:b.prop,conceptos,emision:"2026-08-11",vence:"2026-09-10",estado:"Borrador",
+        pdf:num+".pdf",pdfHora:hora(),pdfQuien:S.usuario,seguimiento:[]};
+      S.facturas.unshift(f);
+    }
+    f.lineas=[...new Set(conceptos.map(c=>c.wo).filter(Boolean))]; f.limite=b.limite||null;
+    f.total=conceptos.reduce((n,c)=>n+(c.importe||0),0);
+    conceptos.forEach(c=>{
+      if(c.tipo==="WO"){
+        const w=W(c.wo); if(w){w.facturada=true; w.hist.push([hora(),`Incluida en borrador ${f.num}`,S.usuario]);}
+      } else {
+        const a=by(S.adicionales,c.subwo); if(a){a.facturada=true; a.facturaId=f.id;}
+      }
+    });
+    flash("fac:"+f.id); S.facturaBorrador=null; cm();
+    toast("✓ Borrador guardado",`<b>${esc(f.num)}</b> · ${conceptos.length} concepto(s) · ${money(f.total)}. Puedes editarlo antes de enviarlo al cliente.`,"v"); render();
+  },
+  facEditarBorrador: d => { const f=by(S.facturas,d.id); if(f&&f.estado==="Borrador") abrirBorradorFactura(f.prop,f.id); },
   /* «Revisar Work Order y verificar: servicios realizados, adicionales, materiales, observaciones»
      Erika valida antes de que se pueda facturar o pagar (Proceso de Facturación y Nómina) */
   validarModal: d => {
@@ -447,20 +466,27 @@ Object.assign(ACC, {
     toast("✓ Factura enviada",`<b>${esc(f.num)}</b> · ${money(f.total)} a ${esc(f.mail||"—")}. El plazo de cobranza corre desde hoy: vence ${esc(f.vence)}.`,"v");
     render();
   },
-  cobrar: d => {
-    const f=by(S.facturas,d.id); f.estado="Pagada"; flash("fac:"+f.id);
+  cobrar: d => modalRegistrarPago(d.id),
+  cobrarGuardar: d => {
+    const f=by(S.facturas,d.id), monto=parseFloat(val("cpMonto")), totalPrev=(S.pagos||[]).filter(p=>p.factura===f.id).reduce((n,p)=>n+(+p.monto||0),0), pendiente=Math.max(0,f.total-totalPrev);
+    if(!(monto>0)||monto>pendiente+.009){ toast("Monto inválido",`El pago debe ser mayor a cero y no superar ${money(pendiente)}.`,"r"); return; }
+    S.pagos.push({id:"PG"+(S.pagos.length+1),factura:f.id,monto,medio:val("cpMedio"),referencia:val("cpRef"),fecha:val("cpFecha"),evidencia:!!val("cpEvid"),quien:S.usuario,nota:val("cpNota")});
+    const recibido=totalPrev+monto, cerrado=recibido>=f.total-.009;
+    f.estado=cerrado?"Pagada":"Enviada"; flash("fac:"+f.id);
     f.seguimiento=f.seguimiento||[];
-    f.seguimiento.push({tipo:"pago",fecha:HOY_SUP,hora:hora(),quien:S.usuario});
-    f.seguimiento.push({tipo:"cierre",fecha:HOY_SUP,hora:hora(),quien:S.usuario});
+    f.seguimiento.push({tipo:"pago",fecha:val("cpFecha"),hora:hora(),quien:S.usuario,nota:`${money(monto)} · ${val("cpMedio")}${val("cpRef")?" · "+val("cpRef"):""}${val("cpEvid")?" · evidence attached":""}`});
+    if(cerrado) f.seguimiento.push({tipo:"cierre",fecha:val("cpFecha"),hora:hora(),quien:S.usuario});
     let quedanAbiertas=0;
-    f.lineas.forEach(id=>{const w=W(id); if(w){
-      const queda=S.facturas.some(otra=>otra.id!==f.id && otra.estado!=="Pagada" && (otra.lineas||[]).includes(id));
+    const bases=(f.conceptos||[]).filter(c=>c.tipo==="WO").map(c=>c.wo);
+    (bases.length?bases:(f.lineas||[])).forEach(id=>{const w=W(id); if(w){
+      const queda=S.facturas.some(otra=>otra.id!==f.id && otra.estado!=="Pagada"
+        && ((otra.conceptos||[]).some(c=>c.tipo==="WO"&&c.wo===id) || (!(otra.conceptos||[]).length&&(otra.lineas||[]).includes(id))));
       if(queda) quedanAbiertas++;
-      if(!queda) w.cobrada=true;
-      w.hist.push([hora(),`Cobrada ${f.num}${queda?" · quedan otras facturas abiertas":""}`,S.usuario]);
+      if(cerrado&&!queda) w.cobrada=true;
+      w.hist.push([hora(),`${cerrado?"Cobrada":"Pago parcial registrado en"} ${f.num}${queda?" · quedan otras facturas abiertas":""}`,S.usuario]);
     }});
     cm();
-    toast("✓ Pago registrado",`${esc(f.num)} · ${money(f.total)}. ${quedanAbiertas?"La factura quedó cerrada; la Work Order seguirá abierta hasta cobrar sus otras facturas.":"Invoice y Work Orders quedaron cerrados."}`,"v"); render();
+    toast("✓ Pago registrado",cerrado?`${esc(f.num)} quedó pagada. ${quedanAbiertas?"La Work Order seguirá abierta hasta cobrar sus otras facturas.":"Invoice y Work Orders quedaron cerrados."}`:`${esc(f.num)} tiene ${money(f.total-recibido)} pendiente. El pago parcial quedó con su comprobante.`,"v"); render();
   },
   cobGestionar: d => modalCobranza(d.id),
   /* Escalera de cobranza del flujograma: Reminder → Correo Overdue → Llamada.

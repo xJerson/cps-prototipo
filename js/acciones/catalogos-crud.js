@@ -115,8 +115,8 @@ Object.assign(ACC, {
     const tipoU = val("uTipo")||v("tipo")||"Residencial";
     modal(`<div class="mh"><h3>${u?"Editar unidad "+esc(u.num):"Nueva unidad"}</h3><p>${esc(P(pid).nombre)}</p></div>
     <div class="mb">
-      <div class="note" style="margin-bottom:12px"><b>Location:</b> ${P(pid).zona?esc(P(pid).zona):'<span style="color:var(--faint)">sin definir en la propiedad</span>'}
-        <span style="font-size:10.5px;color:var(--faint)"> — viene de la propiedad, no se repite acá</span></div>
+      <div class="note" style="margin-bottom:12px"><b>Property area:</b> ${P(pid).zona?esc(P(pid).zona):'<span style="color:var(--faint)">sin definir en la propiedad</span>'}
+        <span style="font-size:10.5px;color:var(--faint)"> — la zona es de la propiedad; la ubicación exacta se guarda abajo por unidad</span></div>
       <div class="fg c3">
         <div class="fld" style="margin-bottom:0"><label>Building <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— si aplica</span></label>
           <input id="uBld" placeholder="A, B…" value="${dr?esc(dr.building||""):(u?esc(u.building||""):"")}"></div>
@@ -135,6 +135,8 @@ Object.assign(ACC, {
             <option ${(dr?dr.ocupacion:(u?u.ocupacion:""))==="Vacant"?"selected":""}>Vacant</option></select>
           <div style="font-size:10.5px;color:var(--faint);margin-top:4px">El técnico verá este dato antes de entrar. Si está ocupada, deberá tocar y esperar autorización o acompañamiento.</div></div>
       </div>
+      <div class="fld"><label>Unit Location</label><input id="uLoc" placeholder="Ej. edificio A, lado este / entrada trasera" value="${dr?esc(dr.ubicacionUnidad||""):(u?esc(u.ubicacionUnidad||""):"")}">
+        <div style="font-size:10.5px;color:var(--faint);margin-top:4px">Referencia específica de esta unidad. La zona de la propiedad se mantiene por separado.</div></div>
       ${tipoU==="Residencial"?`<div class="fg c2">
         <div class="fld" style="margin-bottom:0"><label>Bedrooms <span class="req">*</span></label>
           <input id="uBedrooms" type="number" min="0" class="mono" placeholder="0 = Studio" value="${dr&&dr.bedrooms!=null?dr.bedrooms:(u&&u.bedrooms!=null?u.bedrooms:"")}"></div>
@@ -158,20 +160,20 @@ Object.assign(ACC, {
   uniCampoTipo: d => {
     S.uniDraft = {building:val("uBld"), unidadNum:val("uN"), pisos:val("uP"), tipo:val("uTipo"),
       bedrooms:val("uTipo")==="Residencial"?parseInt(val("uBedrooms"))||0:null,
-      bathrooms:parseInt(val("uBathrooms"))||null, ocupacion:val("uOcup")};
+      bathrooms:parseInt(val("uBathrooms"))||null, ocupacion:val("uOcup"), ubicacionUnidad:val("uLoc")};
     ACC.uniNueva({id:d.id||"", prop:d.prop, keep:true});
   },
   uniDetAgregar: d => {
     S.uniDraft = {building:val("uBld"), unidadNum:val("uN"), pisos:val("uP"), tipo:val("uTipo"),
       bedrooms:val("uTipo")==="Residencial"?parseInt(val("uBedrooms"))||0:null,
-      bathrooms:parseInt(val("uBathrooms"))||null, ocupacion:val("uOcup")};
+      bathrooms:parseInt(val("uBathrooms"))||null, ocupacion:val("uOcup"), ubicacionUnidad:val("uLoc")};
     S.uniDetalle.push({tipo:val("uDetTipo"), cantidad:parseInt(val("uDetCant"))||1});
     ACC.uniNueva({id:d.id||"", prop:d.prop, keep:true});
   },
   uniDetQuitar: d => {
     S.uniDraft = {building:val("uBld"), unidadNum:val("uN"), pisos:val("uP"), tipo:val("uTipo"),
       bedrooms:val("uTipo")==="Residencial"?parseInt(val("uBedrooms"))||0:null,
-      bathrooms:parseInt(val("uBathrooms"))||null, ocupacion:val("uOcup")};
+      bathrooms:parseInt(val("uBathrooms"))||null, ocupacion:val("uOcup"), ubicacionUnidad:val("uLoc")};
     S.uniDetalle.splice(+d.i,1);
     ACC.uniNueva({id:d.id||"", prop:d.prop, keep:true});
   },
@@ -183,7 +185,7 @@ Object.assign(ACC, {
     const bld=val("uBld"), uNumR=val("uN");
     const bedroomsU = tipoU==="Residencial"?parseInt(val("uBedrooms"))||0:null;
     const datos = {building:bld, unidadNum:uNumR, num:uNumComp(bld,uNumR),
-      tipo:tipoU, bedrooms:bedroomsU, bathrooms:parseInt(val("uBathrooms"))||null, ocupacion:val("uOcup")||"Occupied",
+      tipo:tipoU, bedrooms:bedroomsU, bathrooms:parseInt(val("uBathrooms"))||null, ocupacion:val("uOcup")||"Occupied", ubicacionUnidad:val("uLoc").trim(),
       rooms:roomsDesde(tipoU,bedroomsU),pisos:parseInt(val("uP"))||null,detalle:S.uniDetalle.slice()};
     S.uniDetalle=[]; S.uniDraft=null;
     if(yo) return guardarEdicion(yo, datos, "Propiedades", P(yo.prop).nombre+" · unidad "+yo.num, null, "uni:"+yo.id);

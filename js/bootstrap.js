@@ -59,6 +59,8 @@ const AUD = {
   gNoCompletaOK:{a:"Registró una parada no completada", m:"Supervisión"},
   woAvanceOK:{a:"Registró el avance de un trabajo", m:"Work Orders"},
   progOK:{a:"Coordinó la fecha con el cliente", m:"Programación"},
+  agendaCerrarDia:{a:"Cerró agendamiento y generó confirmaciones", m:"Programación"},
+  agendaConfirmacionReenviar:{a:"Reenvió una confirmación de agendamiento", m:"Programación"},
   woDetenerOK:{a:"Detuvo un trabajo", m:"Work Orders"},
   woReanudar:{a:"Reanudó un trabajo detenido", m:"Work Orders"},
   gDiaAbrir:{a:"Abrió su reporte del día", m:"Supervisión"},

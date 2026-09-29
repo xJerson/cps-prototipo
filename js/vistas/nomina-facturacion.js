@@ -556,6 +556,63 @@ VIEWS.nomina = () => {
 };
 
 /* ── FACTURACIÓN ── */
+/* Erika no conoce la agrupación al agendar. Estas líneas viven hasta que ella
+   arma el borrador por propiedad; una WO o Sub-WO no se pierde por quedar
+   fuera de la factura de esta semana. */
+function lineasFacturablesFactura(prop, excluirFactura){
+  const reservadas=new Set(S.facturas.filter(f=>f.estado==="Borrador"&&f.id!==excluirFactura)
+    .flatMap(f=>(f.conceptos||[]).map(c=>c.clave)).filter(Boolean));
+  const lineas=[];
+  S.wos.filter(w=>w.prop===prop&&w.estado==="Completed"&&w.validada&&!w.facturada
+      &&!subWOsPendientesDeWO(w.id).length&&!clienteRevisionPendienteDeWO(w.id)
+      &&puedeFacturar(w)&&!woBloqueada(w.id)&&ingresoBaseWO(w)!==null)
+    .forEach(w=>lineas.push({clave:"wo:"+w.id,tipo:"WO",wo:w.id,subwo:null,unidad:U(w.unidad).num,
+      nombre:w.serv,descripcion:"",precio:ingresoBaseWO(w)/(w.cant||1),cantidad:w.cant||1,
+      importe:ingresoBaseWO(w)||0,evidencia:w.evid||0,fecha:w.fecha,seleccionada:enPeriodo(w.fecha,S.periodo)}));
+  S.adicionales.filter(a=>a.estado==="Aprobado"&&a.facturable&&!a.facturada&&W(a.wo)
+      &&W(a.wo).prop===prop&&W(a.wo).validada&&a.estadoTrabajo!=="Canceled")
+    .forEach(a=>{
+      const cant=cantSubWO(a), total=a.montoFactura!=null?a.montoFactura*(cant/(a.cant||1)):(a.precio||0)*cant;
+      lineas.push({clave:"sub:"+a.id,tipo:"Sub-WO",wo:a.wo,subwo:a.id,unidad:U(W(a.wo).unidad).num,
+        nombre:a.concepto,descripcion:a.ubic||"",precio:cant?total/cant:total,cantidad:cant,
+        importe:total,evidencia:(a.fotosEvidArr||[]).length,fecha:fechaSubWO(a),seleccionada:enPeriodo(fechaSubWO(a),S.periodo)});
+    });
+  return lineas.filter(l=>!reservadas.has(l.clave));
+}
+function abrirBorradorFactura(prop, facturaId){
+  const existente=facturaId&&by(S.facturas,facturaId);
+  const actuales=existente?(existente.conceptos||[]).map(c=>({...c,seleccionada:true})):[];
+  const porClave=new Map(actuales.map(l=>[l.clave,l]));
+  lineasFacturablesFactura(prop,facturaId).forEach(l=>{if(!porClave.has(l.clave)) porClave.set(l.clave,l);});
+  S.facturaBorrador={id:existente?existente.id:null,prop,lineas:[...porClave.values()],limite:existente?existente.limite||"":""};
+  modalBorradorFactura();
+}
+function idLineaBorrador(clave){ return "fb_"+String(clave).replace(/[^a-z0-9]/gi,"_"); }
+function modalBorradorFactura(){
+  const b=S.facturaBorrador, p=P(b.prop);
+  const lineas=b.lineas||[], seleccionadas=lineas.filter(l=>l.seleccionada);
+  const total=seleccionadas.reduce((n,l)=>n+(+l.precio||0)*(+l.cantidad||0),0);
+  const limite=parseFloat(b.limite);
+  modal(`<div class="mh"><h3>${b.id?"Editar borrador":"Preparar factura"}</h3><p>${esc(p.nombre)} · selecciona, junta o separa conceptos antes de enviar.</p></div>
+  <div class="mb">
+    <div class="note" style="margin-bottom:12px">El total se calcula solo. Si el cliente tiene un límite de aprobación, escríbelo para revisarlo; no bloquea el envío porque Erika decide cómo separar las facturas.</div>
+    <div class="fg c2"><div class="fld"><label>Límite de aprobación <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label>
+      <input id="fbLimite" data-a="facBorradorCambiar" type="number" min="0" step="0.01" value="${esc(b.limite||"")}" placeholder="Ej. 2500.00"></div>
+      <div class="fld"><label>Total seleccionado</label><div class="note ${limite>0&&total>limite?"w":"v"}" style="margin:0"><b class="mono">${money(total)}</b>${limite>0?` · ${total>limite?"supera":"dentro de"} ${money(limite)}`:" · sin límite configurado"}</div></div></div>
+    ${lineas.length?`<table style="font-size:11.5px"><thead><tr><th></th><th>Origen</th><th>Nombre</th><th>Descripción</th><th class="num">Precio</th><th class="num">Cant.</th><th class="num">Importe</th></tr></thead><tbody>
+      ${lineas.map(l=>{const id=idLineaBorrador(l.clave), imp=(+l.precio||0)*(+l.cantidad||0); return `<tr style="${l.seleccionada?"":"opacity:.55"}">
+        <td><input id="${id}_sel" data-a="facBorradorCambiar" type="checkbox" ${l.seleccionada?"checked":""}></td>
+        <td class="mono">${l.tipo==="Manual"?"Manual adjustment":`WO-${l.wo}${l.tipo==="Sub-WO"?" · Sub-WO":""}`}<div style="color:var(--faint)">${esc(l.fecha||"—")}</div></td>
+        <td><input id="${id}_nom" data-a="facBorradorCambiar" value="${esc(l.nombre||"")}" style="min-width:110px"></td>
+        <td><input id="${id}_des" data-a="facBorradorCambiar" value="${esc(l.descripcion||"")}" style="min-width:100px"></td>
+        <td><input id="${id}_pre" data-a="facBorradorCambiar" type="number" min="0" step="0.01" value="${esc(l.precio||0)}" style="width:82px;text-align:right"></td>
+        <td><input id="${id}_can" data-a="facBorradorCambiar" type="number" min="0" step="0.01" value="${esc(l.cantidad||0)}" style="width:60px;text-align:right"></td>
+        <td class="num mono">${money(imp)}</td></tr>`;}).join("")}
+    </tbody></table>`:`<div class="empty">No hay conceptos disponibles para esta propiedad.</div>`}
+    <button class="btn sm" data-a="facBorradorAgregarLinea">+ Agregar línea manual</button>
+    <div class="tr">Para dividir una factura, guarda este borrador con una parte de las líneas; luego prepara otra factura con las líneas restantes. Las líneas no seleccionadas quedan disponibles para una semana posterior.</div>
+  </div><div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="facBorradorGuardar" ${seleccionadas.length?"":"disabled"}>Guardar borrador</button></div>`,true);
+}
 VIEWS.facturacion = () => {
   /* Erika valida el expediente final. La revisión de calidad puede ocurrir
      después y nunca frena una nómina o una factura ya correctamente validada.
@@ -584,8 +641,8 @@ VIEWS.facturacion = () => {
     <div style="font-weight:750;align-self:center;min-width:110px">Qué hacer aquí</div>
     ${[["1","Elige la semana","Con el selector de abajo o las flechas ‹ ›."],
        ["2","Revisa las propiedades","Cada tarjeta junta los trabajos listos para cobrar."],
-       ["3","Toca «Generar factura»","Se crea la factura de esa propiedad con su PDF."],
-       ["4","Toca «Enviar al cliente»","En «Facturas emitidas», al final. El pago se sigue en Cobranza."]]
+       ["3","Toca «Preparar factura»","Elige las WO y Sub-WO que irán juntas; el total se recalcula."],
+       ["4","Guarda el borrador y envíalo","Las líneas restantes pueden ir en otra factura o una semana posterior."]]
       .map(([n,t,d])=>`<div style="flex:1;min-width:150px;display:flex;gap:8px">
         <div style="width:22px;height:22px;border-radius:99px;background:var(--azul);color:#fff;font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:center;flex:none">${n}</div>
         <div><div style="font-weight:700;font-size:12.5px">${t}</div><div style="font-size:11px;color:var(--faint)">${d}</div></div></div>`).join("")}
@@ -625,11 +682,11 @@ VIEWS.facturacion = () => {
         ${S.adicionales.filter(a=>a.wo===w.id&&a.estado==="Aprobado"&&a.facturable&&!a.facturada).map(a=>`<tr style="background:var(--azul-cl)">
           <td class="mono">↳ Sub-WO</td><td>${esc(U(w.unidad).num)}</td><td>${esc(a.concepto)}${a.ubic?` · ${esc(a.ubic)}`:""}</td>
           <td>${esc(tecN(tecSubWO(a)))}</td><td><span class="pill ${a.fotosEvidArr&&a.fotosEvidArr.length?"v":"w"}">${(a.fotosEvidArr||[]).length} foto(s)</span></td>
-          <td class="num mono">${money(a.montoFactura!=null?a.montoFactura*(cantSubWO(a)/(a.cant||1)):(a.precio||0)*cantSubWO(a))}<div style="font-size:10px;color:var(--faint)">${a.facturaSeparada?"factura separada":"misma factura"}</div></td></tr>`).join("")}`).join("")}
+          <td class="num mono">${money(a.montoFactura!=null?a.montoFactura*(cantSubWO(a)/(a.cant||1)):(a.precio||0)*cantSubWO(a))}<div style="font-size:10px;color:var(--faint)">se elige en el borrador</div></td></tr>`).join("")}`).join("")}
       </tbody></table>
       ${sinT?`<div class="cp" style="border-top:1px solid var(--line)"><div class="note w" style="margin:0"><b>${sinT} línea sin tarifa.</b> Resuélvela en Approval Requests antes de facturar.</div></div>`:""}
       <div class="mf" style="border-top:1px solid var(--line)">
-        <button class="btn ${sinT?"":"p"}" data-a="facturar" data-prop="${pid}" ${sinT?"disabled":""}>Generar factura</button></div>
+        <button class="btn ${sinT?"":"p"}" data-a="facturar" data-prop="${pid}" ${sinT?"disabled":""}>Preparar factura</button></div>
     </div>`;
   }).join(""):(()=>{
     const terminadas=S.wos.filter(w=>enPeriodo(w.fecha,S.periodo) && w.estado==="Completed");
@@ -643,16 +700,16 @@ VIEWS.facturacion = () => {
       <div style="font-size:12px;color:var(--soft);max-width:520px;margin:0 auto">${motivo}</div></div></div>`;
   })()}
 
-  ${S.facturas.length?`<div class="card"><div class="chd"><h3>Facturas emitidas</h3></div>
+  ${S.facturas.length?`<div class="card"><div class="chd"><h3>Borradores y facturas emitidas</h3></div>
     <table><thead><tr><th>Número</th><th>Propiedad</th><th class="num">Líneas</th><th>Emisión</th><th>Vence</th><th>Estado</th><th class="num">Total</th><th></th></tr></thead>
     <tbody>${S.facturas.map(f=>`<tr class="${fl("fac:"+f.id)}"><td class="mono" style="font-weight:700">${esc(f.num)}</td><td>${esc(P(f.prop).nombre)}</td>
       <td class="num mono">${(f.conceptos||f.lineas).length}</td><td class="mono">${f.emision}</td><td class="mono">${f.vence}</td>
       <td><span class="pill ${f.estado==="Pagada"?"v":facVencida(f)?"r":f.estado==="Emitida"?"g":"a"}">${esc(facEstadoTexto(f))}</span></td>
       <td class="num mono" style="font-weight:700">${money(f.total)}</td>
       <td style="text-align:right;white-space:nowrap">
-        <button class="btn sm" data-a="facPDF" data-id="${f.id}">Ver PDF</button>
-        <button class="btn sm" data-a="facDescargar" data-id="${f.id}">Descargar</button>
-        ${f.estado==="Emitida"
+        ${f.estado==="Borrador"?`<button class="btn sm p" data-a="facEditarBorrador" data-id="${f.id}">Editar borrador</button>`:`<button class="btn sm" data-a="facPDF" data-id="${f.id}">Ver PDF</button>
+        <button class="btn sm" data-a="facDescargar" data-id="${f.id}">Descargar</button>`}
+        ${["Emitida","Borrador"].includes(f.estado)
           ? `<button class="btn sm p" data-a="facEnviar" data-id="${f.id}">Enviar al cliente</button>`
           : `<button class="btn sm" data-a="facVer" data-id="${f.id}">Detalle</button>`}
         ${f.pdf?`<div style="font-size:10px;color:var(--faint);margin-top:3px">📎 ${esc(f.pdf)} · guardado ${esc(f.pdfHora||"")}</div>`:""}
@@ -664,7 +721,11 @@ VIEWS.facturacion = () => {
 function conceptosFactura(f){
   if(f.conceptos) return f.conceptos;
   return f.lineas.map(id=>W(id)).filter(Boolean).map(w=>({tipo:"WO",wo:w.id,unidad:U(w.unidad).num,
-    descripcion:w.serv,cantidad:w.cant||1,importe:ingresoWO(w)||0,evidencia:w.evid||0}));
+    nombre:w.serv,descripcion:"",cantidad:w.cant||1,importe:ingresoWO(w)||0,evidencia:w.evid||0}));
+}
+function textoConceptoFactura(x){
+  const nombre=x.nombre||x.descripcion||"—", detalle=x.nombre&&x.descripcion&&x.descripcion!==x.nombre?x.descripcion:"";
+  return `${esc(nombre)}${detalle?`<div class="s">${esc(detalle)}</div>`:""}`;
 }
 /* ── EL PDF DE LA FACTURA ─────────────────────────────────
    Abre el documento en una ventana aparte y lanza la impresión: el navegador
@@ -675,9 +736,9 @@ function abrirPDF(fid, imprimir){
   const p = P(f.prop), c = CLI(p.cliente);
   const conceptos=conceptosFactura(f);
   const filas = conceptos.map(x => `<tr>
-      <td class="m">WO-${x.wo}${x.tipo==="Sub-WO"?" · Sub-WO":""}</td>
+      <td class="m">${x.tipo==="Manual"?"Manual":`WO-${x.wo}${x.tipo==="Sub-WO"?" · Sub-WO":""}`}</td>
       <td>${esc(x.unidad||"\u2014")}</td>
-      <td>${esc(x.descripcion)}<div class="s">${esc(x.tipo||"WO")}${x.cantidad>1?` · Cantidad ${x.cantidad}`:""}</div></td>
+      <td>${textoConceptoFactura(x)}<div class="s">${esc(x.tipo||"WO")}${x.cantidad>1?` · Cantidad ${x.cantidad}`:""}</div></td>
       <td class="n m">${money(x.importe||0)}</td></tr>`).join("");
 
   const doc = `<!doctype html><html lang="es"><head><meta charset="utf-8">
@@ -756,8 +817,8 @@ function modalFactura(fid, enviando){
         <div style="margin-left:auto;text-align:right"><div style="font-size:10.5px;opacity:.85">Total</div>
           <div class="mono" style="font-size:20px;font-weight:750">${money(f.total)}</div></div></div>
       <table><thead><tr><th>WO</th><th>Unidad</th><th>Servicio</th><th>Evidencia</th><th class="num">Importe</th></tr></thead>
-      <tbody>${conceptos.map(x=>`<tr><td class="mono">WO-${x.wo}${x.tipo==="Sub-WO"?" · Sub-WO":""}</td><td>${esc(x.unidad||"—")}</td>
-        <td>${esc(x.descripcion)}</td>
+      <tbody>${conceptos.map(x=>`<tr><td class="mono">${x.tipo==="Manual"?"Manual":`WO-${x.wo}${x.tipo==="Sub-WO"?" · Sub-WO":""}`}</td><td>${esc(x.unidad||"—")}</td>
+        <td>${textoConceptoFactura(x)}</td>
         <td>${x.evidencia?`<span class="pill v">${x.evidencia} foto(s)</span>`:'<span class="pill w">—</span>'}</td>
         <td class="num mono">${money(x.importe||0)}</td></tr>`).join("")}
       <tr style="background:var(--surface-2);font-weight:750"><td colspan="4">Total</td>
@@ -791,13 +852,13 @@ function resumenExpedienteFactura(f){
    Antes solo existía el extremo final (Registrar pago) y el estado "Vencida"
    nunca se calculaba de verdad — quedaba escrito en los filtros pero nada lo
    encendía. facVencida() lo calcula en vivo, igual que devVencida(). */
-const facVencida = f => f.estado!=="Pagada" && f.vence < HOY_SUP;
+const facVencida = f => !["Pagada","Borrador"].includes(f.estado) && f.vence < HOY_SUP;
 const facEstadoTexto = f => f.estado==="Pagada" ? "Pagada" : facVencida(f) ? "Vencida" : f.estado;
 const SEG_LABEL = {reminder:"Reminder enviado", overdue:"Correo overdue enviado",
   llamada:"Llamada de cobranza", pago:"Pago registrado", cierre:"Invoice y Work Orders cerrados"};
 
 VIEWS.cobranza = () => {
-  const abiertas=S.facturas.filter(f=>f.estado!=="Pagada");
+  const abiertas=S.facturas.filter(f=>!["Pagada","Borrador"].includes(f.estado));
   const vencidas=S.facturas.filter(facVencida);
   return `
   <div class="ph"><div><h2>Cobranza</h2><p>Pasados 30 días sin pago, queda «Vencida» y arranca la escalera: reminder → correo overdue → llamada.</p></div></div>
@@ -862,18 +923,22 @@ function modalCobLlamada(fid){
   <div class="mf"><button class="btn" data-a="cobGestionar" data-id="${fid}">Cancelar</button>
     <button class="btn p" data-a="cobLlamadaGuardar" data-id="${fid}">Guardar</button></div>`);
 }
+function modalRegistrarPago(fid){
+  const f=by(S.facturas,fid), recibido=(S.pagos||[]).filter(p=>p.factura===fid).reduce((n,p)=>n+(+p.monto||0),0), pendiente=Math.max(0,(f.total||0)-recibido);
+  modal(`<div class="mh"><h3>Registrar pago — ${esc(f.num)}</h3><p>Total ${money(f.total)} · recibido ${money(recibido)} · pendiente ${money(pendiente)}</p></div><div class="mb"><div class="fg c2"><div class="fld"><label>Monto recibido <span class="req">*</span></label><input id="cpMonto" type="number" min="0.01" max="${pendiente}" step="0.01" value="${pendiente}"></div><div class="fld"><label>Fecha <span class="req">*</span></label><input id="cpFecha" type="date" value="${HOY_SUP}"></div></div><div class="fg c2"><div class="fld"><label>Medio <span class="req">*</span></label><select id="cpMedio"><option>Check</option><option>ACH</option><option>Card</option><option>Cash</option><option>Other</option></select></div><div class="fld"><label>Cheque / referencia</label><input id="cpRef" placeholder="Ej. CHK-10488"></div></div><div class="fld"><label>Comprobante</label><select id="cpEvid"><option value="yes">Foto/comprobante adjunto simulado</option><option value="">Pendiente</option></select></div><div class="fld"><label>Nota</label><input id="cpNota"></div><div class="note">Puedes registrar pagos parciales. La factura solo se cierra cuando el total recibido la cubre.</div></div><div class="mf"><button class="btn" data-a="cobGestionar" data-id="${fid}">Cancelar</button><button class="btn p" data-a="cobrarGuardar" data-id="${fid}">Guardar pago</button></div>`);
+}
 
 /* ── INVENTARIO ── */
 VIEWS.inventario = () => `
-  <div class="ph"><div><h2>Inventario de materiales</h2>
-    <p>Hoy solo existe <code>Sheet13</code> con dos filas sueltas. El stock nunca se edita: es la suma de entradas menos salidas.</p></div>
+  <div class="ph"><div><h2>Inventario</h2>
+    <p>Consumibles, herramientas, activos, material para instalación y suministros de oficina. El stock de consumibles se calcula con entradas y salidas.</p></div>
     <div class="act"><button class="btn" data-a="movSalida">Registrar salida</button><button class="btn p" data-a="movEntrada">+ Registrar compra</button></div></div>
-  <div class="card"><div class="chd"><h3>Productos</h3></div><table>
-    <thead><tr><th>Producto</th><th>Categoría</th><th>Unidad</th><th class="num">Stock</th><th class="num">Mínimo</th><th>Estado</th><th class="num">Costo ref.</th></tr></thead>
+  <div class="card"><div class="chd"><h3>Productos y activos</h3></div><table>
+    <thead><tr><th>Producto</th><th>Categoría</th><th>Unidad</th><th class="num">Stock</th><th>Responsable / ubicación</th><th>Estado</th><th class="num">Costo ref.</th></tr></thead>
     <tbody>${S.productos.map(p=>{const s=stock(p.id);return `<tr>
       <td style="font-weight:650">${esc(p.nombre)}</td><td>${esc(p.cat)}</td><td>${esc(p.um)}</td>
-      <td class="num mono" style="font-weight:700">${s}</td><td class="num mono">${p.min}</td>
-      <td>${s<p.min?'<span class="pill r"><span class="dot"></span>Stock bajo</span>':'<span class="pill v">OK</span>'}</td>
+      <td class="num mono" style="font-weight:700">${p.consumible===false?"—":s}</td><td>${esc(p.responsable||p.reservadoPara||"—")}<div class="s">${esc(p.ubicacion||"")}</div></td>
+      <td>${p.consumible===false?`<span class="pill a">${esc(p.estado||"Activo")}</span>`:(s<p.min?'<span class="pill r"><span class="dot"></span>Stock bajo</span>':'<span class="pill v">OK</span>')}</td>
       <td class="num mono">${money(p.costo)}</td></tr>`;}).join("")}</tbody></table></div>
   ${(()=>{ const nPend=S.movs.filter(m=>m.costoPend).length; return nPend?`
   <div class="card" style="border-color:var(--ambar)"><div class="chd"><h3>Compras sin costo</h3></div>

@@ -56,6 +56,7 @@ VIEWS.wo = () => {
       <td style="text-align:right"><button class="btn sm p" data-a="solProgramar" data-id="${s.id}">Programar</button></td></tr>`).join("")}
     </tbody></table></div>`:""}
 
+  ${vistaCierreAgendamiento()}
   <div class="tabs">
     ${[["todas","Todas"],["semana","Semana "+S.semana],["sin","Sin técnico"],["camino","Asignadas sin llegar"],["curso","En curso"]].map(([k,n])=>
       `<button class="tab ${f===k?"on":""}" data-a="tab" data-t="${k}">${n}</button>`).join("")}
@@ -85,6 +86,47 @@ VIEWS.wo = () => {
     }).join("")||`<tr><td colspan="${puedeVerDinero?13:11}" class="empty">Nada aquí</td></tr>`}</tbody>
   </table></div>`;
 };
+
+/* El cierre es una acción operativa, no un reloj oculto: alguien lo ejecuta
+   cuando termina de recibir cambios. La hora configurada deja claro cuál es
+   la política vigente y las confirmaciones que produjo quedan consultables. */
+function vistaCierreAgendamiento(){
+  const cfg=S.cierreAgendamiento||(S.cierreAgendamiento={hora:"16:00",fecha:proximoDiaLaborableConfirmacion()});
+  const fecha=cfg.fecha||proximoDiaLaborableConfirmacion();
+  const esFinSemana=esFinDeSemanaConfirmacion(fecha);
+  const elegibles=S.wos.filter(w=>w.fecha===fecha && ["Scheduled","Confirmed"].includes(w.estado) && !!w.tec);
+  const porProp={}; elegibles.forEach(w=>(porProp[w.prop]=porProp[w.prop]||[]).push(w));
+  const envios=(S.confirmacionesAgendamiento||[]).filter(x=>x.fechaAgenda===fecha);
+  const propiedades=Object.keys(porProp);
+  const yaEnviadas=new Set(envios.map(x=>x.prop));
+  return `<div class="card" style="margin-bottom:12px;border-color:var(--azul)">
+    <div class="chd" style="background:var(--azul-cl)"><h3 style="color:var(--azul-s)">Confirmar agenda de mañana</h3>
+      <span class="s">un correo por propiedad para las unidades del próximo día laborable</span></div>
+    <div class="cp"><div class="fg c2" style="align-items:end">
+      <div class="fld" style="margin:0"><label>Fecha a confirmar</label><input id="caFecha" type="date" value="${esc(fecha)}" data-a="agendaCierreFecha"></div>
+      <div class="fld" style="margin:0"><label>Hora de cierre</label><input id="caHora" type="time" value="${esc(cfg.hora||"16:00")}" data-a="agendaCierreHora"></div>
+    </div>
+    <div class="note ${esFinSemana?"w":propiedades.length?"v":"w"}" style="margin:12px 0 0"><b>${esFinSemana?"No se envían confirmaciones sábado ni domingo.":`${elegibles.length} WO elegible(s) en ${propiedades.length} propiedad(es).`}</b>
+      Solo entran las WO <b>Scheduled</b> o <b>Confirmed</b> con técnico; canceladas, reemplazadas y sin asignar quedan fuera. Las confirmaciones se envían únicamente de lunes a viernes.
+      ${envios.length?` Ya se registraron ${envios.length} correo(s) para esta fecha.`:""}</div>
+    <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:10px">
+      <button class="btn p" data-a="agendaCerrarDia" ${propiedades.length&&!esFinSemana?"":"disabled"}>Enviar confirmaciones</button>
+      <span style="font-size:11px;color:var(--faint)">En el prototipo se registra un envío simulado; no manda correo real.</span>
+    </div>
+    ${propiedades.length?`<table style="margin-top:12px"><thead><tr><th>Propiedad</th><th>Unidades que irán en un correo</th><th>Estado</th></tr></thead><tbody>
+      ${propiedades.map(pid=>`<tr><td><b>${esc(P(pid).nombre)}</b></td><td>${porProp[pid].map(w=>`${esc(U(w.unidad).num)} · ${esc(w.serv)} · ${esc(horaVentanaWO(w))}`).join("<br>")}</td>
+        <td>${yaEnviadas.has(pid)?'<span class="pill v">Confirmación registrada</span>':'<span class="pill w">Pendiente de cierre</span>'}</td></tr>`).join("")}
+    </tbody></table>`:""}
+    ${envios.length?`<div style="margin-top:14px"><b style="font-size:11px;color:var(--faint);text-transform:uppercase">Historial de confirmaciones</b>
+      <table style="margin-top:5px"><thead><tr><th>Propiedad</th><th>Contactos</th><th>WO</th><th>Enviado</th><th></th></tr></thead><tbody>
+      ${envios.slice().reverse().map(x=>`<tr><td>${esc(P(x.prop).nombre)}</td><td>${esc((x.contactos||[]).map(c=>c.mail).filter(Boolean).join(", ")||"—")}</td>
+        <td>${(x.wos||[]).map(id=>`WO-${id}`).join(", ")}</td><td class="mono">${esc(x.fechaCierre)} · ${esc(x.horaCierre)}</td>
+        <td><button class="btn sm" data-a="agendaConfirmacionVer" data-id="${esc(x.id)}">Ver correo</button> <button class="btn sm" data-a="agendaConfirmacionReenviar" data-id="${esc(x.id)}">Reenviar</button></td></tr>`).join("")}
+      </tbody></table></div>`:""}
+    </div></div>`;
+}
+
+function horaVentanaWO(w){ return `${w.horaProg||"—"}${w.horaFin?`–${w.horaFin}`:""}`; }
 
 function fichaWO(id){
   const w=W(id), p=P(w.prop), u=U(w.unidad), t=tarifaWO(w), puedeVerDinero=puedeVerUtilidad();
@@ -118,6 +160,8 @@ function fichaWO(id){
         ?`<button class="btn" data-a="woDetener" data-id="${w.id}">Detener trabajo</button>`:""}
       ${w.estado==="Detenido"
         ?`<button class="btn v" data-a="woReanudar" data-id="${w.id}">Reanudar trabajo</button>`:""}
+      ${["Pending","Detenido"].includes(w.estado)
+        ?`<button class="btn" data-a="woPendienteCliente" data-id="${w.id}">Avisar cliente</button>`:""}
     </div></div>
   <div style="display:grid;grid-template-columns:1fr 330px;gap:14px;align-items:start">
     <div>
@@ -171,7 +215,7 @@ function fichaWO(id){
                 ${a.origen==="Planificada"?`<span class="pill a">Fecha: ${esc(fechaSubWO(a)||"sin programar")}</span>`:""}
                 ${a.estadoTrabajo?`<span class="pill ${a.estadoTrabajo==="Completed"?"v":"w"}">Operación: ${esc(a.estadoTrabajo)}${a.parcial?` · ${a.cantRealizada||0}/${a.cant||1}`:""}</span>`:""}
                 ${a.cantPendiente>0?`<span class="pill w">${a.cantPendiente} pendiente(s) · reasignable</span>`:""}
-                ${a.facturable?`<span class="pill v">Factura: ${a.facturaSeparada?"separada":"concepto adicional"}</span>`:""}
+                ${a.facturable?`<span class="pill v">Disponible para facturar</span>`:""}
                 ${a.aprob&&a.aprob.foto?`<a href="${a.aprob.foto}" target="_blank" style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--azul)">
                   <img src="${a.aprob.foto}" style="width:28px;height:28px;object-fit:cover;border-radius:5px">Comprobante de la aprobación</a>`:""}
               </div></td></tr>`:""}`).join("")}
@@ -532,10 +576,7 @@ function modalSubWO(woId){
       <div class="fld"><label>Fecha <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional, si es otro día</span></label>
         <input type="date" id="swFecha" value=""></div>
     </div>
-    <div class="fld"><label>Si el cliente aprueba cobrarla</label><select id="swFacturaModo">
-      <option value="misma">Concepto adicional en la misma factura</option>
-      <option value="separada">Generar una factura separada</option></select>
-      <div class="hint">La decisión de cobrar o no se toma durante la aprobación; aquí solo defines cómo se separará.</div></div>
+    <div class="note">La forma de facturar se decide después, en el borrador de factura de la propiedad. Ahí puedes juntar esta Sub-Work Order con otras o dejarla para una factura separada.</div>
     <div class="note">La Sub-Work Order tendrá su propia asignación, fecha, estado y evidencia, pero seguirá ligada a WO-${w.id}. Si tiene precio queda pendiente de aprobación; al aprobarla se activa en el celular del técnico elegido.</div>
     <div class="note">Las fotos (Photos) se agregan después, desde la tarjeta «Sub-Work Orders» de esta WO — hay dos tipos: de referencia (para que el técnico vea con anticipación) y de evidencia (el resultado, para returns).</div>
   </div>
@@ -563,9 +604,8 @@ function modalGestionSubWO(id){
     <div class="fld"><label>Fecha</label><input type="date" id="sgFecha" value="${esc(a.fecha||"")}"></div></div>
     <div class="fg c2"><div class="fld"><label>Estado operativo</label><select id="sgEstado" ${a.estado==="Pendiente"?"disabled":""}>
       ${["Unassigned","Assigned","In progress","Completed","Canceled"].map(x=>`<option ${x===estado?"selected":""}>${x}</option>`).join("")}</select>
-      ${a.estado==="Pendiente"?'<div class="hint">Se activa cuando se apruebe.</div>':""}</div>
-    <div class="fld"><label>Facturación</label><select id="sgFactura"><option value="misma" ${!a.facturaSeparada?"selected":""}>Concepto en la misma factura</option><option value="separada" ${a.facturaSeparada?"selected":""}>Factura separada</option></select></div></div>
-    <div class="note">La reasignación afecta la agenda móvil y la nómina de esta Sub-Work Order, no cambia al técnico de la WO principal.</div>
+      ${a.estado==="Pendiente"?'<div class="hint">Se activa cuando se apruebe.</div>':""}</div></div>
+    <div class="note">La reasignación afecta la agenda móvil y la nómina de esta Sub-Work Order, no cambia al técnico de la WO principal. La agrupación de factura se decide al preparar la factura de la propiedad.</div>
   </div><div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="subwoGestionGuardar" data-id="${a.id}">Guardar</button></div>`);
 }
 
@@ -809,6 +849,7 @@ function refWO(){
     const tipoN = campo("wUniTipo", u&&u.tipo||"Residencial")||"Residencial";
     const pisosN = campo("wUniPisos", u&&u.pisos);
     const ocupN = campo("wUniOcup", u&&u.ocupacion||"Occupied")||"Occupied";
+    const locN = campo("wUniLoc", u&&u.ubicacionUnidad||"");
     const bedroomsN = campo("wUniBedrooms", bedRooms);
     const bathroomsN = campo("wUniBathrooms", u&&u.bathrooms);
     return `
@@ -831,6 +872,9 @@ function refWO(){
           <option ${ocupN!=="Vacant"?"selected":""}>Occupied</option>
           <option ${ocupN==="Vacant"?"selected":""}>Vacant</option></select></div>
     </div>
+    <div class="fld" style="margin:-4px 0 12px"><label>Unit Location</label>
+      <input id="wUniLoc" data-a="woUniCampo" placeholder="Ej. edificio A, lado este / entrada trasera" value="${esc(locN)}">
+      <div class="hint">Referencia específica de esta unidad; la zona pertenece a la propiedad.</div></div>
     ${tipoN==="Residencial"?`<div class="fg c2" style="margin:-4px 0 12px">
       <div class="fld" style="margin-bottom:0"><label>Bedrooms ${SIN_BEDROOMS.includes(cat)?'<span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional para este servicio</span>':'<span class="req">*</span>'}</label>
         <input id="wUniBedrooms" data-a="woUniCampo" type="number" min="0" class="mono" placeholder="0 = Studio" value="${esc(bedroomsN)}"></div>
@@ -843,6 +887,7 @@ function refWO(){
     ? `<div class="note" style="margin-bottom:12px"><b>Se llenan solos desde la propiedad y la unidad:</b>
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
           <span class="pill a">Zona: ${esc(p.zona)}</span>
+          ${u.ubicacionUnidad?`<span class="pill a">Unit location: ${esc(u.ubicacionUnidad)}</span>`:""}
           <span class="pill a">Dirección: ${esc(p.dir)}</span>
           <span class="pill a">Rooms: ${u.rooms?esc(u.rooms):"por completar"}</span>
           ${u.pisos?`<span class="pill a">Pisos: ${u.pisos}</span>`:""}
@@ -937,6 +982,7 @@ function modalProg(id){
       : "Primero se acuerda la fecha con el cliente; después se asigna el técnico."}</div>
     <div class="fld"><label>Fecha acordada <span class="req">*</span></label>
       <input type="date" id="pgF" value="${esc(f)}" data-a="progFecha"></div>
+    ${U(w.unidad).ocupacion==="Occupied"?`<div class="fg c2"><div class="fld"><label>Horario desde</label><input id="pgInicio" type="time" value="${esc(w.horaProg||"")}"></div><div class="fld"><label>Horario hasta</label><input id="pgFin" type="time" value="${esc(w.horaFin||"")}"></div></div><div class="note w" style="margin-top:-5px;margin-bottom:12px">Unidad ocupada: se crearán recordatorios simulados un día y una hora antes. La confirmación del cliente es opcional y no oculta la WO al técnico.</div>`:""}
 
     <div style="margin:0 0 12px">
       <b style="font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.03em">Quién puede ese día</b>

@@ -1,5 +1,85 @@
 "use strict";
+
+/* ── CIERRE DE AGENDAMIENTO ───────────────────────────────────────────
+   La agrupación se hace al cerrar, usando la fecha vigente de cada WO. Nunca
+   se toma una propuesta histórica: una orden movida ya sólo existe en su
+   fecha actual. Las confirmaciones se envían únicamente de lunes a viernes. */
+function esFinDeSemanaConfirmacion(fecha){
+  const dia=new Date(`${fecha}T12:00:00`).getDay();
+  return dia===0||dia===6;
+}
+function moverFechaConfirmacion(fecha, dias){
+  const d=new Date(`${fecha}T12:00:00`); d.setDate(d.getDate()+dias);
+  return d.toISOString().slice(0,10);
+}
+function siguienteDiaLaborableConfirmacion(fecha){
+  let salida=fecha;
+  while(esFinDeSemanaConfirmacion(salida)) salida=moverFechaConfirmacion(salida,1);
+  return salida;
+}
+function proximoDiaLaborableConfirmacion(){
+  return siguienteDiaLaborableConfirmacion(moverFechaConfirmacion(HOY_SUP,1));
+}
+function wosElegiblesCierre(fecha){
+  if(esFinDeSemanaConfirmacion(fecha)) return [];
+  return S.wos.filter(w=>w.fecha===fecha && ["Scheduled","Confirmed"].includes(w.estado) && !!w.tec);
+}
+function contactosConfirmacion(prop){
+  const directos=(contactosDe(prop)||[]).filter(c=>c.mail).map(c=>({id:c.id,nombre:c.nombre,mail:c.mail}));
+  if(directos.length) return directos;
+  const cli=CLI(P(prop).cliente);
+  return cli&&cli.mail?[{id:null,nombre:cli.contacto||cli.nombre,mail:cli.mail}]:[];
+}
+function cuerpoConfirmacionAgenda(prop, fecha, ws){
+  const p=P(prop);
+  const filas=ws.slice().sort((a,b)=>(a.horaProg||"").localeCompare(b.horaProg||""))
+    .map(w=>`• Unit ${U(w.unidad).num}: ${w.serv} — ${horaVentanaWO(w)}`).join("\n");
+  return `Hello,\n\nThis is your scheduling confirmation for ${fecha} at ${p.nombre}.\n\n${filas}\n\nPlease let us know as soon as possible if any unit needs to be changed.\n\nThank you,\nCordova Property Services`;
+}
+function registrarConfirmacionAgenda(prop, fecha, ws, reenvioDe){
+  if(esFinDeSemanaConfirmacion(fecha)) return null;
+  S.confirmacionesAgendamiento=S.confirmacionesAgendamiento||[];
+  const contactos=contactosConfirmacion(prop), id="CA"+Date.now()+"-"+(S.confirmacionesAgendamiento.length+1);
+  const r={id,prop,fechaAgenda:fecha,fechaCierre:HOY_SUP,horaCierre:hora(),contactos,wos:ws.map(w=>w.id),
+    asunto:`Scheduling confirmation · ${P(prop).nombre} · ${fecha}`,
+    mensaje:cuerpoConfirmacionAgenda(prop,fecha,ws),estado:"Sent (simulated)",quien:S.usuario,reenvioDe:reenvioDe||null};
+  S.confirmacionesAgendamiento.unshift(r);
+  ws.forEach(w=>w.hist.push([hora(),`Scheduling confirmation prepared for ${fecha} · ${P(prop).nombre}`,S.usuario]));
+  return r;
+}
+
 Object.assign(ACC, {
+  agendaCierreFecha: () => {
+    S.cierreAgendamiento=S.cierreAgendamiento||{};
+    const elegida=val("caFecha")||proximoDiaLaborableConfirmacion();
+    if(esFinDeSemanaConfirmacion(elegida)){
+      const lunes=siguienteDiaLaborableConfirmacion(elegida);
+      S.cierreAgendamiento.fecha=lunes;
+      toast("No se envían confirmaciones el fin de semana",`Sábado y domingo no son días laborables. La fecha se movió al <b>${esc(lunes)}</b>.`,"w");
+      render(); return;
+    }
+    S.cierreAgendamiento.fecha=elegida; render();
+  },
+  agendaCierreHora: () => { const h=val("caHora"); if(!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(h)){ toast("Hora inválida","Usa el formato de 24 horas, por ejemplo 16:00.","r"); return; } S.cierreAgendamiento=S.cierreAgendamiento||{}; S.cierreAgendamiento.hora=h; toast("Hora de cierre actualizada",`El cierre de agendamiento queda configurado a las <b>${esc(h)}</b>.`,"v"); render(); },
+  agendaCerrarDia: () => {
+    const fecha=(S.cierreAgendamiento&&S.cierreAgendamiento.fecha)||proximoDiaLaborableConfirmacion(), grupos={};
+    if(esFinDeSemanaConfirmacion(fecha)){
+      toast("No se enviaron confirmaciones","Las confirmaciones solo se envían de lunes a viernes. Elegí un día laborable.","w");
+      return;
+    }
+    wosElegiblesCierre(fecha).forEach(w=>(grupos[w.prop]=grupos[w.prop]||[]).push(w));
+    const enviados=S.confirmacionesAgendamiento||[]; let nuevos=0, omitidos=0;
+    Object.entries(grupos).forEach(([prop,ws])=>{
+      if(enviados.some(x=>x.prop===prop&&x.fechaAgenda===fecha&&!x.reenvioDe)){ omitidos++; return; }
+      if(registrarConfirmacionAgenda(prop,fecha,ws)) nuevos++;
+    });
+    if(!nuevos){ toast("Sin correos nuevos",omitidos?"Ya existe una confirmación por cada propiedad para esta fecha. Usa «Reenviar» solo si corresponde.":"No hay WO elegibles para cerrar.","w"); render(); return; }
+    toast("✓ Agendamiento cerrado",`${nuevos} correo(s) de confirmación agrupados por propiedad quedaron registrados${omitidos?`; ${omitidos} duplicado(s) se omitieron`:""}. El envío es simulado en este prototipo.`,"v"); render();
+  },
+  agendaConfirmacionVer: d => { const x=by(S.confirmacionesAgendamiento||[],d.id); if(!x) return; modal(`<div class="mh"><h3>Confirmación de agendamiento</h3><p>${esc(P(x.prop).nombre)} · ${esc(x.fechaAgenda)}</p></div><div class="mb"><div class="fld"><label>To</label><input readonly value="${esc((x.contactos||[]).map(c=>c.mail).filter(Boolean).join(", ")||"No email registered")}"></div><div class="fld"><label>Subject</label><input readonly value="${esc(x.asunto)}"></div><div class="fld"><label>Message</label><textarea readonly rows="12">${esc(x.mensaje)}</textarea></div><div class="note">${x.reenvioDe?"Explicit resend":"Automatic simulated send at scheduling close"} · recorded ${esc(x.fechaCierre)} ${esc(x.horaCierre)} by ${esc(x.quien)}.</div></div><div class="mf"><button class="btn" data-a="cm">Close</button></div>`); },
+  agendaConfirmacionReenviar: d => { const x=by(S.confirmacionesAgendamiento||[],d.id); if(!x) return; if(esFinDeSemanaConfirmacion(x.fechaAgenda)){ toast("No se puede reenviar","Las confirmaciones solo se envían de lunes a viernes.","w"); return; } const ws=(x.wos||[]).map(W).filter(w=>w&&w.fecha===x.fechaAgenda&&["Scheduled","Confirmed"].includes(w.estado)&&w.tec); if(!ws.length){ toast("No se pudo reenviar","Las WO de este correo ya no están elegibles en esa fecha.","w"); return; } registrarConfirmacionAgenda(x.prop,x.fechaAgenda,ws,x.id); toast("✓ Correo reenviado",`Se registró un reenvío explícito para <b>${esc(P(x.prop).nombre)}</b>.`,"v"); render(); },
+  woPendienteCliente: d => { const w=W(+d.id), p=P(w.prop), c=(contactosDe(w.prop)||[])[0]||CLI(p.cliente); modal(`<div class="mh"><h3>Notify customer — WO-${w.id}</h3><p>Customer-facing message is generated in English.</p></div><div class="mb"><div class="fld"><label>Reason <span class="req">*</span></label><select id="pcReason"><option>Unit does not have electricity</option><option>Unit does not have water</option><option>Pest control is required</option><option>No access to the unit</option><option>Other</option></select></div><div class="fld"><label>Detail</label><input id="pcDetail" placeholder="Optional detail for the customer"></div><div class="fld"><label>Send by</label><select id="pcMedium"><option>Email</option><option>SMS</option></select></div><div class="note">To: ${esc(c.nombre||"Property contact")} · ${esc(c.mail||c.tel||"—")}. This prototype records a simulated send and follow-up; it does not send a real message.</div></div><div class="mf"><button class="btn" data-a="cm">Cancel</button><button class="btn p" data-a="woPendienteEnviar" data-id="${w.id}">Send and record follow-up</button></div>`); },
+  woPendienteEnviar: d => { const w=W(+d.id), motivo=val("pcReason"), detalle=val("pcDetail").trim(), medio=val("pcMedium"), msg=`Hello, work order WO-${w.id} is pending because ${motivo.toLowerCase()}${detalle?`. ${detalle}`:""}. Please let us know when the unit is ready for service.`; S.comunicacionesWO=(S.comunicacionesWO||[]); S.comunicacionesWO.unshift({id:"CW"+(S.comunicacionesWO.length+1),wo:w.id,medio,fecha:HOY_SUP,quien:S.usuario,motivo,mensaje:msg,estado:"Sent"}); w.hist.push([hora(),`Cliente notified by ${medio}: ${motivo}`,S.usuario]); cm(); toast("✓ Customer notified",`The ${medio} message was recorded in English with a follow-up for WO-${w.id}.`,"v"); render(); },
 
 
   woVer: d => { S.mod="wo"; S.sub=+d.id; render(); },
@@ -113,6 +193,7 @@ Object.assign(ACC, {
       tipo:tipoNueva, bedrooms,
       bathrooms:val("wUniBathrooms")!==""?parseInt(val("wUniBathrooms"))||0:null,
       ocupacion:val("wUniOcup")||"Occupied",
+      ubicacionUnidad:val("wUniLoc").trim(),
       rooms:tipoNueva==="Residencial"&&bedTxt===""?null:roomsDesde(tipoNueva,bedrooms),
       pisos:parseInt(val("wUniPisos"))||null
     };
@@ -249,7 +330,7 @@ Object.assign(ACC, {
     const w = W(+d.id);
     const f = val("pgF"), medio = val("pgM"), contacto = val("pgC"), nota = val("pgN");
     const motivo = document.getElementById("pgMotivo") ? val("pgMotivo") : "";
-    const pendiente = chk("pgP");
+    const pendiente = chk("pgP"), inicio=val("pgInicio"), fin=val("pgFin");
     const resp = pendiente ? "Quedó en confirmar después" : "Fecha acordada";
     if(!f){ marcaFalta(["pgF"]); toast("Falta la fecha","Pon la fecha que quedaron.","r"); return; }
     if(w.fecha && !motivo){ marcaFalta(["pgMotivo"]); toast("Falta el resultado","Registra qué pasó con la fecha anterior antes de reagendar.","r"); return; }
@@ -273,6 +354,12 @@ Object.assign(ACC, {
       const antes = w.fecha;
       w.fechaSolicitada = w.fechaSolicitada || antes;
       w.fecha = f;
+      if(inicio) w.horaProg=inicio;
+      if(fin) w.horaFin=fin;
+      if(U(w.unidad).ocupacion==="Occupied" && inicio){
+        S.recordatoriosWO=(S.recordatoriosWO||[]).filter(r=>r.wo!==w.id);
+        S.recordatoriosWO.push({id:"RW"+(S.recordatoriosWO.length+1),wo:w.id,tipo:"1 day before",fecha:f,hora:inicio,estado:"Scheduled"},{id:"RW"+(S.recordatoriosWO.length+2),wo:w.id,tipo:"1 hour before",fecha:f,hora:inicio,estado:"Scheduled"});
+      }
       w.confirmCliente = {fecha:f, medio, contacto, quien:S.usuario, hora:hora(), dia:HOY_SUP};
       if(w.estado==="Scheduled") w.estado = "Confirmed";
       if(motivo){ w.reagendada = (w.reagendada||0)+1; w.motivoReag = motivo; }
@@ -304,6 +391,9 @@ Object.assign(ACC, {
     /* Quedó en confirmar después: se anota la fecha tentativa, pero la orden
        no pasa a Confirmed y se ve así al momento de asignar. */
     S.progF = null; S.progTmp = null;
+    if(inicio) w.horaProg=inicio;
+    if(fin) w.horaFin=fin;
+    if(U(w.unidad).ocupacion==="Occupied" && inicio){ S.recordatoriosWO=(S.recordatoriosWO||[]).filter(r=>r.wo!==w.id); S.recordatoriosWO.push({id:"RW"+(S.recordatoriosWO.length+1),wo:w.id,tipo:"1 day before",fecha:f,hora:inicio,estado:"Scheduled"},{id:"RW"+(S.recordatoriosWO.length+2),wo:w.id,tipo:"1 hour before",fecha:f,hora:inicio,estado:"Scheduled"}); }
     cm();
     toast("Anotado — falta que confirme",
       `Quedó tentativo el <b>${f}</b> con <b>${esc(contacto)}</b>. La orden sigue <b>sin confirmar</b>.`,"w");
@@ -810,7 +900,7 @@ Object.assign(ACC, {
     if(estado==="Completed" && !(a.fotosEvidArr||[]).length){
       toast("🚫 Falta la evidencia","No se puede completar una Sub-Work Order sin al menos una foto.","r"); return;
     }
-    a.tec=tec; a.fecha=fecha; a.estadoTrabajo=estado; a.facturaSeparada=val("sgFactura")==="separada";
+    a.tec=tec; a.fecha=fecha; a.estadoTrabajo=estado;
     if(estado!=="Canceled" && estado!=="Completed") w.validada=false;
     if(w.estado==="Completed" && w.evid>0 && ingresoWO(w)!==null && !subWOsPendientesDeWO(w.id).length) w.validada=true;
     const despues=tecSubWO(a);
@@ -839,7 +929,7 @@ Object.assign(ACC, {
       cant, precio, estado: monto>0 ? "Pendiente" : "Aprobado",
       aprob: monto>0 ? null : {medio:"Directo",quien:S.usuario,fecha:hora()},
       origen:"Planificada", fotosRefArr:[], fotosEvidArr:[], specs,
-      tec:tecOverride, fecha:fechaOverride, facturaSeparada:val("swFacturaModo")==="separada", facturable:false,
+      tec:tecOverride, fecha:fechaOverride, facturable:false,
       estadoTrabajo:monto>0?"Pending approval":(tecOverride||w.tec?"Assigned":"Unassigned"),
       hist:[[hora(), `Sub-Work Order planificada creada: ${tipo}`, S.usuario]]};
     S.adicionales.push(na);

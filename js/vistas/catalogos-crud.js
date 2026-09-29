@@ -143,8 +143,9 @@ function fichaProp(id){
   ${t==="unidades"?`<div class="card"><div class="chd"><h3>Unidades</h3>
     <span class="s">catálogo de referencia — no bloquea agendar, se va llenando solo con cada WO/Estimado</span>
     <span class="r"><button class="btn sm p" data-a="uniNueva" data-prop="${id}">+ Unidad</button></span></div>
-    ${us.length?`<table><thead><tr><th>Building</th><th>Unidad</th><th class="num">Floor</th><th>Rooms</th><th class="num">Bathrooms</th><th>Occupancy</th><th>Detail</th><th class="num">Work Orders</th><th></th></tr></thead><tbody>
-    ${us.map(u=>`<tr class="${fl("uni:"+u.id)}"><td class="mono">${esc(u.building)||"—"}</td><td style="font-weight:650">${esc(u.unidadNum||u.num)}</td><td class="num mono">${u.pisos}</td>
+    ${us.length?`<table><thead><tr><th>Building</th><th>Unidad</th><th>Location</th><th class="num">Floor</th><th>Rooms</th><th class="num">Bathrooms</th><th>Occupancy</th><th>Detail</th><th class="num">Work Orders</th><th></th></tr></thead><tbody>
+    ${us.map(u=>`<tr class="${fl("uni:"+u.id)}"><td class="mono">${esc(u.building)||"—"}</td><td style="font-weight:650">${esc(u.unidadNum||u.num)}</td>
+      <td style="font-size:11.5px;color:var(--soft)">${esc(u.ubicacionUnidad)||"—"}</td><td class="num mono">${u.pisos}</td>
       <td>${esc(u.rooms)||'<span class="pill w">sin definir</span>'}</td>
       <td class="num mono">${u.bathrooms||"—"}</td>
       <td>${u.ocupacion==="Vacant"?'<span class="pill w">Vacant</span>':'<span class="pill v">Occupied</span>'}</td>

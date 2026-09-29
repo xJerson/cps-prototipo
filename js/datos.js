@@ -1,6 +1,6 @@
 "use strict";
 /* ══════════ DATOS SEMILLA ══════════ */
-let ID = {p:100,u:200,c:300,t:400,w:1061,e:500,f:605,pr:700,mv:800,cl:900,ad:958,cm:960};
+let ID = {p:100,u:200,c:300,t:400,w:1062,e:500,f:605,pr:700,mv:800,cl:900,ad:958,cm:960};
 const nid = k => ++ID[k];
 /* Fotos semilla: no hay cámara real en el arranque del prototipo, pero la
    galería/miniatura necesita una URL de imagen real (no un contador ni
@@ -22,6 +22,11 @@ let S = {
   /* El buscador de Work Orders conserva texto y fecha por separado: cambiar
      uno no borra el otro, que era el problema del Excel. */
   filtroWO:{modo:"todos", sem:33, desde:"", hasta:""},
+  /* El cierre no queda atado a una hora fija: hoy es 4 PM, pero operación
+     puede moverlo sin tocar código. Las confirmaciones son correos simulados
+     y auditables hasta que se conecte un proveedor real de correo. */
+  cierreAgendamiento:{hora:"16:00", fecha:"2026-08-12"},
+  confirmacionesAgendamiento:[],
   sub:null, tab:null, phone:false, phTec:"T1", phView:"agenda", phWO:null, phSub:null,
   // Avisos sembrados para que la pestaña del celular no arranque vacía: uno sin leer, uno ya leído.
   notis:[
@@ -83,7 +88,7 @@ let S = {
      (building-número, o solo el número si no hay building) y es lo que se
      muestra en todas las pantallas; building/unidadNum son la fuente. */
   unidades:[
-    {id:"U1",prop:"P1",building:"A",unidadNum:"204",num:"A-204",rooms:"2 bedroom",pisos:1,detalle:[{tipo:"Bedroom",cantidad:2},{tipo:"Bathroom",cantidad:2}]},
+    {id:"U1",prop:"P1",building:"A",unidadNum:"204",num:"A-204",ubicacionUnidad:"Building A · east side",rooms:"2 bedroom",pisos:1,detalle:[{tipo:"Bedroom",cantidad:2},{tipo:"Bathroom",cantidad:2}]},
     {id:"U2",prop:"P1",building:"A",unidadNum:"211",num:"A-211",rooms:"3 bedroom",pisos:2,detalle:[{tipo:"Bedroom",cantidad:3},{tipo:"Bathroom",cantidad:2}]},
     {id:"U3",prop:"P1",building:"B",unidadNum:"102",num:"B-102",rooms:"1 bedroom",pisos:1,detalle:[{tipo:"Bedroom",cantidad:1},{tipo:"Bathroom",cantidad:1}]},
     {id:"U9",prop:"P1",building:"A",unidadNum:"105",num:"A-105",rooms:"Studio",pisos:1,detalle:[{tipo:"Studio",cantidad:1},{tipo:"Bathroom",cantidad:1}]},
@@ -164,7 +169,7 @@ let S = {
      notasTec:"Color change aprobado por manager",
      hist:[["8:20","Creada","Thalia"],["8:21","Asignada a Marcos Ayala","Thalia"],
            ["14:10","Devuelta por supervisión: Quedó pintura en el marco de la puerta y el zócalo sin retocar.","Gustavo"]]},
-    {id:1042,prop:"P2",unidad:"U5",cat:"Clean",serv:"Deep clean",tec:null,estado:"Scheduled",semana:33,fecha:"2026-08-12",horaProg:"9:00",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",hist:[["7:50","Creada","Claudia"]]},
+    {id:1042,prop:"P2",unidad:"U5",cat:"Clean",serv:"Deep clean",tec:null,estado:"Pending",semana:33,fecha:"2026-08-12",horaProg:"9:00",po:"",asistencia:false,evid:0,mats:[],notas:"Waiting for water service",notasTec:"",hist:[["7:50","Creada","Claudia"],["8:10","Pending: unit does not have water","Thalia"]]},
     {id:1043,prop:"P3",unidad:"U7",cat:"Repair",serv:"Drywall repair",tec:"T4",estado:"Confirmed",semana:33,fecha:"2026-08-12",horaProg:"10:00",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",
      /* Confirmada con el cliente: así Andrés SÍ la ve en su agenda — ejemplo
         de contraste con la 1044 (sin confirmar), que a propósito no la ve. */
@@ -174,6 +179,12 @@ let S = {
         arranque siempre vacía. */
      fotosPrevias:[{url:FOTO_SEED,quien:"Thalia",hora:"8:25"},{url:FOTO_SEED,quien:"Thalia",hora:"8:25"}],
      hist:[["8:25","Creada","Thalia"],["8:26","Asignada a Andrés Solís","Thalia"]]},
+    /* Ejemplo para el cierre de agendamiento: Harbor Pointe tiene dos
+       unidades elegibles mañana, por lo que debe salir UN solo correo con
+       ambas líneas al cerrar el día. */
+    {id:1062,prop:"P3",unidad:"U14",cat:"Clean",serv:"Full clean",tec:"T4",estado:"Confirmed",semana:33,fecha:"2026-08-12",horaProg:"13:00",horaFin:"15:00",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",
+     confirmCliente:{fecha:"2026-08-12",medio:"Email",contacto:"Rick Halloway",quien:"Thalia",hora:"9:05"},
+     hist:[["9:00","Creada","Thalia"],["9:05","Fecha confirmada con el cliente","Thalia"],["9:06","Asignada a Andrés Solís","Thalia"]]},
     /* A propósito sin confirmCliente: es el ejemplo de que Diego NO la ve
        todavía en su "Mi agenda" del celular — recién aparece cuando alguien
        la confirme desde Reagendar. */
@@ -354,7 +365,7 @@ let S = {
       pdf:"INV-2026-1045.pdf",pdfHora:"12:30",pdfQuien:"Erika",
       seguimiento:[{tipo:"pago",fecha:"2026-08-11",hora:"15:00",quien:"Claudia",nota:"Pago recibido y conciliado."},{tipo:"cierre",fecha:"2026-08-11",hora:"15:00",quien:"Claudia"}]}
   ],
-  pagos:[], nomina:[], bitacora:[], audSeq:0, avisos:[], campana:false,
+  pagos:[{id:"PG1",factura:"F601",monto:120,medio:"Check",referencia:"CHK-10488",fecha:"2026-08-11",evidencia:true,quien:"Claudia",nota:"Partial payment received"}], nomina:[], bitacora:[], audSeq:0, avisos:[], campana:false,
   /* Expedientes post-work enviados al cliente: se conserva el token para
      que el enlace pueda abrirse en otra pestaña del mismo origen. */
   revisionesCliente:[], aprobadoresSol:{},
@@ -486,7 +497,19 @@ let S = {
        el técnico nunca pone el costo, por eso arranca en 0 hasta que oficina
        lo complete mirando la foto del ticket (ver movs M6/M7, más abajo). */
     {id:"PT1",cat:"Compra en tienda",nombre:"Sellador de grout",um:"unidad",costo:0,min:0}
+    ,{id:"EQ1",cat:"Herramientas y equipos",nombre:"Aspiradora industrial",um:"unidad",costo:420,min:0,consumible:false,responsable:"T3",estado:"Operativa",ubicacion:"Bodega Pensacola"}
+    ,{id:"AF1",cat:"Muebles / activos",nombre:"Laptop administración",um:"unidad",costo:780,min:0,consumible:false,responsable:"Claudia",estado:"Operativa",ubicacion:"Oficina"}
+    ,{id:"IN1",cat:"Material para instalación",nombre:"LVT flooring",um:"caja",costo:48,min:4,consumible:true,reservadoPara:"WO-1040",ubicacion:"Bodega"}
+    ,{id:"OF1",cat:"Suministros de oficina",nombre:"Papel carta",um:"resma",costo:6.5,min:3,consumible:true,ubicacion:"Oficina"}
   ],
+  gastosCompartidos:[
+    {id:"GC1",tipo:"Fuel",concepto:"Gasolina para ruta de 3 unidades",monto:90,fecha:"2026-08-10",vehiculo:"Ford Transit 12",evidencia:true,notas:"Ruta lejana Pensacola",asignaciones:[{wo:1038,monto:30},{wo:1039,monto:30},{wo:1040,monto:30}],quien:"Gustavo"},
+    {id:"GC2",tipo:"Accommodation",concepto:"Airbnb para finalizar trabajos",monto:420,fecha:"2026-08-09",vehiculo:"",evidencia:true,notas:"Semana de cierre",asignaciones:[{wo:1040,monto:210},{wo:1043,monto:210}],quien:"Erika"},
+    {id:"GC3",tipo:"Office",concepto:"Internet oficina",monto:95,fecha:"2026-08-01",vehiculo:"",evidencia:true,notas:"Gasto administrativo",asignaciones:[],quien:"Claudia"}
+  ],
+  vehiculos:[{id:"V1",nombre:"Ford Transit 12",placa:"FL CPS-012"},{id:"V2",nombre:"Chevrolet Silverado 8",placa:"FL CPS-008"}],
+  recordatoriosWO:[{id:"RW1",wo:1043,tipo:"1 day before",fecha:"2026-08-11",hora:"10:00",estado:"Scheduled"},{id:"RW2",wo:1043,tipo:"1 hour before",fecha:"2026-08-12",hora:"09:00",estado:"Scheduled"}],
+  comunicacionesWO:[{id:"CW1",wo:1042,medio:"Email",fecha:"2026-08-11",quien:"Thalia",motivo:"Unit does not have water",mensaje:"Hello, work order WO-1042 is pending because the unit does not have water. Please let us know when the unit is ready for service.",estado:"Sent"}],
   movs:[
     {id:"M1",prod:"PR1",tipo:"entrada",cant:24,fecha:"2026-08-03",wo:null,costo:780,tienda:"Sherwin Williams",quien:"Erika",evid:true},
     {id:"M2",prod:"PR3",tipo:"entrada",cant:8,fecha:"2026-07-20",wo:null,costo:239.44,tienda:"Home Depot",quien:"Gustavo",evid:true},
@@ -506,6 +529,6 @@ let S = {
 /* Las unidades anteriores a Unit Occupancy no traían el campo. Se adopta la
    opción conservadora: se consideran ocupadas hasta que oficina confirme que
    están vacantes, para que el técnico nunca reciba permiso implícito de entrar. */
-S.unidades.forEach(u=>{ if(!u.ocupacion) u.ocupacion="Occupied"; });
+S.unidades.forEach(u=>{ if(!u.ocupacion) u.ocupacion="Occupied"; if(!u.ubicacionUnidad) u.ubicacionUnidad=""; });
 
 S.cat = CAT;   // los catálogos son datos del sistema, no constantes del código

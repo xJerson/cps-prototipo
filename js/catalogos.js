@@ -94,6 +94,7 @@ const ROLES = {
   "Thalia": {i:"TM",r:"Programación",  m:["tablero","wo","calendario","despacho","supervision","propiedades","tecnicos","catalogos","excepciones","reportes","alertas"]},
   "Gustavo":{i:"GA",r:"Supervisión",   m:["tablero","wo","calendario","supervision","gustavoweb","inventario","tecnicos","excepciones","reportes","alertas"]},
   "Erika":  {i:"EM",r:"Administración",m:["tablero","wo","nomina","facturacion","cobranza","tarifario","inventario","excepciones","reportes","alertas","bitacora"]}
+  ,"Contador":{i:"CT",r:"Contabilidad · solo lectura",m:["tablero","finanzas","inventario","reportes"]}
 };
 /* Teléfono que se le da al cajero cuando el técnico compra material en
    tienda con la tarjeta de la empresa — lo usa la tarjeta "Compra de
@@ -123,6 +124,7 @@ const MODS = [
   {id:"facturacion",n:"Facturación",         ic:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/>'},
   {id:"cobranza",  n:"Cobranza",             ic:'<circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/>'},
   {id:"inventario",n:"Inventario",           ic:'<path d="M21 16V8l-9-5-9 5v8l9 5z"/><path d="M3.3 7L12 12l8.7-5M12 22V12"/>'},
+  {id:"finanzas", n:"Finanzas",             ic:'<path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/>'},
   {g:"Sistema"},
   {id:"alertas",   n:"Alertas",              ic:'<path d="M18 8A6 6 0 1 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.7 21a2 2 0 0 1-3.4 0"/>'},
   {id:"bitacora",  n:"Bitácora",             ic:'<path d="M12 8v4l3 2"/><circle cx="12" cy="12" r="9"/>'}
