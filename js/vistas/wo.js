@@ -98,7 +98,7 @@ function vistaCierreAgendamiento(){
   const porProp={}; elegibles.forEach(w=>(porProp[w.prop]=porProp[w.prop]||[]).push(w));
   const envios=(S.confirmacionesAgendamiento||[]).filter(x=>x.fechaAgenda===fecha);
   const propiedades=Object.keys(porProp);
-  const yaEnviadas=new Set(envios.map(x=>x.prop));
+  const pendientes=esFinSemana?[]:elegibles.filter(w=>!avisoAgendaDe(w));
   return `<div class="card" style="margin-bottom:12px;border-color:var(--azul)">
     <div class="chd" style="background:var(--azul-cl)"><h3 style="color:var(--azul-s)">Confirmar agenda de mañana</h3>
       <span class="s">un correo por propiedad para las unidades del próximo día laborable</span></div>
@@ -106,22 +106,25 @@ function vistaCierreAgendamiento(){
       <div class="fld" style="margin:0"><label>Fecha a confirmar</label><input id="caFecha" type="date" value="${esc(fecha)}" data-a="agendaCierreFecha"></div>
       <div class="fld" style="margin:0"><label>Hora de cierre</label><input id="caHora" type="time" value="${esc(cfg.hora||"16:00")}" data-a="agendaCierreHora"></div>
     </div>
-    <div class="note ${esFinSemana?"w":propiedades.length?"v":"w"}" style="margin:12px 0 0"><b>${esFinSemana?"No se envían confirmaciones sábado ni domingo.":`${elegibles.length} WO elegible(s) en ${propiedades.length} propiedad(es).`}</b>
-      Solo entran las WO <b>Scheduled</b> o <b>Confirmed</b> con técnico; canceladas, reemplazadas y sin asignar quedan fuera. Las confirmaciones se envían únicamente de lunes a viernes.
-      ${envios.length?` Ya se registraron ${envios.length} correo(s) para esta fecha.`:""}</div>
+    <div class="note ${esFinSemana?"w":propiedades.length?"v":"w"}" style="margin:12px 0 0"><b>${esFinSemana?"No se envían confirmaciones sábado ni domingo.":`${elegibles.length} WO elegible(s) en ${propiedades.length} propiedad(es) · ${pendientes.length} por avisar.`}</b>
+      Solo entran las WO <b>Scheduled</b> o <b>Confirmed</b> con técnico, confirmadas o no por el cliente. Cada WO se avisa <b>una sola vez</b> por fecha: si ya salió por el sistema o se registró como avisada por otro medio, no se vuelve a enviar. El aviso no cambia nada en la WO. Solo de lunes a viernes.</div>
     <div style="display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-top:10px">
-      <button class="btn p" data-a="agendaCerrarDia" ${propiedades.length&&!esFinSemana?"":"disabled"}>Enviar confirmaciones</button>
+      <button class="btn p" data-a="agendaCerrarDia" ${pendientes.length?"":"disabled"}>Enviar confirmaciones${pendientes.length?` (${pendientes.length})`:""}</button>
       <span style="font-size:11px;color:var(--faint)">En el prototipo se registra un envío simulado; no manda correo real.</span>
     </div>
     ${propiedades.length?`<table style="margin-top:12px"><thead><tr><th>Propiedad</th><th>Unidades que irán en un correo</th><th>Estado</th></tr></thead><tbody>
-      ${propiedades.map(pid=>`<tr><td><b>${esc(P(pid).nombre)}</b></td><td>${porProp[pid].map(w=>`${esc(U(w.unidad).num)} · ${esc(w.serv)} · ${esc(horaVentanaWO(w))}`).join("<br>")}</td>
-        <td>${yaEnviadas.has(pid)?'<span class="pill v">Confirmación registrada</span>':'<span class="pill w">Pendiente de cierre</span>'}</td></tr>`).join("")}
+      ${propiedades.map(pid=>{ const faltan=porProp[pid].filter(w=>!avisoAgendaDe(w)).length;
+        return `<tr><td><b>${esc(P(pid).nombre)}</b></td><td>${porProp[pid].map(w=>{ const x=avisoAgendaDe(w);
+          return `${esc(U(w.unidad).num)} · ${esc(w.serv)} · ${esc(horaVentanaWO(w))} ${x
+            ?`<span class="pill v" title="${esc(textoAvisoAgenda(x))}">✓ avisada${x.canal==="Otro medio"?" por otro medio":""}</span>`
+            :`<a href="#" data-a="agendaAvisoModal" data-id="${w.id}" style="font-size:11px;color:var(--azul)">avisar / ya avisada</a>`}`; }).join("<br>")}</td>
+        <td>${faltan&&!esFinSemana?`<button class="btn sm p" data-a="agendaEnviarProp" data-id="${esc(pid)}">Enviar ahora (${faltan})</button>`:'<span class="pill v">Todo avisado</span>'}</td></tr>`; }).join("")}
     </tbody></table>`:""}
     ${envios.length?`<div style="margin-top:14px"><b style="font-size:11px;color:var(--faint);text-transform:uppercase">Historial de confirmaciones</b>
-      <table style="margin-top:5px"><thead><tr><th>Propiedad</th><th>Contactos</th><th>WO</th><th>Enviado</th><th></th></tr></thead><tbody>
+      <table style="margin-top:5px"><thead><tr><th>Propiedad</th><th>Contactos</th><th>WO</th><th>Cómo</th><th>Enviado</th><th></th></tr></thead><tbody>
       ${envios.slice().reverse().map(x=>`<tr><td>${esc(P(x.prop).nombre)}</td><td>${esc((x.contactos||[]).map(c=>c.mail).filter(Boolean).join(", ")||"—")}</td>
-        <td>${(x.wos||[]).map(id=>`WO-${id}`).join(", ")}</td><td class="mono">${esc(x.fechaCierre)} · ${esc(x.horaCierre)}</td>
-        <td><button class="btn sm" data-a="agendaConfirmacionVer" data-id="${esc(x.id)}">Ver correo</button> <button class="btn sm" data-a="agendaConfirmacionReenviar" data-id="${esc(x.id)}">Reenviar</button></td></tr>`).join("")}
+        <td>${(x.wos||[]).map(id=>`WO-${id}`).join(", ")}</td><td>${x.canal==="Otro medio"?`Otro medio · ${esc(x.medio)}`:"Sistema"}</td><td class="mono">${esc(x.fechaCierre)} · ${esc(x.horaCierre)} · ${esc(x.quien)}</td>
+        <td>${x.canal==="Otro medio"?"":`<button class="btn sm" data-a="agendaConfirmacionVer" data-id="${esc(x.id)}">Ver correo</button>`}</td></tr>`).join("")}
       </tbody></table></div>`:""}
     </div></div>`;
 }
@@ -162,6 +165,9 @@ function fichaWO(id){
         ?`<button class="btn v" data-a="woReanudar" data-id="${w.id}">Reanudar trabajo</button>`:""}
       ${["Pending","Detenido"].includes(w.estado)
         ?`<button class="btn" data-a="woPendienteCliente" data-id="${w.id}">Avisar cliente</button>`:""}
+      ${(()=>{ const x=avisoAgendaDe(w);
+        if(x) return `<button class="btn" disabled title="${esc(textoAvisoAgenda(x))}">✓ Agendamiento avisado</button>`;
+        return puedeAvisarAgenda(w)?`<button class="btn" data-a="agendaAvisoModal" data-id="${w.id}">✉ Avisar agendamiento al cliente</button>`:""; })()}
     </div></div>
   <div style="display:grid;grid-template-columns:1fr 330px;gap:14px;align-items:start">
     <div>

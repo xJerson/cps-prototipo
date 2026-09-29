@@ -23,8 +23,8 @@ function renderFon(){
      entren sin apretar. */
   $("#fanm").textContent = "Celular";
   $("#fasu").textContent = t.zona;
-  /* La confirmación del cliente ayuda a coordinar, pero una WO asignada debe
-     seguir visible para el técnico: ocultarla era un bloqueo operativo. */
+  /* La confirmación del cliente es solo para la oficina: el técnico va igual
+     y no debe saber si el cliente confirmó o no, para que no deje de ir. */
   const mias = S.wos.filter(w=>w.tec===t.id && !w.cobrada && w.estado!=="Canceled");
   const subMias = subWOsDeTec(t.id).filter(a=>{
     const w=W(a.wo); return w && !w.cobrada;
@@ -108,7 +108,7 @@ function renderFon(){
     const w=W(S.phWO), p=P(w.prop), u=U(w.unidad);
     const ocupacion = u.ocupacion||"Occupied";
     const ads=S.adicionales.filter(a=>a.wo===w.id), sols=solsDe(w.id);
-    const col={g:"#8a97a4",a:"#1f4e79",m:"#5b21b6",w:"#8a5a00",v:"#1e5c3a",r:"#9b2226"}[estP(w.estado)];
+    const col={g:"#8a97a4",a:"#1f4e79",m:"#5b21b6",w:"#8a5a00",v:"#1e5c3a",r:"#9b2226"}[estP(estadoTec(w))];
     const dato = (et,v) => v ? `<div class="ds" style="margin-bottom:3px"><b>${et}:</b> ${esc(v)}</div>` : "";
     /* Antes mostraba "9:00" fijo aunque nadie la haya definido — Claudia:
        "la hora no aparezca a menos de que sí se agende una hora". dato() ya
@@ -121,8 +121,7 @@ function renderFon(){
     h=`<button class="db g" style="margin:5px 0 9px;padding:7px;font-size:11.5px" data-a="fView" data-v="agenda">‹ Mi agenda</button>
     <div class="dc"><div style="display:flex;justify-content:space-between;gap:7px">
       <div style="min-width:0"><div class="dh">${esc(p.nombre)}</div><div class="ds">Unidad ${esc(u.num)} · ${esc(u.rooms)} · ${u.pisos} piso(s)</div></div>
-      <span class="dtag" style="background:${col}22;color:${col};flex:none">${esc(w.estado)}</span></div>
-      ${fechaSinConfirmar(w)?`<div class="ds" style="margin-top:6px;color:var(--ambar)">⏳ El cliente todavía no confirmó esta fecha — puede moverse.</div>`:""}
+      <span class="dtag" style="background:${col}22;color:${col};flex:none">${esc(estadoTec(w))}</span></div>
       <div style="margin-top:9px;padding-top:9px;border-top:1px solid var(--line)">
         ${dato("Servicio", w.serv)}
         ${w.ubic?dato("Dónde", w.ubic):""}
@@ -276,7 +275,7 @@ function renderFon(){
   }
   else {
     h=`<div class="dl" style="margin-top:5px">Mi agenda</div>`+((mias.length||subMias.length)?mias.map(w=>{
-      const col={g:"#8a97a4",a:"#1f4e79",m:"#5b21b6",w:"#8a5a00",v:"#1e5c3a",r:"#9b2226"}[estP(w.estado)];
+      const col={g:"#8a97a4",a:"#1f4e79",m:"#5b21b6",w:"#8a5a00",v:"#1e5c3a",r:"#9b2226"}[estP(estadoTec(w))];
       const a=asisDe(w.id);
       return `<div class="dc" data-a="fAbrir" data-id="${w.id}" style="cursor:pointer;${
         w.infoPedida?"border-color:var(--ambar);box-shadow:0 0 0 2px var(--ambar-cl)"
@@ -287,8 +286,8 @@ function renderFon(){
              :w.nueva?`<div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--azul);margin-bottom:2px">NUEVO</div>`:""}
             <div class="dh">${esc(P(w.prop).nombre)}</div>
             <div class="ds">${esc(U(w.unidad).num)} · ${esc(w.serv)}</div>
-            <div class="ds" style="font-size:10px">${w.fecha}${w.horaProg?` · ${esc(w.horaFin?`${w.horaProg}–${w.horaFin}`:w.horaProg)}`:""}${!w.confirmCliente?" · client confirmation pending":""}</div></div>
-          <span class="dtag" style="background:${col}22;color:${col};flex:none;height:fit-content">${esc(w.estado)}</span></div>
+            <div class="ds" style="font-size:10px">${w.fecha}${w.horaProg?` · ${esc(w.horaFin?`${w.horaProg}–${w.horaFin}`:w.horaProg)}`:""}</div></div>
+          <span class="dtag" style="background:${col}22;color:${col};flex:none;height:fit-content">${esc(estadoTec(w))}</span></div>
         ${a?`<div class="ds" style="margin-top:5px;color:var(--verde)">Llegaste ${a.horaReal} · ${esc(a.puntualidad)}</div>`:""}
         ${(w.fotosPrevias||[]).length?`<div class="ds" style="margin-top:5px;color:var(--azul);font-weight:700">📷 ${(w.fotosPrevias||[]).length} foto(s) para prepararte antes de ir</div>`:""}
         <div class="ds" style="margin-top:6px;color:var(--azul);font-weight:650">Abrir ›</div></div>`;
@@ -549,6 +548,10 @@ const enProceso    = () => S.wos.filter(w=>["In progress","Esperando aprobaci\u0
 /* \u2500\u2500 Modulo 5 de Claudia: control de servicios en proceso \u2500\u2500
    Ella nombro SEIS estados (L179-185) que no son los del Excel. Aqui se
    traduce el estado real al nombre que ella uso, sin tocar el dato. */
+/* El técnico ve "Scheduled" tanto si el cliente confirmó como si no:
+   la confirmación no cambia la visita y no debe influir en que vaya. */
+const estadoTec = w => w.estado==="Confirmed" ? "Scheduled" : w.estado;
+
 const EST_SUP = {
   "Scheduled":  {n:"No iniciado",             c:"#8a97a4"},
   "Confirmed":  {n:"No iniciado",             c:"#8a97a4"},

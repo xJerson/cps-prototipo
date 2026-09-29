@@ -158,7 +158,6 @@ function ayudaContexto(){
   if(S.mod==="wo" && S.sub){
     const w = W(S.sub);
     if(w && !w.tec && esAgendada(w.estado)) return {sel:'[data-a="asigModal"]', txt:"Esta Work Order no tiene técnico. Tocá «Asignar técnico»."};
-    if(w && w.tec && !w.confirmCliente && esAgendada(w.estado)) return {sel:'[data-a="progCliente"]', txt:"Falta confirmar la fecha con el cliente. Tocá «Programar con el cliente»."};
     if(w && w.infoPedida) return {sel:'[data-a="verWoEnCel"]', txt:`Le pediste algo al técnico. Abrí su celular para que lo complete: «Ver en el celular de ${esc(T(w.tec)?T(w.tec).nombre:"el técnico")}».`};
     if(w && w.tec && esAgendada(w.estado) && !asisDe(w.id)) return {sel:'[data-a="verWoEnCel"]', txt:`Ya está asignada y con fecha. Ahora le toca al técnico: abrí su celular con «Ver en el celular de ${esc(T(w.tec)?T(w.tec).nombre:"el técnico")}» y seguí desde ahí.`};
     if(w && w.estado==="Completed" && !w.supervisada && w.evid) return {sel:'[data-a="supervisar"]', txt:"El trabajo está terminado y tiene evidencia. Tocá «Aprobar supervisión»."};

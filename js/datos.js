@@ -171,8 +171,8 @@ let S = {
            ["14:10","Devuelta por supervisión: Quedó pintura en el marco de la puerta y el zócalo sin retocar.","Gustavo"]]},
     {id:1042,prop:"P2",unidad:"U5",cat:"Clean",serv:"Deep clean",tec:null,estado:"Pending",semana:33,fecha:"2026-08-12",horaProg:"9:00",po:"",asistencia:false,evid:0,mats:[],notas:"Waiting for water service",notasTec:"",hist:[["7:50","Creada","Claudia"],["8:10","Pending: unit does not have water","Thalia"]]},
     {id:1043,prop:"P3",unidad:"U7",cat:"Repair",serv:"Drywall repair",tec:"T4",estado:"Confirmed",semana:33,fecha:"2026-08-12",horaProg:"10:00",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",
-     /* Confirmada con el cliente: así Andrés SÍ la ve en su agenda — ejemplo
-        de contraste con la 1044 (sin confirmar), que a propósito no la ve. */
+     /* Confirmada con el cliente; la 1044 queda sin confirmar. El técnico
+        ve las dos igual en su agenda: la confirmación es solo de oficina. */
      confirmCliente:{fecha:"2026-08-12",medio:"Llamada",contacto:"Property Manager",quien:"Thalia",hora:"8:40"},
      /* Fotos de referencia: lo que hay que reparar, para que el técnico lo vea
         antes de ir — Work to Be Performed, sembrado para que la galería no
@@ -185,9 +185,8 @@ let S = {
     {id:1062,prop:"P3",unidad:"U14",cat:"Clean",serv:"Full clean",tec:"T4",estado:"Confirmed",semana:33,fecha:"2026-08-12",horaProg:"13:00",horaFin:"15:00",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",
      confirmCliente:{fecha:"2026-08-12",medio:"Email",contacto:"Rick Halloway",quien:"Thalia",hora:"9:05"},
      hist:[["9:00","Creada","Thalia"],["9:05","Fecha confirmada con el cliente","Thalia"],["9:06","Asignada a Andrés Solís","Thalia"]]},
-    /* A propósito sin confirmCliente: es el ejemplo de que Diego NO la ve
-       todavía en su "Mi agenda" del celular — recién aparece cuando alguien
-       la confirme desde Reagendar. */
+    /* A propósito sin confirmCliente: la oficina la ve "Sin confirmar", pero
+       Diego la ve en su agenda igual que una confirmada y va igual. */
     {id:1044,prop:"P1",unidad:"U3",cat:"Clean",serv:"Full clean",tec:"T1",estado:"Scheduled",semana:33,fecha:"2026-08-13",horaProg:"9:00",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",hist:[["8:30","Creada","Claudia"]]},
     /* Terminada y con evidencia, pero todavía sin que nadie la revise — a
        diferencia de la 1039 (sin evidencia), a ésta SÍ se le puede tocar
