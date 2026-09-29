@@ -48,31 +48,27 @@ function puedeAvisarAgenda(w){
 function wosPorAvisar(fecha, prop){
   return wosElegiblesCierre(fecha).filter(w=>(!prop||w.prop===prop) && !avisoAgendaDe(w));
 }
-function registrarConfirmacionAgenda(prop, fecha, ws){
+/* Un mismo registro sirve para el correo automático del cierre y para el
+   envío manual: el canal dice cómo salió. Con Correo lo manda el sistema; con
+   WhatsApp, mensaje o llamada lo manda la persona y aquí queda anotado. */
+const CANALES_AGENDA=["Correo","WhatsApp","Mensaje de texto","Llamada"];
+function registrarConfirmacionAgenda(prop, fecha, ws, medio, auto, nota){
   if(esFinDeSemanaConfirmacion(fecha)) return null;
   ws=ws.filter(w=>!avisoAgendaDe(w));
   if(!ws.length) return null;
+  medio=medio||"Correo";
   S.confirmacionesAgendamiento=S.confirmacionesAgendamiento||[];
-  const contactos=contactosConfirmacion(prop), id="CA"+Date.now()+"-"+(S.confirmacionesAgendamiento.length+1);
-  const r={id,prop,fechaAgenda:fecha,fechaCierre:HOY_SUP,horaCierre:hora(),contactos,wos:ws.map(w=>w.id),
-    canal:"Sistema",medio:"Email",
+  const correo=medio==="Correo", id="CA"+Date.now()+"-"+(S.confirmacionesAgendamiento.length+1);
+  const r={id,prop,fechaAgenda:fecha,fechaCierre:HOY_SUP,horaCierre:hora(),contactos:correo?contactosConfirmacion(prop):[],
+    wos:ws.map(w=>w.id),medio,auto:!!auto,nota:nota||"",
     asunto:`Scheduling confirmation · ${P(prop).nombre} · ${fecha}`,
-    mensaje:cuerpoConfirmacionAgenda(prop,fecha,ws),estado:"Sent (simulated)",quien:S.usuario};
+    mensaje:cuerpoConfirmacionAgenda(prop,fecha,ws),estado:correo?"Sent (simulated)":"Sent by the office",quien:auto?"Cierre automático":S.usuario};
   S.confirmacionesAgendamiento.unshift(r);
-  ws.forEach(w=>w.hist.push([hora(),`Scheduling confirmation sent to the customer for ${fecha} · ${P(prop).nombre}`,S.usuario]));
-  return r;
-}
-function registrarAvisoExterno(w, medio, nota){
-  S.confirmacionesAgendamiento=S.confirmacionesAgendamiento||[];
-  const r={id:"CA"+Date.now()+"-"+(S.confirmacionesAgendamiento.length+1),prop:w.prop,fechaAgenda:w.fecha,
-    fechaCierre:HOY_SUP,horaCierre:hora(),contactos:[],wos:[w.id],canal:"Otro medio",medio,nota:nota||"",
-    estado:"Sent outside the system",quien:S.usuario};
-  S.confirmacionesAgendamiento.unshift(r);
-  w.hist.push([hora(),`Aviso de agendamiento para ${w.fecha} registrado como enviado por otro medio (${medio})`,S.usuario]);
+  ws.forEach(w=>w.hist.push([hora(),`Agenda del ${fecha} enviada al cliente por ${medio.toLowerCase()}${auto?" (cierre automático)":""}`,r.quien]));
   return r;
 }
 function textoAvisoAgenda(x){
-  return `${x.canal==="Otro medio"?`Enviado por otro medio (${x.medio})`:"Enviado por el sistema"} · ${x.quien} · ${x.fechaCierre} ${x.horaCierre}`;
+  return `${x.medio||"Correo"}${x.auto?" automático":""} · ${x.quien} · ${x.fechaCierre} ${x.horaCierre}`;
 }
 
 Object.assign(ACC, {
@@ -96,49 +92,35 @@ Object.assign(ACC, {
     }
     wosPorAvisar(fecha).forEach(w=>(grupos[w.prop]=grupos[w.prop]||[]).push(w));
     let nuevos=0;
-    Object.entries(grupos).forEach(([prop,ws])=>{ if(registrarConfirmacionAgenda(prop,fecha,ws)) nuevos++; });
+    Object.entries(grupos).forEach(([prop,ws])=>{ if(registrarConfirmacionAgenda(prop,fecha,ws,"Correo",true)) nuevos++; });
     if(!nuevos){ toast("Sin correos nuevos",wosElegiblesCierre(fecha).length?"Todas las WO de esta fecha ya fueron avisadas. No se vuelve a enviar.":"No hay WO elegibles para cerrar.","w"); render(); return; }
     toast("✓ Agendamiento cerrado",`${nuevos} correo(s) agrupados por propiedad, solo con las WO que todavía no se habían avisado. El envío es simulado en este prototipo.`,"v"); render();
   },
-  agendaEnviarProp: d => {
-    const fecha=(S.cierreAgendamiento&&S.cierreAgendamiento.fecha)||proximoDiaLaborableConfirmacion();
-    const ws=wosPorAvisar(fecha,d.id);
-    if(!ws.length){ toast("Ya avisada","Las WO de esta propiedad para esa fecha ya fueron avisadas. No se vuelve a enviar.","w"); render(); return; }
-    registrarConfirmacionAgenda(d.id,fecha,ws);
-    toast("✓ Correo enviado",`Se avisó a <b>${esc(P(d.id).nombre)}</b> de ${ws.length} WO para el ${esc(fecha)}.`,"v"); render();
-  },
-  agendaAvisoModal: d => {
-    const w=W(+d.id); if(!w) return;
-    const x=avisoAgendaDe(w);
-    if(x){ toast("Ya se avisó",`WO-${w.id} ya fue avisada para el ${esc(w.fecha)}: ${esc(textoAvisoAgenda(x))}.`,"w"); return; }
-    if(!puedeAvisarAgenda(w)){ toast("No se puede avisar","La WO necesita fecha en día laborable, técnico asignado y estar Scheduled o Confirmed.","w"); return; }
-    const cons=contactosConfirmacion(w.prop);
-    modal(`<div class="mh"><h3>Aviso de agendamiento — WO-${w.id}</h3><p>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)} · ${esc(w.fecha)}</p></div>
+  agendaModal: d => {
+    const prop=d.prop, fecha=d.fecha;
+    if(esFinDeSemanaConfirmacion(fecha)){ toast("No se puede enviar","La agenda solo se envía para días de lunes a viernes.","w"); return; }
+    const ws=wosPorAvisar(fecha,prop), ya=wosElegiblesCierre(fecha).filter(w=>w.prop===prop && avisoAgendaDe(w));
+    if(!ws.length){ toast("Ya enviada","Todas las WO de este cliente para esa fecha ya tienen su agenda enviada. No se vuelve a enviar.","w"); return; }
+    const cons=contactosConfirmacion(prop);
+    modal(`<div class="mh"><h3>Enviar agenda — ${esc(P(prop).nombre)}</h3><p>${esc(fecha)} · ${ws.length} WO por avisar</p></div>
       <div class="mb">
-        <div class="fld"><label>To</label><input readonly value="${esc(cons.map(c=>c.mail).join(", ")||"No email registered")}"></div>
-        <div class="fld"><label>Message</label><textarea readonly rows="9">${esc(cuerpoConfirmacionAgenda(w.prop,w.fecha,[w]))}</textarea></div>
-        <div class="note" style="margin-bottom:12px">Es solo un aviso: no cambia el estado, la confirmación ni el técnico de la WO. Se envía una sola vez por fecha.</div>
-        <div style="border-top:1px solid var(--line);padding-top:12px"><b style="font-size:12px">¿Ya se le avisó por otro lado?</b>
-          <div class="fg c2" style="margin-top:8px"><div class="fld"><label>Medio</label><select id="aeMedio"><option>Correo (fuera del sistema)</option><option>WhatsApp</option><option>Mensaje de texto</option><option>Llamada</option></select></div>
-          <div class="fld"><label>Nota</label><input id="aeNota" placeholder="Opcional"></div></div>
-          <button class="btn sm" data-a="agendaMarcarExternoOK" data-id="${w.id}">Registrar como ya avisado</button></div>
+        <div class="fld"><label>Canal <span class="req">*</span></label><select id="agCanal">${CANALES_AGENDA.map(c=>`<option>${esc(c)}</option>`).join("")}</select></div>
+        <div class="fld"><label>Para</label><input readonly value="${esc(cons.map(c=>c.mail).join(", ")||"Sin correo registrado")}"></div>
+        <div class="fld"><label>Mensaje (inglés)</label><textarea readonly rows="9">${esc(cuerpoConfirmacionAgenda(prop,fecha,ws))}</textarea></div>
+        <div class="fld"><label>Nota</label><input id="agNota" placeholder="Opcional — por ejemplo, a quién se le escribió"></div>
+        ${ya.length?`<div class="note v" style="margin-bottom:10px">Ya enviadas antes y no se repiten: ${ya.map(w=>`${esc(U(w.unidad).num)} (${esc(avisoAgendaDe(w).medio||"Correo")})`).join(", ")}.</div>`:""}
+        <div class="note">Con <b>Correo</b> el sistema envía el mensaje. Con <b>WhatsApp, mensaje o llamada</b> lo envías tú con este texto y aquí queda registrado por qué canal salió. No cambia nada en las WO y cada WO se envía una sola vez por fecha.</div>
       </div>
-      <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="agendaEnviarWO" data-id="${w.id}">Enviar correo</button></div>`);
+      <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="agendaEnviarOK" data-prop="${esc(prop)}" data-fecha="${esc(fecha)}">Enviar agenda</button></div>`);
   },
-  agendaEnviarWO: d => {
-    const w=W(+d.id); if(!w) return;
-    const x=avisoAgendaDe(w);
-    if(x){ cm(); toast("Ya se avisó",`No se vuelve a enviar: ${esc(textoAvisoAgenda(x))}.`,"w"); render(); return; }
-    if(!puedeAvisarAgenda(w)){ toast("No se puede avisar","La WO necesita fecha en día laborable, técnico asignado y estar Scheduled o Confirmed.","w"); return; }
-    registrarConfirmacionAgenda(w.prop,w.fecha,[w]); cm();
-    toast("✓ Correo enviado",`Se avisó al cliente el agendamiento de WO-${w.id} para el ${esc(w.fecha)}.`,"v"); render();
-  },
-  agendaMarcarExternoOK: d => {
-    const w=W(+d.id); if(!w) return;
-    const x=avisoAgendaDe(w);
-    if(x){ cm(); toast("Ya se avisó",`Ya estaba registrado: ${esc(textoAvisoAgenda(x))}.`,"w"); render(); return; }
-    registrarAvisoExterno(w,val("aeMedio"),val("aeNota").trim()); cm();
-    toast("✓ Registrado",`WO-${w.id} queda como avisada. El sistema ya no enviará el correo para el ${esc(w.fecha)}.`,"v"); render();
+  agendaEnviarOK: d => {
+    const prop=d.prop, fecha=d.fecha, medio=val("agCanal")||"Correo", nota=val("agNota").trim();
+    const ws=wosPorAvisar(fecha,prop);
+    if(!ws.length){ cm(); toast("Ya enviada","Estas WO ya tenían su agenda enviada. No se vuelve a enviar.","w"); render(); return; }
+    registrarConfirmacionAgenda(prop,fecha,ws,medio,false,nota); cm();
+    toast("✓ Agenda enviada",medio==="Correo"
+      ?`Se envió por correo a <b>${esc(P(prop).nombre)}</b> la agenda del ${esc(fecha)} (${ws.length} WO).`
+      :`Quedó registrado que la agenda del ${esc(fecha)} se envió por <b>${esc(medio.toLowerCase())}</b> a <b>${esc(P(prop).nombre)}</b>. El cierre de las 4 PM no la repetirá.`,"v"); render();
   },
   agendaConfirmacionVer: d => { const x=by(S.confirmacionesAgendamiento||[],d.id); if(!x) return; modal(`<div class="mh"><h3>Confirmación de agendamiento</h3><p>${esc(P(x.prop).nombre)} · ${esc(x.fechaAgenda)}</p></div><div class="mb"><div class="fld"><label>To</label><input readonly value="${esc((x.contactos||[]).map(c=>c.mail).filter(Boolean).join(", ")||"No email registered")}"></div><div class="fld"><label>Subject</label><input readonly value="${esc(x.asunto)}"></div><div class="fld"><label>Message</label><textarea readonly rows="12">${esc(x.mensaje)}</textarea></div><div class="note">${esc(textoAvisoAgenda(x))}. Simulated send in this prototype.</div></div><div class="mf"><button class="btn" data-a="cm">Close</button></div>`); },
   woPendienteCliente: d => { const w=W(+d.id), p=P(w.prop), c=(contactosDe(w.prop)||[])[0]||CLI(p.cliente); modal(`<div class="mh"><h3>Notify customer — WO-${w.id}</h3><p>Customer-facing message is generated in English.</p></div><div class="mb"><div class="fld"><label>Reason <span class="req">*</span></label><select id="pcReason"><option>Unit does not have electricity</option><option>Unit does not have water</option><option>Pest control is required</option><option>No access to the unit</option><option>Other</option></select></div><div class="fld"><label>Detail</label><input id="pcDetail" placeholder="Optional detail for the customer"></div><div class="fld"><label>Send by</label><select id="pcMedium"><option>Email</option><option>SMS</option></select></div><div class="note">To: ${esc(c.nombre||"Property contact")} · ${esc(c.mail||c.tel||"—")}. This prototype records a simulated send and follow-up; it does not send a real message.</div></div><div class="mf"><button class="btn" data-a="cm">Cancel</button><button class="btn p" data-a="woPendienteEnviar" data-id="${w.id}">Send and record follow-up</button></div>`); },
