@@ -3,6 +3,18 @@ Object.assign(ACC, {
 
 
   propVer: d => { S.mod="propiedades"; S.sub=d.id; S.tab="datos"; render(); },
+  /* Crédito de propiedad: solo abonos manuales acá; el uso se descuenta desde el borrador de factura. */
+  creditoNuevo: d => modal(`<div class="mh"><h3>Agregar crédito</h3><p>${esc(P(d.id).nombre)}</p></div>
+    <div class="mb"><div class="fg c2">
+      <div class="fld"><label>Monto <span class="req">*</span></label><input id="crMonto" class="mono" placeholder="0.00"></div>
+      <div class="fld"><label>Motivo <span class="req">*</span></label><input id="crMot"></div></div></div>
+    <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="creditoGuardar" data-id="${d.id}">Guardar</button></div>`),
+  creditoGuardar: d => {
+    const monto=parseFloat(val("crMonto")), motivo=val("crMot");
+    if(!(monto>0)||!motivo){ S.audOmitir=true; marcaFalta(["crMonto","crMot"]); toast("Falta información","Escribe un monto mayor a 0 y el motivo.","r"); return; }
+    (S.creditosProp=S.creditosProp||[]).push({id:"CR"+Date.now(),prop:d.id,tipo:"Abono",monto,motivo,quien:S.usuario,fecha:HOY_SUP});
+    cm(); toast("✓ Crédito agregado",`${esc(P(d.id).nombre)} · saldo ${money(saldoCredito(d.id))}.`,"v"); render();
+  },
   propNueva: d => { const p = d&&d.id ? P(d.id) : null;
     const op = (a,v) => a.map(x=>`<option ${x===v?"selected":""}>${esc(x)}</option>`).join("");
     modal(`<div class="mh"><h3>${p?"Editar "+esc(p.nombre):"Nueva propiedad"}</h3>

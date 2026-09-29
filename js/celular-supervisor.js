@@ -362,9 +362,37 @@ function hojaDev(g){
   </div></div>`;
 }
 
+/* Gasolina / mantenimiento / servicio de Gustavo. Se guardan en S.gastosCompartidos (la misma estructura
+   que Finanzas ya lee), así salen en su libro y en el CSV de salidas sin duplicar nada. */
+const TIPOS_VEH = {"Gasolina":"Fuel","Mantenimiento":"Vehicle maintenance","Servicio":"Vehicle service"};
+const gastosVehiculoGustavo = () => (S.gastosCompartidos||[]).filter(g=>g.quien==="Gustavo" && g.vehiculo);
+function gastosVehiculoHTML(){
+  return `<button class="db p" style="margin-top:10px" data-a="gVehAbrir">Gasolina / vehículo</button>`
+    + gastosVehiculoGustavo().slice(0,3).map(g=>`<div class="dc"><div style="display:flex;justify-content:space-between;gap:6px"><div class="dh">${esc(g.tipo)} · ${esc(g.vehiculo)}</div><b>${money(g.monto)}</b></div>
+      <div class="ds">${esc(g.fecha)}${g.notas?" · "+esc(g.notas):""} ${miniRecibo(g.foto)}</div></div>`).join("");
+}
+
 /* Hojas que suben dentro del teléfono — nunca un modal de la web */
 function hojaCel(sh){
   const w = W(sh.wo);
+  if(sh.t==="veh") return `<div class="fscrim" data-a="fSheetNo"><div class="fsheet" data-stop>
+    <div class="grab"></div>
+    <h4>Gasolina / vehículo</h4>
+    <div class="sub">Va directo a Finanzas.</div>
+    <label>Tipo</label>
+    <select id="gvTipoV">${Object.keys(TIPOS_VEH).map(t=>`<option ${t===sh.tipo?"selected":""}>${t}</option>`).join("")}</select>
+    <label>Vehículo</label>
+    <select id="gvVeh">${(S.vehiculos||[]).map(v=>`<option ${v.nombre===sh.veh?"selected":""}>${esc(v.nombre)}</option>`).join("")}</select>
+    <label>Fecha</label><input type="date" id="gvFecha" value="${esc(sh.fecha)}">
+    <label>Monto</label><input id="gvMonto" value="${esc(sh.monto)}" inputmode="decimal" placeholder="$0.00">
+    <label>Foto <span class="req">*</span></label>
+    <button type="button" class="db g" data-a="gVehFoto">${sh.foto
+      ?`<img src="${sh.foto}" style="width:16px;height:16px;object-fit:cover;border-radius:3px"> Foto agregada — tocá para cambiar`
+      :"📷 Foto del recibo"}</button>
+    <label>Nota</label><input id="gvNota" value="${esc(sh.nota)}">
+    <button class="db p" style="margin-top:11px" data-a="gVehOK">Guardar</button>
+    <button class="db g" data-a="fSheetNo">Cancelar</button>
+  </div></div>`;
   /* Un adicional real trae varios conceptos («Extra prep, Primer»). El técnico
      empieza con un renglón y agrega los que necesite; no hay tope, porque el
      tope se lo puso el Excel, no el trabajo. */
@@ -405,16 +433,15 @@ function hojaCel(sh){
      el celular. Sin esto, materialWO() de la orden queda en $0 en silencio
      salvo que alguien de oficina se acuerde de anotarlo aparte en Inventario. */
   if(sh.t==="material"){
-    const prods = S.productos;
-    // El técnico nunca ve dinero de nada — ni siquiera el costo de lo que
-    // registra. materialWO() sigue calculándolo para oficina, solo que no
-    // se le muestra a él en ningún lado del celular.
+    const prods = S.productos.filter(p=>p.consumible!==false && p.cat!=="Suministros de oficina");
+    // Erika: el técnico sí ve el costo del material (lo compra él). Lo que
+    // nunca ve es lo que se le factura al cliente.
     return `<div class="fscrim" data-a="fSheetNo"><div class="fsheet" data-stop>
     <div class="grab"></div>
     <h4>Materiales y observaciones</h4>
     <div class="sub">Lo que usaste en este trabajo — así queda registrado en la orden, no se pierde.</div>
     ${sh.filas.map((f,i)=>`<div class="adfila">
-      <select id="mtP${i}">${prods.map(p=>`<option value="${p.id}" ${p.id===f.prod?"selected":""}>${esc(p.nombre)}</option>`).join("")}</select>
+      <select id="mtP${i}">${prods.map(p=>`<option value="${p.id}" ${p.id===f.prod?"selected":""}>${esc(p.nombre)} · ${esc(p.um)}${p.costo?` · ${money(p.costo)}`:""}</option>`).join("")}</select>
       <button class="adx" data-a="fMaterialMenos" data-i="${i}" ${sh.filas.length===1?"disabled":""}>−</button>
       <div class="adnum"><label>Cant.<input id="mtC${i}" value="${esc(String(f.cant))}" inputmode="decimal"></label></div>
     </div>`).join("")}
@@ -455,18 +482,24 @@ function hojaCel(sh){
     <label>¿Dónde compraste?</label>
     <select id="cpTienda">${CAT.tiendas.map(t=>`<option ${t===sh.tienda?"selected":""}>${esc(t)}</option>`).join("")}</select>
     <label>¿Qué compraste?</label>
-    <input id="cpNombre" value="${esc(sh.nombre)}" placeholder="Ej. sellador de grout">
-    <label>¿Cuánto compraste?</label>
-    <input id="cpCant" value="${esc(String(sh.cant))}" inputmode="decimal">
-    <label>Pagó</label>
-    <input id="cpPago" value="${esc(String(sh.pago||""))}" inputmode="decimal" placeholder="$0.00">
-    <div class="db-seg" style="display:flex;gap:6px;margin-top:7px">
-      <button type="button" class="db ${sh.uso==="todo"?"p":"g"}" style="flex:1" data-a="fCompraUso" data-v="todo">Usé todo</button>
-      <button type="button" class="db ${sh.uso==="sobro"?"p":"g"}" style="flex:1" data-a="fCompraUso" data-v="sobro">Sobró material</button>
-    </div>
-    ${sh.uso==="sobro"?`<label>¿Cuánto usaste en esta unidad?</label>
-    <input id="cpUsado" value="${esc(String(sh.usado||""))}" inputmode="decimal">
-    <div class="sub">Lo que sobró queda en inventario para otro trabajo.</div>`:""}
+    ${sh.filas.map((f,i)=>`<div class="adfila">
+      <input id="cpN${i}" value="${esc(f.nombre)}" placeholder="Ej. limpiador de carpeta">
+      <button class="adx" data-a="fCompraMenos" data-i="${i}" ${sh.filas.length===1?"disabled":""}>−</button>
+      <div class="adnum" style="grid-template-columns:1fr 1fr 1fr">
+        <label>Cant.<input id="cpC${i}" value="${esc(String(f.cant))}" inputmode="decimal"></label>
+        <label><select id="cpM${i}" style="padding:6px 4px">${UNIDADES_COMPRA.map(u=>`<option ${u===f.um?"selected":""}>${esc(u)}</option>`).join("")}</select></label>
+        <label>Pagó<input id="cpG${i}" value="${esc(String(f.pago||""))}" inputmode="decimal" placeholder="$"></label>
+      </div>
+      <div style="grid-column:1/3;display:flex;gap:6px">
+        <button type="button" class="db ${f.uso==="todo"?"p":"g"}" style="flex:1;margin:0" data-a="fCompraUso" data-i="${i}" data-v="todo">Usé todo</button>
+        <button type="button" class="db ${f.uso==="sobro"?"p":"g"}" style="flex:1;margin:0" data-a="fCompraUso" data-i="${i}" data-v="sobro">Sobró</button>
+      </div>
+      ${f.uso==="sobro"?`<div class="adnum"><label>Usé<input id="cpU${i}" value="${esc(String(f.usado||""))}" inputmode="decimal"></label></div>`:""}
+    </div>`).join("")}
+    <button class="db g admas" data-a="fCompraMas">+ Agregar otro</button>
+    <label>Total ticket</label>
+    <input id="cpTotal" value="${esc(String(sh.total||""))}" inputmode="decimal" placeholder="$0.00">
+    <div class="sub">"Pagó" por producto es opcional. Si solo sabés el total, oficina lo reparte con la foto del ticket. Lo que sobra queda en inventario.</div>
     <button type="button" class="db g" style="margin-top:7px" data-a="fCompraFoto">${sh.foto
       ?`<img src="${sh.foto}" style="width:16px;height:16px;object-fit:cover;border-radius:3px"> Foto agregada — tocá para cambiar`
       :"📷 Agregar foto del ticket"}</button>

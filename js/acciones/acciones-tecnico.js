@@ -1,4 +1,10 @@
 "use strict";
+const UNIDADES_COMPRA=["unidad","galón","cuarto","caja","libra","pie"];
+/* Lee de la hoja de Gustavo lo tecleado antes de re-dibujarla (sacar la foto la reconstruye). */
+function leerVeh(){ const sh=S.phSheet; if(!sh||sh.t!=="veh"||!document.getElementById("gvMonto")) return sh;
+  Object.assign(sh,{tipo:val("gvTipoV"),veh:val("gvVeh"),fecha:val("gvFecha"),monto:val("gvMonto"),nota:val("gvNota")}); return sh; }
+const filaCompra = () => ({nombre:"", cant:"1", um:"unidad", uso:"todo", usado:"", pago:""});
+
 Object.assign(ACC, {
 
   verTecnicoCel: () => { S.phRol="tecnico"; S.phView=S.phWO?"wo":"agenda"; S.phone=true; S.gRep=null; render(); },
@@ -72,6 +78,7 @@ Object.assign(ACC, {
   },
   fLlegue: d => {
     const w=W(+d.id), p=P(w.prop);
+    if(woEspera(w)){ toast("En espera",`Falta terminar WO-${woEspera(w).id} para poder empezar.`,"w"); return; }
     S.reloj += 23;
     const prog = w.horaProg || "9:00";
     const [ph,pm] = prog.split(":").map(Number);
@@ -152,44 +159,71 @@ Object.assign(ACC, {
       n?`${n} línea(s) — quedaron en el costo de WO-${w.id}.`:"Se guardaron las observaciones.","v");
     render();
   },
-  fCompraMaterial: d => { S.phSheet={t:"compra", wo:+d.id, tienda:CAT.tiendas[0], nombre:"", cant:"1", uso:"todo", usado:"", pago:"", foto:null}; render(); },
+  /* ── Gasolina / vehículo de Gustavo (su celular) ── */
+  gVehAbrir: () => { S.phSheet={t:"veh",tipo:"Gasolina",veh:((S.vehiculos||[])[0]||{}).nombre||"",fecha:HOY_SUP,monto:"",nota:"",foto:null}; render(); },
+  gVehFoto: () => { const sh=leerVeh(); if(!sh||sh.t!=="veh") return; capturarFoto(url=>{ sh.foto=url; render(); }); },
+  gVehOK: () => { const sh=leerVeh(); if(!sh||sh.t!=="veh") return;
+    const monto=parseFloat(String(sh.monto).replace(/[$,]/g,""));
+    if(!(monto>0)){ S.audOmitir=true; toast("Falta el monto","Escribe cuánto fue.","r"); return; }
+    if(!sh.foto){ S.audOmitir=true; toast("Falta la foto","Sin foto del recibo no se puede guardar.","r"); return; }
+    const tipo=TIPOS_VEH[sh.tipo]||sh.tipo;
+    S.gastosCompartidos.unshift({id:"GC"+(S.gastosCompartidos.length+1),tipo,concepto:tipo==="Fuel"?"Fuel loaded by Gustavo":tipo,monto,fecha:sh.fecha||HOY_SUP,
+      vehiculo:sh.veh,evidencia:true,foto:sh.foto,notas:sh.nota||"",asignaciones:[],quien:"Gustavo"});
+    S.phSheet=null; toast("✓ Guardado",`${esc(sh.tipo)} · ${money(monto)}. Ya está en Finanzas.`,"v"); render(); },
+  fCompraMaterial: d => { S.phSheet={t:"compra", wo:+d.id, tienda:CAT.tiendas[0], filas:[filaCompra()], total:"", foto:null}; render(); },
   fCompraFoto: () => { leerCompra(); const sh=S.phSheet; if(!sh||sh.t!=="compra") return;
     capturarFoto(url=>{ sh.foto=url; render(); }); },
+  fCompraMas: () => { leerCompra(); const sh=S.phSheet; if(!sh||sh.t!=="compra") return; sh.filas.push(filaCompra()); render(); },
+  fCompraMenos: d => { leerCompra(); const sh=S.phSheet; if(!sh||sh.t!=="compra"||sh.filas.length<2) return; sh.filas.splice(+d.i,1); render(); },
   fCompraUso: d => { leerCompra(); const sh=S.phSheet; if(!sh||sh.t!=="compra") return;
-    sh.uso=d.v; render(); },
+    const f=sh.filas[+d.i]; if(f) f.uso=d.v; render(); },
   /* Regla del cliente: TODO lo comprado entra a inventario (entrada); lo
-     usado en esta unidad sale (salida) y lo que sobra queda en stock. */
+     usado en esta unidad sale (salida) y lo que sobra queda en stock.
+     Un ticket puede traer varias cosas: cada línea es su propia entrada, y
+     todas comparten el mismo ticket. El monto por línea es opcional; si solo
+     hay total, oficina reparte mirando la foto. */
   fCompraOK: d => {
     leerCompra();
-    const sh=S.phSheet, w=W(+d.id), tec=T(w.tec);
-    const nombre=(sh.nombre||"").trim();
-    if(!nombre){ toast("Falta decir qué compraste","Escribe qué material compraste.","r"); return; }
-    const comprado=parseFloat(sh.cant)||1;
-    const usado=sh.uso==="todo" ? comprado : parseFloat(sh.usado);
-    if(sh.uso==="sobro" && (!Number.isFinite(usado) || usado<0 || usado>=comprado)){
-      toast("Revisa la cantidad usada","Debe ser menor a lo que compraste.","r"); return;
+    const sh=S.phSheet, w=W(+d.id), tec=T(w.tec), quien=tec?tec.nombre:S.usuario, round2=x=>Math.round(x*100)/100;
+    const filas=sh.filas.map(f=>Object.assign({},f,{nombre:(f.nombre||"").trim()})).filter(f=>f.nombre);
+    if(!filas.length){ toast("Falta decir qué compraste","Escribe al menos un producto.","r"); return; }
+    for(const f of filas){
+      f.comprado=parseFloat(f.cant);
+      if(!(f.comprado>0)){ toast("Revisa la cantidad",`«${esc(f.nombre)}» necesita una cantidad mayor a 0.`,"r"); return; }
+      f.usadoN=f.uso==="todo" ? f.comprado : parseFloat(f.usado);
+      if(f.uso==="sobro" && (!Number.isFinite(f.usadoN) || f.usadoN<0 || f.usadoN>=f.comprado)){
+        toast("Revisa lo que usaste",`En «${esc(f.nombre)}» debe ser menor a lo que compraste.`,"r"); return; }
+      const t=String(f.pago||"").trim(); f.pagoN=t?parseFloat(t):null;
+      if(t && !(f.pagoN>0)){ toast("Revisa lo que pagaste",`El monto de «${esc(f.nombre)}» debe ser mayor a 0.`,"r"); return; }
     }
-    const pagoTxt=String(sh.pago||"").trim(), pago=parseFloat(pagoTxt);
-    if(pagoTxt && !(pago>0)){ toast("Revisa lo que pagaste","Debe ser un monto mayor a 0.","r"); return; }
-    const conPago=pago>0, round2=x=>Math.round(x*100)/100, unit=conPago?pago/comprado:0;
-    let p=S.productos.find(x=>!x.cliente && x.nombre.toLowerCase()===nombre.toLowerCase());
-    if(!p){ p={id:"PT"+nid("mv"), cat:"Compra en tienda", nombre, um:"unidad", min:0, costo:0}; S.productos.push(p); }
-    if(conPago && p.costo===0) p.costo=round2(unit);
-    const entrada={id:"MT"+nid("mv"), prod:p.id, tipo:"entrada", cant:comprado, fecha:w.fecha, wo:null,
-      compraWo:w.id, costo:conPago?round2(pago):0, costoPend:!conPago, tienda:sh.tienda, quien:tec?tec.nombre:S.usuario,
-      notas:conPago?"Comprado en tienda con tarjeta de la empresa":"Comprado en tienda con tarjeta de la empresa — falta cargar el costo del ticket",
-      recibo:sh.foto||null, evid:!!sh.foto};
-    S.movs.push(entrada);
-    if(usado>0){
-      S.movs.push({id:"MT"+nid("mv"), prod:p.id, tipo:"salida", cant:usado, fecha:w.fecha, wo:w.id,
-        costo:conPago?round2(unit*usado):0, compra:entrada.id, tienda:"", quien:tec?tec.nombre:S.usuario, evid:false});
-    }
-    const sobro=comprado-usado;
-    w.hist.push([hora(), `Compró en tienda (${sh.tienda}): ${nombre} × ${comprado} · usó ${usado}${conPago?` · pagó ${money(pago)}`:""}${sobro>0?` · sobró ${sobro} (queda en inventario)`:""}${sh.foto?" · con foto del ticket":" · sin foto del ticket"}`, tec?tec.nombre:S.usuario]);
+    const totT=String(sh.total||"").trim(), total=totT?parseFloat(totT):null;
+    if(totT && !(total>0)){ toast("Revisa el total","El total del ticket debe ser mayor a 0.","r"); return; }
+    const sinPago=filas.filter(f=>f.pagoN===null), sumaCon=filas.reduce((a,f)=>a+(f.pagoN||0),0);
+    if(total!==null && sumaCon>total+0.005){ toast("No cuadra con el ticket",`Los montos suman ${money(sumaCon)} y el ticket es ${money(total)}.`,"r"); return; }
+    /* Si hay total y falta el monto de una sola línea, sale por diferencia. */
+    if(total!==null && sinPago.length===1 && total-sumaCon>0.005) sinPago[0].pagoN=round2(total-sumaCon);
+    const ticket="TK"+nid("mv");
+    let pendientes=0;
+    filas.forEach(f=>{
+      const conPago=f.pagoN>0, unit=conPago?f.pagoN/f.comprado:0;
+      let p=S.productos.find(x=>!x.cliente && x.consumible!==false && x.nombre.toLowerCase()===f.nombre.toLowerCase());
+      if(!p){ p={id:"PT"+nid("mv"), cat:"Compra en tienda", nombre:f.nombre, um:f.um||"unidad", min:0, costo:0}; S.productos.push(p); }
+      f.um=p.um;
+      if(conPago && !p.costo) p.costo=round2(unit);
+      if(!conPago) pendientes++;
+      const entrada={id:"MT"+nid("mv"), prod:p.id, tipo:"entrada", cant:f.comprado, fecha:w.fecha, wo:null,
+        compraWo:w.id, ticket, ticketTotal:total, costo:conPago?round2(f.pagoN):0, costoPend:!conPago, tienda:sh.tienda, quien,
+        notas:conPago?"Comprado en tienda con tarjeta de la empresa":"Comprado en tienda con tarjeta de la empresa — falta cargar el costo del ticket",
+        recibo:sh.foto||null, evid:!!sh.foto};
+      S.movs.push(entrada);
+      if(f.usadoN>0) S.movs.push({id:"MT"+nid("mv"), prod:p.id, tipo:"salida", cant:f.usadoN, fecha:w.fecha, wo:w.id,
+        costo:conPago?round2(unit*f.usadoN):0, compra:entrada.id, tienda:"", quien, evid:false});
+    });
+    w.hist.push([hora(), `Compró en tienda (${sh.tienda}): ${filas.map(f=>`${f.nombre} × ${f.comprado} ${f.um}${f.usadoN<f.comprado?` (usó ${f.usadoN}, sobró ${f.comprado-f.usadoN})`:""}`).join(", ")}${total!==null?` · ticket ${money(total)}`:""}${sh.foto?" · con foto del ticket":" · sin foto del ticket"}`, quien]);
     S.phSheet=null; flash("wo:"+w.id);
     toast(sh.foto?"✓ Compra registrada":"✓ Registrada — falta la foto del ticket",
-      sh.foto?"Quedó con el comprobante adjunto para oficina.":"Oficina va a necesitar la foto del ticket para poder facturarlo.",
-      sh.foto?"v":"w");
+      `${filas.length} producto(s).${pendientes?` ${pendientes} sin monto: oficina lo completa con el ticket.`:""}${sh.foto?"":" Oficina va a necesitar la foto del ticket."}`,
+      sh.foto&&!pendientes?"v":"w");
     render();
   },
   fSheetNo: () => { S.phSheet=null; render(); },
@@ -243,6 +277,7 @@ Object.assign(ACC, {
     render(); },
   fTermine: d => {
     const w=W(+d.id);
+    if(woEspera(w)){ toast("En espera",`Falta terminar WO-${woEspera(w).id} para poder empezar.`,"w"); return; }
     /* Un adicional pendiente ya NO frena que el técnico cierre lo que tenía
        programado — el pago/factura de esta WO igual queda frenado por la
        excepción en vivo que arma excAuto() (ver woBloqueada), así que no
@@ -255,6 +290,11 @@ Object.assign(ACC, {
     if(a){ const [h1,m1]=a.horaReal.split(":").map(Number);
       w.horas = Math.max(0.5, Math.round(((S.reloj-(h1*60+m1))/60)*10)/10); }
     w.hist.push([hora(),`Terminó · ${w.evid} evidencia(s)${w.horas?` · ${w.horas} h en sitio`:""}`,T(w.tec).nombre]);
+    // WO enlazadas: al terminar esta, la que iba después queda libre y su técnico se entera
+    S.wos.filter(x=>x.dependeDe===w.id && x.estado!=="Canceled").forEach(x=>{
+      x.hist.push([hora(),`Ya puede empezar: terminó WO-${w.id}`,"Sistema"]);
+      if(x.tec) noti(`Ya podés empezar WO-${x.id}`,`${P(x.prop).nombre} ${U(x.unidad).num} · ${x.serv} — terminó WO-${w.id}.`);
+    });
     // Hoy Erika revisa a mano porque los reportes le llegan en papel.
     // Aquí el dato ya está: si está completo, se valida solo. A ella solo le llega lo que falla.
     const subsPend=subWOsOperativas().some(a=>a.wo===w.id && a.estadoTrabajo!=="Canceled" && (a.cantPendiente>0 || a.estadoTrabajo!=="Completed" || !(a.fotosEvidArr||[]).length));

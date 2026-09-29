@@ -93,7 +93,7 @@ const ROLES = {
   "Lydia":  {i:"LC",r:"Comercial",     m:["tablero","clientes","solicitudes","estimados","propiedades","wo","calendario","excepciones","reportes","alertas"]},
   "Thalia": {i:"TM",r:"Programación",  m:["tablero","wo","calendario","despacho","supervision","propiedades","tecnicos","catalogos","excepciones","reportes","alertas"]},
   "Gustavo":{i:"GA",r:"Supervisión",   m:["tablero","wo","calendario","supervision","gustavoweb","inventario","tecnicos","excepciones","reportes","alertas"]},
-  "Erika":  {i:"EM",r:"Administración",m:["tablero","wo","nomina","facturacion","cobranza","tarifario","inventario","excepciones","reportes","alertas","bitacora"]}
+  "Erika":  {i:"EM",r:"Administración",m:["tablero","wo","nomina","facturacion","cobranza","tarifario","inventario","finanzas","excepciones","reportes","buscar","alertas","bitacora"]}
   ,"Contador":{i:"CT",r:"Contabilidad · solo lectura",m:["tablero","finanzas","inventario","reportes"]}
 };
 /* Teléfono que se le da al cajero cuando el técnico compra material en
@@ -110,6 +110,7 @@ const MODS = [
   {id:"gustavoweb",n:"Vista de Gustavo (web)",ic:'<rect x="5" y="2" width="14" height="20" rx="3"/><path d="M9 18h6"/>'},
   {id:"excepciones",n:"Approval Requests",         ic:'<path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>'},
   {id:"reportes",  n:"Reportes",              ic:'<path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/>'},
+  {id:"buscar",    n:"Buscar",               ic:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>'},
   {g:"Comercial"},
   {id:"clientes",  n:"Management",ic:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>'},
   {id:"solicitudes",n:"Solicitudes",         ic:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'},

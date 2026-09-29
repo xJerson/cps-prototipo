@@ -384,7 +384,7 @@ function modalDefinirPrecio(id){
    perder la relación con ella (Main WO Full Paint → Sub-WO Door paint,
    Sub-WO Garage paint...). Oficina la crea acá ya aprobada — la que
    aprobar es la que descubre el técnico en sitio (fAdic / fAdicOK). */
-const woPagable = w => w.validada && !w.pagadaTec && !woBloqueada(w.id) && !subWOsPendientesDeWO(w.id).length && !clienteRevisionPendienteDeWO(w.id);
+const woPagable = w => aprobPagoOK(w) && !w.pagadaTec && !woBloqueada(w.id) && !subWOsPendientesDeWO(w.id).length && !clienteRevisionPendienteDeWO(w.id);
 VIEWS.nomina = () => {
   const ws = S.wos.filter(w=>enPeriodo(w.fecha,S.periodo) && w.estado==="Completed");
   const bloqSemana = ws.filter(w=>!w.pagadaTec && woBloqueada(w.id)).length;
@@ -438,11 +438,12 @@ VIEWS.nomina = () => {
     return porVal.length?`<div class="card" style="border-color:var(--ambar)">
       <div class="chd" style="background:var(--ambar-cl)"><h3 style="color:var(--ambar)">Solo estas necesitan tu revisión</h3>
         <span class="s">${porVal.length} de ${S.wos.filter(w=>w.estado==="Completed").length} terminadas · las completas se validaron solas</span></div>
-      <table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Técnico</th><th>Evidencia</th><th>Tiempo en sitio</th><th></th></tr></thead>
+      <table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Técnico</th><th>Evidencia</th><th>Tiempo en sitio</th><th>Aprobado</th><th></th></tr></thead>
       <tbody>${porVal.map(w=>`<tr><td class="mono" style="font-weight:700">WO-${w.id}</td>
         <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td><td>${esc(tecN(w.tec))}</td>
         <td>${w.evid?`<span class="pill v">${w.evid}</span>`:'<span class="pill r">falta</span>'}</td>
         <td class="mono" style="color:var(--faint)">${w.horas?w.horas+" h":"—"}</td>
+        <td>${pillsAprob(w)}</td>
         <td style="text-align:right"><button class="btn sm p" data-a="validarModal" data-id="${w.id}">Revisar y validar</button></td></tr>`).join("")}
       </tbody></table></div>`:"";})()}
 
@@ -468,19 +469,20 @@ VIEWS.nomina = () => {
         <button class="btn sm" data-a="comprobante" data-tec="${tid}">Ver comprobante</button>
         ${pagTec?`<button class="btn sm v" data-a="pagarTec" data-tec="${tid}">Marcar pagado (${pagTec})</button>`
           :arr.length&&!pendTec?`<span class="pill v">✓ Pagado</span>`:""}</span></div>
-      <table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Servicio</th><th>Rooms</th><th>Floors</th><th>Pagado</th><th class="num">Ingreso</th><th class="num">Egreso</th><th class="num">Material</th>${puedeVerUtilidad()?`<th class="num">Utilidad</th>`:""}</tr></thead>
+      <table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Servicio</th><th>Rooms</th><th>Floors</th><th>Pagado</th><th>Aprobado</th><th class="num">Ingreso</th><th class="num">Egreso</th><th class="num">Material</th>${puedeVerUtilidad()?`<th class="num">Utilidad</th>`:""}</tr></thead>
       <tbody>${arr.map(w=>`<tr><td class="mono" style="font-weight:700">WO-${w.id}</td>
         <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td><td>${esc(w.serv)}</td><td>${esc(U(w.unidad).rooms)}</td>
         <td class="num mono">${U(w.unidad).pisos||"—"}</td>
         <td>${w.pagadaTec?'<span class="pill v">✓ sí</span>':woBloqueada(w.id)?'<span class="pill r">approval pending</span>':'<span class="pill g">no</span>'}</td>
+        <td style="white-space:nowrap">${pillsAprob(w)}</td>
         <td class="num mono">${ingresoWO(w)!==null?money(ingresoWO(w)):'<span class="pill w">NA</span>'}</td>
         <td class="num mono">${egresoWO(w)!==null?money(egresoWO(w)):"—"}</td>
         <td class="num mono">${materialWO(w)?money(materialWO(w)):"—"}</td>
         ${puedeVerUtilidad()?`<td class="num mono" style="color:${utilidadWO(w)>=0?"var(--verde)":"var(--rojo)"}">${utilidadWO(w)!==null?money(utilidadWO(w)):"—"}</td>`:""}</tr>`).join("")}
-      ${extras.map(x=>`<tr style="background:var(--ambar-cl)"><td colspan="7">Pago adicional aprobado · WO-${x.wo}
+      ${extras.map(x=>`<tr style="background:var(--ambar-cl)"><td colspan="8">Pago adicional aprobado · WO-${x.wo}
           <div style="font-size:10.5px;color:var(--ambar)">${esc((x.motivo||"").slice(0,70))}</div></td>
         <td class="num mono">${money(x.monto)}</td><td></td>${puedeVerUtilidad()?`<td></td>`:""}</tr>`).join("")}
-      <tr style="background:var(--surface-2);font-weight:700"><td colspan="6">Totales</td>
+      <tr style="background:var(--surface-2);font-weight:700"><td colspan="7">Totales</td>
         <td class="num mono">${money(ing)}</td><td class="num mono">${money(egr)}</td>
         <td class="num mono">${money(mat)}</td>${puedeVerUtilidad()?`<td class="num mono" style="color:var(--verde)">${money(ing-egr-mat)}</td>`:""}</tr>
       </tbody></table></div>`;
@@ -563,14 +565,20 @@ function lineasFacturablesFactura(prop, excluirFactura){
   const reservadas=new Set(S.facturas.filter(f=>f.estado==="Borrador"&&f.id!==excluirFactura)
     .flatMap(f=>(f.conceptos||[]).map(c=>c.clave)).filter(Boolean));
   const lineas=[];
-  S.wos.filter(w=>w.prop===prop&&w.estado==="Completed"&&w.validada&&!w.facturada
+  S.wos.filter(w=>w.prop===prop&&w.estado==="Completed"&&aprobFacturaOK(w)&&!w.facturada
       &&!subWOsPendientesDeWO(w.id).length&&!clienteRevisionPendienteDeWO(w.id)
-      &&puedeFacturar(w)&&!woBloqueada(w.id)&&ingresoBaseWO(w)!==null)
-    .forEach(w=>lineas.push({clave:"wo:"+w.id,tipo:"WO",wo:w.id,subwo:null,unidad:U(w.unidad).num,
-      nombre:w.serv,descripcion:"",precio:ingresoBaseWO(w)/(w.cant||1),cantidad:w.cant||1,
-      importe:ingresoBaseWO(w)||0,evidencia:w.evid||0,fecha:w.fecha,seleccionada:enPeriodo(w.fecha,S.periodo)}));
+      &&puedeFacturar(w)&&!woBloqueada(w.id)&&!w.facRetenida&&ingresoBaseWO(w)!==null)
+    .forEach(w=>{
+      lineas.push({clave:"wo:"+w.id,tipo:"WO",wo:w.id,subwo:null,unidad:U(w.unidad).num,
+        nombre:w.serv,descripcion:"",precio:ingresoBaseWO(w)/(w.cant||1),cantidad:w.cant||1,
+        importe:ingresoBaseWO(w)||0,evidencia:w.evid||0,fecha:w.fecha,seleccionada:enPeriodo(w.fecha,S.periodo)});
+      // Ajustes de validación al cliente: línea propia, el concepto sale tal cual se escribió
+      ajustesValDe(w,"cobro").forEach(a=>lineas.push({clave:"aj:"+a.id,tipo:"Ajuste",wo:w.id,subwo:null,unidad:U(w.unidad).num,
+        nombre:a.concepto,descripcion:"",precio:ajusteMonto(a),cantidad:1,importe:ajusteMonto(a),evidencia:0,
+        fecha:w.fecha,seleccionada:enPeriodo(w.fecha,S.periodo)}));
+    });
   S.adicionales.filter(a=>a.estado==="Aprobado"&&a.facturable&&!a.facturada&&W(a.wo)
-      &&W(a.wo).prop===prop&&W(a.wo).validada&&a.estadoTrabajo!=="Canceled")
+      &&W(a.wo).prop===prop&&aprobFacturaOK(W(a.wo))&&a.estadoTrabajo!=="Canceled")
     .forEach(a=>{
       const cant=cantSubWO(a), total=a.montoFactura!=null?a.montoFactura*(cant/(a.cant||1)):(a.precio||0)*cant;
       lineas.push({clave:"sub:"+a.id,tipo:"Sub-WO",wo:a.wo,subwo:a.id,unidad:U(W(a.wo).unidad).num,
@@ -579,54 +587,112 @@ function lineasFacturablesFactura(prop, excluirFactura){
     });
   return lineas.filter(l=>!reservadas.has(l.clave));
 }
+/* Descuento de una línea: monto fijo ($) o % del bruto. Nunca pasa del bruto,
+   así el importe no baja de 0; una línea negativa (ajuste al cliente) no lleva descuento. */
+function descuentoLinea(l){
+  const bruto=(+l.precio||0)*(+l.cantidad||0); if(bruto<=0) return 0;
+  const d=Math.max(0,+l.desc||0);
+  return Math.min(bruto, l.descTipo==="%"?bruto*Math.min(d,100)/100:d);
+}
+const importeLinea = l => Math.round(((+l.precio||0)*(+l.cantidad||0)-descuentoLinea(l))*100)/100;
+const textoDescLinea = l => { const d=+l.desc||0; return d>0&&descuentoLinea(l)>0 ? (l.descTipo==="%"?`−${d}%`:`−${money(d)}`) : "—"; };
+/* Una sola fuente para los totales por factura del borrador: la vista y el guardado leen lo mismo.
+   Cada grupo (Factura 1..6) es una factura; el crédito de la propiedad cae en un solo grupo y
+   se limita al subtotal de ese grupo. */
+function resumenBorrador(b){
+  const sel=(b.lineas||[]).filter(l=>l.seleccionada);
+  const grupos=[...new Set(sel.map(l=>+l.grupo||1))].sort((x,y)=>x-y).map(g=>{
+    const ls=sel.filter(l=>(+l.grupo||1)===g);
+    return {g,lineas:ls,subtotal:ls.reduce((n,l)=>n+importeLinea(l),0),cred:0,total:0};});
+  const usoPrev=b.id?(S.creditosProp||[]).filter(c=>c.factura===b.id&&c.tipo==="Uso").reduce((n,c)=>n+c.monto,0):0;
+  const disp=Math.max(0,saldoCredito(b.prop)+usoPrev);   // lo que este mismo borrador ya usó cuenta como disponible
+  const gc=grupos.find(x=>x.g===(+b.creditoGrupo||1))||grupos[0];
+  const maxCred=gc?Math.max(0,Math.min(disp,gc.subtotal)):0;
+  const cred=Math.min(Math.max(0,+b.credito||0),maxCred);
+  if(gc) gc.cred=cred;
+  grupos.forEach(x=>{x.total=x.subtotal-x.cred;});
+  return {grupos,disp,maxCred,cred,credG:gc?gc.g:1,total:grupos.reduce((n,x)=>n+x.total,0)};
+}
 function abrirBorradorFactura(prop, facturaId){
   const existente=facturaId&&by(S.facturas,facturaId);
-  const actuales=existente?(existente.conceptos||[]).map(c=>({...c,seleccionada:true})):[];
+  // Borradores viejos pueden no traer precio unitario: se deduce del importe
+  const actuales=existente?(existente.conceptos||[]).filter(c=>c.tipo!=="Credito").map(c=>({...c,seleccionada:true,grupo:1,
+    precio:c.precio!=null?c.precio:(c.importe||0)/(c.cantidad||1)})):[];
+  const credPrev=existente?(existente.conceptos||[]).filter(c=>c.tipo==="Credito").reduce((n,c)=>n-(c.importe||0),0):0;
   const porClave=new Map(actuales.map(l=>[l.clave,l]));
-  lineasFacturablesFactura(prop,facturaId).forEach(l=>{if(!porClave.has(l.clave)) porClave.set(l.clave,l);});
-  S.facturaBorrador={id:existente?existente.id:null,prop,lineas:[...porClave.values()],limite:existente?existente.limite||"":""};
+  lineasFacturablesFactura(prop,facturaId).forEach(l=>{if(!porClave.has(l.clave)) porClave.set(l.clave,{...l,grupo:1});});
+  S.facturaBorrador={id:existente?existente.id:null,prop,lineas:[...porClave.values()],limite:existente?existente.limite||"":"",credito:credPrev||0,creditoGrupo:1};
   modalBorradorFactura();
 }
 function idLineaBorrador(clave){ return "fb_"+String(clave).replace(/[^a-z0-9]/gi,"_"); }
+/* Categoría de una línea para asignarla en bloque a una factura: la categoría de su WO
+   (Clean, Paint…) o, si no es una WO, su tipo (Sub-WO, Ajuste, Manual). No se guarda: se deduce. */
+const catLinea = l => (l.tipo==="WO"&&W(l.wo)&&W(l.wo).cat) || l.tipo || "—";
 function modalBorradorFactura(){
   const b=S.facturaBorrador, p=P(b.prop);
-  const lineas=b.lineas||[], seleccionadas=lineas.filter(l=>l.seleccionada);
-  const total=seleccionadas.reduce((n,l)=>n+(+l.precio||0)*(+l.cantidad||0),0);
-  const limite=parseFloat(b.limite);
-  modal(`<div class="mh"><h3>${b.id?"Editar borrador":"Preparar factura"}</h3><p>${esc(p.nombre)} · selecciona, junta o separa conceptos antes de enviar.</p></div>
+  const lineas=b.lineas||[], r=resumenBorrador(b), limite=parseFloat(b.limite);
+  const nG=Math.min(6,Math.max(0,...lineas.map(l=>+l.grupo||1))+1);   // 1..(mayor usado + 1), tope 6
+  const excede=g=>limite>0&&g.total>limite+.004, nExc=r.grupos.filter(excede).length;
+  const paraDespues=lineas.filter(l=>!l.seleccionada).length;
+  modal(`<div class="mh"><h3>${b.id?"Editar borrador":"Preparar factura"}</h3><p>${esc(p.nombre)} · asigna cada línea a una factura.</p></div>
   <div class="mb">
-    <div class="note" style="margin-bottom:12px">El total se calcula solo. Si el cliente tiene un límite de aprobación, escríbelo para revisarlo; no bloquea el envío porque Erika decide cómo separar las facturas.</div>
-    <div class="fg c2"><div class="fld"><label>Límite de aprobación <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label>
+    <div class="note" style="margin-bottom:12px">Asigna cada línea a Factura 1, 2 o 3: se crea una factura por grupo. Las líneas sin marcar quedan para después.</div>
+    <div class="fg c2"><div class="fld"><label>Límite por factura <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label>
       <input id="fbLimite" data-a="facBorradorCambiar" type="number" min="0" step="0.01" value="${esc(b.limite||"")}" placeholder="Ej. 2500.00"></div>
-      <div class="fld"><label>Total seleccionado</label><div class="note ${limite>0&&total>limite?"w":"v"}" style="margin:0"><b class="mono">${money(total)}</b>${limite>0?` · ${total>limite?"supera":"dentro de"} ${money(limite)}`:" · sin límite configurado"}</div></div></div>
-    ${lineas.length?`<table style="font-size:11.5px"><thead><tr><th></th><th>Origen</th><th>Nombre</th><th>Descripción</th><th class="num">Precio</th><th class="num">Cant.</th><th class="num">Importe</th></tr></thead><tbody>
-      ${lineas.map(l=>{const id=idLineaBorrador(l.clave), imp=(+l.precio||0)*(+l.cantidad||0); return `<tr style="${l.seleccionada?"":"opacity:.55"}">
+      <div class="fld"><label>Total</label><div class="note ${nExc?"w":"v"}" style="margin:0"><b class="mono">${money(r.total)}</b>${limite>0?` · ${nExc?nExc+" supera(n)":"todas dentro de"} ${money(limite)}`:""}</div></div></div>
+    ${r.disp>0.004?`<div class="fg c3"><div class="fld"><label>Crédito disponible</label><div class="note v" style="margin:0"><b class="mono">${money(r.disp)}</b></div></div>
+      <div class="fld"><label>Usar</label><input id="fbCredito" data-a="facBorradorCambiar" type="number" min="0" max="${r.maxCred}" step="0.01" value="${r.cred||""}" placeholder="0.00"></div>
+      <div class="fld"><label>Crédito en</label><select id="fbCredG" data-a="facBorradorCambiar">${(r.grupos.length?r.grupos.map(x=>x.g):[1]).map(g=>`<option value="${g}" ${g===r.credG?"selected":""}>Factura ${g}</option>`).join("")}</select></div></div>`:""}
+    ${lineas.length?`<div class="fg c3" style="align-items:end"><div class="fld"><label>Categoría</label><select id="fbCat">${[...new Set(lineas.map(catLinea))].map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join("")}</select></div>
+      <div class="fld"><label>Factura</label><select id="fbCatG">${Array.from({length:nG},(_,i)=>i+1).map(n=>`<option value="${n}">${n}</option>`).join("")}</select></div>
+      <div class="fld"><button class="btn" data-a="facAsignarCat">Asignar</button></div></div>`:""}
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+      ${r.grupos.map(g=>`<span class="pill ${excede(g)?"w":"v"}">Factura ${g.g} · ${money(g.total)} · ${g.lineas.length} ${g.lineas.length===1?"línea":"líneas"}${excede(g)?" · supera el límite":""}</span>`).join("")}
+      ${paraDespues?`<span class="pill g">${paraDespues} para después</span>`:""}</div>
+    ${lineas.length?`<table style="font-size:11.5px"><thead><tr><th></th><th>Factura</th><th>Origen</th><th>Nombre</th><th class="num">Precio</th><th class="num">Cant.</th><th class="num">Desc.</th><th class="num">Importe</th><th></th></tr></thead><tbody>
+      ${lineas.map(l=>{const id=idLineaBorrador(l.clave), g=+l.grupo||1; return `<tr style="${l.seleccionada?"":"opacity:.55"}">
         <td><input id="${id}_sel" data-a="facBorradorCambiar" type="checkbox" ${l.seleccionada?"checked":""}></td>
-        <td class="mono">${l.tipo==="Manual"?"Manual adjustment":`WO-${l.wo}${l.tipo==="Sub-WO"?" · Sub-WO":""}`}<div style="color:var(--faint)">${esc(l.fecha||"—")}</div></td>
-        <td><input id="${id}_nom" data-a="facBorradorCambiar" value="${esc(l.nombre||"")}" style="min-width:110px"></td>
-        <td><input id="${id}_des" data-a="facBorradorCambiar" value="${esc(l.descripcion||"")}" style="min-width:100px"></td>
-        <td><input id="${id}_pre" data-a="facBorradorCambiar" type="number" min="0" step="0.01" value="${esc(l.precio||0)}" style="width:82px;text-align:right"></td>
-        <td><input id="${id}_can" data-a="facBorradorCambiar" type="number" min="0" step="0.01" value="${esc(l.cantidad||0)}" style="width:60px;text-align:right"></td>
-        <td class="num mono">${money(imp)}</td></tr>`;}).join("")}
+        <td><select id="${id}_grp" data-a="facBorradorCambiar" ${l.seleccionada?"":"disabled"}>${Array.from({length:Math.max(nG,g)},(_,i)=>i+1).map(n=>`<option value="${n}" ${n===g?"selected":""}>${n}</option>`).join("")}</select></td>
+        <td class="mono">${l.tipo==="Manual"?"Manual adjustment":`WO-${l.wo}${l.tipo==="Sub-WO"?" · Sub-WO":l.tipo==="Ajuste"?" · Adjustment":""}`}<div style="color:var(--faint)">${esc(l.fecha||"—")}</div></td>
+        <td>${esc(l.nombre||"—")}${l.descripcion?`<div style="color:var(--faint)">${esc(l.descripcion)}</div>`:""}</td>
+        <td class="num mono">${money(+l.precio||0)}</td>
+        <td class="num mono">${+l.cantidad||0}</td>
+        <td class="num mono">${textoDescLinea(l)}</td>
+        <td class="num mono">${money(importeLinea(l))}</td>
+        <td><button class="btn sm" data-a="facLineaEditar" data-k="${esc(l.clave)}">Editar</button></td></tr>`;}).join("")}
     </tbody></table>`:`<div class="empty">No hay conceptos disponibles para esta propiedad.</div>`}
     <button class="btn sm" data-a="facBorradorAgregarLinea">+ Agregar línea manual</button>
-    <div class="tr">Para dividir una factura, guarda este borrador con una parte de las líneas; luego prepara otra factura con las líneas restantes. Las líneas no seleccionadas quedan disponibles para una semana posterior.</div>
-  </div><div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="facBorradorGuardar" ${seleccionadas.length?"":"disabled"}>Guardar borrador</button></div>`,true);
+  </div><div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="facBorradorGuardar" ${r.grupos.length?"":"disabled"}>Guardar</button></div>`,true);
+}
+/* Editor de una línea, como en cualquier app de facturas: nombre, descripción, precio, cantidad y descuento ($ o %). */
+function modalLineaFactura(clave){
+  const b=S.facturaBorrador, l=b&&(b.lineas||[]).find(x=>x.clave===clave); if(!l) return modalBorradorFactura();
+  modal(`<div class="mh"><h3>Editar línea</h3><p>${l.tipo==="Manual"?"Manual adjustment":`WO-${l.wo}${l.tipo==="Sub-WO"?" · Sub-WO":l.tipo==="Ajuste"?" · Adjustment":""}`}</p></div>
+  <div class="mb">
+    <div class="fld"><label>Nombre</label><input id="fleNom" value="${esc(l.nombre||"")}"></div>
+    <div class="fld"><label>Descripción</label><input id="fleDes" value="${esc(l.descripcion||"")}"></div>
+    <div class="fg c2"><div class="fld"><label>Precio</label><input id="fleP" type="number" step="0.01" value="${esc(+l.precio||0)}"></div>
+      <div class="fld"><label>Cantidad</label><input id="fleC" type="number" min="0" step="0.01" value="${esc(+l.cantidad||0)}"></div></div>
+    <div class="fg c2"><div class="fld"><label>Descuento</label><input id="fleD" type="number" min="0" step="0.01" value="${esc(+l.desc||"")}" placeholder="0"></div>
+      <div class="fld"><label>Tipo</label><select id="fleT"><option value="$" ${l.descTipo==="%"?"":"selected"}>$ monto</option><option value="%" ${l.descTipo==="%"?"selected":""}>% del subtotal</option></select></div></div>
+  </div><div class="mf"><button class="btn" data-a="facLineaVolver">Cancelar</button><button class="btn p" data-a="facLineaGuardar" data-k="${esc(l.clave)}">Guardar</button></div>`);
 }
 VIEWS.facturacion = () => {
   /* Erika valida el expediente final. La revisión de calidad puede ocurrir
      después y nunca frena una nómina o una factura ya correctamente validada.
      El touch-up de corrección sigue sin ser facturable. */
-  const candidatas = S.wos.filter(w=>enPeriodo(w.fecha,S.periodo) && w.estado==="Completed" && w.validada && !subWOsPendientesDeWO(w.id).length && !clienteRevisionPendienteDeWO(w.id)
+  const candidatas = S.wos.filter(w=>enPeriodo(w.fecha,S.periodo) && w.estado==="Completed" && aprobFacturaOK(w) && !subWOsPendientesDeWO(w.id).length && !clienteRevisionPendienteDeWO(w.id)
                                      && !w.facturada && puedeFacturar(w));
-  const listas = candidatas.filter(w=>!woBloqueada(w.id));
+  const listas = candidatas.filter(w=>!woBloqueada(w.id) && !w.facRetenida);
+  // Retenidas: validadas y sin facturar que Erika frenó a mano; se ven aunque cambie el período para poder liberarlas
+  const retenidas = S.wos.filter(w=>w.facRetenida && w.estado==="Completed" && aprobFacturaOK(w) && !w.facturada);
   const frenadasExc = candidatas.filter(w=>woBloqueada(w.id));
   const frenadas = [];
   const porProp = {};
   listas.forEach(w=>(porProp[w.prop]=porProp[w.prop]||[]).push(w));
   const pendientes = S.wos.filter(w=>enPeriodo(w.fecha,S.periodo) && w.estado==="Completed" && !w.facturada).map(w=>{
     const razones=[];
-    if(!w.validada) razones.push("pendiente de validación");
+    if(!aprobFacturaOK(w)) razones.push("factura sin aprobar");
     if(subWOsPendientesDeWO(w.id).length) razones.push("tiene una Sub-WO pendiente");
     if(clienteRevisionPendienteDeWO(w.id)) razones.push("falta confirmación o corrección del cliente");
     if(woBloqueada(w.id)) razones.push("tiene una Approval Request pendiente");
@@ -669,20 +735,30 @@ VIEWS.facturacion = () => {
       ${pendientes.map(x=>`<tr><td class="mono">WO-${x.w.id}</td><td>${esc(P(x.w.prop).nombre)} · ${esc(U(x.w.unidad).num)}</td><td>${x.razones.map(r=>`<span class="pill w" style="margin:0 4px 4px 0">${esc(r)}</span>`).join("")}</td></tr>`).join("")}
     </tbody></table><div class="cp"><div class="tr" style="margin:0">Una WO solo aparece para generar factura cuando está terminada, validada por Erika, sin pendientes que afecten el importe y con tarifa definida. La revisión de calidad se registra aparte.</div></div></div>`:""}
 
+  ${retenidas.length?`<div class="card" style="border-color:var(--ambar);margin-bottom:14px"><div class="chd" style="background:var(--ambar-cl)"><h3 style="color:var(--ambar)">Retenidas</h3><span class="s">${retenidas.length} fuera del borrador · la nómina sigue igual</span></div>
+    <table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Servicio</th><th>Motivo</th><th></th></tr></thead><tbody>
+      ${retenidas.map(w=>`<tr><td class="mono" style="font-weight:700">WO-${w.id}</td><td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td><td>${esc(w.serv)}</td>
+        <td><span class="pill w" title="${esc(w.facRetenida.motivo)}">Retenida</span> ${esc(w.facRetenida.motivo)}<div style="font-size:10.5px;color:var(--faint)">${esc(w.facRetenida.quien)} · ${esc(w.facRetenida.fecha)} ${esc(w.facRetenida.hora)}</div></td>
+        <td style="text-align:right"><button class="btn sm" data-a="facLiberar" data-id="${w.id}">Liberar</button></td></tr>`).join("")}
+    </tbody></table></div>`:""}
+
   ${Object.keys(porProp).length?Object.entries(porProp).map(([pid,arr])=>{
     const tot=arr.reduce((a,w)=>a+(ingresoWO(w)||0),0);
     const sinT=arr.filter(w=>ingresoWO(w)===null).length;
     return `<div class="card"><div class="chd"><h3>${esc(P(pid).nombre)}</h3><span class="s">${esc(CLI(P(pid).cliente).nombre)}</span>
       <span class="r"><span class="mono" style="font-size:16px;font-weight:750">${money(tot)}</span></span></div>
-      <table><thead><tr><th>WO</th><th>Unidad</th><th>Servicio</th><th>Técnico</th><th>Evidencia</th><th class="num">Importe</th></tr></thead>
+      <table><thead><tr><th>WO</th><th>Unidad</th><th>Servicio</th><th>Técnico</th><th>Evidencia</th><th class="num">Importe</th><th></th></tr></thead>
       <tbody>${arr.map(w=>`<tr><td class="mono" style="font-weight:700">WO-${w.id}</td><td>${esc(U(w.unidad).num)}</td>
         <td>${esc(w.serv)}</td><td>${w.tec?esc(tecN(w.tec)):"—"}</td>
         <td>${w.evid?`<span class="pill v">${w.evid} foto(s)</span>`:'<span class="pill r"><span class="dot"></span>sin evidencia</span>'}</td>
-        <td class="num mono">${ingresoBaseWO(w)!==null?money(ingresoBaseWO(w)):'<span class="pill w">NA</span>'}</td></tr>
+        <td class="num mono">${ingresoBaseWO(w)!==null?money(ingresoBaseWO(w)):'<span class="pill w">NA</span>'}</td>
+        <td style="text-align:right"><button class="btn sm" data-a="facRetener" data-id="${w.id}">Retener</button></td></tr>
+        ${ajustesValDe(w,"cobro").map(a=>`<tr style="background:var(--azul-cl)"><td class="mono">↳ Adjustment</td><td>${esc(U(w.unidad).num)}</td><td>${esc(a.concepto)}</td><td>—</td><td>—</td>
+          <td class="num mono">${money(ajusteMonto(a))}<div style="font-size:10px;color:var(--faint)">se elige en el borrador</div></td><td></td></tr>`).join("")}
         ${S.adicionales.filter(a=>a.wo===w.id&&a.estado==="Aprobado"&&a.facturable&&!a.facturada).map(a=>`<tr style="background:var(--azul-cl)">
           <td class="mono">↳ Sub-WO</td><td>${esc(U(w.unidad).num)}</td><td>${esc(a.concepto)}${a.ubic?` · ${esc(a.ubic)}`:""}</td>
           <td>${esc(tecN(tecSubWO(a)))}</td><td><span class="pill ${a.fotosEvidArr&&a.fotosEvidArr.length?"v":"w"}">${(a.fotosEvidArr||[]).length} foto(s)</span></td>
-          <td class="num mono">${money(a.montoFactura!=null?a.montoFactura*(cantSubWO(a)/(a.cant||1)):(a.precio||0)*cantSubWO(a))}<div style="font-size:10px;color:var(--faint)">se elige en el borrador</div></td></tr>`).join("")}`).join("")}
+          <td class="num mono">${money(a.montoFactura!=null?a.montoFactura*(cantSubWO(a)/(a.cant||1)):(a.precio||0)*cantSubWO(a))}<div style="font-size:10px;color:var(--faint)">se elige en el borrador</div></td><td></td></tr>`).join("")}`).join("")}
       </tbody></table>
       ${sinT?`<div class="cp" style="border-top:1px solid var(--line)"><div class="note w" style="margin:0"><b>${sinT} línea sin tarifa.</b> Resuélvela en Approval Requests antes de facturar.</div></div>`:""}
       <div class="mf" style="border-top:1px solid var(--line)">
@@ -725,7 +801,9 @@ function conceptosFactura(f){
 }
 function textoConceptoFactura(x){
   const nombre=x.nombre||x.descripcion||"—", detalle=x.nombre&&x.descripcion&&x.descripcion!==x.nombre?x.descripcion:"";
-  return `${esc(nombre)}${detalle?`<div class="s">${esc(detalle)}</div>`:""}`;
+  // El descuento se ve en la línea (cliente en inglés); el importe ya viene descontado
+  const dsc=x.tipo!=="Credito"&&descuentoLinea(x)>0?`Discount ${x.descTipo==="%"?(+x.desc)+"% ":""}(\u2212${money(descuentoLinea(x))})`:"";
+  return `${esc(nombre)}${detalle?`<div class="s">${esc(detalle)}</div>`:""}${dsc?`<div class="s">${dsc}</div>`:""}`;
 }
 /* ── EL PDF DE LA FACTURA ─────────────────────────────────
    Abre el documento en una ventana aparte y lanza la impresión: el navegador
@@ -736,7 +814,7 @@ function abrirPDF(fid, imprimir){
   const p = P(f.prop), c = CLI(p.cliente);
   const conceptos=conceptosFactura(f);
   const filas = conceptos.map(x => `<tr>
-      <td class="m">${x.tipo==="Manual"?"Manual":`WO-${x.wo}${x.tipo==="Sub-WO"?" · Sub-WO":""}`}</td>
+      <td class="m">${x.tipo==="Manual"?"Manual":x.tipo==="Credito"?"Credit":`WO-${x.wo}${x.tipo==="Sub-WO"?" · Sub-WO":x.tipo==="Ajuste"?" · Adjustment":""}`}</td>
       <td>${esc(x.unidad||"\u2014")}</td>
       <td>${textoConceptoFactura(x)}<div class="s">${esc(x.tipo||"WO")}${x.cantidad>1?` · Cantidad ${x.cantidad}`:""}</div></td>
       <td class="n m">${money(x.importe||0)}</td></tr>`).join("");
@@ -817,7 +895,7 @@ function modalFactura(fid, enviando){
         <div style="margin-left:auto;text-align:right"><div style="font-size:10.5px;opacity:.85">Total</div>
           <div class="mono" style="font-size:20px;font-weight:750">${money(f.total)}</div></div></div>
       <table><thead><tr><th>WO</th><th>Unidad</th><th>Servicio</th><th>Evidencia</th><th class="num">Importe</th></tr></thead>
-      <tbody>${conceptos.map(x=>`<tr><td class="mono">${x.tipo==="Manual"?"Manual":`WO-${x.wo}${x.tipo==="Sub-WO"?" · Sub-WO":""}`}</td><td>${esc(x.unidad||"—")}</td>
+      <tbody>${conceptos.map(x=>`<tr><td class="mono">${x.tipo==="Manual"?"Manual":x.tipo==="Credito"?"Credit":`WO-${x.wo}${x.tipo==="Sub-WO"?" · Sub-WO":x.tipo==="Ajuste"?" · Adjustment":""}`}</td><td>${esc(x.unidad||"—")}</td>
         <td>${textoConceptoFactura(x)}</td>
         <td>${x.evidencia?`<span class="pill v">${x.evidencia} foto(s)</span>`:'<span class="pill w">—</span>'}</td>
         <td class="num mono">${money(x.importe||0)}</td></tr>`).join("")}
@@ -840,7 +918,7 @@ function resumenExpedienteFactura(f){
     +(f.conceptos||[]).filter(x=>x.tipo==="Sub-WO").reduce((n,x)=>{
       const a=by(S.adicionales,x.subwo); return n+((a&&a.fotosEvidArr)||[]).length;
     },0);
-  const aprobaciones=ws.reduce((n,w)=>n+(w.validada?1:0)
+  const aprobaciones=ws.reduce((n,w)=>n+(aprobFacturaOK(w)?1:0)
     +solsDe(w.id).flatMap(s=>s.lineas).filter(a=>a.estado==="Aprobado").length,0);
   return {antes,despues,aprobaciones};
 }
@@ -901,6 +979,7 @@ function modalCobranza(fid){
         <span style="color:var(--faint);font-size:11.5px"> — ${esc(s.fecha)} ${esc(s.hora)} · ${esc(s.quien)}</span>
         ${s.nota?`<div style="font-size:12px;color:var(--soft);margin-top:3px">${esc(s.nota)}</div>`:""}
         ${s.promesa?`<div style="font-size:11px;color:var(--faint)">Prometió pagar para el ${esc(s.promesa)}</div>`:""}
+        ${s.foto?`<div style="margin-top:4px">${miniRecibo(s.foto)} <span style="font-size:11px;color:var(--faint)">comprobante</span></div>`:""}
       </div>`).join(""):`<div class="empty" style="padding:14px 0">Todavía no hay seguimiento en esta factura.</div>`}
   </div>
   <div class="mf" style="flex-wrap:wrap;gap:7px">
@@ -924,22 +1003,30 @@ function modalCobLlamada(fid){
     <button class="btn p" data-a="cobLlamadaGuardar" data-id="${fid}">Guardar</button></div>`);
 }
 function modalRegistrarPago(fid){
+  S._recibo=null;   // el comprobante es de este pago, no del anterior
   const f=by(S.facturas,fid), recibido=(S.pagos||[]).filter(p=>p.factura===fid).reduce((n,p)=>n+(+p.monto||0),0), pendiente=Math.max(0,(f.total||0)-recibido);
-  modal(`<div class="mh"><h3>Registrar pago — ${esc(f.num)}</h3><p>Total ${money(f.total)} · recibido ${money(recibido)} · pendiente ${money(pendiente)}</p></div><div class="mb"><div class="fg c2"><div class="fld"><label>Monto recibido <span class="req">*</span></label><input id="cpMonto" type="number" min="0.01" max="${pendiente}" step="0.01" value="${pendiente}"></div><div class="fld"><label>Fecha <span class="req">*</span></label><input id="cpFecha" type="date" value="${HOY_SUP}"></div></div><div class="fg c2"><div class="fld"><label>Medio <span class="req">*</span></label><select id="cpMedio"><option>Check</option><option>ACH</option><option>Card</option><option>Cash</option><option>Other</option></select></div><div class="fld"><label>Cheque / referencia</label><input id="cpRef" placeholder="Ej. CHK-10488"></div></div><div class="fld"><label>Comprobante</label><select id="cpEvid"><option value="yes">Foto/comprobante adjunto simulado</option><option value="">Pendiente</option></select></div><div class="fld"><label>Nota</label><input id="cpNota"></div><div class="note">Puedes registrar pagos parciales. La factura solo se cierra cuando el total recibido la cubre.</div></div><div class="mf"><button class="btn" data-a="cobGestionar" data-id="${fid}">Cancelar</button><button class="btn p" data-a="cobrarGuardar" data-id="${fid}">Guardar pago</button></div>`);
+  modal(`<div class="mh"><h3>Registrar pago — ${esc(f.num)}</h3><p>Total ${money(f.total)} · recibido ${money(recibido)} · pendiente ${money(pendiente)}</p></div><div class="mb"><div class="fg c2"><div class="fld"><label>Monto recibido <span class="req">*</span></label><input id="cpMonto" type="number" min="0.01" max="${pendiente}" step="0.01" value="${pendiente}"></div><div class="fld"><label>Fecha <span class="req">*</span></label><input id="cpFecha" type="date" value="${HOY_SUP}"></div></div><div class="fg c2"><div class="fld"><label>Medio <span class="req">*</span></label><select id="cpMedio"><option>Check</option><option>ACH</option><option>Card</option><option>Cash</option><option>Other</option></select></div><div class="fld"><label>Cheque / referencia</label><input id="cpRef" placeholder="Ej. CHK-10488"></div></div><div class="fld"><label>Comprobante</label><div style="display:flex;align-items:center;gap:8px"><button type="button" class="btn sm" data-a="reciboFoto">📷 Foto</button><span id="recPrev">${miniRecibo(S._recibo)}</span></div></div><div class="fld"><label>Nota</label><input id="cpNota"></div><div class="note">Puedes registrar pagos parciales. La factura solo se cierra cuando el total recibido la cubre.</div></div><div class="mf"><button class="btn" data-a="cobGestionar" data-id="${fid}">Cancelar</button><button class="btn p" data-a="cobrarGuardar" data-id="${fid}">Guardar pago</button></div>`);
 }
 
 /* ── INVENTARIO ── */
+/* Activos no consumibles (se registran y editan a mano) y material reservado para una WO. */
+const INV_ACTIVOS = ["Herramientas y equipos","Muebles / activos"];
+const INV_ESTADOS = ["Operativa","En reparación","Baja"];
+const reservaTxt = p => { const id=p.reservadoWO||((/WO-(\d+)/.exec(p.reservadoPara||"")||[])[1]), w=id&&W(+id);
+  return w ? `WO-${w.id} · ${P(w.prop).nombre} · ${U(w.unidad).num}` : (p.reservadoPara||""); };
+const puedeEditarInv = p => !soloLectura() && (INV_ACTIVOS.includes(p.cat) || p.cat==="Material para instalación");
 VIEWS.inventario = () => `
   <div class="ph"><div><h2>Inventario</h2>
     <p>Consumibles, herramientas, activos, material para instalación y suministros de oficina. El stock de consumibles se calcula con entradas y salidas.</p></div>
-    <div class="act"><button class="btn" data-a="movSalida">Registrar salida</button><button class="btn p" data-a="movEntrada">+ Registrar compra</button></div></div>
+    ${soloLectura()?"":`<div class="act"><button class="btn" data-a="invNuevo">Nuevo</button><button class="btn" data-a="movSalida">Registrar salida</button><button class="btn p" data-a="movEntrada">+ Registrar compra</button></div>`}</div>
   <div class="card"><div class="chd"><h3>Productos y activos</h3></div><table>
-    <thead><tr><th>Producto</th><th>Categoría</th><th>Unidad</th><th class="num">Stock</th><th>Responsable / ubicación</th><th>Estado</th><th class="num">Costo ref.</th></tr></thead>
+    <thead><tr><th>Producto</th><th>Categoría</th><th>Unidad</th><th class="num">Stock</th><th>Responsable / ubicación</th><th>Estado</th><th class="num">Costo ref.</th><th></th></tr></thead>
     <tbody>${S.productos.map(p=>{const s=stock(p.id);return `<tr>
       <td style="font-weight:650">${esc(p.nombre)}</td><td>${esc(p.cat)}</td><td>${esc(p.um)}</td>
-      <td class="num mono" style="font-weight:700">${p.consumible===false?"—":s}</td><td>${esc(p.responsable||p.reservadoPara||"—")}<div class="s">${esc(p.ubicacion||"")}</div></td>
-      <td>${p.consumible===false?`<span class="pill a">${esc(p.estado||"Activo")}</span>`:(s<p.min?'<span class="pill r"><span class="dot"></span>Stock bajo</span>':'<span class="pill v">OK</span>')}</td>
-      <td class="num mono">${money(p.costo)}</td></tr>`;}).join("")}</tbody></table></div>
+      <td class="num mono" style="font-weight:700">${p.consumible===false?"—":s}</td><td>${p.consumible===false?esc(respN(p.responsable)):esc(reservaTxt(p)||"—")}<div class="s">${esc(p.ubicacion||"")}</div></td>
+      <td>${p.consumible===false?`<span class="pill ${p.estado==="Baja"?"r":p.estado==="En reparación"?"w":"a"}">${esc(p.estado||"Activo")}</span>`:(s<p.min?'<span class="pill r"><span class="dot"></span>Stock bajo</span>':'<span class="pill v">OK</span>')}</td>
+      <td class="num mono">${money(p.costo)}</td>
+      <td style="text-align:right">${puedeEditarInv(p)?`<button class="btn sm" data-a="invEditar" data-id="${esc(p.id)}">Editar</button>`:""}</td></tr>`;}).join("")}</tbody></table></div>
   ${(()=>{ const nPend=S.movs.filter(m=>m.costoPend).length; return nPend?`
   <div class="card" style="border-color:var(--ambar)"><div class="chd"><h3>Compras sin costo</h3></div>
     <div class="cp"><span class="pill w">Falta costo</span> ${nPend} compra(s) de técnicos en tienda están esperando el costo del ticket.</div></div>`:""; })()}
@@ -950,7 +1037,7 @@ VIEWS.inventario = () => `
       <td><span class="pill ${m.tipo==="entrada"?"v":"w"}">${m.tipo}</span>${m.costoPend?' <span class="pill w">Falta costo</span>':""}</td>
       <td class="num mono">${m.cant}</td><td class="mono">${m.wo?`WO-${m.wo}`:m.compraWo?`WO-${m.compraWo} (compra)`:"—"}</td>
       <td>${esc(m.tienda)||"—"}</td><td>${esc(m.quien)}</td>
-      <td class="num mono">${m.costoPend?`<button type="button" class="btn sm" data-a="movCosto" data-id="${m.id}">Cargar costo del ticket</button>`:money(m.costo)}</td></tr>`).join("")}
+      <td class="num mono">${m.costoPend?(soloLectura()?'<span class="pill w">Falta costo</span>':`<button type="button" class="btn sm" data-a="movCosto" data-id="${m.id}">Cargar costo del ticket</button>`):money(m.costo)}</td></tr>`).join("")}
     </tbody></table></div>`;
 
 /* ── SUPERVISIÓN — el panel de Gustavo (UC-12, UC-12b, UC-04b) ── */

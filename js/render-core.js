@@ -187,7 +187,7 @@ function ayudaContexto(){
     return null;
   }
   if(S.mod==="facturacion"){
-    const wf = S.wos.find(w=>enPeriodo(w.fecha,S.periodo) && w.estado==="Completed" && w.supervisada && w.validada && !w.facturada && puedeFacturar(w) && !woBloqueada(w.id));
+    const wf = S.wos.find(w=>enPeriodo(w.fecha,S.periodo) && w.estado==="Completed" && w.supervisada && aprobFacturaOK(w) && !w.facturada && puedeFacturar(w) && !woBloqueada(w.id));
     if(wf) return {sel:`[data-a="facturar"][data-prop="${wf.prop}"]`, txt:"Hay trabajo listo para facturar. Tocá «Generar factura»."};
     return null;
   }
@@ -252,6 +252,8 @@ const AYUDA_VISTA = {
     tips:["«De campo»: lo que Gustavo mandó desde el celular, esperando que decidas qué hacer con eso.","«Ruta del día»: las propiedades que le armaste para hoy.","«Por revisar»: Work Orders terminadas por el técnico, esperando que Gustavo apruebe o devuelva.","«Devoluciones»: lo que se mandó a corregir por calidad, con su motivo y estado.","«Reporte diario»: el resumen del día de Gustavo, se arma solo.","«Ver su celular» abre el simulador — ahí es donde se prueban todas estas acciones de verdad."]},
   reportes:{t:"Reportes", d:"Los números del trabajo cruzados como quieras: por semana, por zona, por servicio.",
     tips:["Tocá un número de la tabla para ver qué órdenes hay detrás."]},
+  buscar:{t:"Buscar", d:"Filtra las Work Orders y mira cobro, pago y utilidad de cada una. Sirve para saber cuánto se pagó antes por un mismo trabajo.",
+    tips:["Usa Agrupar para ver promedios por propiedad, técnico, servicio o semana.","CSV descarga lo que estás viendo."]},
   clientes:{t:"Management", d:"Las empresas administradoras (property management). Se registra una vez y todas sus propiedades cuelgan de ahí.",
     tips:["Hacé clic en una fila para ver o corregir una administradora.","«+ Nuevo» registra una."]},
   solicitudes:{t:"Solicitudes Comerciales", d:"El pedido del cliente, registrado antes de que exista ningún estimado. Arriba están las visitas comerciales.",

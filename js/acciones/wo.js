@@ -232,6 +232,11 @@ Object.assign(ACC, {
     }
     /* Se captura antes de abrir una posible confirmación de duplicado: ese
        modal reemplaza el formulario, pero los datos de unidad no deben perderse. */
+    const dependeDe=val("wDep")?+val("wDep"):null;
+    if(dependeDe){   // una WO no puede esperar a sí misma ni a una que ya la espera a ella (evita ciclos A→B→A)
+      const pre=W(dependeDe), yoW=d&&d.id?W(+d.id):null;
+      if(!pre || (yoW && woCadenaIncluye(pre,yoW.id))){ toast("🚫 No se puede enlazar","Esa Work Order ya depende de esta: quedaría un ciclo.","r"); return; }
+    }
     const bedTxt=val("wUniBedrooms");
     const bedrooms=(tipoNueva==="Residencial"&&bedTxt!=="")?parseInt(bedTxt)||0:null;
     const datosUnidad = {
@@ -268,7 +273,7 @@ Object.assign(ACC, {
       }
       if(yo){
         const datosWO={prop:pid, unidad:uid, cat, serv, ubic, ubicDetalle, fecha, semana:fecha?semanaDe(fecha):null,
-          horaProg, cant:cantN, po, notasTec, notasOficina};
+          horaProg, cant:cantN, po, notasTec, notasOficina, dependeDe};
         if(!diffCampos(yo,datosWO).length && cambiosUnidad.length){
           cm(); toast("✓ Unidad actualizada",`Los datos de <b>${esc(uNueva.num)}</b> quedaron guardados para las próximas Work Orders.`,"v"); render(); return;
         }
@@ -289,6 +294,16 @@ Object.assign(ACC, {
         notas:"", notasTec, notasOficina, fotosPrevias:(S.woFotosPreviasDraft||[]).slice(),
         propuestas:[{fecha,medio:"Registro de WO",contacto:S.usuario,respuesta:"Fecha programada",nota:"",motivo:"",quien:S.usuario,hora:hora(),dia:HOY_SUP}],
         hist:[[hora(),"Creada · fecha programada para "+fecha,S.usuario]]};
+      if(dependeDe){ nueva.dependeDe=dependeDe; nueva.hist.push([hora(),`Va después de WO-${dependeDe}`,S.usuario]); }
+      /* «Crear nueva» desde el aviso de duplicado (modalDupWO): exige motivo y deja rastro en las dos WO.
+         El return no pasa por aquí: se hace desde la WO original (ver woDupReturn). */
+      const di=S._woDupInfo; S._woDupInfo=null;
+      if(di){
+        const orig=W(di.orig);
+        nueva.motivoDup=di.motivo;
+        nueva.hist.push([hora(),`Creada aunque ya existe WO-${di.orig} · ${di.motivo}`,S.usuario]);
+        if(orig) orig.hist.push([hora(),`Se creó WO-${id} igual (mismo servicio y unidad) · ${di.motivo}`,S.usuario]);
+      }
       S.wos.push(nueva);
       S.woFotosPreviasDraft=[];
       /* Si esta WO nace de "Programar" en una Solicitud, recién AHORA que de
@@ -311,12 +326,17 @@ Object.assign(ACC, {
     // verdad queda en manos de quien está cargando la WO: abrir la que ya
     // existe, o seguir y crear la nueva igual.
     if(!esNueva){
-      const dup = S.wos.find(w2 => w2.unidad===uid && w2.serv===serv && w2.fecha===fecha
-        && w2.estado!=="Canceled" && (!yo || w2.id!==yo.id)
-        && (!exige || (w2.ubic===ubic&&w2.ubicDetalle===ubicDetalle)));
+      /* Al crear: misma unidad + mismo servicio sin importar la fecha, contra WO abiertas o
+         terminadas hace ≤60 días (relativo a HOY_SUP). Al corregir una existente solo importa la misma fecha. */
+      const dias = w2 => w2.fecha ? Math.round((new Date(HOY_SUP)-new Date(w2.fecha))/86400000) : Infinity;
+      const iguales = S.wos.filter(w2 => w2.unidad===uid && w2.serv===serv && w2.estado!=="Canceled"
+        && (!yo || w2.id!==yo.id) && !w2.touchup
+        && (!exige || (w2.ubic===ubic&&w2.ubicDetalle===ubicDetalle))
+        && (yo ? w2.fecha===fecha : (!woHecha(w2) || dias(w2)<=60)));
+      const dup = iguales.find(w2=>!woHecha(w2)) || iguales[0];
       if(dup){
-        S._woPendienteGuardar = procederGuardado;
-        modalDupWO(dup);
+        S._woPendienteGuardar = procederGuardado; S._woDupInfo = null;
+        modalDupWO(dup, !!yo);
         return;
       }
     }
@@ -325,6 +345,24 @@ Object.assign(ACC, {
   woContinuarDuplicado: () => {
     const fn = S._woPendienteGuardar; S._woPendienteGuardar = null;
     if(fn) fn();
+  },
+  /* Erika: el return «se va a la original y desde ahí se hace». No se crea
+     una WO nueva: se abre la original y se registra la devolución con el
+     flujo de siempre (no se cobra al cliente; si lo rehace el mismo técnico
+     no se le paga; si va otro, al original le queda el descuento por decidir). */
+  woDupReturn: d => {
+    const orig=W(+d.id); if(!orig) return;
+    const motivo=val("dpMot");
+    S._woPendienteGuardar=null; S._woDupInfo=null; S.audOmitir=true;
+    cm(); S.mod="wo"; S.sub=orig.id; render();
+    ACC.devolverModal({id:orig.id});
+    const m=document.getElementById("dvM"); if(m && motivo) m.value=motivo;
+  },
+  woDupNueva: d => {
+    const m = val("dpMot");
+    if(!m){ S.audOmitir=true; marcaFalta(["dpMot"]); toast("Falta el motivo","Escribe por qué se crea otra igual.","r"); return; }
+    const fn = S._woPendienteGuardar; S._woPendienteGuardar = null; if(!fn) return;
+    S._woDupInfo = {tipo:"nueva", orig:+d.id, motivo:m}; fn();
   },
 
   /* ── COORDINAR LA FECHA CON EL CLIENTE ──────────────────────── */
@@ -401,10 +439,7 @@ Object.assign(ACC, {
       w.fecha = f;
       if(inicio) w.horaProg=inicio;
       if(fin) w.horaFin=fin;
-      if(U(w.unidad).ocupacion==="Occupied" && inicio){
-        S.recordatoriosWO=(S.recordatoriosWO||[]).filter(r=>r.wo!==w.id);
-        S.recordatoriosWO.push({id:"RW"+(S.recordatoriosWO.length+1),wo:w.id,tipo:"1 day before",fecha:f,hora:inicio,estado:"Scheduled"},{id:"RW"+(S.recordatoriosWO.length+2),wo:w.id,tipo:"1 hour before",fecha:f,hora:inicio,estado:"Scheduled"});
-      }
+      if(U(w.unidad).ocupacion==="Occupied" && inicio) programarRecordatorios(w,f,inicio);   // 1 día antes / 1 hora antes de la hora de inicio
       w.confirmCliente = {fecha:f, medio, contacto, quien:S.usuario, hora:hora(), dia:HOY_SUP};
       if(w.estado==="Scheduled") w.estado = "Confirmed";
       if(motivo){ w.reagendada = (w.reagendada||0)+1; w.motivoReag = motivo; }
@@ -438,7 +473,7 @@ Object.assign(ACC, {
     S.progF = null; S.progTmp = null;
     if(inicio) w.horaProg=inicio;
     if(fin) w.horaFin=fin;
-    if(U(w.unidad).ocupacion==="Occupied" && inicio){ S.recordatoriosWO=(S.recordatoriosWO||[]).filter(r=>r.wo!==w.id); S.recordatoriosWO.push({id:"RW"+(S.recordatoriosWO.length+1),wo:w.id,tipo:"1 day before",fecha:f,hora:inicio,estado:"Scheduled"},{id:"RW"+(S.recordatoriosWO.length+2),wo:w.id,tipo:"1 hour before",fecha:f,hora:inicio,estado:"Scheduled"}); }
+    if(U(w.unidad).ocupacion==="Occupied" && inicio) programarRecordatorios(w,f,inicio);
     cm();
     toast("Anotado — falta que confirme",
       `Quedó tentativo el <b>${f}</b> con <b>${esc(contacto)}</b>. La orden sigue <b>sin confirmar</b>.`,"w");
@@ -901,7 +936,7 @@ Object.assign(ACC, {
     const parentPost=(w.evidFotos||[]).slice();
     if(!items.some(x=>x.post.length) && !parentPost.length){ toast("Falta evidencia post-work","Carga al menos una foto final del trabajo principal o de una Sub-WO.","r"); return; }
     const r={id:"CR"+Date.now(),wo:w.id,prop:w.propiedad||w.prop,propiedad:p.nombre,unidad:U(w.unidad).num,correo:mail,mensaje:val("crMsg"),items,parentPost,estado:"Enviado",canalEnvio:"Correo electrónico",creado:HOY_SUP,enviado:HOY_SUP,hora:hora(),respondido:null};
-    S.revisionesCliente.unshift(r); guardarRevisionesCliente(); w.validada=false;
+    S.revisionesCliente.unshift(r); guardarRevisionesCliente(); desvalidar(w);
     w.clienteRevisionId=r.id; w.hist.push([hora(),`Expediente post-work enviado a ${mail}`,S.usuario]);
     cm();
     toast("✓ Correo preparado",`Correo registrado para <b>${esc(mail)}</b> con <b>${parentPost.length+items.reduce((n,x)=>n+x.post.length,0)} foto(s) adjunta(s)</b>. Cuando el cliente responda, registra aquí el canal y su aprobación.` ,"v"); render();
@@ -915,7 +950,7 @@ Object.assign(ACC, {
     r.respondido={quien:S.usuario,canal,fecha:HOY_SUP,hora:hora(),nota}; guardarRevisionesCliente();
     const w=W(r.wo); if(w){
       if(confirmada){ w.clienteConfirmado=r.respondido; w.clienteCorreccion=null; w.hist.push([hora(),`Cliente aprobó el expediente post-work por ${canal}`,S.usuario]); if(w.estado==="Completed"&&w.evid>0&&ingresoWO(w)!==null&&!subWOsPendientesDeWO(w.id).length) w.validada=true; }
-      else { w.clienteCorreccion={fecha:HOY_SUP,hora:hora(),nota,canal}; w.validada=false; w.hist.push([hora(),`Cliente solicitó corrección por ${canal}: ${nota}`,S.usuario]); avisar("Erika","Cliente solicitó una corrección",`WO-${w.id}: ${nota}`,"r"); }
+      else { w.clienteCorreccion={fecha:HOY_SUP,hora:hora(),nota,canal}; desvalidar(w); w.hist.push([hora(),`Cliente solicitó corrección por ${canal}: ${nota}`,S.usuario]); avisar("Erika","Cliente solicitó una corrección",`WO-${w.id}: ${nota}`,"r"); }
     }
     cm(); toast(confirmada?"✓ Aprobación registrada":"Corrección registrada",`Respuesta guardada por canal <b>${esc(canal)}</b>, con fecha y hora.`,confirmada?"v":"w"); render();
   },
@@ -929,7 +964,7 @@ Object.assign(ACC, {
   clienteCorreccionGuardar: d => {
     const r=by(S.revisionesCliente,d.id), nota=val("crCorrection"); if(!r||!nota){ toast("Falta el detalle","Describe qué debe corregirse.","r"); return; }
     r.estado="Corrección solicitada"; r.respondido={quien:"Cliente",fecha:HOY_SUP,hora:hora(),nota}; guardarRevisionesCliente();
-    const w=W(r.wo); if(w){ w.clienteCorreccion={fecha:HOY_SUP,hora:hora(),nota}; w.validada=false; w.hist.push([hora(),`Cliente solicitó corrección: ${nota}`,"Cliente"]); avisar("Erika","Cliente solicitó una corrección",`WO-${w.id}: ${nota}`,"r"); }
+    const w=W(r.wo); if(w){ w.clienteCorreccion={fecha:HOY_SUP,hora:hora(),nota}; desvalidar(w); w.hist.push([hora(),`Cliente solicitó corrección: ${nota}`,"Cliente"]); avisar("Erika","Cliente solicitó una corrección",`WO-${w.id}: ${nota}`,"r"); }
     toast("Solicitud enviada","Oficina recibió el detalle de la corrección.","w"); cm(); render();
   },
   clienteRevisionExcepcion: d => {
@@ -946,7 +981,7 @@ Object.assign(ACC, {
       toast("🚫 Falta la evidencia","No se puede completar una Sub-Work Order sin al menos una foto.","r"); return;
     }
     a.tec=tec; a.fecha=fecha; a.estadoTrabajo=estado;
-    if(estado!=="Canceled" && estado!=="Completed") w.validada=false;
+    if(estado!=="Canceled" && estado!=="Completed") desvalidar(w);
     if(w.estado==="Completed" && w.evid>0 && ingresoWO(w)!==null && !subWOsPendientesDeWO(w.id).length) w.validada=true;
     const despues=tecSubWO(a);
     a.hist.push([hora(),`Gestión actualizada · ${estado} · ${despues?tecN(despues):"sin técnico"}`,S.usuario]);
@@ -978,7 +1013,7 @@ Object.assign(ACC, {
       estadoTrabajo:monto>0?"Pending approval":(tecOverride||w.tec?"Assigned":"Unassigned"),
       hist:[[hora(), `Sub-Work Order planificada creada: ${tipo}`, S.usuario]]};
     S.adicionales.push(na);
-    if(na.estado==="Aprobado") w.validada=false;
+    if(na.estado==="Aprobado") desvalidar(w);
     w.hist.push([hora(), `Sub-Work Order planificada: ${tipo}`, S.usuario]);
     cm();
     toast("✓ Sub-Work Order creada",
@@ -1047,4 +1082,49 @@ Object.assign(ACC, {
   materialRecibo: d => {
     const m=S.movs.find(x=>x.id===d.id); if(!m) return;
     capturarFoto(url=>{ m.recibo=url; m.evid=true; render(); });
-  },});
+  },
+
+  /* ── Recordatorios de unidad ocupada: «Enviar» los marca como enviados (simulado; el texto al cliente va en inglés) ── */
+  recordatorioEnviar: d => { if(!puedeAvisarPend()) return;
+    const r=(S.recordatoriosWO||[]).find(x=>x.id===d.id); if(!r||r.estado==="Sent") return;
+    r.estado="Sent"; r.enviado={quien:S.usuario,fecha:HOY_SUP,hora:hora()}; r.mensaje=textoRecordatorio(r);
+    const w=W(r.wo); if(w) w.hist.push([hora(),`Reminder sent to customer (${r.tipo})`,S.usuario]);
+    toast("✓ Recordatorio enviado",`WO-${r.wo} · ${esc(r.tipo)}. Registrado como enviado (simulado).`,"v"); render(); },
+
+  /* ── WO pendientes: selección en lote, aviso por propiedad y seguimiento de la respuesta ── */
+  pendSel: d => { const id=+d.id, l=S.pendSel||(S.pendSel=[]);
+    S.pendSel = l.includes(id) ? l.filter(x=>x!==id) : l.concat(id); render(); },
+  pendAvisar: () => { if(!puedeAvisarPend()) return;
+    const ws=(S.pendSel||[]).map(W).filter(w=>w&&ESTADOS_PEND.includes(w.estado));
+    if(!ws.length){ toast("Marca WO","Selecciona al menos una WO pendiente.","r"); return; }
+    const props=[...new Set(ws.map(w=>w.prop))];
+    modal(`<div class="mh"><h3>Avisar · ${ws.length} WO</h3><p>${props.length} propiedad(es) — un mensaje por propiedad, en inglés.</p></div><div class="mb">
+      <div class="fld"><label>Motivo <span class="req">*</span></label><select id="pnReason">${MOTIVOS_PEND.map(m=>`<option>${m}</option>`).join("")}</select></div>
+      <div class="fld"><label>Detalle</label><input id="pnDetail"></div>
+      <div class="fld"><label>Medio</label><select id="pnMedium"><option>Email</option><option>SMS</option></select></div>
+      <div class="note">${props.map(pid=>{ const c=(contactosDe(pid)||[])[0]||CLI(P(pid).cliente); return `<b>${esc(P(pid).nombre)}</b> · ${esc(c.nombre||"Property contact")} · ${esc(c.mail||c.tel||"—")} — ${ws.filter(w=>w.prop===pid).map(w=>"WO-"+w.id).join(", ")}`; }).join("<br>")}<br>Envío simulado: queda registrado con su seguimiento.</div></div>
+      <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="pendAvisarOK">Enviar</button></div>`); },
+  pendAvisarOK: () => { if(!puedeAvisarPend()) return;
+    const ws=(S.pendSel||[]).map(W).filter(w=>w&&ESTADOS_PEND.includes(w.estado)); if(!ws.length){ cm(); return; }
+    const motivo=val("pnReason"), detalle=val("pnDetail"), medio=val("pnMedium"); S.comunicacionesWO=S.comunicacionesWO||[];
+    const props=[...new Set(ws.map(w=>w.prop))], nuevas=[];
+    props.forEach(pid=>{ const g=ws.filter(w=>w.prop===pid), grupo="M"+nid("gx");
+      const lista=g.map(w=>`WO-${w.id} (unit ${U(w.unidad).num})`).join(", ");
+      const msg=`Hello, the following work order${g.length>1?"s":""} at ${P(pid).nombre} ${g.length>1?"are":"is"} pending because ${motivo.toLowerCase()}: ${lista}${detalle?`. ${detalle}`:""}. Please let us know when the unit${g.length>1?"s are":" is"} ready for service.`;
+      g.forEach(w=>{ const c={id:"CW"+(S.comunicacionesWO.length+1+nuevas.length),wo:w.id,prop:pid,medio,fecha:HOY_SUP,hora:hora(),quien:S.usuario,motivo,mensaje:msg,estado:"Sent",grupo};
+        nuevas.push(c); w.hist.push([hora(),`Customer notified by ${medio}: ${motivo}`,S.usuario]); }); });
+    S.comunicacionesWO.unshift(...nuevas.slice().reverse()); S.pendSel=[]; flash(nuevas.map(c=>"com:"+c.id)); cm();
+    toast("✓ Clientes avisados",`${props.length} mensaje(s) por ${medio} · ${nuevas.length} WO con seguimiento abierto.`,"v"); render(); },
+  pendRespuesta: d => { const c=(S.comunicacionesWO||[]).find(x=>x.id===d.id); if(!c||!puedeAvisarPend()) return;
+    modal(`<div class="mh"><h3>Respuesta · WO-${c.wo}</h3><p>${esc(c.motivo)} · ${esc(c.medio)} · enviado ${esc(c.fecha)}</p></div><div class="mb">
+      <div class="fld"><label>Respuesta</label><select id="prRes"><option>Ya se puede trabajar</option><option>Sigue pendiente</option></select></div>
+      <div class="fld"><label>Nota</label><input id="prNota"></div>
+      <div class="hint">«Ya se puede trabajar» cierra el seguimiento; «Sigue pendiente» lo deja abierto.</div></div>
+      <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="pendRespuestaOK" data-id="${esc(c.id)}">Guardar</button></div>`); },
+  pendRespuestaOK: d => { const c=(S.comunicacionesWO||[]).find(x=>x.id===d.id); if(!c||!puedeAvisarPend()) return;
+    const resultado=val("prRes"), nota=val("prNota"), w=W(c.wo);
+    c.respuesta={resultado,nota,quien:S.usuario,fecha:HOY_SUP,hora:hora()};
+    if(resultado==="Ya se puede trabajar") c.estado="Closed";
+    if(w) w.hist.push([hora(),`Cliente respondió: ${resultado}${nota?" · "+nota:""}`,S.usuario]);
+    cm(); toast(c.estado==="Closed"?"✓ Seguimiento cerrado":"Sigue abierto",`WO-${c.wo} · ${esc(resultado)}.`,c.estado==="Closed"?"v":"w"); render(); },
+});

@@ -34,6 +34,42 @@ const puede = m => { const r=ROLES[S.usuario]; return r.m==="*" || r.m.includes(
    también lo puede consultar Lydia. */
 const puedeVerUtilidad = () => ["Claudia","Erika"].includes(S.usuario);
 const puedeVerIngreso = () => ["Lydia","Erika","Claudia"].includes(S.usuario);
+/* Contabilidad solo mira y descarga: ninguna acción de captura le aparece. */
+const soloLectura = () => S.usuario==="Contador";
+/* Quién avisa a clientes por WO pendientes y envía recordatorios: programación y administración. */
+const puedeAvisarPend = () => ["Thalia","Claudia","Erika"].includes(S.usuario);
+/* Pago al técnico y factura al cliente se aprueban por separado (w.aprobPago / w.aprobFactura).
+   w.validada queda como "las dos" y como marca de las WO anteriores a este cambio: por eso los
+   helpers la aceptan — nómina y facturación leen siempre estos dos, nunca w.validada directo. */
+const puedeValidar = () => ["Claudia","Erika"].includes(S.usuario);
+const aprobPagoOK = w => !!(w.aprobPago || w.validada);
+const aprobFacturaOK = w => !!(w.aprobFactura || w.validada);
+/* Una corrección o un cambio en la WO invalida las dos aprobaciones, no solo la marca general. */
+function desvalidar(w){ w.validada=false; w.aprobPago=null; w.aprobFactura=null; }
+function pillsAprob(w){
+  const p=(ok,t,a)=>`<span class="pill ${ok?"v":"g"}" ${a?`title="${esc(a.quien+" · "+a.fecha+" "+a.hora)}"`:""}>${t}${ok?" ✓":" —"}</span>`;
+  return p(aprobPagoOK(w),"Pago",w.aprobPago)+" "+p(aprobFacturaOK(w),"Factura",w.aprobFactura);
+}
+/* Responsable de un activo: id de técnico o nombre de oficina. */
+const respN = v => v ? (T(v)?tecN(v):v) : "—";
+/* Recordatorios de unidad ocupada: fecha/hora son CUÁNDO se envían. Un día antes = día anterior a la
+   misma hora de inicio; una hora antes = inicio − 1 h (antes ambos quedaban con la hora de inicio). */
+const hmMin = h => { const [a,b]=String(h||"9:00").split(":"); return (parseInt(a)||0)*60+(parseInt(b)||0); };
+const minHM = m => { m=Math.max(0,m); return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"); };
+function recordatoriosDe(f, inicio){
+  return [{tipo:"1 day before",fecha:fechaMover(f,-1),hora:minHM(hmMin(inicio))},{tipo:"1 hour before",fecha:f,hora:minHM(hmMin(inicio)-60)}];
+}
+function programarRecordatorios(w, f, inicio){
+  S.recordatoriosWO=(S.recordatoriosWO||[]).filter(r=>r.wo!==w.id);
+  recordatoriosDe(f,inicio).forEach(r=>S.recordatoriosWO.push({id:"RW"+nid("rw"),wo:w.id,...r,estado:"Scheduled"}));
+}
+/* Texto al cliente (en inglés) del recordatorio de una WO en unidad ocupada. */
+function textoRecordatorio(r){
+  const w=W(r.wo); if(!w) return "";
+  return `Hello, this is a reminder that work order WO-${w.id} (${w.serv}) at ${P(w.prop).nombre}, unit ${U(w.unidad).num}, is scheduled for ${w.fecha} at ${w.horaProg||"9:00"}. Please make sure our team can access the unit.`;
+}
+/* Miniatura de un comprobante (foto real). */
+const miniRecibo = url => url ? `<a href="${url}" target="_blank"><img src="${url}" style="width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px solid var(--line);vertical-align:middle"></a>` : "";
 
 /* Íconos de composición de unidad — compartidos entre el Price List
    (Tarifario) y el selector de Unidad del Estimado, para que la misma
@@ -115,26 +151,48 @@ function tarifaWO(w){ const u=U(w.unidad); return tarifa(w.prop,w.cat,w.serv,u.r
    la tarifa normal — w.extraFacturable. Si no hay tarifa base pero sí hay
    extra aprobado para cobrar, igual es facturable (es un cargo aparte, no
    depende de que la WO en sí tenga precio). */
+/* Ajustes que Erika carga al validar (w.ajustesVal): única fuente para nómina
+   y facturación. Cobro extra / Descuento cliente mueven lo que se le cobra al
+   cliente; Pago extra / Descuento técnico mueven lo que se le paga al técnico. */
+const AJUSTES_VAL = {"Cobro extra":{lado:"cobro",signo:1}, "Pago extra":{lado:"pago",signo:1},
+  "Descuento cliente":{lado:"cobro",signo:-1}, "Descuento técnico":{lado:"pago",signo:-1}};
+const ajusteMonto = a => (AJUSTES_VAL[a.tipo]?AJUSTES_VAL[a.tipo].signo:1)*(+a.monto||0);
+const ajustesValDe = (w,lado) => (w.ajustesVal||[]).filter(a=>AJUSTES_VAL[a.tipo]&&AJUSTES_VAL[a.tipo].lado===lado);
+const ajustesValTotal = (w,lado) => ajustesValDe(w,lado).reduce((n,a)=>n+ajusteMonto(a),0);
 function ingresoWO(w){
   const extra = w.extraFacturable||0;
   const base = w.precio!=null ? w.precio*(w.cant||1) : (tarifaWO(w) ? tarifaWO(w).precio*(w.cant||1) : null);
-  if(base===null && !extra) return null;
-  return (base||0) + extra;
+  const aj=ajustesValTotal(w,"cobro");
+  if(base===null && !extra && !aj) return null;
+  return (base||0) + extra + aj;
 }
-/* Importe del trabajo principal sin mezclar los conceptos de Sub-WO. Esto
-   permite que la factura los muestre como líneas independientes y, cuando
-   corresponde, los mande a una factura separada. */
+/* Importe del trabajo principal sin mezclar los conceptos de Sub-WO ni los
+   ajustes de validación. Esto permite que la factura los muestre como líneas
+   independientes y, cuando corresponde, los mande a una factura separada. */
 function ingresoBaseWO(w){
   const total=ingresoWO(w);
-  return total===null ? null : total-(w.extraFacturable||0);
+  return total===null ? null : total-(w.extraFacturable||0)-ajustesValTotal(w,"cobro");
 }
 /* Si el touch-up lo hace el mismo tecnico que se equivoco, no se le paga:
    esta rehaciendo su propio trabajo. Si va otro, se paga normal. */
 function egresoWO(w){
-  if(w.touchup && w.tec && w.tec===w.tecOriginal) return 0;
-  if(w.pago!=null) return w.pago*(w.cant||1);
-  const t=tarifaWO(w); return t? t.pago*(w.cant||1) : null;
+  const aj=ajustesValTotal(w,"pago");
+  if(w.touchup && w.tec && w.tec===w.tecOriginal) return aj;
+  if(w.pago!=null) return w.pago*(w.cant||1)+aj;
+  const t=tarifaWO(w); return t? t.pago*(w.cant||1)+aj : null;
 }
+/* Pago base sin ajustes: lo que se edita en «Pago técnico» al validar. */
+const egresoBaseWO = w => { const e=egresoWO(w); return e===null ? null : e-ajustesValTotal(w,"pago"); };
+/* WO enlazada (w.dependeDe): la sucesora espera hasta que la anterior termine.
+   Cancelada no traba: si no va a ocurrir, esperarla sería quedar varado. */
+const woHecha = w => ["Completed","Invoiced","Paid"].includes(w.estado);
+const woCadenaIncluye = (w,id) => { let p=w, n=0; while(p && n++<50){ if(p.id===id) return true; p=p.dependeDe?W(p.dependeDe):null; } return false; };
+const woOpcionesDepende = (unidad,yoId) => S.wos.filter(x=>x.unidad===unidad && x.estado!=="Canceled" && !woHecha(x)
+  && x.id!==yoId && !(yoId && woCadenaIncluye(x,yoId)));
+const woEspera = w => { const p=w.dependeDe&&W(w.dependeDe); return p && p.estado!=="Canceled" && !woHecha(p) ? p : null; };
+/* Crédito de propiedad: saldo = abonos − usos. Solo se aplica a mano en la factura. */
+const saldoCredito = prop => Math.round(((S.creditosProp||[]).filter(c=>c.prop===prop)
+  .reduce((n,c)=>n+(c.tipo==="Abono"?1:-1)*(+c.monto||0),0))*100)/100;
 function materialWO(w){ return S.movs.filter(m=>m.wo===w.id && m.tipo==="salida" && !m.cliente).reduce((a,m)=>a+m.costo,0); }
 /* Punto 10: el pago adicional que se aprueba al aceptar una Sub-Work
    Order (ver medioOK) queda en S.excepciones, no en egresoWO — así que

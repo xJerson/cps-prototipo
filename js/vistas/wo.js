@@ -8,6 +8,8 @@ VIEWS.wo = () => {
   if(f==="sin") ws = ws.filter(w=>!w.tec);
   if(f==="curso") ws = ws.filter(w=>["In progress","Esperando aprobación"].includes(w.estado));
   if(f==="camino") ws = ws.filter(w=>w.tec && esAgendada(w.estado) && !asisDe(w.id));
+  if(f==="pend") ws = ws.filter(w=>ESTADOS_PEND.includes(w.estado));
+  const selMode = f==="pend" && puedeAvisarPend(), sel = (S.pendSel||[]).filter(id=>{ const w=W(id); return w && ESTADOS_PEND.includes(w.estado); });
   const filtroFecha=S.filtroWO||{modo:"todos",sem:S.semana,desde:"",hasta:""};
   const fechaRapida={hoy:HOY_SUP,manana:fechaMover(HOY_SUP,1),ayer:fechaMover(HOY_SUP,-1)};
   if(fechaRapida[filtroFecha.modo]) ws=ws.filter(w=>w.fecha===fechaRapida[filtroFecha.modo]);
@@ -57,16 +59,20 @@ VIEWS.wo = () => {
     </tbody></table></div>`:""}
 
   ${vistaCierreAgendamiento()}
+  ${cardRecordatorios()}
+  ${puedeAvisarPend()?cardSeguimientoPend():""}
   <div class="tabs">
-    ${[["todas","Todas"],["semana","Semana "+S.semana],["sin","Sin técnico"],["camino","Asignadas sin llegar"],["curso","En curso"]].map(([k,n])=>
+    ${[["todas","Todas"],["semana","Semana "+S.semana],["sin","Sin técnico"],["camino","Asignadas sin llegar"],["curso","En curso"],["pend","Pendientes"]].map(([k,n])=>
       `<button class="tab ${f===k?"on":""}" data-a="tab" data-t="${k}">${n}</button>`).join("")}
   </div>
-  <div class="note" style="margin-bottom:12px"><b>${ws.length} resultado(s).</b> Los filtros de texto y fecha se mantienen juntos hasta que los cambies.</div>
+  <div class="note" style="margin-bottom:12px;display:flex;align-items:center;gap:10px"><span><b>${ws.length} resultado(s).</b> Los filtros de texto y fecha se mantienen juntos hasta que los cambies.</span>
+    ${selMode?`<button class="btn p" style="margin-left:auto" data-a="pendAvisar" ${sel.length?"":"disabled"}>Avisar (${sel.length})</button>`:""}</div>
   <div class="card"><table>
-    <thead><tr><th>WO</th><th>Fecha</th><th>Hora</th><th>Sem</th><th>Propiedad · Unidad</th><th>Rooms</th><th>Tipo</th><th>Servicio</th><th>Técnico</th><th>Llegada</th><th>Estado</th>${puedeVerDinero?'<th class="num">Cobrado</th><th class="num">Pagado</th>':""}</tr></thead>
+    <thead><tr>${selMode?"<th></th>":""}<th>WO</th><th>Fecha</th><th>Hora</th><th>Sem</th><th>Propiedad · Unidad</th><th>Rooms</th><th>Tipo</th><th>Servicio</th><th>Técnico</th><th>Llegada</th><th>Estado</th>${puedeVerDinero?'<th class="num">Cobrado</th><th class="num">Pagado</th>':""}</tr></thead>
     <tbody>${ws.map(w=>{
       const t=tarifaWO(w);
       return `<tr class="cl${fl("wo:"+w.id)}" data-a="woVer" data-id="${w.id}">
+        ${selMode?`<td><input type="checkbox" data-a="pendSel" data-id="${w.id}" ${sel.includes(w.id)?"checked":""}></td>`:""}
         <td class="mono" style="font-weight:700">WO-${w.id}</td>
         <td class="mono">${w.fecha.slice(5)}</td><td class="mono">${esc(w.horaProg||"9:00")}</td><td class="mono">${w.semana}</td>
         <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td>
@@ -80,12 +86,46 @@ VIEWS.wo = () => {
           ${w.reagendada?`<span class="pill w" title="${esc(w.motivoReag||"Se movió de fecha")}"><span class="dot"></span>Reagendada${w.reagendada>1?" · "+w.reagendada+"x":""}</span>`:""}
           ${fechaSinConfirmar(w)?`<span class="pill w" title="Se le propuso una fecha al cliente y todavía no la confirmó"><span class="dot"></span>Sin confirmar</span>`:""}
           ${bloqueadaPorDev(w)?`<span class="pill r" title="${esc(devAbiertaDeWO(w.id).area)}: ${esc(devAbiertaDeWO(w.id).desc)}"><span class="dot"></span>Devolución abierta</span>`:""}
+          ${woEspera(w)?`<span class="pill w" title="Empieza cuando termine WO-${woEspera(w).id}"><span class="dot"></span>Espera WO-${woEspera(w).id}</span>`:""}
+          ${w.facRetenida&&!w.facturada?`<span class="pill w" title="${esc(w.facRetenida.motivo)}"><span class="dot"></span>Retenida</span>`:""}
         </div></td>
         ${puedeVerDinero?`<td class="num mono">${w.facturada&&ingresoWO(w)!==null?money(ingresoWO(w)):"—"}</td>
           <td class="num mono">${w.pagadaTec&&egresoWO(w)!==null?money(egresoWO(w)):"—"}</td>`:""}</tr>`;
-    }).join("")||`<tr><td colspan="${puedeVerDinero?13:11}" class="empty">Nada aquí</td></tr>`}</tbody>
+    }).join("")||`<tr><td colspan="${(puedeVerDinero?13:11)+(selMode?1:0)}" class="empty">Nada aquí</td></tr>`}</tbody>
   </table></div>`;
 };
+
+/* WO que esperan algo del cliente: se avisan en lote y se les da seguimiento. */
+const ESTADOS_PEND = ["Pending","Detenido"];
+const MOTIVOS_PEND = ["Unit does not have electricity","Unit does not have water","Pest control is required","No access to the unit","Other"];
+/* Recordatorios de unidad ocupada: fecha/hora = cuándo se envían. «Enviar» los marca como enviados (simulado). */
+function filaRecordatorio(r, conWO){
+  const w=W(r.wo), tarde=r.estado==="Scheduled" && r.fecha<HOY_SUP;
+  return `<tr>${conWO?`<td class="mono" style="font-weight:700">WO-${r.wo}</td><td>${w?esc(P(w.prop).nombre)+" · "+esc(U(w.unidad).num):"—"}</td>`:""}
+    <td>${esc(r.tipo)}</td><td class="mono">${esc(r.fecha)} ${esc(r.hora)}</td>
+    <td><span class="pill ${r.estado==="Sent"?"v":tarde?"w":"g"}">${r.estado==="Sent"?"Sent":tarde?"Scheduled · atrasado":"Scheduled"}</span>${r.enviado?`<div style="font-size:10.5px;color:var(--faint)">${esc(r.enviado.quien)} · ${esc(r.enviado.fecha)} ${esc(r.enviado.hora)}</div>`:""}</td>
+    <td style="text-align:right">${r.estado==="Scheduled"&&puedeAvisarPend()?`<button class="btn sm" data-a="recordatorioEnviar" data-id="${esc(r.id)}">Enviar</button>`:""}</td></tr>`;
+}
+function cardRecordatorios(){
+  const rs=(S.recordatoriosWO||[]).filter(r=>r.estado==="Scheduled" && W(r.wo) && W(r.wo).estado!=="Canceled")
+    .sort((a,b)=>(a.fecha+a.hora).localeCompare(b.fecha+b.hora));
+  if(!rs.length) return "";
+  return `<div class="card"><div class="chd"><h3>Recordatorios</h3><span class="s">${rs.length} por enviar · unidades ocupadas</span></div>
+    <table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Tipo</th><th>Se envía</th><th>Estado</th><th></th></tr></thead><tbody>${rs.map(r=>filaRecordatorio(r,true)).join("")}</tbody></table></div>`;
+}
+/* Comunicaciones abiertas con el cliente por WO pendientes: cada una espera su respuesta. */
+function cardSeguimientoPend(){
+  const cs=(S.comunicacionesWO||[]).filter(c=>c.estado!=="Closed");
+  if(!cs.length) return "";
+  return `<div class="card"><div class="chd"><h3>Seguimiento</h3><span class="s">${cs.length} aviso(s) esperando respuesta</span></div>
+    <table><thead><tr><th>WO</th><th>Propiedad</th><th>Motivo</th><th>Medio</th><th class="num">Días</th><th>Respuesta</th><th></th></tr></thead><tbody>
+    ${cs.map(c=>{ const w=W(c.wo), dias=Math.max(0,Math.round((new Date(HOY_SUP)-new Date(c.fecha))/86400000));
+      return `<tr class="${fl("com:"+c.id)}"><td class="mono" style="font-weight:700">WO-${c.wo}</td><td>${w?esc(P(w.prop).nombre)+" · "+esc(U(w.unidad).num):"—"}</td>
+        <td>${esc(c.motivo)}</td><td>${esc(c.medio)}</td><td class="num mono"><b style="color:${dias>2?"var(--rojo)":"var(--tinta)"}">${dias}</b></td>
+        <td>${c.respuesta?`<span class="pill w">${esc(c.respuesta.resultado)}</span>${c.respuesta.nota?`<div style="font-size:10.5px;color:var(--faint)">${esc(c.respuesta.nota)}</div>`:""}`:"—"}</td>
+        <td style="text-align:right"><button class="btn sm" data-a="pendRespuesta" data-id="${esc(c.id)}">Respuesta</button></td></tr>`; }).join("")}
+    </tbody></table></div>`;
+}
 
 /* El cierre es una acción operativa, no un reloj oculto: alguien lo ejecuta
    cuando termina de recibir cambios. La hora configurada deja claro cuál es
@@ -151,6 +191,7 @@ function fichaWO(id){
             ${w.fecha?"Reagendar":"Definir fecha con cliente"}</button>`:""}
       ${!w.tec?`<button class="btn ${w.confirmCliente?"p":""}" data-a="asigModal" data-id="${w.id}">Asignar técnico</button>`:""}
       ${w.estado==="Completed"&&!w.supervisada?`<button class="btn v" data-a="supervisar" data-id="${w.id}">Aprobar supervisión</button>`:""}
+      ${puedeValidar()&&w.estado==="Completed"&&!(aprobPagoOK(w)&&aprobFacturaOK(w))?`<button class="btn p" data-a="validarModal" data-id="${w.id}">Revisar</button>`:""}
       ${w.tec && !["Canceled","Invoiced","Paid"].includes(w.estado)
         ?`<button class="btn" data-a="woReasignar" data-id="${w.id}">Reasignar técnico</button>`:""}
       ${esAgendada(w.estado)
@@ -173,9 +214,12 @@ function fichaWO(id){
     <div>
       <div class="card"><div class="chd"><h3>Datos del trabajo</h3>
         <span class="r"><span class="pill ${estP(w.estado)}"><span class="dot"></span>${w.estado}</span>
+          ${puedeValidar()&&w.estado==="Completed"?`<span style="margin-left:5px">${pillsAprob(w)}</span>`:""}
           ${w.reagendada?`<span class="pill w" style="margin-left:5px" title="${esc(w.motivoReag||"")}">↻ reagendada${w.reagendada>1?" "+w.reagendada+"x":""}</span>`:""}
           ${fechaSinConfirmar(w)?`<span class="pill w" style="margin-left:5px" title="Se le propuso una fecha al cliente y todavía no la confirmó">⏳ fecha sin confirmar</span>`:""}
-          ${bloqueadaPorDev(w)?`<span class="pill r" style="margin-left:5px">⚠ devolución abierta</span>`:""}</span></div>
+          ${bloqueadaPorDev(w)?`<span class="pill r" style="margin-left:5px">⚠ devolución abierta</span>`:""}
+          ${woEspera(w)?`<span class="pill w" style="margin-left:5px">Espera WO-${woEspera(w).id}</span>`:""}
+          ${w.facRetenida&&!w.facturada?`<span class="pill w" style="margin-left:5px" title="${esc(w.facRetenida.motivo)}">Retenida · ${esc(w.facRetenida.motivo)}</span>`:""}</span></div>
         ${(()=>{ const d=devAbiertaDeWO(w.id); if(!d) return "";
           const tu=touchupDe(d.id);
           return `<div class="cp" style="border-top:1px solid var(--line)"><div class="note r" style="margin:0">
@@ -195,6 +239,8 @@ function fichaWO(id){
           <tr><td style="color:var(--faint)">Cantidad</td><td class="mono">${w.cant||1}${puedeVerDinero&&(w.cant||1)>1&&t?` × ${money(t.precio)} = ${money(ingresoWO(w))}`:""}</td></tr>
           <tr><td style="color:var(--faint)">PO</td><td class="mono">${esc(w.po)||"—"}</td></tr>
           <tr><td style="color:var(--faint)">Asistencia</td><td>${w.asistencia?'<span class="pill v">Sí</span>':'<span class="pill g">No registrada</span>'}</td></tr>
+          ${w.dependeDe&&W(w.dependeDe)?`<tr><td style="color:var(--faint)">Va después de</td><td><a href="#" data-a="woVerDesdeModal" data-id="${w.dependeDe}" style="color:var(--azul);font-weight:650">WO-${w.dependeDe}</a> · ${esc(W(w.dependeDe).serv)} · ${esc(W(w.dependeDe).estado)}</td></tr>`:""}
+          ${w.motivoDup?`<tr><td style="color:var(--faint)">Motivo (duplicada)</td><td>${esc(w.motivoDup)}</td></tr>`:""}
           <tr><td style="color:var(--faint)">Notas al técnico</td><td>${esc(w.notasTec)||"—"}</td></tr>
           <tr><td style="color:var(--faint)">Notas internas de oficina</td><td>${esc(w.notasOficina)||"—"}</td></tr>
           <tr><td style="color:var(--faint)">Qué hizo el técnico</td><td>${esc(w.notas)||'<span style="color:var(--faint)">sin describir</span>'}</td></tr>
@@ -248,6 +294,10 @@ function fichaWO(id){
           :`<div class="note" style="margin:0 0 9px">Cuando las fotos post-work estén listas, envía al cliente un correo con las fotos adjuntas para que responda por email.</div>
             <button class="btn sm p" data-a="clienteExpediente" data-id="${w.id}">Enviar expediente al cliente</button>`}
         </div></div>
+
+      ${(()=>{ const rs=(S.recordatoriosWO||[]).filter(r=>r.wo===w.id); if(!rs.length) return "";
+        return `<div class="card"><div class="chd"><h3>Recordatorios</h3><span class="s">unidad ocupada · aviso al cliente</span></div>
+          <table><thead><tr><th>Tipo</th><th>Se envía</th><th>Estado</th><th></th></tr></thead><tbody>${rs.map(r=>filaRecordatorio(r,false)).join("")}</tbody></table></div>`; })()}
 
       ${trazaWO(w)}
 
@@ -757,6 +807,8 @@ function modalWO(w){
       <div class="fld"><label>Cantidad <span class="req">*</span></label><input id="wCant" value="${w?(w.cant||1):""}" placeholder="1" class="mono"></div>
       <div class="fld"><label>PO</label><input id="wPO" placeholder="opcional" value="${w?esc(w.po||""):""}"></div>
     </div>
+    <div class="fld"><label>Va después de</label><select id="wDep" data-yo="${w?w.id:""}" data-value="${w&&w.dependeDe?w.dependeDe:""}"></select>
+      <div class="hint">La WO espera a la elegida (misma unidad). El técnico la ve en espera hasta que termine.</div></div>
     <div class="fld"><label>Notas al técnico</label><textarea id="wNotas" placeholder="lo que el técnico necesita saber antes de llegar">${w?esc(w.notasTec||""):""}</textarea></div>
     <div class="fld"><label>Notas internas de oficina <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— no las ve el técnico</span></label><textarea id="wNotasOficina" placeholder="Ej. motivo de reprogramación, acuerdo con cliente…">${w?esc(w.notasOficina||""):""}</textarea></div>
     ${!w?`<div class="fld"><label>Fotos de referencia <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label>
@@ -785,7 +837,19 @@ function refFotosPreviasWO(){
    avisa — a veces sí piden el mismo trabajo meses después (una limpieza,
    por ejemplo), y ahí la unidad+servicio+fecha coincidiendo no es un error.
    Quien carga la WO decide: abrir la que ya existe, o seguir igual. */
-function modalDupWO(dup){
+function modalDupWO(dup, edicion){
+  if(!edicion) return modal(`<div class="mh"><h3>Ya existe una WO igual</h3></div>
+  <div class="mb">
+    <div class="note w">WO-${dup.id} ya es <b>${esc(dup.serv)}</b> para esta unidad (${esc(dup.fecha||"sin fecha")} · ${esc(dup.estado)})${dup.ubic?` en «${esc(dup.ubic)}»`:""}.</div>
+    ${woHecha(dup)?`<div class="note" style="margin-top:10px"><b>Hacer return</b> abre WO-${dup.id} para corregirla desde ahí: no se le cobra al cliente y se aplican las reglas de devolución al técnico.</div>`:""}
+    <div class="fld" style="margin-top:12px"><label>Motivo <span class="req">*</span></label>
+      <textarea id="dpMot" placeholder="${woHecha(dup)?"Qué hay que corregir, o por qué se necesita otra":"Por qué se necesita otra igual"}"></textarea></div>
+  </div>
+  <div class="mf">
+    <button class="btn" data-a="woVerDesdeModal" data-id="${dup.id}">Abrir WO-${dup.id}</button>
+    ${woHecha(dup)?`<button class="btn" data-a="woDupReturn" data-id="${dup.id}">Hacer return</button>`:""}
+    <button class="btn p" data-a="woDupNueva" data-id="${dup.id}">Crear nueva</button>
+  </div>`);
   modal(`<div class="mh"><h3>Ya existe una Work Order igual</h3></div>
   <div class="mb">
     <div class="note w">WO-${dup.id} ya es <b>${esc(dup.serv)}</b> para esta unidad el <b>${esc(dup.fecha)}</b>${dup.ubic?` en «${esc(dup.ubic)}»`:""}.
@@ -800,6 +864,15 @@ function refWO(){
   const pid=val("wProp"), cat=val("wCat");
   const uid=val("wUni"), esNueva=uid==="__new__";
   const uniTxt=document.getElementById("wUniTxt");
+  // «Va después de»: solo WO abiertas de la misma unidad, sin ciclos (ver woOpcionesDepende)
+  const selD=document.getElementById("wDep");
+  if(selD){
+    const prevD=selD.value||selD.dataset.value||"", yoId=+selD.dataset.yo||null;
+    const ops=(uid&&uid!=="__new__")?woOpcionesDepende(uid,yoId):[];
+    if(prevD && !ops.some(x=>String(x.id)===String(prevD)) && W(+prevD)) ops.push(W(+prevD));
+    selD.innerHTML=`<option value="">—</option>`+ops.map(x=>`<option value="${x.id}" ${String(x.id)===String(prevD)?"selected":""}>WO-${x.id} · ${esc(x.serv)}</option>`).join("");
+    selD.dataset.value="";
+  }
   /* Sección 4 del feedback: el Servicio depende del Tipo de servicio, no de
      la Propiedad — se resuelve antes del bloqueo de abajo para que se pueda
      elegir Tipo de servicio y Servicio primero, y recién después Propiedad

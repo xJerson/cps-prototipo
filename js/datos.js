@@ -1,6 +1,6 @@
 "use strict";
 /* ══════════ DATOS SEMILLA ══════════ */
-let ID = {p:100,u:200,c:300,t:400,w:1062,e:500,f:605,pr:700,mv:800,cl:900,ad:958,cm:960};
+let ID = {p:100,u:200,c:300,t:400,w:1062,e:500,f:605,pr:700,mv:800,cl:900,ad:958,cm:960,rw:10,gx:10,inv:10};
 const nid = k => ++ID[k];
 /* Fotos semilla: no hay cámara real en el arranque del prototipo, pero la
    galería/miniatura necesita una URL de imagen real (no un contador ni
@@ -364,6 +364,7 @@ let S = {
       pdf:"INV-2026-1045.pdf",pdfHora:"12:30",pdfQuien:"Erika",
       seguimiento:[{tipo:"pago",fecha:"2026-08-11",hora:"15:00",quien:"Claudia",nota:"Pago recibido y conciliado."},{tipo:"cierre",fecha:"2026-08-11",hora:"15:00",quien:"Claudia"}]}
   ],
+  creditosProp:[],
   pagos:[{id:"PG1",factura:"F601",monto:120,medio:"Check",referencia:"CHK-10488",fecha:"2026-08-11",evidencia:true,quien:"Claudia",nota:"Partial payment received"}], nomina:[], bitacora:[], audSeq:0, avisos:[], campana:false,
   /* Expedientes post-work enviados al cliente: se conserva el token para
      que el enlace pueda abrirse en otra pestaña del mismo origen. */
@@ -493,8 +494,8 @@ let S = {
     {id:"PR3",cat:"Limpieza",nombre:"Líquido carpeta",um:"galón",costo:29.93,min:6},
     {id:"PR4",cat:"Repuesto",nombre:"Drywall 4x8",um:"unidad",costo:18.75,min:10},
     /* Creado "al vuelo" cuando Andrés lo compró en tienda desde su celular —
-       el técnico nunca pone el costo, por eso arranca en 0 hasta que oficina
-       lo complete mirando la foto del ticket (ver movs M6/M7, más abajo). */
+       no puso lo que pagó, por eso arranca en 0 hasta que oficina lo
+       complete mirando la foto del ticket (ver movs M6/M7, más abajo). */
     {id:"PT1",cat:"Compra en tienda",nombre:"Sellador de grout",um:"unidad",costo:0,min:0}
     ,{id:"EQ1",cat:"Herramientas y equipos",nombre:"Aspiradora industrial",um:"unidad",costo:420,min:0,consumible:false,responsable:"T3",estado:"Operativa",ubicacion:"Bodega Pensacola"}
     ,{id:"AF1",cat:"Muebles / activos",nombre:"Laptop administración",um:"unidad",costo:780,min:0,consumible:false,responsable:"Claudia",estado:"Operativa",ubicacion:"Oficina"}

@@ -138,7 +138,15 @@ function fichaProp(id){
     <tr><td style="color:var(--faint)">Al terminar</td><td>${esc(p.finalExp)||"—"}</td></tr>
     <tr><td style="color:var(--faint)">Ojo</td><td>${esc(p.notasTec)||"—"}</td></tr>
     <tr><td style="color:var(--faint)">Activa</td><td>${p.activa?'<span class="pill v">Sí</span>':'<span class="pill g">No</span>'}</td></tr>
-  </tbody></table></div>`:""}
+  </tbody></table></div>
+  ${puedeVerIngreso()?(()=>{ const mv=(S.creditosProp||[]).filter(c=>c.prop===id).slice().reverse();
+    return `<div class="card" style="margin-top:14px"><div class="chd"><h3>Crédito: ${money(saldoCredito(id))}</h3>
+      <span class="s">Se usa a mano en el borrador de factura</span>
+      <span class="r"><button class="btn sm p" data-a="creditoNuevo" data-id="${id}">Agregar crédito</button></span></div>
+      ${mv.length?`<table><thead><tr><th>Fecha</th><th>Tipo</th><th>Motivo</th><th>Quién</th><th class="num">Monto</th></tr></thead><tbody>
+        ${mv.slice(0,8).map(c=>`<tr><td class="mono">${esc(c.fecha)}</td><td><span class="pill ${c.tipo==="Abono"?"v":"a"}">${esc(c.tipo)}</span></td>
+          <td>${esc(c.motivo)}</td><td>${esc(c.quien)}</td><td class="num mono">${c.tipo==="Abono"?"":"−"}${money(c.monto)}</td></tr>`).join("")}
+      </tbody></table>`:`<div class="empty">Sin movimientos</div>`}</div>`; })():""}`:""}
 
   ${t==="unidades"?`<div class="card"><div class="chd"><h3>Unidades</h3>
     <span class="s">catálogo de referencia — no bloquea agendar, se va llenando solo con cada WO/Estimado</span>

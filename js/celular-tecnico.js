@@ -29,8 +29,8 @@ function renderFon(){
   const subMias = subWOsDeTec(t.id).filter(a=>{
     const w=W(a.wo); return w && !w.cobrada;
   });
-  /* Claudia: el técnico ve el desglose de SU pago, pero nunca lo que se le
-     factura al cliente ni el costo de materiales. */
+  /* El técnico ve el desglose de SU pago y el costo de los materiales
+     (Erika), pero nunca lo que se le factura al cliente. */
   $("#fnav").innerHTML = [
     {v:"agenda",n:"Agenda",ic:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>'},
     {v:"pago",n:"Mi pago",ic:'<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>'},
@@ -204,8 +204,15 @@ function renderFon(){
        no hay acceso...), eso lo registra oficina con "Detener" desde
        Work Orders — un mecanismo distinto, que ya existía antes de este
        flujograma y sí viene del Excel original del cliente. */
+    // Enlazada (w.dependeDe): sigue en la agenda pero no se puede empezar hasta que termine la anterior
+    const espera = woEspera(w);
     const acciones =
-      (esAgendada(w.estado) && w.tec
+      (espera && w.tec
+        ? `<div class="dc" style="background:var(--ambar-cl);border-color:var(--ambar)">
+             <div class="dh" style="color:var(--ambar)">En espera</div>
+             <div class="ds" style="margin-top:3px">Falta terminar WO-${espera.id} (${esc(espera.serv)}). Te avisamos cuando puedas empezar.</div></div>
+           <button class="db p" disabled>${icBtn('<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>')}Ya llegué</button>` : "")
+    + (esAgendada(w.estado) && w.tec && !espera
         ? `<button class="db p" data-a="fLlegue" data-id="${w.id}">
              ${icBtn('<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>')}
              Ya llegué</button>` : "")
@@ -234,6 +241,12 @@ function renderFon(){
            <div class="ds" style="margin:-4px 0 7px;padding:0 2px">Lo que usaste en este trabajo — queda registrado en la orden.</div>
            <button class="db g" data-a="fCompraMaterial" data-id="${w.id}">${icBtn(IC_TICKET)}Compra de materiales</button>
            <div class="ds" style="margin:-4px 0 7px;padding:0 2px">¿Vas a Home Depot/Lowe's con la tarjeta de la empresa? Acá tenés el teléfono para el cajero y subís la foto del ticket.</div>
+           ${(()=>{ const ms=S.movs.filter(m=>m.wo===w.id&&m.tipo==="salida"); if(!ms.length) return "";
+             const tot=ms.reduce((a,m)=>a+(m.costo||0),0), falta=ms.some(m=>!m.costo);
+             return `<div class="dc" style="margin:0 0 9px"><div class="dl" style="margin:0 0 5px">Material usado</div>
+               ${ms.map(m=>{ const p=by(S.productos,m.prod);
+                 return `<div class="ds" style="display:flex;justify-content:space-between;gap:8px"><span>${esc(p?p.nombre:"")} × ${m.cant} ${esc(p?p.um:"")}</span><b>${m.costo?money(m.costo):"falta costo"}</b></div>`; }).join("")}
+               <div class="ds" style="display:flex;justify-content:space-between;margin-top:5px;padding-top:5px;border-top:1px solid var(--line)"><span>Total</span><b>${money(tot)}${falta?" + pendiente":""}</b></div></div>`; })()}
            <button class="db g" data-a="fAdic" data-id="${w.id}">${icBtn(IC_ALERTA)}Necesito aprobación</button>
            <div class="ds" style="margin:-4px 0 7px;padding:0 2px">Algo que encontraste y no estaba en la orden — le llega a oficina al instante.</div>
            <div class="fld" style="margin:4px 0 9px">
@@ -248,7 +261,7 @@ function renderFon(){
            <button class="db g" disabled>${icBtn(IC_FOTO)}Foto de cómo quedó</button>
            <button class="db g" disabled>${icBtn(IC_ALERTA)}Necesito aprobación</button>
            <button class="db v" disabled>${icBtn(IC_CHECK)}Terminé</button>
-           <div class="ds" style="text-align:center;margin-top:2px">Marca tu llegada para poder cerrar el trabajo</div>` : "")
+           <div class="ds" style="text-align:center;margin-top:2px">${espera?`En espera — falta terminar WO-${espera.id}`:"Marca tu llegada para poder cerrar el trabajo"}</div>` : "")
     /* Oficina le pidió lo que faltaba. No se le reabre el trabajo: solo
        aparece lo que falta, y al enviarlo le avisa a quien se lo pidió. */
     + (w.infoPedida
@@ -288,6 +301,7 @@ function renderFon(){
             <div class="ds">${esc(U(w.unidad).num)} · ${esc(w.serv)}</div>
             <div class="ds" style="font-size:10px">${w.fecha}${w.horaProg?` · ${esc(w.horaFin?`${w.horaProg}–${w.horaFin}`:w.horaProg)}`:""}</div></div>
           <span class="dtag" style="background:${col}22;color:${col};flex:none;height:fit-content">${esc(estadoTec(w))}</span></div>
+        ${woEspera(w)?`<div class="ds" style="margin-top:5px;color:var(--ambar);font-weight:700">En espera — falta terminar WO-${woEspera(w).id} (${esc(woEspera(w).serv)})</div>`:""}
         ${a?`<div class="ds" style="margin-top:5px;color:var(--verde)">Llegaste ${a.horaReal} · ${esc(a.puntualidad)}</div>`:""}
         ${(w.fotosPrevias||[]).length?`<div class="ds" style="margin-top:5px;color:var(--azul);font-weight:700">📷 ${(w.fotosPrevias||[]).length} foto(s) para prepararte antes de ir</div>`:""}
         <div class="ds" style="margin-top:6px;color:var(--azul);font-weight:650">Abrir ›</div></div>`;
@@ -412,9 +426,16 @@ function leerMaterial(){
 }
 function leerCompra(){
   const sh=S.phSheet; if(!sh||sh.t!=="compra") return;
-  const t=document.getElementById("cpTienda"), n=document.getElementById("cpNombre"),
-        c=document.getElementById("cpCant"), u=document.getElementById("cpUsado"), g=document.getElementById("cpPago");
-  if(t) sh.tienda=t.value; if(n) sh.nombre=n.value; if(c) sh.cant=c.value; if(u) sh.usado=u.value; if(g) sh.pago=g.value;
+  const v=id=>{ const e=document.getElementById(id); return e?e.value:null; };
+  if(v("cpTienda")!==null) sh.tienda=v("cpTienda");
+  if(v("cpTotal")!==null) sh.total=v("cpTotal");
+  sh.filas.forEach((f,i)=>{
+    if(v("cpN"+i)!==null) f.nombre=v("cpN"+i);
+    if(v("cpC"+i)!==null) f.cant=v("cpC"+i);
+    if(v("cpM"+i)!==null) f.um=v("cpM"+i);
+    if(v("cpG"+i)!==null) f.pago=v("cpG"+i);
+    if(v("cpU"+i)!==null) f.usado=v("cpU"+i);
+  });
 }
 
 
@@ -783,6 +804,8 @@ function gustavoScreenHTML(view){
            ${panelCell(IC_INSPECCION, inspPend().length, "Inspecciones para estimados", "#5b3a8a")}
            ${panelCell(IC_LISTA, unidadesListas().length, "Unidades listas para entregar", "#1f4e79")}
          </div>`
+         // Sus gastos de gasolina y vehículo: van al mismo libro de Finanzas que los de la oficina
+         + (S.phone && S.phRol==="supervisor" ? gastosVehiculoHTML() : "")
 
          ;
   }

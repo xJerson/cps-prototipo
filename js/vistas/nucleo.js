@@ -178,7 +178,7 @@ function modal(html,wide){ $("#mroot").innerHTML=`<div class="scrim" data-a="cm"
    / woGuardar). Cerrar CUALQUIER modal — cancelado o no — apaga esa marca:
    así, si el usuario abre otra cosa sin guardar, no queda una Solicitud
    vieja esperando pegarse a una Work Order que no tiene nada que ver. */
-function cm(){ $("#mroot").innerHTML=""; S.progSolId=null; S._aprobFoto=null; S._dvFoto=null; if(typeof renderCoach==="function") renderCoach(); }
+function cm(){ $("#mroot").innerHTML=""; S.progSolId=null; S._aprobFoto=null; S._dvFoto=null; S._recibo=null; if(typeof renderCoach==="function") renderCoach(); }
 const val = id => { const e=document.getElementById(id); return e? e.value.trim() : ""; };
 const chk = id => { const e=document.getElementById(id); return e? e.checked : false; };
 function marcaFalta(ids){ let bad=false; ids.forEach(i=>{ const e=document.getElementById(i);
@@ -298,7 +298,7 @@ const CAMPOS = {
   desc:"Description", tax:"Tax", descuento:"Total Discount", cantidad:"Quantity",
   unidad:"Unidad", fecha:"Fecha", horaProg:"Hora", semana:"Semana",
   cant:"Cantidad", po:"PO", notasTec:"Notas al técnico", notasOficina:"Notas internas de oficina",
-  ubic:"Ubicación del trabajo", ubicDetalle:"Detalle de ubicación"
+  ubic:"Ubicación del trabajo", ubicDetalle:"Detalle de ubicación", dependeDe:"Va después de"
 };
 /* Un id crudo («P3», «T2») no le dice nada a nadie leyendo la bitácora */
 function legible(k,v){
@@ -313,6 +313,7 @@ function legible(k,v){
   if(k==="unidad")  return U(v)?U(v).num:String(v);
   if(k==="sup"||k==="tec") return tecN(v)||String(v);
   if(k==="precio"||k==="pago") return money(v);
+  if(k==="dependeDe") return "WO-"+v;
   return String(v);
 }
 function diffCampos(antes, despues){

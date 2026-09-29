@@ -148,7 +148,7 @@ Object.assign(ACC, {
       (l.hist=l.hist||[]).push([hora(), `Aprobada por ${d.medio.toLowerCase()}`, S.usuario]);
       if(l.origen==="Planificada"){
         l.estadoTrabajo=tecSubWO(l)?"Assigned":"Unassigned";
-        w.validada=false;
+        desvalidar(w);
         (l.hist=l.hist||[]).push([hora(),`Activada para ${tecSubWO(l)?tecN(tecSubWO(l)):"asignación"}`,S.usuario]);
       }
       if(l.precio==null){
@@ -288,7 +288,7 @@ Object.assign(ACC, {
    (Approval Request, Sub-WO, cliente) queda afuera y se paga después. */
 function pagarNomina(tec){
   {
-    const todas=S.wos.filter(w=>enPeriodo(w.fecha,S.periodo)&&w.estado==="Completed"&&(!tec||w.tec===tec)&&w.validada&&!w.pagadaTec&&!subWOsPendientesDeWO(w.id).length&&!clienteRevisionPendienteDeWO(w.id));
+    const todas=S.wos.filter(w=>enPeriodo(w.fecha,S.periodo)&&w.estado==="Completed"&&(!tec||w.tec===tec)&&aprobPagoOK(w)&&!w.pagadaTec&&!subWOsPendientesDeWO(w.id).length&&!clienteRevisionPendienteDeWO(w.id));
     const bloqueadas=todas.filter(w=>woBloqueada(w.id));
     const ws=todas.filter(w=>!woBloqueada(w.id));
     if(!ws.length){ toast("🚫 Nada para pagar",
@@ -313,67 +313,22 @@ function pagarNomina(tec){
       + (bloqueadas.length?` <b>${bloqueadas.length} WO(s) quedaron afuera</b> por excepción sin resolver — se pagan cuando se resuelva.`:""),"v"); render();
   }
 }
-Object.assign(ACC, {
-  facturar: d => {
-    const prop=+d.prop;
-    if(!lineasFacturablesFactura(prop).length){
-      toast("No hay conceptos disponibles","Esta propiedad no tiene WO o Sub-WO validadas y sin facturar.","r"); return;
-    }
-    abrirBorradorFactura(prop);
-  },
-  facBorradorCambiar: () => {
-    const b=S.facturaBorrador; if(!b) return;
-    b.limite=val("fbLimite");
-    b.lineas.forEach(l=>{
-      const id=idLineaBorrador(l.clave), sel=document.getElementById(id+"_sel");
-      if(!sel) return;
-      l.seleccionada=sel.checked;
-      l.nombre=val(id+"_nom"); l.descripcion=val(id+"_des");
-      l.precio=parseFloat(val(id+"_pre"))||0; l.cantidad=parseFloat(val(id+"_can"))||0;
-      l.importe=l.precio*l.cantidad;
-    });
-    modalBorradorFactura();
-  },
-  facBorradorAgregarLinea: () => {
-    ACC.facBorradorCambiar(); const b=S.facturaBorrador; if(!b) return;
-    const n=(b.lineas||[]).filter(l=>l.tipo==="Manual").length+1;
-    b.lineas.push({clave:"manual:"+Date.now()+":"+n,tipo:"Manual",wo:null,subwo:null,unidad:"—",nombre:"Adjustment",descripcion:"",precio:0,cantidad:1,importe:0,evidencia:0,fecha:HOY_SUP,seleccionada:true});
-    modalBorradorFactura();
-  },
-  facBorradorGuardar: () => {
-    ACC.facBorradorCambiar();
-    const b=S.facturaBorrador, conceptos=b&&b.lineas.filter(l=>l.seleccionada).map(l=>({...l,importe:(+l.precio||0)*(+l.cantidad||0)}));
-    if(!conceptos||!conceptos.length){ toast("Elige un concepto","Selecciona al menos una WO o Sub-WO.","r"); return; }
-    let f=b.id&&by(S.facturas,b.id);
-    if(f){
-      (f.conceptos||[]).forEach(c=>{
-        if(c.tipo==="WO"){const w=W(c.wo); if(w) w.facturada=false;}
-        else {const a=by(S.adicionales,c.subwo); if(a){a.facturada=false; delete a.facturaId;}}
-      });
-      f.conceptos=conceptos;
-    } else {
-      const num="INV-2026-"+String(1040+(++ID.f-600)).padStart(4,"0"), id="F"+ID.f;
-      f={id,num,prop:b.prop,conceptos,emision:"2026-08-11",vence:"2026-09-10",estado:"Borrador",
-        pdf:num+".pdf",pdfHora:hora(),pdfQuien:S.usuario,seguimiento:[]};
-      S.facturas.unshift(f);
-    }
-    f.lineas=[...new Set(conceptos.map(c=>c.wo).filter(Boolean))]; f.limite=b.limite||null;
-    f.total=conceptos.reduce((n,c)=>n+(c.importe||0),0);
-    conceptos.forEach(c=>{
-      if(c.tipo==="WO"){
-        const w=W(c.wo); if(w){w.facturada=true; w.hist.push([hora(),`Incluida en borrador ${f.num}`,S.usuario]);}
-      } else {
-        const a=by(S.adicionales,c.subwo); if(a){a.facturada=true; a.facturaId=f.id;}
-      }
-    });
-    flash("fac:"+f.id); S.facturaBorrador=null; cm();
-    toast("✓ Borrador guardado",`<b>${esc(f.num)}</b> · ${conceptos.length} concepto(s) · ${money(f.total)}. Puedes editarlo antes de enviarlo al cliente.`,"v"); render();
-  },
-  facEditarBorrador: d => { const f=by(S.facturas,d.id); if(f&&f.estado==="Borrador") abrirBorradorFactura(f.prop,f.id); },
-  /* «Revisar Work Order y verificar: servicios realizados, adicionales, materiales, observaciones»
-     Erika valida antes de que se pueda facturar o pagar (Proceso de Facturación y Nómina) */
-  validarModal: d => {
-    const w=W(+d.id), ads=S.adicionales.filter(a=>a.wo===w.id), mv=S.movs.filter(m=>m.wo===w.id);
+function aprobarWO(w, que){
+  if(!w) return;
+  leerValDraft(w); if(!aplicarEdicionVal(w)) return;
+  const sello={quien:S.usuario,hora:hora(),fecha:HOY_SUP};
+  if(que!=="factura" && !aprobPagoOK(w)) w.aprobPago={...sello};
+  if(que!=="pago" && !aprobFacturaOK(w)) w.aprobFactura={...sello};
+  w.validada = aprobPagoOK(w) && aprobFacturaOK(w);
+  S._valDraft=null; cm();
+  w.hist.push([hora(),que==="ambos"?"Work Order validada para facturación y nómina":que==="pago"?"Pago aprobado (nómina)":"Factura aprobada",S.usuario]);
+  toast(que==="ambos"?"✓ Work Order validada":que==="pago"?"✓ Pago aprobado":"✓ Factura aprobada",
+    `WO-${w.id} ${que==="ambos"?"pasa a nómina y facturación":que==="pago"?"pasa a nómina":"pasa a facturación"}. Por ${S.usuario}.`,"v"); render();
+}
+/* Validar con dinero (Claudia/Erika): edita Cobro y Pago técnico y agrega ajustes. */
+function modalValidar(w){
+  const dr=(S._valDraft&&S._valDraft.wo===w.id)?S._valDraft:{};
+    const ads=S.adicionales.filter(a=>a.wo===w.id), mv=S.movs.filter(m=>m.wo===w.id);
     const subs=subWOsOperativas().filter(a=>a.wo===w.id && a.estadoTrabajo!=="Canceled");
     const subsPend=subWOsPendientesDeWO(w.id);
     /* Reunión 2026-09-09: las horas NO bloquean — al técnico se le paga por
@@ -406,17 +361,200 @@ Object.assign(ACC, {
       </tbody></table>
       ${falta.length?`<div class="note r" style="margin-top:12px"><b>Falta: ${esc(falta.join(", "))}.</b>
         Su flujograma dice «solicitar información al técnico» antes de validar.</div>`
-       :`<div class="note v" style="margin-top:12px"><b>Todo completo.</b> Al validar entra a nómina y a facturación.</div>`}
+       :`<div class="note v" style="margin-top:12px"><b>Todo completo.</b> «Aprobar pago» libera la nómina, «Aprobar factura» la facturación, «Validar» las dos.</div>`}
+      <div style="margin-top:10px;display:flex;gap:6px;align-items:center"><span style="font-size:11px;color:var(--faint)">Estado</span>${pillsAprob(w)}</div>
+      ${puedeVerUtilidad()?bloqueDineroVal(w,dr):""}
     </div>
     <div class="mf"><button class="btn" data-a="cm">Cerrar</button>
+      ${puedeVerUtilidad()?`<button class="btn" data-a="valGuardar" data-id="${w.id}">Guardar</button>`:""}
       ${faltaBase?`<button class="btn" data-a="pedirInfo" data-id="${w.id}">Solicitar info al técnico</button>`:""}
-      <button class="btn ${falta.length?"":"v"}" data-a="validarOK" data-id="${w.id}" ${falta.length?"disabled":""}>Validar Work Order</button></div>`,true);
+      ${aprobPagoOK(w)?"":`<button class="btn" data-a="aprobPago" data-id="${w.id}" ${falta.length?"disabled":""}>Aprobar pago</button>`}
+      ${aprobFacturaOK(w)?"":`<button class="btn" data-a="aprobFactura" data-id="${w.id}" ${falta.length?"disabled":""}>Aprobar factura</button>`}
+      ${aprobPagoOK(w)&&aprobFacturaOK(w)?"":`<button class="btn ${falta.length?"":"v"}" data-a="validarOK" data-id="${w.id}" ${falta.length?"disabled":""}>Validar</button>`}</div>`,true);
+}
+
+/* Bloque «Dinero» del modal de validar: solo lo ve quien puede ver utilidad. */
+function bloqueDineroVal(w,dr){
+  const cobro=ingresoBaseWO(w), pago=egresoBaseWO(w), mat=materialWO(w), comp=asignadoGastoWO(w.id);
+  const ajC=ajustesValTotal(w,"cobro"), ajP=ajustesValTotal(w,"pago");
+  const gan=ingresoWO(w)===null?null:utilidadNetaWO(w);
+  const fila=(t,v,col)=>`<div style="display:flex;justify-content:space-between;padding:3px 0;font-size:12px"><span style="color:var(--soft)">${t}</span><span class="mono" ${col?`style="color:${col}"`:""}>${v}</span></div>`;
+  const num=v=>v==null?"":String(Math.round(v*100)/100);
+  return `<div class="card" style="margin-top:14px"><div class="chd"><h3>Dinero</h3></div><div class="cp">
+    <div class="fg c2">
+      <div class="fld"><label>Cobro</label><input id="vaCobro" class="mono" value="${esc(dr.cobro!==undefined?dr.cobro:num(cobro))}" placeholder="0.00"></div>
+      <div class="fld"><label>Pago técnico</label><input id="vaPago" class="mono" value="${esc(dr.pago!==undefined?dr.pago:num(pago))}" placeholder="0.00"></div></div>
+    <div class="fld"><label>Motivo</label><input id="vaMot" value="${esc(dr.mot||"")}" placeholder="Obligatorio si cambias Cobro o Pago"></div>
+    ${fila("Materiales",money(mat))}
+    ${comp?fila("Gastos compartidos",money(comp)):""}
+    ${ajC||ajP?fila("Extras y descuentos",`cobro ${ajC>=0?"+":"−"}${money(Math.abs(ajC))} · pago ${ajP>=0?"+":"−"}${money(Math.abs(ajP))}`):""}
+    ${gan===null?"":`<div style="display:flex;justify-content:space-between;padding:7px 0 0;margin-top:4px;border-top:1px solid var(--line);font-weight:750"><span>Ganancia</span><span class="mono" style="color:${gan>=0?"var(--verde)":"var(--rojo)"}">${money(gan)}</span></div>`}
+    <div class="dl" style="margin:12px 0 5px;font-weight:750;font-size:12px">Ajustes</div>
+    ${(w.ajustesVal||[]).map(a=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:3px 0;font-size:12px">
+      <span><span class="pill ${AJUSTES_VAL[a.tipo]&&AJUSTES_VAL[a.tipo].signo<0?"w":"g"}">${esc(a.tipo)}</span> ${esc(a.concepto)}</span>
+      <span><span class="mono">${money(ajusteMonto(a))}</span> <button class="btn sm" data-a="valAjQuitar" data-id="${w.id}" data-aid="${a.id}" title="Quitar">×</button></span></div>`).join("")||`<div class="hint">Sin ajustes.</div>`}
+    <div class="fg c3" style="margin-top:8px">
+      <div class="fld"><label>Tipo</label><select id="vaTipo">${Object.keys(AJUSTES_VAL).map(t=>`<option ${t===dr.tipo?"selected":""}>${t}</option>`).join("")}</select></div>
+      <div class="fld"><label>Concepto</label><input id="vaConc" value="${esc(dr.conc||"")}"></div>
+      <div class="fld"><label>Monto</label><input id="vaMonto" class="mono" value="${esc(dr.monto||"")}" placeholder="0.00"></div></div>
+    <button class="btn sm" data-a="valAjAgregar" data-id="${w.id}">+ Agregar</button>
+    <div class="hint" style="margin-top:6px">«Cobro extra» y «Descuento cliente» salen en la factura (concepto en inglés como lo escribas). «Pago extra» y «Descuento técnico» entran a la nómina.</div>
+  </div></div>`;
+}
+/* Guarda lo tecleado en el bloque para no perderlo al re-abrir el modal. */
+function leerValDraft(w){
+  if(!document.getElementById("vaCobro")) return;
+  S._valDraft={wo:w.id, cobro:val("vaCobro"), pago:val("vaPago"), mot:val("vaMot"), tipo:val("vaTipo"), conc:val("vaConc"), monto:val("vaMonto")};
+}
+/* Aplica Cobro/Pago técnico editados sobre w.precio / w.pago (por unidad, como
+   los lee ingresoWO/egresoWO). Sin Motivo no cambia nada. */
+function aplicarEdicionVal(w){
+  if(!puedeVerUtilidad() || !document.getElementById("vaCobro")) return true;
+  const cant=w.cant||1, mot=val("vaMot"), cambios=[];
+  const rev=(id,actual,campo,etq)=>{
+    const t=val(id); if(t==="") return true;
+    const n=parseFloat(t);
+    if(!Number.isFinite(n)||n<0){ S.audOmitir=true; toast("Monto inválido",`${etq}: escribe un número mayor o igual a 0.`,"r"); marcaFalta([id]); return false; }
+    if(actual===null || Math.abs(n-actual)>.004) cambios.push({campo,etq,antes:actual,despues:n});
+    return true;
+  };
+  if(!rev("vaCobro",ingresoBaseWO(w),"precio","Cobro") || !rev("vaPago",egresoBaseWO(w),"pago","Pago técnico")) return false;
+  if(cambios.length && !mot){ S.audOmitir=true; marcaFalta(["vaMot"]); toast("Falta el motivo","Escribe por qué cambias el cobro o el pago.","r"); return false; }
+  cambios.forEach(c=>{
+    w[c.campo]=c.despues/cant;
+    w.hist.push([hora(),`${c.etq} ${c.antes===null?"sin definir":money(c.antes)} → ${money(c.despues)} · ${mot}`,S.usuario]);
+  });
+  return true;
+}
+/* Lee del DOM lo que el usuario tocó en el borrador (sin redibujar). Cada campo se lee solo si está en pantalla:
+   con el editor de línea abierto no hay tabla, y leer "" borraría el límite. */
+function leerBorrador(){
+  const b=S.facturaBorrador; if(!b) return null;
+  if(document.getElementById("fbLimite")) b.limite=val("fbLimite");
+  if(document.getElementById("fbCredito")) b.credito=parseFloat(val("fbCredito"))||0;
+  if(document.getElementById("fbCredG")) b.creditoGrupo=+val("fbCredG")||1;
+  b.lineas.forEach(l=>{
+    const id=idLineaBorrador(l.clave), sel=document.getElementById(id+"_sel"); if(!sel) return;
+    l.seleccionada=sel.checked;
+    const g=document.getElementById(id+"_grp"); if(g) l.grupo=+g.value||1;
+  });
+  return b;
+}
+Object.assign(ACC, {
+  facturar: d => {
+    const prop=Number.isNaN(+d.prop)?d.prop:+d.prop;   // las propiedades semilla tienen id texto ("P1"); las nuevas, numérico
+    if(!lineasFacturablesFactura(prop).length){
+      toast("No hay conceptos disponibles","Esta propiedad no tiene WO o Sub-WO validadas y sin facturar.","r"); return;
+    }
+    abrirBorradorFactura(prop);
   },
-  validarOK: d => {
-    const w=W(+d.id); w.validada=true;
-    w.hist.push([hora(),"Work Order validada para facturación y nómina",S.usuario]);
-    toast("✓ Work Order validada",`WO-${w.id} pasa a nómina y facturación. Validada por ${S.usuario}.`,"v"); render();
+  facBorradorCambiar: () => { if(leerBorrador()) modalBorradorFactura(); },
+  facBorradorAgregarLinea: () => {
+    const b=leerBorrador(); if(!b) return;
+    const n=(b.lineas||[]).filter(l=>l.tipo==="Manual").length+1, clave="manual:"+Date.now()+":"+n;
+    b.lineas.push({clave,tipo:"Manual",wo:null,subwo:null,unidad:"—",nombre:"Adjustment",descripcion:"",precio:0,cantidad:1,importe:0,evidencia:0,fecha:HOY_SUP,seleccionada:true,grupo:1});
+    modalLineaFactura(clave);   // se abre el editor: una línea manual nace en 0 y hay que llenarla
   },
+  facLineaEditar: d => { if(leerBorrador()) modalLineaFactura(d.k); },
+  facLineaVolver: () => modalBorradorFactura(),
+  facLineaGuardar: d => {
+    const b=S.facturaBorrador, l=b&&(b.lineas||[]).find(x=>x.clave===d.k); if(!l) return;
+    const nombre=val("fleNom"), precio=parseFloat(val("fleP")), cant=parseFloat(val("fleC")), desc=parseFloat(val("fleD")||"0"), tipo=val("fleT")==="%"?"%":"$";
+    const mal=[!nombre&&"fleNom", !Number.isFinite(precio)&&"fleP", !(cant>=0)&&"fleC", !(desc>=0&&(tipo==="$"||desc<=100))&&"fleD"].filter(Boolean);
+    if(mal.length){ S.audOmitir=true; marcaFalta(mal); toast("Revisa la línea","Nombre, precio, cantidad y descuento válidos (el % no pasa de 100).","r"); return; }
+    Object.assign(l,{nombre,descripcion:val("fleDes"),precio,cantidad:cant,desc,descTipo:tipo});
+    l.importe=importeLinea(l);
+    modalBorradorFactura();
+  },
+  /* Una factura por grupo: la de menor número reusa el borrador que se edita (si lo hay), las demás nacen nuevas. */
+  facBorradorGuardar: () => {
+    const b=leerBorrador(); if(!b) return;
+    const r=resumenBorrador(b);
+    if(!r.grupos.length){ S.audOmitir=true; toast("Elige un concepto","Selecciona al menos una WO o Sub-WO.","r"); return; }
+    const previa=(b.id&&by(S.facturas,b.id))||null;
+    if(previa) (previa.conceptos||[]).forEach(c=>{   // se liberan las líneas del borrador; abajo se vuelven a reservar por grupo
+      if(c.tipo==="WO"){const w=W(c.wo); if(w) w.facturada=false;}
+      else {const a=by(S.adicionales,c.subwo); if(a){a.facturada=false; delete a.facturaId;}}
+    });
+    // si se re-edita el borrador, se devuelve el crédito usado y se vuelve a descontar donde toque
+    S.creditosProp=(S.creditosProp||[]).filter(c=>!(b.id&&c.factura===b.id&&c.tipo==="Uso"));
+    const hechas=[], nuevas=[];
+    r.grupos.forEach((x,i)=>{
+      const conceptos=x.lineas.map(l=>{const {grupo,seleccionada,...c}=l; return {...c,importe:importeLinea(l)};});   // el importe ya sale con el descuento
+      if(x.cred>0.004) conceptos.push({clave:"credito",tipo:"Credito",wo:null,subwo:null,unidad:"—",nombre:"Credit applied",descripcion:"",
+        precio:-x.cred,cantidad:1,importe:-x.cred,evidencia:0,fecha:HOY_SUP});
+      let f=i===0?previa:null;
+      if(f) f.conceptos=conceptos;
+      else {
+        const num="INV-2026-"+String(1040+(++ID.f-600)).padStart(4,"0"), id="F"+ID.f;
+        f={id,num,prop:b.prop,conceptos,emision:"2026-08-11",vence:"2026-09-10",estado:"Borrador",
+          pdf:num+".pdf",pdfHora:hora(),pdfQuien:S.usuario,seguimiento:[]};
+        nuevas.push(f);
+      }
+      f.lineas=[...new Set(conceptos.map(c=>c.wo).filter(Boolean))]; f.limite=b.limite||null;
+      f.total=conceptos.reduce((n,c)=>n+(c.importe||0),0);
+      if(x.cred>0.004) S.creditosProp.push({id:"CR"+Date.now(),prop:b.prop,tipo:"Uso",monto:x.cred,motivo:"Applied to "+f.num,factura:f.id,quien:S.usuario,fecha:HOY_SUP});
+      conceptos.forEach(c=>{
+        if(c.tipo==="WO"){
+          const w=W(c.wo); if(w){w.facturada=true; w.hist.push([hora(),`Incluida en borrador ${f.num}`,S.usuario]);}
+        } else {
+          const a=by(S.adicionales,c.subwo); if(a){a.facturada=true; a.facturaId=f.id;}
+        }
+      });
+      hechas.push(f);
+    });
+    S.facturas.unshift(...nuevas);
+    S._facGuardadas=hechas.map(f=>f.num);
+    flash("fac:"+hechas[0].id); S.facturaBorrador=null; cm();
+    toast("✓ Borrador guardado",hechas.length===1
+      ? `<b>${esc(hechas[0].num)}</b> · ${hechas[0].conceptos.length} concepto(s) · ${money(hechas[0].total)}. Puedes editarlo antes de enviarlo al cliente.`
+      : `${hechas.length} facturas: ${hechas.map(f=>`<b>${esc(f.num)}</b> ${money(f.total)}`).join(" · ")}. Puedes editarlas antes de enviarlas al cliente.`,"v"); render();
+  },
+  facEditarBorrador: d => { const f=by(S.facturas,d.id); if(f&&f.estado==="Borrador") abrirBorradorFactura(f.prop,f.id); },
+  /* Retener factura: la WO ya validada sale de los candidatos del borrador; la nómina no se toca. */
+  facRetener: d => { const w=W(+d.id); if(!w||w.facturada) return;
+    modal(`<div class="mh"><h3>Retener WO-${w.id}</h3><p>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)} · ${esc(w.serv)}</p></div>
+    <div class="mb"><div class="fld"><label>Motivo <span class="req">*</span></label><textarea id="rtMot"></textarea></div>
+      <div class="hint">No entra a ningún borrador hasta que la liberes. La nómina sigue igual.</div></div>
+    <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="facRetenerOK" data-id="${w.id}">Retener</button></div>`); },
+  facRetenerOK: d => { const w=W(+d.id), m=val("rtMot");
+    if(!m){ S.audOmitir=true; marcaFalta(["rtMot"]); toast("Falta el motivo","Escribe por qué se retiene.","r"); return; }
+    w.facRetenida={motivo:m, quien:S.usuario, hora:hora(), fecha:HOY_SUP};
+    w.hist.push([hora(),`Factura retenida · ${m}`,S.usuario]);
+    cm(); toast("Retenida",`WO-${w.id} no entra a factura hasta que la liberes.`,"w"); render(); },
+  facLiberar: d => { const w=W(+d.id); if(!w||!w.facRetenida) return;
+    delete w.facRetenida; w.hist.push([hora(),"Factura liberada",S.usuario]);
+    toast("Liberada",`WO-${w.id} vuelve a estar disponible para facturar.`,"v"); render(); },
+  /* «Revisar Work Order y verificar: servicios realizados, adicionales, materiales, observaciones»
+     Erika valida antes de que se pueda facturar o pagar (Proceso de Facturación y Nómina) */
+  validarModal: d => { S._valDraft=null; modalValidar(W(+d.id)); },
+  valGuardar: d => { const w=W(+d.id); leerValDraft(w); if(!aplicarEdicionVal(w)) return;
+    S._valDraft=null; toast("✓ Guardado",`WO-${w.id} · cambios guardados. Sigue sin validar.`,"v"); modalValidar(w); render(); },
+  valAjAgregar: d => { const w=W(+d.id); leerValDraft(w);
+    const conc=val("vaConc"), monto=parseFloat(val("vaMonto")), tipo=val("vaTipo");
+    if(!conc||!(monto>0)){ S.audOmitir=true; marcaFalta(["vaConc","vaMonto"]); toast("Falta información","Escribe concepto y un monto mayor a 0.","r"); return; }
+    (w.ajustesVal=w.ajustesVal||[]).push({id:"AJ"+Date.now(), tipo, concepto:conc, monto, quien:S.usuario, hora:hora()});
+    w.hist.push([hora(),`Ajuste ${tipo}: ${conc} · ${money(monto)}`,S.usuario]);
+    S._valDraft.conc=""; S._valDraft.monto=""; modalValidar(w); render(); },
+  valAjQuitar: d => { const w=W(+d.id); leerValDraft(w);
+    const a=(w.ajustesVal||[]).find(x=>x.id===d.aid); if(!a) return;
+    w.ajustesVal=w.ajustesVal.filter(x=>x!==a);
+    w.hist.push([hora(),`Ajuste quitado: ${a.tipo} · ${a.concepto} · ${money(a.monto)}`,S.usuario]);
+    modalValidar(w); render(); },
+  /* Pago y factura se aprueban por separado; «Validar» aprueba las dos. w.validada solo queda en true
+     cuando las dos están aprobadas, para que lo demás que la lee siga igual. */
+  validarOK: d => aprobarWO(W(+d.id),"ambos"),
+  aprobPago: d => aprobarWO(W(+d.id),"pago"),
+  aprobFactura: d => aprobarWO(W(+d.id),"factura"),
+  /* Asigna en bloque una categoría a una factura del borrador; Erika decide, nada es automático. */
+  facAsignarCat: () => {
+    const b=leerBorrador(); if(!b) return;
+    const cat=val("fbCat"), g=Math.min(6,Math.max(1,+val("fbCatG")||1));
+    b.lineas.filter(l=>catLinea(l)===cat).forEach(l=>{ l.grupo=g; });
+    modalBorradorFactura();
+  },
+  /* El comprobante (foto real) vive en S._recibo mientras el modal está abierto; se pinta sin rearmar el formulario. */
+  reciboFoto: () => capturarFoto(url=>{ S._recibo=url; const e=document.getElementById("recPrev"); if(e) e.innerHTML=miniRecibo(url); }),
   pedirInfo: d => {
     const w=W(+d.id);
     /* Sin esta marca, la solicitud vivía solo en un aviso de texto: Erika no
@@ -470,11 +608,11 @@ Object.assign(ACC, {
   cobrarGuardar: d => {
     const f=by(S.facturas,d.id), monto=parseFloat(val("cpMonto")), totalPrev=(S.pagos||[]).filter(p=>p.factura===f.id).reduce((n,p)=>n+(+p.monto||0),0), pendiente=Math.max(0,f.total-totalPrev);
     if(!(monto>0)||monto>pendiente+.009){ toast("Monto inválido",`El pago debe ser mayor a cero y no superar ${money(pendiente)}.`,"r"); return; }
-    S.pagos.push({id:"PG"+(S.pagos.length+1),factura:f.id,monto,medio:val("cpMedio"),referencia:val("cpRef"),fecha:val("cpFecha"),evidencia:!!val("cpEvid"),quien:S.usuario,nota:val("cpNota")});
+    S.pagos.push({id:"PG"+(S.pagos.length+1),factura:f.id,monto,medio:val("cpMedio"),referencia:val("cpRef"),fecha:val("cpFecha"),evidencia:!!S._recibo,foto:S._recibo||null,quien:S.usuario,nota:val("cpNota")});
     const recibido=totalPrev+monto, cerrado=recibido>=f.total-.009;
     f.estado=cerrado?"Pagada":"Enviada"; flash("fac:"+f.id);
     f.seguimiento=f.seguimiento||[];
-    f.seguimiento.push({tipo:"pago",fecha:val("cpFecha"),hora:hora(),quien:S.usuario,nota:`${money(monto)} · ${val("cpMedio")}${val("cpRef")?" · "+val("cpRef"):""}${val("cpEvid")?" · evidence attached":""}`});
+    f.seguimiento.push({tipo:"pago",fecha:val("cpFecha"),hora:hora(),quien:S.usuario,nota:`${money(monto)} · ${val("cpMedio")}${val("cpRef")?" · "+val("cpRef"):""}${S._recibo?" · evidence attached":""}`,foto:S._recibo||null});
     if(cerrado) f.seguimiento.push({tipo:"cierre",fecha:val("cpFecha"),hora:hora(),quien:S.usuario});
     let quedanAbiertas=0;
     const bases=(f.conceptos||[]).filter(c=>c.tipo==="WO").map(c=>c.wo);
@@ -557,7 +695,10 @@ Object.assign(ACC, {
       <div class="fld"><label>Foto del ticket</label>${m.recibo
         ?`<img src="${m.recibo}" style="max-width:100%;border-radius:6px">`
         :`<div class="hint">Sin foto del ticket</div>`}</div>
-      <div class="fld"><label>Total del ticket para este material <span class="req">*</span></label><input id="mcT" class="mono"></div>
+      ${m.ticket?(()=>{ const otros=S.movs.filter(x=>x.ticket===m.ticket && x.id!==m.id);
+        const conCosto=otros.filter(x=>!x.costoPend).reduce((a,x)=>a+x.costo,0);
+        return `<div class="note" style="margin-bottom:10px"><b>Mismo ticket:</b> ${otros.length?otros.map(x=>{ const q=by(S.productos,x.prod); return `${esc(q?q.nombre:"")} × ${x.cant}${x.costoPend?" (sin costo)":` = ${money(x.costo)}`}`; }).join(" · "):"solo este producto"}${m.ticketTotal?`<br>Total ticket ${money(m.ticketTotal)} · ya asignado ${money(conCosto)} · <b>queda ${money(Math.max(0,m.ticketTotal-conCosto))}</b>`:""}</div>`; })():""}
+      <div class="fld"><label>Costo de este producto <span class="req">*</span></label><input id="mcT" class="mono"></div>
     </div>
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="movCostoOK" data-id="${m.id}">Guardar</button></div>`);
   },
@@ -578,4 +719,61 @@ Object.assign(ACC, {
     cm(); flash("mov:"+m.id);
     toast("✓ Costo cargado", `${esc(p?p.nombre:"")} quedó con el costo cargado.`, "v");
     render();
-  },});
+  },
+
+  /* ── Activos no consumibles: alta y edición a mano, con historial de quién cambió qué ── */
+  invNuevo: () => { if(soloLectura()) return;
+    modal(`<div class="mh"><h3>Nuevo activo</h3></div>
+    <div class="mb">
+      <div class="fld"><label>Nombre <span class="req">*</span></label><input id="invN"></div>
+      <div class="fg c2"><div class="fld"><label>Categoría</label><select id="invC">${INV_ACTIVOS.map(c=>`<option>${esc(c)}</option>`).join("")}</select></div>
+        <div class="fld"><label>Estado</label><select id="invE">${INV_ESTADOS.map(e=>`<option>${e}</option>`).join("")}</select></div></div>
+      <div class="fg c2"><div class="fld"><label>Responsable</label>${selResponsable("invR","")}</div>
+        <div class="fld"><label>Ubicación</label><input id="invU"></div></div>
+    </div>
+    <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="invNuevoGuardar">Guardar</button></div>`); },
+  invNuevoGuardar: () => { if(soloLectura()) return;
+    if(marcaFalta(["invN"])){ toast("Falta el nombre","Escribe cómo se llama el activo.","r"); return; }
+    const p={id:"AC"+nid("inv"),cat:val("invC"),nombre:val("invN"),um:"unidad",costo:0,min:0,consumible:false,
+      responsable:val("invR"),estado:val("invE"),ubicacion:val("invU"),hist:[{fecha:HOY_SUP,hora:hora(),quien:S.usuario,cambio:"Alta"}]};
+    S.productos.push(p); cm(); toast("✓ Activo creado",`${esc(p.nombre)} · ${esc(respN(p.responsable))}.`,"v"); render(); },
+  invEditar: d => { const p=by(S.productos,d.id); if(!p||!puedeEditarInv(p)) return;
+    const mat=p.cat==="Material para instalación";
+    modal(`<div class="mh"><h3>Editar ${esc(p.nombre)}</h3><p>${esc(p.cat)}</p></div>
+    <div class="mb">
+      ${mat?`<div class="fld"><label>Reservado para</label><select id="invW"><option value="">— ninguna —</option>${woAbiertasOpts(reservaId(p))}</select></div>
+        <div class="hint">El stock no baja hasta registrar una salida a esa WO.</div>`
+      :`<div class="fg c2"><div class="fld"><label>Responsable</label>${selResponsable("invR",p.responsable)}</div>
+          <div class="fld"><label>Estado</label><select id="invE">${INV_ESTADOS.map(e=>`<option ${e===(p.estado||"Operativa")?"selected":""}>${e}</option>`).join("")}</select></div></div>
+        <div class="fld"><label>Ubicación</label><input id="invU" value="${esc(p.ubicacion||"")}"></div>`}
+      ${(p.hist||[]).length?`<div class="dl" style="margin:12px 0 4px;font-weight:750;font-size:12px">Historial</div>
+        ${p.hist.slice().reverse().slice(0,6).map(h=>`<div style="font-size:11.5px;color:var(--soft);padding:2px 0"><span class="mono">${esc(h.fecha)} ${esc(h.hora)}</span> · ${esc(h.quien)} · ${esc(h.cambio)}</div>`).join("")}`:""}
+    </div>
+    <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="invEditarGuardar" data-id="${esc(p.id)}">Guardar</button></div>`); },
+  invEditarGuardar: d => { if(soloLectura()) return;
+    const p=by(S.productos,d.id); if(!p||!puedeEditarInv(p)) return;
+    const cambios=[], cambia=(etq,antes,despues)=>{ if(String(antes||"")!==String(despues||"")) cambios.push(`${etq}: ${antes||"—"} → ${despues||"—"}`); };
+    if(p.cat==="Material para instalación"){
+      const id=val("invW"), w=id&&W(+id), antes=reservaTxt(p);
+      cambia("Reservado para",antes,w?`WO-${w.id} · ${P(w.prop).nombre} · ${U(w.unidad).num}`:"");
+      p.reservadoWO=w?w.id:null; p.reservadoPara=w?"WO-"+w.id:"";
+    } else {
+      cambia("Responsable",respN(p.responsable),respN(val("invR"))); cambia("Estado",p.estado||"Operativa",val("invE")); cambia("Ubicación",p.ubicacion,val("invU"));
+      p.responsable=val("invR"); p.estado=val("invE"); p.ubicacion=val("invU");
+    }
+    if(!cambios.length){ S.audOmitir=true; cm(); toast("Sin cambios","No modificaste nada.",""); return; }
+    (p.hist=p.hist||[]).push({fecha:HOY_SUP,hora:hora(),quien:S.usuario,cambio:cambios.join(" · ")});
+    cm(); toast("✓ Guardado",`${esc(p.nombre)}: ${esc(cambios.join(" · "))}.`,"v"); render(); },
+});
+/* Select de responsable: técnicos y usuarios de oficina. */
+function selResponsable(id, actual){
+  return `<select id="${id}"><option value="">— sin responsable —</option>
+    <optgroup label="Técnicos">${S.tecnicos.filter(t=>t.activo!==false).map(t=>`<option value="${t.id}" ${t.id===actual?"selected":""}>${esc(tecN(t.id))}</option>`).join("")}</optgroup>
+    <optgroup label="Oficina">${Object.keys(ROLES).map(u=>`<option value="${u}" ${u===actual?"selected":""}>${u}</option>`).join("")}</optgroup></select>`;
+}
+/* WO abiertas (no terminadas ni canceladas) para reservar material; la ya reservada siempre se ofrece. */
+const reservaId = p => p.reservadoWO || ((/WO-(\d+)/.exec(p.reservadoPara||"")||[])[1]) || null;
+function woAbiertasOpts(actual){
+  return S.wos.filter(w=>!["Completed","Canceled","Invoiced","Paid"].includes(w.estado) || String(w.id)===String(actual))
+    .map(w=>`<option value="${w.id}" ${String(w.id)===String(actual)?"selected":""}>WO-${w.id} · ${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</option>`).join("");
+}

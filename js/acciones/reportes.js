@@ -74,3 +74,36 @@ Object.assign(ACC, {
     flash("rep:"+r.id);
     toast("Anotado para compra",`<b>${esc(r.material||"Material")}</b> para ${esc(P(r.prop).nombre)}. Queda en Inventario.`,"v");
     render(); },});
+
+/* Buscar: filtros guardados en S.busq (sobreviven a los render y a abrir una WO y volver). */
+Object.assign(ACC, {
+  busqCambia: () => {
+    const b=busq(), prop=val("bqProp");
+    Object.assign(b,{desde:val("bqDesde"),hasta:val("bqHasta"),q:val("bqQ"),serv:val("bqServ"),tec:val("bqTec"),estado:val("bqEst"),agr:val("bqAgr")});
+    b.unidad = prop!==b.prop ? "" : val("bqUni");   // otra propiedad = otras unidades
+    b.prop = prop;
+    render();
+  },
+  /* Semana = domingo a sábado, igual que semanaDe(); «hoy» es la fecha del prototipo. */
+  busqRango: d => {
+    const b=busq(), hoy=HOY_SUP, dow=new Date(hoy+"T12:00:00").getDay();
+    if(d.r==="todo"){ b.desde=""; b.hasta=""; }
+    else if(d.r==="mes"){
+      const [y,m]=hoy.split("-").map(Number), mm=String(m).padStart(2,"0");
+      b.desde=`${y}-${mm}-01`; b.hasta=`${y}-${mm}-${String(new Date(y,m,0).getDate()).padStart(2,"0")}`;
+    } else {
+      const ini=fechaMover(hoy,-dow-(d.r==="pasada"?7:0));
+      b.desde=ini; b.hasta=fechaMover(ini,6);
+    }
+    render();
+  },
+  buscarCSV: () => {
+    const q=v=>`"${String(v==null?"":v).replace(/"/g,'""')}"`;   // texto siempre entre comillas
+    const n=v=>v===null||v===undefined?"":Math.round(v*100)/100;
+    const rows=busqWOs(busq()).map(busqFila);
+    const csv=["WO,Date,Property,Unit,Service,Technician,Billed,Paid,Material,Profit",
+      ...rows.map(f=>[f.w.id,f.w.fecha||"",q(P(f.w.prop).nombre),q(U(f.w.unidad).num),q(f.w.serv),q(f.w.tec?tecN(f.w.tec):""),n(f.cobro),n(f.pago),n(f.mat),n(f.uti)].join(","))].join("\n");
+    const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download="cps-search.csv"; a.click(); URL.revokeObjectURL(a.href);
+    toast("✓ Archivo preparado",`${rows.length} Work Order(s) exportadas.`,"v");
+  }
+});
