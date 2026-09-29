@@ -433,9 +433,9 @@ function hojaCel(sh){
      registrado. Esta tarjeta le da lo que necesita mostrar en caja (en
      inglés, para el cajero) y una foto de comprobante, igual que ya existe
      para el resto de las fotos de la WO.
-     Mismo criterio que "material" arriba: el técnico nunca ve ni ingresa
-     dinero — no hay campo de costo. El monto lo completa oficina después,
-     leyendo la foto del ticket. */
+     Erika: el técnico sí anota lo que pagó por el material (total del
+     ticket); lo que nunca ve es lo que él cobra por el trabajo. Si lo deja
+     vacío, oficina lo completa después leyendo la foto del ticket. */
   if(sh.t==="compra"){ const p=P(w.prop), u=U(w.unidad);
     return `<div class="fscrim" data-a="fSheetNo"><div class="fsheet" data-stop>
     <div class="grab"></div>
@@ -458,6 +458,8 @@ function hojaCel(sh){
     <input id="cpNombre" value="${esc(sh.nombre)}" placeholder="Ej. sellador de grout">
     <label>¿Cuánto compraste?</label>
     <input id="cpCant" value="${esc(String(sh.cant))}" inputmode="decimal">
+    <label>Pagó</label>
+    <input id="cpPago" value="${esc(String(sh.pago||""))}" inputmode="decimal" placeholder="$0.00">
     <div class="db-seg" style="display:flex;gap:6px;margin-top:7px">
       <button type="button" class="db ${sh.uso==="todo"?"p":"g"}" style="flex:1" data-a="fCompraUso" data-v="todo">Usé todo</button>
       <button type="button" class="db ${sh.uso==="sobro"?"p":"g"}" style="flex:1" data-a="fCompraUso" data-v="sobro">Sobró material</button>

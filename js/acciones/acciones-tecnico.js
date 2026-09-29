@@ -152,7 +152,7 @@ Object.assign(ACC, {
       n?`${n} línea(s) — quedaron en el costo de WO-${w.id}.`:"Se guardaron las observaciones.","v");
     render();
   },
-  fCompraMaterial: d => { S.phSheet={t:"compra", wo:+d.id, tienda:CAT.tiendas[0], nombre:"", cant:"1", uso:"todo", usado:"", foto:null}; render(); },
+  fCompraMaterial: d => { S.phSheet={t:"compra", wo:+d.id, tienda:CAT.tiendas[0], nombre:"", cant:"1", uso:"todo", usado:"", pago:"", foto:null}; render(); },
   fCompraFoto: () => { leerCompra(); const sh=S.phSheet; if(!sh||sh.t!=="compra") return;
     capturarFoto(url=>{ sh.foto=url; render(); }); },
   fCompraUso: d => { leerCompra(); const sh=S.phSheet; if(!sh||sh.t!=="compra") return;
@@ -169,19 +169,23 @@ Object.assign(ACC, {
     if(sh.uso==="sobro" && (!Number.isFinite(usado) || usado<0 || usado>=comprado)){
       toast("Revisa la cantidad usada","Debe ser menor a lo que compraste.","r"); return;
     }
+    const pagoTxt=String(sh.pago||"").trim(), pago=parseFloat(pagoTxt);
+    if(pagoTxt && !(pago>0)){ toast("Revisa lo que pagaste","Debe ser un monto mayor a 0.","r"); return; }
+    const conPago=pago>0, round2=x=>Math.round(x*100)/100, unit=conPago?pago/comprado:0;
     let p=S.productos.find(x=>!x.cliente && x.nombre.toLowerCase()===nombre.toLowerCase());
     if(!p){ p={id:"PT"+nid("mv"), cat:"Compra en tienda", nombre, um:"unidad", min:0, costo:0}; S.productos.push(p); }
+    if(conPago && p.costo===0) p.costo=round2(unit);
     const entrada={id:"MT"+nid("mv"), prod:p.id, tipo:"entrada", cant:comprado, fecha:w.fecha, wo:null,
-      compraWo:w.id, costo:0, costoPend:true, tienda:sh.tienda, quien:tec?tec.nombre:S.usuario,
-      notas:"Comprado en tienda con tarjeta de la empresa — falta cargar el costo del ticket",
+      compraWo:w.id, costo:conPago?round2(pago):0, costoPend:!conPago, tienda:sh.tienda, quien:tec?tec.nombre:S.usuario,
+      notas:conPago?"Comprado en tienda con tarjeta de la empresa":"Comprado en tienda con tarjeta de la empresa — falta cargar el costo del ticket",
       recibo:sh.foto||null, evid:!!sh.foto};
     S.movs.push(entrada);
     if(usado>0){
       S.movs.push({id:"MT"+nid("mv"), prod:p.id, tipo:"salida", cant:usado, fecha:w.fecha, wo:w.id,
-        costo:0, compra:entrada.id, tienda:"", quien:tec?tec.nombre:S.usuario, evid:false});
+        costo:conPago?round2(unit*usado):0, compra:entrada.id, tienda:"", quien:tec?tec.nombre:S.usuario, evid:false});
     }
     const sobro=comprado-usado;
-    w.hist.push([hora(), `Compró en tienda (${sh.tienda}): ${nombre} × ${comprado} · usó ${usado}${sobro>0?` · sobró ${sobro} (queda en inventario)`:""}${sh.foto?" · con foto del ticket":" · sin foto del ticket"}`, tec?tec.nombre:S.usuario]);
+    w.hist.push([hora(), `Compró en tienda (${sh.tienda}): ${nombre} × ${comprado} · usó ${usado}${conPago?` · pagó ${money(pago)}`:""}${sobro>0?` · sobró ${sobro} (queda en inventario)`:""}${sh.foto?" · con foto del ticket":" · sin foto del ticket"}`, tec?tec.nombre:S.usuario]);
     S.phSheet=null; flash("wo:"+w.id);
     toast(sh.foto?"✓ Compra registrada":"✓ Registrada — falta la foto del ticket",
       sh.foto?"Quedó con el comprobante adjunto para oficina.":"Oficina va a necesitar la foto del ticket para poder facturarlo.",

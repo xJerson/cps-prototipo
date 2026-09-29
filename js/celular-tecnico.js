@@ -413,8 +413,8 @@ function leerMaterial(){
 function leerCompra(){
   const sh=S.phSheet; if(!sh||sh.t!=="compra") return;
   const t=document.getElementById("cpTienda"), n=document.getElementById("cpNombre"),
-        c=document.getElementById("cpCant"), u=document.getElementById("cpUsado");
-  if(t) sh.tienda=t.value; if(n) sh.nombre=n.value; if(c) sh.cant=c.value; if(u) sh.usado=u.value;
+        c=document.getElementById("cpCant"), u=document.getElementById("cpUsado"), g=document.getElementById("cpPago");
+  if(t) sh.tienda=t.value; if(n) sh.nombre=n.value; if(c) sh.cant=c.value; if(u) sh.usado=u.value; if(g) sh.pago=g.value;
 }
 
 
