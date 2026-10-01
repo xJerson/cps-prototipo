@@ -119,7 +119,6 @@ const totalEstAprob = e => lineasAprobDe(e)
   .reduce((a,i)=> a + (e.lineas[i] ? totalLinea(e, e.lineas[i]) : 0), 0);
 /* Numero, Bill To y vigencia — igual que el Estimate real de vCita */
 const estSiguienteNum = () => "EST-2026-"+String(20+S.estimados.length).padStart(3,"0");
-const sumarDias = (iso,n) => { const d=new Date(iso+"T00:00:00"); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
 const billToDe = pid => { const p=P(pid); return p.cliente ? esc(CLI(p.cliente).nombre)+" - "+esc(p.nombre) : esc(p.nombre); };
 const NOTA_ESTIMADO_DEFAULT = "Please note that cleaning services requiring extra materials or additional time will incur an extra charge per item or supply used.\nWe also offer trash-out services, carpet cleaning, and more.\nFor painting, we can handle sheen changes (matte, satin, semi-gloss) and color changes — not just same-color refreshes.\nAdditionally, if you need repairs, we do it all: from the smallest fixes to more complex projects!\nIf you need a customized estimate, don't hesitate to contact us — we'll get it to you within 24 hours!";
 /* Solo cuenta como "inspeccion recibida" un reporte de campo tipo "previo"

@@ -98,11 +98,12 @@ Object.assign(ACC, {
     const per = S.periodo, perTxt = periodoTexto(per);
     const todas = S.wos.filter(w=>enPeriodo(w.fecha,per) && w.estado==="Completed");
     const ws = todas.filter(w=>w.tec===d.tec);
-    const tot = ws.reduce((a,w)=>a+(egresoWO(w)||0),0);
-    const extra = extrasAprobadosDeWOs(todas).filter(x=>tecExtra(x)===d.tec);
+    const previas = per.tipo==="semana" ? woPendAnteriores(d.tec,per.sem) : [];   // sin pagar de semanas anteriores
+    const tot = ws.concat(previas).reduce((a,w)=>a+montoNomWO(w),0);
+    const extra = extrasAprobadosDeWOs(todas.concat(previas)).filter(x=>tecExtra(x)===d.tec);
     const totExtra = extra.reduce((a,x)=>a+(x.monto||0),0);
     /* Solo descuentos Aplicados, y solo en período «Semana» (se llevan por semana); nunca baja de cero. */
-    const descs = per.tipo==="semana" ? descDe(d.tec,per.sem) : [];
+    const descs = per.tipo==="semana" ? descSemana(d.tec,per.sem) : [];
     const totDesc = Math.min(tot+totExtra, descs.reduce((a,x)=>a+x.monto,0));
     const neto = tot+totExtra-totDesc;
     modal(`<div class="mh"><h3>Comprobante de pago</h3>
@@ -120,13 +121,17 @@ Object.assign(ACC, {
         <tbody>${ws.map(w=>`<tr><td class="mono">${w.fecha.slice(5)}</td>
           <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td>
           <td>${esc(w.serv)}<div style="font-size:10.5px;color:var(--faint)">${esc(U(w.unidad).rooms)}</div></td>
-          <td class="num mono">${egresoWO(w)!==null?money(egresoWO(w)):'<span class="pill w">NA</span>'}</td></tr>`).join("")
-          ||`<tr><td colspan="4" class="empty">Sin trabajos terminados en este período</td></tr>`}
+          <td class="num mono">${egresoWO(w)!==null?money(montoNomWO(w)):'<span class="pill w">NA</span>'}</td></tr>`).join("")
+          ||(previas.length?"":`<tr><td colspan="4" class="empty">Sin trabajos terminados en este período</td></tr>`)}
+        ${previas.map(w=>`<tr style="background:var(--ambar-cl)"><td class="mono">${w.fecha.slice(5)}</td>
+          <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td>
+          <td>${esc(w.serv)}<div style="font-size:10.5px;color:var(--ambar)">Pendiente de una semana anterior</div></td>
+          <td class="num mono">${egresoWO(w)!==null?money(montoNomWO(w)):'<span class="pill w">NA</span>'}</td></tr>`).join("")}
         ${extra.map(x=>`<tr style="background:var(--ambar-cl)"><td class="mono">—</td>
           <td colspan="2">Pago adicional aprobado · WO-${x.wo}<div style="font-size:10.5px;color:var(--ambar)">${esc(x.motivo.slice(0,70))}</div></td>
           <td class="num mono">${money(x.monto)}</td></tr>`).join("")}
         ${descs.map(x=>`<tr style="background:var(--rojo-cl)"><td class="mono">—</td>
-          <td colspan="2">Descuento por devolución · WO-${x.wo}<div style="font-size:10.5px;color:var(--rojo)">${esc((x.motivo||"").slice(0,70))}</div></td>
+          <td colspan="2">${x.tipo==="Manual"?`Descuento · ${esc(x.concepto)}${x.wo?` · WO-${esc(x.wo)}`:""}`:`Descuento por devolución · WO-${x.wo}`}<div style="font-size:10.5px;color:var(--rojo)">${esc((x.tipo==="Manual"?x.desc:x.motivo||"").slice(0,90))}</div></td>
           <td class="num mono">−${money(x.monto)}</td></tr>`).join("")}
         <tr style="background:var(--surface-2);font-weight:750"><td colspan="3">Total ${esc(perTxt)}</td>
           <td class="num mono" style="font-size:15px">${money(neto)}</td></tr></tbody></table>

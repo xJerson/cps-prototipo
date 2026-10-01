@@ -26,6 +26,9 @@ const CLI = id => by(S.clientes,id) || {nombre:"—"};
 const ESTCOL = {Prospect:"w",Onboarding:"m",Active:"v","On Hold":"w",Inactive:"r"};
 const tecN = id => { const t=T(id); return t? t.nombre+" "+t.apellido : "sin asignar"; };
 const W = id => by(S.wos,id);
+/* Plazo de cobranza: días de crédito de la propiedad (30 si no tiene) y suma de días en UTC para que la zona horaria no mueva la fecha. */
+const diasCreditoProp = prop => { const p=P(prop); const n=p&&parseInt(p.diasCredito,10); return Number.isFinite(n)&&n>=0 ? n : 30; };
+const sumarDias = (iso,n) => { const d=new Date(iso+"T00:00:00Z"); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); };
 const money = n => "$"+(Math.round(n*100)/100).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 const hora = () => { const h=Math.floor(S.reloj/60),m=S.reloj%60; return h+":"+String(m).padStart(2,"0"); };
 const puede = m => { const r=ROLES[S.usuario]; return r.m==="*" || r.m.includes(m); };
@@ -183,6 +186,12 @@ function egresoWO(w){
 }
 /* Pago base sin ajustes: lo que se edita en «Pago técnico» al validar. */
 const egresoBaseWO = w => { const e=egresoWO(w); return e===null ? null : e-ajustesValTotal(w,"pago"); };
+/* Pagos parciales al técnico (w.pagosTec=[{monto,fecha,quien,nota,nomina}]). egresoWO sigue siendo
+   el costo para la utilidad; el saldo es lo que todavía se le debe. */
+const pagadoTecWO = w => Math.round((w.pagosTec||[]).reduce((a,p)=>a+(p.monto||0),0)*100)/100;
+const saldoTecWO = w => { if(w.pagadaTec) return 0; const e=egresoWO(w); return e===null ? 0 : Math.max(0,Math.round((e-pagadoTecWO(w))*100)/100); };
+/* Lo que la nómina suma por WO: pagada = lo que ganó; sin pagar = lo que se le debe (saldo). */
+const montoNomWO = w => w.pagadaTec ? (egresoWO(w)||0) : saldoTecWO(w);
 /* WO enlazada (w.dependeDe): la sucesora espera hasta que la anterior termine.
    Cancelada no traba: si no va a ocurrir, esperarla sería quedar varado. */
 const woHecha = w => ["Completed","Invoiced","Paid"].includes(w.estado);

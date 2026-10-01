@@ -364,7 +364,7 @@ function trazaWO(w){
   const p=P(w.prop), c=CLI(p.cliente), a=asisDe(w.id);
   const est = w.origen ? by(S.estimados,w.origen.id) : null;
   const fac = S.facturas.find(f=>f.lineas.includes(w.id));
-  const nom = w.pagadaTec ? S.nomina.find(n=>n.wos && n.wos.includes(w.id)) : null;
+  const nom = w.pagadaTec ? S.nomina.filter(n=>n.wos && n.wos.includes(w.id)).pop() : null;   // el último: el pago final, no un parcial
   const puedeVerDinero = puedeVerUtilidad();
   const paso = (ok,tit,det,quien) => `<li class="${ok?"hecho":"pend"}">
     <span class="mk">${ok?"✓":"○"}</span>
@@ -403,7 +403,7 @@ function trazaWO(w){
       w.supervisada?"Revisada y aprobada":"Pendiente de que Gustavo la revise",
       w.supervisada?esc((w.hist.find(h=>h[1].includes("Supervisión"))||[])[2]||""):null)}
     ${paso(!!fac, fac?`Facturada en ${esc(fac.num)}`:"Sin facturar",
-      fac?`${puedeVerDinero?money(ingresoWO(w)||0)+" de "+money(fac.total)+" · ":""}vence ${esc(fac.vence)}`:"Todavía no entra a ninguna factura",null)}
+      fac?`${puedeVerDinero?money(ingresoWO(w)||0)+" de "+money(fac.total)+" · ":""}vence ${esc(fac.vence||"al enviar")}`:"Todavía no entra a ninguna factura",null)}
     ${paso(!!w.cobrada,"Cobrada", w.cobrada?`Pago registrado`:"Pendiente de cobro",null)}
     ${paso(!!w.pagadaTec,"Pagada al técnico",
       w.pagadaTec?`${puedeVerDinero?money(egresoWO(w)||0)+" en ":"En "}la nómina de la semana ${w.semana}`:"No ha entrado a nómina",

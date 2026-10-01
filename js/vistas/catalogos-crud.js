@@ -124,6 +124,7 @@ function fichaProp(id){
     <tr><td style="color:var(--faint)">Client Status</td><td><span class="pill ${ESTCOL[p.estado]||"w"}">${esc(p.estado||"—")}</span></td></tr>
     <tr><td style="color:var(--faint)">Client Source</td><td>${esc(p.origen||"—")}</td></tr>
     <tr><td style="color:var(--faint)">Dirección</td><td>${esc(p.dir)}</td></tr>
+    <tr><td style="color:var(--faint)">Crédito</td><td>${diasCreditoProp(id)} días</td></tr>
     <tr><td style="color:var(--faint)">Door code</td><td class="mono">${esc(p.door)}</td></tr>
     <tr><td style="color:var(--faint)">Default Contact Method</td><td>${esc(p.pref)}</td></tr>
     <tr><td style="color:var(--faint)">Approval Method</td><td>${esc(p.aprob)}</td></tr>

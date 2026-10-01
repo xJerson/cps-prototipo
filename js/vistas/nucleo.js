@@ -288,7 +288,7 @@ const CAMPOS = {
   nombre:"Nombre", apellido:"Apellido", tipo:"Tipo", contacto:"Contacto",
   tel:"Teléfono", mail:"Correo", origen:"Origen", estado:"Estado",
   zona:"Zona (Area)", cliente:"Management", dir:"Dirección",
-  door:"Door code", coi:"COI vence", pref:"Default Contact Method",
+  diasCredito:"Crédito (días)", door:"Door code", coi:"COI vence", pref:"Default Contact Method",
   aprob:"Approval Method", notas:"Special Property Requirements",
   mailAP1:"Accounts Payable Email 1", mailAP2:"Accounts Payable Email 2",
   num:"Número de unidad", rooms:"Rooms", pisos:"Floor", detalle:"Detail",

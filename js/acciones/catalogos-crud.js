@@ -29,7 +29,9 @@ Object.assign(ACC, {
       <div class="fg c2">
         <div class="fld"><label>Client Status</label><select id="nEst">${op(["Prospect","Onboarding","Active","On Hold","Inactive"], p?p.estado:"Prospect")}</select></div>
         <div class="fld"><label>Client Source</label><select id="nOrig">${op(["Llamada","Formulario web","Referido","Visita comercial","Correo"], p?p.origen:"")}</select></div></div>
-      <div class="fld"><label>Property Phone Number</label><input id="nTel" class="mono" value="${p?esc(p.tel):""}"></div>
+      <div class="fg c2">
+        <div class="fld"><label>Property Phone Number</label><input id="nTel" class="mono" value="${p?esc(p.tel):""}"></div>
+        <div class="fld"><label>Crédito (días)</label><input id="nCred" type="number" min="0" step="1" value="${p?diasCreditoProp(p.id):30}"></div></div>
       <div class="fg c2">
         <div class="fld"><label>Accounts Payable Email 1 <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><input id="nAP1" value="${p?esc(p.mailAP1):""}"></div>
         <div class="fld"><label>Accounts Payable Email 2 <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><input id="nAP2" value="${p?esc(p.mailAP2):""}"></div></div>
@@ -66,8 +68,10 @@ Object.assign(ACC, {
     } },
   propGuardar: d => {
     if(marcaFalta(["nP","nD"])){ toast("Faltan datos","Nombre y dirección son obligatorios.","r"); return; }
+    const credTxt = val("nCred").trim(), cred = credTxt==="" ? 30 : Number(credTxt);
+    if(!Number.isInteger(cred)||cred<0){ document.getElementById("nCred").parentElement.classList.add("bad"); toast("Crédito inválido","Los días de crédito deben ser un número entero, 0 o más.","r"); return; }
     const yo = d&&d.id ? P(d.id) : null;
-    if(yo) return guardarEdicion(yo, {nombre:val("nP"),zona:val("nZ"),cliente:val("nC"),dir:val("nD"),
+    if(yo) return guardarEdicion(yo, {...(yo.diasCredito!=null||cred!==diasCreditoProp(yo.id)?{diasCredito:cred}:{}),nombre:val("nP"),zona:val("nZ"),cliente:val("nC"),dir:val("nD"),
       ciudad:val("nCiudad"),estadoUS:val("nEstadoUS"),zip:val("nZip"),tel:val("nTel"),
       estado:val("nEst"),origen:val("nOrig"),
       door:val("nDC"),pref:val("nPR"),aprob:val("nAP"),
@@ -81,7 +85,7 @@ Object.assign(ACC, {
       ciudad:val("nCiudad"),estadoUS:val("nEstadoUS"),zip:val("nZip"),tel:val("nTel"),notas:val("nNT"),
       estado:val("nEst"),origen:val("nOrig"),
       activa:true,door:val("nDC"),aprob:val("nAP"),pref:val("nPR"),
-      mailAP1:val("nAP1"),mailAP2:val("nAP2"),polizas:[],
+      mailAP1:val("nAP1"),mailAP2:val("nAP2"),polizas:[],diasCredito:cred,
       shop:val("nShop"),shopCode:val("nShopCode"),horario:val("nHorario"),notasPaint:val("nPaint"),
       finalExp:val("nFinalExp"),notasTec:val("nOjo")});
     const np = P(id);

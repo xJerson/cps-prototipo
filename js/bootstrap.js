@@ -25,6 +25,8 @@ document.addEventListener("input", e=>{
   const el = e.target;
   if(el.id==="wPropTxt") ACC.woPropBuscar();
   else if(el.id==="wUniTxt") ACC.woUniBuscar();
+  else if(el.id==="gaBuscar"||el.id==="gaSoloMarc") ACC.gaFiltrar();
+  else if(el.classList.contains("gaWO")) ACC.gaContar();
 });
 document.addEventListener("change", e=>{
   const sel = e.target.closest("select[data-a], input[data-a], textarea[data-a]");
@@ -145,9 +147,14 @@ const AUD = {
   cobrar:{a:"Registró un pago", m:"Cobranza"},
   cobRecordatorio:{a:"Envió un reminder de cobranza", m:"Cobranza"},
   cobOverdue:{a:"Envió un correo overdue", m:"Cobranza"},
+  cobAgrupadoEnviar:{a:"Envió un recordatorio agrupado", m:"Cobranza"},
   cobLlamadaGuardar:{a:"Registró una llamada de cobranza", m:"Cobranza"},
   pagarSemana:{a:"Aprobó la nómina", m:"Nómina"},
-  pagarTec:{a:"Marcó como pagado a un técnico", m:"Nómina"},
+  pagarTecOK:{a:"Marcó como pagado a un técnico", m:"Nómina"},
+  parcialOK:{a:"Registró un pago parcial a un técnico", m:"Nómina"},
+  nomAdjuntarGuardar:{a:"Adjuntó el comprobante de un pago de nómina", m:"Nómina"},
+  descManualOK:{a:"Agregó un descuento a la nómina de un técnico", m:"Nómina"},
+  descQuitar:{a:"Quitó un descuento de la nómina de un técnico", m:"Nómina"},
   descAplicar:{a:"Aplicó un descuento por devolución", m:"Nómina"},
   descNoAplicarOK:{a:"Decidió no aplicar un descuento por devolución", m:"Nómina"},
   movGuardar:{a:"Registró movimiento de inventario", m:"Inventario"},
@@ -158,7 +165,7 @@ const AUD = {
 };
 /* En las altas el identificador nace dentro de la acción: se lee después */
 /* El descuento recién decidido (lo fija la acción en acciones/nomina-facturacion.js). */
-const descRef = () => { const x=by(S.descuentos,ultimoDescDecidido); return x ? tecN(x.tec)+" · WO-"+x.wo : ""; };
+const descRef = () => { const x=by(S.descuentos,ultimoDescDecidido); return x ? tecN(x.tec)+(x.wo?" · WO-"+x.wo:"") : ""; };
 const AUD_POST = {
   woGuardar:   () => S.wos.length     ? "WO-"+S.wos[S.wos.length-1].id : "",
   propGuardar: () => S.propiedades.length ? S.propiedades[S.propiedades.length-1].nombre : "",
@@ -175,7 +182,10 @@ const AUD_POST = {
   catSave:     () => "",
   movGuardar:  () => { const m=S.movs[S.movs.length-1]; return m? by(S.productos,m.prod).nombre : ""; },
   pagarSemana: () => periodoTexto(S.periodo),
-  pagarTec:    () => { const n=S.nomina[S.nomina.length-1]; return n&&n.tec ? tecN(n.tec)+" · "+periodoTexto(S.periodo) : ""; },
+  pagarTecOK:  () => { const n=S.nomina[S.nomina.length-1]; return n&&n.tec ? tecN(n.tec)+" · "+periodoTexto(S.periodo) : ""; },
+  parcialOK:   () => { const n=S.nomina[S.nomina.length-1]; return n&&n.tec ? tecN(n.tec)+" · WO-"+n.wos[0]+" · "+money(n.total) : ""; },
+  descManualOK: () => { const x=S.descuentos[S.descuentos.length-1]; return x ? tecN(x.tec)+" · "+x.concepto+" · "+money(x.monto) : ""; },
+  descQuitar:   () => ultimoDescManual,
   descAplicar:     () => descRef(),
   descNoAplicarOK: () => descRef(),
   excGuardar:  () => S.excepciones.length ? S.excepciones[S.excepciones.length-1].tipo : "",
@@ -254,7 +264,9 @@ VIEWS.bitacora = () => {
 };
 ACC.audFiltra = () => { S.audU=val("audU"); S.audM=val("audM"); render(); };
 
-document.addEventListener("keydown", e=>{ if(e.key==="Escape") cm(); });
+document.addEventListener("keydown", e=>{ if(e.key==="Escape") cm();
+  /* Enter aplica el texto de los filtros de nómina y de facturas, igual que su botón «Buscar» */
+  else if(e.key==="Enter"){ const id=e.target.id; if(id==="nhQ") ACC.nomFiltro(); else if(id==="fcQ") ACC.facFiltro(); } });
 
 /* ══ Modo Gustavo: ?gustavo=1 en la URL (o entrar por gustavo.html) abre
    directo en su celular, a pantalla completa, sin el dashboard alrededor —

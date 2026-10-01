@@ -1,5 +1,7 @@
 "use strict";
 let ultimoDescDecidido = null;
+let ultimoDescManual = "";   // concepto del último descuento manual tocado — lo lee AUD_POST
+const leerF = (id,def) => { const e=document.getElementById(id); return e ? e.value.trim() : def; };
 function asignarApprovalRequest(id, quien){
   if(!quien) return;
   const manual=by(S.excepciones,id);
@@ -253,8 +255,90 @@ Object.assign(ACC, {
     toast("Excepción rechazada","Queda registrado que no se autorizó.","w"); render();
   },
 
-  pagarTec: d => pagarNomina(d.tec),
+  /* Marcar pagado: primero el cheque y su foto (opcionales); la nómina se registra en pagarTecOK. */
+  pagarTec: d => {
+    const c=nominaCalc(d.tec);
+    if(!c.ws.length){ toast("🚫 Nada para pagar","No hay Work Orders listas para pagar.","r"); return; }
+    S._recibo=null;
+    modal(`<div class="mh"><h3>Marcar pagado</h3><p>${esc(tecN(d.tec))} · ${esc(periodoTexto(S.periodo))} · ${money(c.tot)}</p></div>
+    <div class="mb"><div class="fld"><label>Cheque #</label><input id="pgCh" placeholder="Opcional" autocomplete="off"></div>${campoRecibo("Comprobante")}</div>
+    <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="pagarTecOK" data-tec="${d.tec}">Pagar</button></div>`);
+  },
+  pagarTecOK: d => { const foto=S._recibo, cheque=val("pgCh"); cm(); pagarNomina(d.tec,{cheque,foto}); },
   pagarSemana: () => pagarNomina(null),
+  /* Pago parcial por WO (p. ej. externos en proyectos grandes): crea su propio registro y baja el saldo. */
+  parcialModal: d => {
+    const w=W(+d.id); if(!w||!woPagable(w)) return;
+    const sal=saldoTecWO(w); S._recibo=null;
+    modal(`<div class="mh"><h3>Pago parcial</h3><p>WO-${w.id} · ${esc(tecN(w.tec))} · saldo ${money(sal)}${pagadoTecWO(w)>0?` de ${money(egresoWO(w))}`:""}</p></div>
+    <div class="mb"><div class="fg c2"><div class="fld"><label>Monto <span class="req">*</span></label><input id="pcM" type="number" min="0.01" max="${sal}" step="0.01"></div>
+      <div class="fld"><label>Cheque #</label><input id="pcCh" placeholder="Opcional" autocomplete="off"></div></div>
+      <div class="fld"><label>Nota</label><input id="pcN" placeholder="Ej. anticipo del proyecto"></div>${campoRecibo("Comprobante")}</div>
+    <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="parcialOK" data-id="${w.id}">Pagar</button></div>`);
+  },
+  parcialOK: d => {
+    const w=W(+d.id); if(!w||!woPagable(w)){ S.audOmitir=true; cm(); return; }
+    const sal=saldoTecWO(w), m=Math.round(parseFloat(val("pcM"))*100)/100;
+    if(!(m>0)){ S.audOmitir=true; marcaFalta(["pcM"]); toast("Falta el monto","Escribe cuánto se le paga ahora.","r"); return; }
+    if(m>=sal-0.004){ S.audOmitir=true; toast("Es el saldo completo","Para pagar todo usa «Marcar pagado».","r"); return; }
+    const id="NM"+(S.nomina.length+1), nota=val("pcN"), cheque=val("pcCh"), foto=S._recibo||null;
+    S.nomina.push({id,semana:S.semana,periodo:{...S.periodo},tec:w.tec,wos:[w.id],total:m,tipo:"Parcial",nota,cheque,foto,quien:S.usuario,fecha:HOY_SUP,hora:hora()});
+    (w.pagosTec=w.pagosTec||[]).push({monto:m,fecha:HOY_SUP,quien:S.usuario,nota,nomina:id});
+    w.hist.push([hora(),`Pago parcial al técnico · ${money(m)} de ${money(egresoWO(w))}`,S.usuario]);
+    cm(); toast("✓ Pago parcial",`${esc(tecN(w.tec))} · WO-${w.id} · ${money(m)}. Le quedan ${money(sal-m)}.`,"v"); render();
+  },
+  /* Historial de nómina: filtros, detalle y comprobante que se adjunta después. */
+  nomFiltro: () => { const f=filtroNom();
+    f.tec=leerF("nhTec",f.tec); f.desde=leerF("nhDesde",f.desde); f.hasta=leerF("nhHasta",f.hasta); f.q=leerF("nhQ",f.q); f.ptec=leerF("nhPTec",f.ptec); render(); },
+  nomLimpiar: () => { Object.assign(filtroNom(),{tec:"",desde:"",hasta:"",q:""}); render(); },
+  nomVer: d => { const a=S.nomAbiertos||(S.nomAbiertos=[]), i=a.indexOf(d.id); if(i>-1) a.splice(i,1); else a.push(d.id); render(); },
+  nomAdjuntar: d => {
+    const n=S.nomina.find(x=>nomId(x)===d.id); if(!n) return; S._recibo=null;
+    modal(`<div class="mh"><h3>Adjuntar comprobante</h3><p>${esc(nomTecs(n).map(tecN).join(", "))} · ${money(n.total||0)} · ${esc(n.fecha||"")}</p></div>
+    <div class="mb"><div class="fld"><label>Cheque #</label><input id="naCh" value="${esc(n.cheque||"")}" autocomplete="off"></div>${campoRecibo("Comprobante")}</div>
+    <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="nomAdjuntarGuardar" data-id="${esc(d.id)}">Guardar</button></div>`);
+  },
+  nomAdjuntarGuardar: d => {
+    const n=S.nomina.find(x=>nomId(x)===d.id); if(!n){ cm(); return; }
+    const ch=val("naCh");
+    if(!S._recibo && ch===(n.cheque||"")){ S.audOmitir=true; toast("Falta el comprobante","Toma la foto del cheque o escribe el número.","r"); return; }
+    n.cheque=ch; if(S._recibo) n.foto=S._recibo;
+    cm(); toast("✓ Comprobante guardado","Ya aparece en el historial.","v"); render();
+  },
+  /* Descuento general a la nómina de la semana: concepto obligatorio, WO y descripción opcionales. */
+  descManualModal: d => {
+    if(S.periodo.tipo!=="semana") return;
+    const ws=S.wos.filter(w=>w.tec===d.tec && w.estado!=="Canceled" && w.fecha && w.fecha>=fechaMover(HOY_SUP,-60)).sort((a,b)=>a.fecha<b.fecha?1:-1);
+    modal(`<div class="mh"><h3>Descuento</h3><p>${esc(tecN(d.tec))} · ${esc(periodoTexto(S.periodo))}</p></div>
+    <div class="mb"><div class="fg c2"><div class="fld"><label>Monto <span class="req">*</span></label><input id="dmM" type="number" min="0.01" step="0.01"></div>
+      <div class="fld"><label>Concepto <span class="req">*</span></label><input id="dmC" placeholder="Ej. trabajo mal hecho" maxlength="60" autocomplete="off"></div></div>
+      <div class="fg c2"><div class="fld"><label>WO</label><select id="dmWO"><option value="">— ninguna —</option>${ws.map(w=>`<option value="${w.id}">WO-${w.id} · ${esc(w.fecha.slice(5))} · ${esc(P(w.prop).nombre)} ${U(w.unidad)?esc(U(w.unidad).num):""}</option>`).join("")}</select></div>
+      <div class="fld"><label>Otra WO #</label><input id="dmWOt" type="number" min="1" placeholder="Opcional"></div></div>
+      <div class="fld"><label>Descripción</label><input id="dmD" placeholder="Breve — el técnico la ve" maxlength="90" autocomplete="off"></div></div>
+    <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="descManualOK" data-tec="${d.tec}">Aplicar</button></div>`);
+  },
+  descManualOK: d => {
+    const monto=Math.round(parseFloat(val("dmM"))*100)/100, concepto=val("dmC"), t=val("dmWOt");
+    const sinC=marcaFalta(["dmC"]), sinM=marcaFalta(["dmM"])||!(monto>0);
+    if(sinC||sinM){ S.audOmitir=true; toast("Faltan datos","Monto y concepto son obligatorios.","r"); return; }
+    const wo = t ? parseInt(t,10) : (val("dmWO") ? +val("dmWO") : null);
+    if(t && !(wo>0)){ S.audOmitir=true; toast("WO inválida","Escribe solo el número de la WO.","r"); return; }
+    ultimoDescManual = concepto;
+    S.descuentos.push({id:"DS"+Date.now()+Math.floor(Math.random()*99), tipo:"Manual", estado:"Aplicado", tec:d.tec, semana:S.periodo.sem,
+      wo, concepto, motivo:concepto, desc:val("dmD"), monto, quien:S.usuario, fecha:HOY_SUP, hora:hora()});
+    cm(); toast("✓ Descuento aplicado",`−${money(monto)} a <b>${esc(tecN(d.tec))}</b> · ${esc(concepto)}.`,"v"); render();
+  },
+  descQuitar: d => {
+    const x=by(S.descuentos,d.id);
+    if(!x || x.tipo!=="Manual" || x.nomina){ S.audOmitir=true; return; }
+    ultimoDescManual = x.concepto;
+    S.descuentos.splice(S.descuentos.indexOf(x),1);
+    toast("Descuento quitado",`${esc(x.concepto)} · ${money(x.monto)} ya no se le descuenta a <b>${esc(tecN(x.tec))}</b>.`,"w"); render();
+  },
+  /* Filtros de facturas (Facturación y Cobranza) */
+  facFiltro: () => { const f=filtroFac();
+    f.q=leerF("fcQ",f.q); f.prop=leerF("fcProp",f.prop); f.estado=leerF("fcEst",f.estado); f.desde=leerF("fcDesde",f.desde); f.hasta=leerF("fcHasta",f.hasta); render(); },
+  facFiltroLimpiar: () => { Object.assign(filtroFac(),{q:"",prop:"",estado:"",desde:"",hasta:""}); render(); },
   /* Descuento por devolución: quien paga decide si se aplica o no. */
   descAplicar: d => {
     const x = by(S.descuentos,d.id);
@@ -284,34 +368,48 @@ Object.assign(ACC, {
     toast("Descuento no aplicado",`A <b>${esc(tecN(x.tec))}</b> no se le descuenta <b>${money(x.monto)}</b>. Queda el motivo registrado.`,"w"); render();
   },
 });
+/* Qué entra al pago y cuánto: las WO pagables del período (más las pendientes de semanas anteriores, si se mira una semana)
+   a su saldo — lo que falte tras pagos parciales — y por técnico, con sus descuentos todavía sin descontar; nunca baja de cero. */
+function nominaCalc(tec){
+  const sem=S.periodo.tipo==="semana";
+  const todas=S.wos.filter(w=>enPeriodo(w.fecha,S.periodo)&&w.estado==="Completed"&&(!tec||w.tec===tec)&&aprobPagoOK(w)&&!w.pagadaTec&&!subWOsPendientesDeWO(w.id).length&&!clienteRevisionPendienteDeWO(w.id));
+  const bloqueadas=todas.filter(w=>woBloqueada(w.id));
+  const previas=sem?woPendAnteriores(tec,S.periodo.sem):[];
+  const ws=todas.filter(w=>!woBloqueada(w.id)).concat(previas);
+  // Punto 10: incluye los adicionales de Sub-Work Order ya aprobados.
+  const extrasPago=extrasAprobadosDeWOs(ws);
+  const tecs=[...new Set(ws.map(w=>w.tec).filter(Boolean).concat(extrasPago.map(tecExtra).filter(Boolean)))];
+  const filas=tecs.map(t=>{
+    const wt=ws.filter(w=>w.tec===t), ex=extrasPago.filter(x=>tecExtra(x)===t);
+    const b=wt.reduce((a,w)=>a+saldoTecWO(w),0)+ex.reduce((a,x)=>a+(x.monto||0),0);
+    const ds=sem?descSemana(t,S.periodo.sem).filter(x=>!x.nomina):[], dd=ds.reduce((a,x)=>a+x.monto,0);
+    return {t,wt,ds,b,dd,tot:Math.max(0,b-dd)};
+  });
+  return {ws,bloqueadas,previas,filas,tot:filas.reduce((a,f)=>a+f.tot,0)};
+}
 /* Claudia: se puede marcar pagado por técnico; lo que le quede pendiente
-   (Approval Request, Sub-WO, cliente) queda afuera y se paga después. */
-function pagarNomina(tec){
-  {
-    const todas=S.wos.filter(w=>enPeriodo(w.fecha,S.periodo)&&w.estado==="Completed"&&(!tec||w.tec===tec)&&aprobPagoOK(w)&&!w.pagadaTec&&!subWOsPendientesDeWO(w.id).length&&!clienteRevisionPendienteDeWO(w.id));
-    const bloqueadas=todas.filter(w=>woBloqueada(w.id));
-    const ws=todas.filter(w=>!woBloqueada(w.id));
-    if(!ws.length){ toast("🚫 Nada para pagar",
-      bloqueadas.length?`${bloqueadas.length} Work Order(s) con excepción sin resolver — es todo lo que hay pendiente en este período.`:"No hay Work Orders listas para pagar.","r"); return; }
-    // Punto 10: sin esto, lo que queda registrado como "nómina pagada" no
-    // incluía los adicionales de Sub-Work Order ya aprobados — se le pagaba
-    // de más al técnico (vía comprobante) de lo que el registro decía.
-    const extrasPago=extrasAprobadosDeWOs(ws);
-    let tot=ws.reduce((a,w)=>a+(egresoWO(w)||0),0) + extrasPago.reduce((a,x)=>a+(x.monto||0),0);
-    /* Neto por técnico y solo con descuentos Aplicados (igual que la vista de Nómina). */
-    if(S.periodo.tipo==="semana"){
-      const tecs=[...new Set(ws.map(w=>w.tec).filter(Boolean).concat(extrasPago.map(tecExtra).filter(Boolean)))];
-      tot=tecs.reduce((a,t)=>{
-        const b=ws.filter(w=>w.tec===t).reduce((s,w)=>s+(egresoWO(w)||0),0)+extrasPago.filter(x=>tecExtra(x)===t).reduce((s,x)=>s+(x.monto||0),0);
-        return a+Math.max(0,b-totalDesc(t,S.periodo.sem));
-      },0);
-    }
-    S.nomina.push({semana:S.semana, periodo:{...S.periodo}, tec:tec||null, wos:ws.map(w=>w.id), total:tot, quien:S.usuario, fecha:HOY_SUP, hora:hora()});
-    ws.forEach(w=>{w.pagadaTec=true; w.hist.push([hora(),`Pagada al técnico en nómina — ${periodoTexto(S.periodo)}`,S.usuario]);});
-    toast(tec?`✓ ${esc(tecN(tec))} marcado como pagado`:"✓ Nómina aprobada",
-      `${periodoTexto(S.periodo)} · ${money(tot)}${tec?"":` a ${new Set(ws.map(w=>w.tec).filter(Boolean).concat(extrasPago.map(tecExtra).filter(Boolean))).size} técnicos`}.`
-      + (bloqueadas.length?` <b>${bloqueadas.length} WO(s) quedaron afuera</b> por excepción sin resolver — se pagan cuando se resuelva.`:""),"v"); render();
-  }
+   (Approval Request, Sub-WO, cliente) queda afuera y se paga después.
+   Un registro de nómina por técnico, con su cheque y comprobante (ext) si se dieron. */
+function pagarNomina(tec, ext){
+  ext=ext||{};
+  const c=nominaCalc(tec);
+  if(!c.ws.length){ S.audOmitir=true; toast("🚫 Nada para pagar",
+    c.bloqueadas.length?`${c.bloqueadas.length} Work Order(s) con excepción sin resolver — es todo lo que hay pendiente en este período.`:"No hay Work Orders listas para pagar.","r"); return; }
+  c.filas.forEach(f=>{
+    const id="NM"+(S.nomina.length+1);
+    S.nomina.push({id, semana:S.semana, periodo:{...S.periodo}, tec:f.t, wos:f.wt.map(w=>w.id), total:f.tot, desc:Math.min(f.b,f.dd),
+      cheque:ext.cheque||"", foto:ext.foto||null, quien:S.usuario, fecha:HOY_SUP, hora:hora()});
+    f.ds.forEach(x=>{ x.nomina=id; });   // ya se descontó: no se vuelve a restar ni se puede quitar
+    f.wt.forEach(w=>{
+      const sal=saldoTecWO(w);
+      if(sal>0.004) (w.pagosTec=w.pagosTec||[]).push({monto:sal,fecha:HOY_SUP,quien:S.usuario,nota:"Pago final",nomina:id});
+      w.pagadaTec=true; w.hist.push([hora(),`Pagada al técnico en nómina — ${periodoTexto(S.periodo)}`,S.usuario]);
+    });
+  });
+  toast(tec?`✓ ${esc(tecN(tec))} marcado como pagado`:"✓ Nómina aprobada",
+    `${periodoTexto(S.periodo)} · ${money(c.tot)}${tec?"":` a ${c.filas.length} técnicos`}.`
+    + (c.previas.length?` Incluye ${c.previas.length} WO de semanas anteriores.`:"")
+    + (c.bloqueadas.length?` <b>${c.bloqueadas.length} WO(s) quedaron afuera</b> por excepción sin resolver — se pagan cuando se resuelva.`:""),"v"); render();
 }
 function aprobarWO(w, que){
   if(!w) return;
@@ -509,7 +607,7 @@ Object.assign(ACC, {
       if(f) f.conceptos=conceptos;
       else {
         const num="INV-2026-"+String(1040+(++ID.f-600)).padStart(4,"0"), id="F"+ID.f;
-        f={id,num,prop:b.prop,conceptos,emision:"2026-08-11",vence:"2026-09-10",estado:"Borrador",
+        f={id,num,prop:b.prop,conceptos,emision:HOY_SUP,vence:null,estado:"Borrador",
           pdf:num+".pdf",pdfHora:hora(),pdfQuien:S.usuario,seguimiento:[]};
         nuevas.push(f);
       }
@@ -550,7 +648,7 @@ Object.assign(ACC, {
   /* «Revisar Work Order y verificar: servicios realizados, adicionales, materiales, observaciones»
      Erika valida antes de que se pueda facturar o pagar (Proceso de Facturación y Nómina) */
   validarModal: d => { S._valDraft=null; modalValidar(W(+d.id)); },
-  valMatModal: d => { const w=W(+d.id); if(!w) return; leerValDraft(w); modalMaterialesVal(w); },
+  valMatModal: d => { const w=W(+d.id); if(!w) return; leerValDraft(w); S._valMatDraft=null; modalMaterialesVal(w); },   // siempre parte de lo guardado: lo no guardado se descarta
   valMatAgregar: d => { const w=W(+d.id); leerValMatDraft(); const f=S._valMatDraft&&S._valMatDraft.filas;
     if(!w||!f) return; const p=S.productos.find(x=>x.consumible!==false&&x.cat!=="Suministros de oficina");
     f.push({id:null,prod:p?p.id:"",cant:"1",costo:p?String(p.costo||0):"0"}); modalMaterialesVal(w); },
@@ -594,11 +692,29 @@ Object.assign(ACC, {
   validarOK: d => aprobarWO(W(+d.id),"ambos"),
   aprobPago: d => aprobarWO(W(+d.id),"pago"),
   aprobFactura: d => aprobarWO(W(+d.id),"factura"),
-  /* Asigna en bloque una categoría a una factura del borrador; Erika decide, nada es automático. */
-  facAsignarCat: () => {
+  /* El lote es una excepción manual: solo suma las líneas coincidentes a la
+     factura indicada. Nunca deselecciona ni reasigna las que no coincidieron. */
+  facAsignarLote: () => {
     const b=leerBorrador(); if(!b) return;
-    const cat=val("fbCat"), g=Math.min(6,Math.max(1,+val("fbCatG")||1));
-    b.lineas.filter(l=>catLinea(l)===cat).forEach(l=>{ l.grupo=g; });
+    const desde=val("fbLoteDesde"), hasta=val("fbLoteHasta"), tipo=val("fbLoteTipo");
+    const factura=Math.min(6,Math.max(1,+val("fbLoteFactura")||1));
+    b.lote={desde,hasta,tipo,factura};
+    if(!tipo){
+      S.audOmitir=true; marcaFalta(["fbLoteTipo"]);
+      toast("Elige el tipo","Selecciona Clean, Paint, Carpet o Extras para armar ese lote.","r"); return;
+    }
+    if(desde&&hasta&&desde>hasta){
+      S.audOmitir=true; marcaFalta(["fbLoteDesde","fbLoteHasta"]);
+      toast("Rango inválido","«Desde» no puede ser posterior a «Hasta».","r"); return;
+    }
+    const coincidentes=b.lineas.filter(l=>{
+      const fecha=l.fecha||"";
+      return (!desde||fecha>=desde) && (!hasta||fecha<=hasta) && (!tipo||tipoLoteLinea(l)===tipo);
+    });
+    if(!coincidentes.length){
+      toast("No hay líneas coincidentes","Ajusta el rango o el tipo de trabajo; no se modificó ninguna línea.","w"); return;
+    }
+    coincidentes.forEach(l=>{ l.seleccionada=true; l.grupo=factura; });
     modalBorradorFactura();
   },
   /* El comprobante (foto real) vive en S._recibo mientras el modal está abierto; se pinta sin rearmar el formulario. */
@@ -645,11 +761,15 @@ Object.assign(ACC, {
   facEnviar: d => modalFactura(d.id,true),
   facEnviarOK: d => {
     const f=by(S.facturas,d.id), p=P(f.prop), c=CLI(p.cliente);
-    f.estado="Enviada"; f.envio="2026-08-11"; f.mail=val("facMail")||c.mail;
+    // El plazo corre desde el envío: hoy + días de crédito de la propiedad, salvo que ya se fijó a mano.
+    const n=diasCreditoProp(f.prop), calc=sumarDias(HOY_SUP,n), pre=f.venceManual&&f.vence?f.vence:calc, v=val("facVence")||pre;
+    if(v<f.emision){ marcaFalta(["facVence"]); document.getElementById("facVence").parentElement.classList.add("bad"); toast("Fecha inválida",`El vencimiento no puede ser antes de la emisión (${esc(f.emision)}).`,"r"); return; }
+    f.estado="Enviada"; f.envio=HOY_SUP; f.mail=val("facMail")||c.mail;
+    f.diasCredito=n; f.vence=v; if(v!==pre) f.venceManual=true;
     f.expediente=resumenExpedienteFactura(f);
     f.lineas.forEach(id=>{const w=W(id); if(w) w.hist.push([hora(),`Factura ${f.num} enviada al cliente`,S.usuario]);});
     cm();
-    toast("✓ Factura enviada",`<b>${esc(f.num)}</b> · ${money(f.total)} a ${esc(f.mail||"—")}. El plazo de cobranza corre desde hoy: vence ${esc(f.vence)}.`,"v");
+    toast("✓ Factura enviada",`<b>${esc(f.num)}</b> · ${money(f.total)} a ${esc(f.mail||"—")}. Vence ${esc(f.vence)} (${f.venceManual?"fecha manual":n+" días"}).`,"v");
     render();
   },
   cobrar: d => modalRegistrarPago(d.id),
@@ -675,6 +795,21 @@ Object.assign(ACC, {
     toast("✓ Pago registrado",cerrado?`${esc(f.num)} quedó pagada. ${quedanAbiertas?"La Work Order seguirá abierta hasta cobrar sus otras facturas.":"Invoice y Work Orders quedaron cerrados."}`:`${esc(f.num)} tiene ${money(f.total-recibido)} pendiente. El pago parcial quedó con su comprobante.`,"v"); render();
   },
   cobGestionar: d => modalCobranza(d.id),
+  /* Cambiar el vencimiento de una factura ya enviada: exige motivo y queda en el seguimiento. */
+  facVenceCambiar: d => { const f=by(S.facturas,d.id);
+    modal(`<div class="mh"><h3>Vencimiento — ${esc(f.num)}</h3><p>Hoy vence ${esc(f.vence)}.</p></div>
+    <div class="mb"><div class="fld"><label>Nueva fecha <span class="req">*</span></label><input id="fvFecha" type="date" min="${esc(f.emision)}" value="${esc(f.vence)}"></div>
+      <div class="fld"><label>Motivo <span class="req">*</span></label><input id="fvMot" placeholder="Ej. el cliente pidió más plazo"></div></div>
+    <div class="mf"><button class="btn" data-a="cobGestionar" data-id="${f.id}">Cancelar</button><button class="btn p" data-a="facVenceGuardar" data-id="${f.id}">Guardar</button></div>`,true); },
+  facVenceGuardar: d => { const f=by(S.facturas,d.id), v=val("fvFecha"), mot=val("fvMot").trim();
+    if(marcaFalta(["fvFecha","fvMot"])){ toast("Faltan datos","Fecha y motivo son obligatorios.","r"); return; }
+    if(v<f.emision){ document.getElementById("fvFecha").parentElement.classList.add("bad"); toast("Fecha inválida",`No puede ser antes de la emisión (${esc(f.emision)}).`,"r"); return; }
+    if(v===f.vence){ toast("Sin cambios","Es la misma fecha de vencimiento.",""); return; }
+    f.seguimiento=f.seguimiento||[];
+    f.seguimiento.push({tipo:"vence",fecha:HOY_SUP,hora:hora(),quien:S.usuario,nota:`${f.vence} → ${v} · ${mot}`});
+    f.vence=v; f.venceManual=true; flash("fac:"+f.id);
+    toast("✓ Vencimiento cambiado",`<b>${esc(f.num)}</b> vence ${esc(v)}.`,"v");
+    render(); modalCobranza(f.id); },
   /* Escalera de cobranza del flujograma: Reminder → Correo Overdue → Llamada.
      Cada paso solo se habilita cuando ya pasó el anterior (ver modalCobranza). */
   cobRecordatorio: d => {
@@ -692,6 +827,16 @@ Object.assign(ACC, {
     flash("fac:"+f.id);
     toast("✓ Correo overdue enviado",`Se avisó a <b>${esc(P(f.prop).nombre)}</b> que ${esc(f.num)} sigue vencida.`,"v");
     modalCobranza(f.id);
+  },
+  cobAgrupadoModal: d => modalCobAgrupado(d.cli),
+  cobAgrupadoEnviar: d => {
+    const mail=val("caMail").trim(), ids=[...document.querySelectorAll(".caFac:checked")].map(e=>e.value);
+    if(!mail){ S.audOmitir=true; marcaFalta(["caMail"]); toast("Falta el correo","Escribe a quién se envía.","r"); return; }
+    if(!ids.length){ S.audOmitir=true; toast("Elige facturas","Marca al menos una factura vencida.","r"); return; }
+    const fs=ids.map(id=>by(S.facturas,id)), nums=fs.map(f=>f.num).join(", "), nota=val("caNota").trim();
+    fs.forEach(f=>{ (f.seguimiento=f.seguimiento||[]).push({tipo:"agrupado",fecha:HOY_SUP,hora:hora(),quien:S.usuario,
+      nota:`A ${mail} · junto con ${nums}${nota?" · "+nota:""}`}); flash("fac:"+f.id); });
+    cm(); toast("✓ Recordatorio enviado",`${fs.length} factura(s) · ${money(fs.reduce((a,f)=>a+f.total,0))} a ${esc(mail)}.`,"v"); render();
   },
   cobLlamadaModal: d => modalCobLlamada(d.id),
   cobLlamadaGuardar: d => {

@@ -272,7 +272,7 @@ const AYUDA_VISTA = {
     tips:["Regla para pagarle al técnico: alcanza con que Erika la valide acá — no hace falta esperar que Gustavo la haya aprobado.","«Revisar y validar» abre el detalle de una orden.","Una WO con Approval Request pendiente no se paga hasta que se resuelva — el resto del período sí."]},
   facturacion:{t:"Facturación", d:"De órdenes terminadas a factura, agrupadas por propiedad, sin volver a escribir nada. El período (semana / día / rango / mes) se elige arriba.",
     tips:["Regla para poder facturar: hacen falta las DOS cosas juntas — aprobada por Gustavo (Supervisión) y validada por Erika (Nómina). Si falta una, no aparece.","La tabla «Por qué todavía no aparecen algunas WO» explica el motivo exacto de cada una que quedó afuera.","«Generar factura» crea la factura de esa propiedad.","Se frena solo la WO con Approval Request pendiente o sin tarifa, no toda la propiedad."]},
-  cobranza:{t:"Cobranza", d:"El seguimiento de las facturas emitidas. Pasados 30 días sin pago, arranca la secuencia de reclamo.",
+  cobranza:{t:"Cobranza", d:"El seguimiento de las facturas emitidas. Al pasar su vencimiento sin pago, arranca la secuencia de reclamo.",
     tips:[]},
   inventario:{t:"Inventario de materiales", d:"Los materiales. El stock no se edita: es la suma de las compras menos las salidas.",
     tips:["Cada salida queda ligada a la Work Order donde se usó."]},

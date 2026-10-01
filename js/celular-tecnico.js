@@ -51,8 +51,9 @@ function renderFon(){
     const sem=S.semana;
     const ws=S.wos.filter(w=>w.tec===t.id && w.semana===sem && w.estado==="Completed");
     const extra=extrasAprobadosDeWOs(S.wos.filter(w=>w.semana===sem)).filter(x=>tecExtra(x)===t.id);
-    const desc=descDe(t.id,sem);
-    const base=ws.reduce((a,w)=>a+(egresoWO(w)||0),0);
+    const desc=descSemana(t.id,sem);
+    const previas=woPendAnteriores(t.id,sem);   // sin pagar de semanas anteriores
+    const base=ws.concat(previas).reduce((a,w)=>a+montoNomWO(w),0);
     const totExtra=extra.reduce((a,x)=>a+(x.monto||0),0);
     const totDesc=desc.reduce((a,x)=>a+x.monto,0);
     const total=base+totExtra-totDesc;
@@ -66,13 +67,17 @@ function renderFon(){
         <div style="font-size:10.5px;opacity:.85">${ws.length} trabajo(s) terminado(s)</div></div>
       <div class="dc"><div class="dl" style="margin:0 0 2px">Trabajos</div>
         ${ws.map(w=>fila(`${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}`,
-            `${esc(w.fecha.slice(5))} · ${esc(w.serv)}${w.touchup&&egresoWO(w)===0?" · corrección, no se paga":""}${w.pagadaTec?" · ya pagado":""}`,
-            egresoWO(w)!==null?money(egresoWO(w)):"Por definir", egresoWO(w)===null?"var(--ambar)":"")).join("")
+            `${esc(w.fecha.slice(5))} · ${esc(w.serv)}${w.touchup&&egresoWO(w)===0?" · corrección, no se paga":""}${w.pagadaTec?" · ya pagado":""}${!w.pagadaTec&&pagadoTecWO(w)>0?` · Pagado parcial ${money(pagadoTecWO(w))} de ${money(egresoWO(w))}`:""}`,
+            egresoWO(w)!==null?money(montoNomWO(w)):"Por definir", egresoWO(w)===null?"var(--ambar)":"")).join("")
           ||`<div class="ds" style="padding:8px 0">Todavía no tienes trabajos terminados esta semana.</div>`}</div>
+      ${previas.length?`<div class="dc"><div class="dl" style="margin:0 0 2px">Pendientes anteriores</div>
+        ${previas.map(w=>fila(`${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}`,
+            `${esc(w.fecha.slice(5))} · ${esc(w.serv)}${pagadoTecWO(w)>0?` · Pagado parcial ${money(pagadoTecWO(w))} de ${money(egresoWO(w))}`:""}`,
+            egresoWO(w)!==null?money(montoNomWO(w)):"Por definir", egresoWO(w)===null?"var(--ambar)":"")).join("")}</div>`:""}
       ${extra.length?`<div class="dc"><div class="dl" style="margin:0 0 2px">Pagos adicionales aprobados</div>
         ${extra.map(x=>fila(`Adicional · WO-${x.wo}`,esc((x.motivo||"").slice(0,60)),"+"+money(x.monto),"var(--verde)")).join("")}</div>`:""}
       ${desc.length?`<div class="dc"><div class="dl" style="margin:0 0 2px">Descuentos</div>
-        ${desc.map(x=>fila(esc(x.motivo||x.concepto||"Descuento"),x.wo?`WO-${x.wo}`:"","−"+money(x.monto),"var(--rojo)")).join("")}</div>`:""}
+        ${desc.map(x=>fila(esc(x.concepto||x.motivo||"Descuento"),[x.wo?`WO-${x.wo}`:"",x.desc?esc(x.desc):""].filter(Boolean).join(" · "),"−"+money(x.monto),"var(--rojo)")).join("")}</div>`:""}
       ${ws.some(w=>egresoWO(w)===null)?`<div class="ds" style="text-align:center;margin-top:4px">"Por definir": oficina todavía no carga el pago de ese trabajo.</div>`:""}`;
   }
   else if(S.phView==="subwo" && S.phSub){
@@ -674,6 +679,9 @@ function quitarDescuento(dv){
 /* Solo los Aplicados restan plata; Por decidir y No aplicado nunca. */
 const descTodos = (tec,sem) => S.descuentos.filter(x=>x.tec===tec && x.semana===sem);
 const descDe    = (tec,sem) => descTodos(tec,sem).filter(x=>x.estado==="Aplicado");
+/* Los de la semana + los Aplicados de semanas anteriores que todavía no se descontaron
+   (al técnico no se le pagó esa semana): se restan en el pago donde realmente cobra. */
+const descSemana = (tec,sem) => descDe(tec,sem).concat(S.descuentos.filter(x=>x.tec===tec && x.semana<sem && x.estado==="Aplicado" && !x.nomina));
 const totalDesc = (tec,sem) => descDe(tec,sem).reduce((a,x)=>a+x.monto,0);
 
 /* ── Helpers del reporte diario ── */
