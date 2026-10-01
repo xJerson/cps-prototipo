@@ -69,7 +69,8 @@ Object.assign(ACC, {
     const selEl = document.getElementById("scContactoSel");
     const datos = {prop:propSel, propNombre:"", contactoId: (selEl && selEl.value) ? selEl.value : null,
       contacto:val("scContacto"), correo:val("scCorreo"), alcance:val("scAlcance"),
-      inspeccion, fechaObjetivo:val("scFecha"), notas:val("scNotas")};
+      inspeccion, fechaObjetivo:val("scFecha"), notas:val("scNotas"),
+      origen:val("scOrigen")||"Claudia", pidio:val("scOrigen")==="Correo"?val("scPidio"):""};
     const yo = d&&d.id ? by(S.solicitudesComerciales,d.id) : null;
     if(yo){
       Object.assign(yo, datos);
@@ -81,25 +82,29 @@ Object.assign(ACC, {
       return;
     }
     const ns = {id:"SC"+Date.now(), fecha:"2026-08-11", quien:S.usuario, estimadoId:null,
-      estado: inspeccion?"Esperando inspección":"Lista para estimado", ...datos};
+      estado: inspeccion?"Esperando inspección":"Lista para estimado", ...solSello(), ...datos};
     S.solicitudesComerciales.unshift(ns); flash("solcom:"+ns.id);
+    // Si no la registró Claudia, se le avisa: tiene 24h para contestar
+    if(S.usuario!=="Claudia") avisar("Claudia","Nueva solicitud de estimado",
+      `${esc(ns.prop?P(ns.prop).nombre:(ns.propNombre||"Propiedad nueva"))} (${ns.origen}) — contestar antes de ${fmtLim(ns.limite)}`,"a");
     cm();
     toast("✓ Solicitud registrada",`Lydia registró el pedido de <b>${esc(ns.contacto)}</b>.`
       + (inspeccion?" Falta asignar inspección a Gustavo.":" Ya se puede armar el estimado."),"v"); render();
   },
   solComInspeccion: d => {
     const s = by(S.solicitudesComerciales,d.id);
-    s.inspAsignada = true;
+    s.inspAsignada = true; solResponder(s,"Inspección");
     toast("Inspección asignada a Gustavo",`Cuando Gustavo entregue su reporte de campo de esta propiedad, la solicitud queda lista para armar el estimado.`,"v");
     render();
   },
-  solComDescartar: d => { const s=by(S.solicitudesComerciales,d.id); s.estado="Descartada"; toast("Solicitud descartada","","w"); render(); },
+  solComDescartar: d => { const s=by(S.solicitudesComerciales,d.id); s.estado="Descartada"; solResponder(s,"Descartada"); toast("Solicitud descartada","","w"); render(); },
   /* Convierte la solicitud en un estimado — el mismo formulario de vCita,
      ya con la propiedad y el contacto cargados. */
   solComEstimado: d => {
     const s = by(S.solicitudesComerciales,d.id);
     if(!s.prop){ toast("🚫 Falta registrar la propiedad","Crea primero la Propiedad (con al menos un Contacto) antes de armar el estimado.","r"); return; }
     if(s.inspeccion && !solInspeccionLista(s)){ toast("🚫 Falta el reporte de inspección","Gustavo todavía no entrega el reporte de campo de esta propiedad.","r"); return; }
+    solResponder(s,"Estimado");
     estInicializarBorrador(s.prop, s.id);
     toast("Estimado en preparación",`Se abre con <b>${esc(P(s.prop).nombre)}</b> ya cargada. Alcance pedido: «${esc(s.alcance)}».`,"v");
     modalEst();

@@ -190,13 +190,15 @@ VIEWS.solicitudes = () => `
     </div>`;})()}
 
   <div class="card"><table>
-    <thead><tr><th>Fecha</th><th>Propiedad</th><th>Contacto</th><th>Alcance</th><th>Inspección</th><th>Estado</th><th></th></tr></thead>
+    <thead><tr><th>Fecha</th><th>Propiedad</th><th>Contacto</th><th>Alcance</th><th>Origen</th><th>Inspección</th><th>Respuesta</th><th>Estado</th><th></th></tr></thead>
     <tbody>${S.solicitudesComerciales.map(s=>`<tr class="${fl("solcom:"+s.id)}">
       <td class="mono">${esc(s.fecha)}</td>
       <td>${s.prop?esc(P(s.prop).nombre):`${esc(s.propNombre)} <span class="pill w">nueva</span>`}</td>
       <td>${esc(s.contacto)}<div style="font-size:10.5px;color:var(--faint)">${esc(s.correo)}</div></td>
       <td>${esc(s.alcance.length>60?s.alcance.slice(0,60)+"…":s.alcance)}</td>
+      <td>${s.origen?`<span class="pill">${esc(s.origen)}</span>`:"—"}${s.pidio?`<div style="font-size:10.5px;color:var(--faint)">${esc(s.pidio)}</div>`:""}</td>
       <td>${s.inspeccion?`<span class="pill ${solInspeccionLista(s)?"v":"w"}">${solInspeccionLista(s)?"Recibida":"Pendiente"}</span>`:'<span style="color:var(--faint)">No requiere</span>'}</td>
+      <td>${solRespuestaHTML(s)}</td>
       <td><span class="pill ${s.estado==="Estimado creado"?"v":s.estado==="Descartada"?"r":"a"}">${esc(s.estado)}</span></td>
       <td style="text-align:right;white-space:nowrap">
         ${s.estado==="Esperando inspección"&&!solInspeccionLista(s)?`<button class="btn sm" data-a="solComInspeccion" data-id="${s.id}">Asignar inspección a Gustavo</button>`:""}
@@ -204,7 +206,7 @@ VIEWS.solicitudes = () => `
           <button class="btn sm" data-a="solComNueva" data-id="${s.id}">Editar</button>
           <button class="btn sm" data-a="solComDescartar" data-id="${s.id}">Descartar</button>`:""}
         ${s.estado==="Estimado creado"?`<button class="btn sm" data-a="estInvoice" data-id="${s.estimadoId}">Ver estimado</button>`:""}
-      </td></tr>`).join("")||`<tr><td colspan="7" class="empty">Sin solicitudes todavía</td></tr>`}
+      </td></tr>`).join("")||`<tr><td colspan="9" class="empty">Sin solicitudes todavía</td></tr>`}
     </tbody></table></div>
   <div class="note">El embudo comercial completo se ve aquí: cuántos pedidos entran, cuántos requieren inspección de Gustavo, cuántos terminan convertidos en un estimado — y cuántos se caen antes de llegar a eso.</div>`;
 
@@ -250,6 +252,15 @@ function refSolCom(preselectId, preservarTexto){
       : "";
   }
 }
+/* Celda "Respuesta": cuenta regresiva de 24h, o cómo cerró */
+function solRespuestaHTML(s){
+  if(!s.respondida && (s.estado==="Estimado creado"||s.estado==="Descartada")) return "—";
+  const p=solPlazo(s);
+  if(p.estado==="abierta") return p.horas<0 ? `<span class="pill r">vencida hace ${fmtHoras(p.horas)}</span>`
+    : `<span class="pill ${p.horas<=4?"a":""}">⏱ faltan ${fmtHoras(p.horas)}</span>`;
+  return p.estado==="a tiempo" ? `<span class="pill v">✅ a tiempo (${fmtHoras(p.horas)})</span>`
+    : `<span class="pill r">⚠ tarde (${fmtHoras(p.horas)})</span>`;
+}
 function modalSolCom(id){
   const s = id ? by(S.solicitudesComerciales,id) : null;
   modal(`<div class="mh"><h3>${s?"Editar solicitud":"Nueva Solicitud Comercial"}</h3><p>Lo mismo que Lydia anota cuando alguien pide un precio.</p></div>
@@ -269,7 +280,11 @@ function modalSolCom(id){
     <div class="fg c2">
       <div class="fld"><label>¿Requiere inspección en sitio? <span class="req">*</span></label>
         <select id="scInspeccion"><option value="no" ${!(s&&s.inspeccion)?"selected":""}>No</option><option value="si" ${s&&s.inspeccion?"selected":""}>Sí</option></select></div>
-      <div class="fld"><label>Fecha objetivo <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><input type="date" id="scFecha" value="${s?esc(s.fechaObjetivo||""):""}"></div></div>
+      <div class="fld"><label>Cliente lo necesita <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><input type="date" id="scFecha" value="${s?esc(s.fechaObjetivo||""):""}"></div></div>
+    <div class="fg c2">
+      <div class="fld"><label>Origen</label>
+        <select id="scOrigen">${["Claudia","Correo","Gustavo","Visita"].map(o=>`<option ${(s&&s.origen||"Claudia")===o?"selected":""}>${o}</option>`).join("")}</select></div>
+      <div class="fld"><label>Pidió <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— si fue por correo</span></label><input id="scPidio" placeholder="¿Quién lo pidió?" value="${s?esc(s.pidio||""):""}"></div></div>
     <div class="fld" style="margin-bottom:0"><label>Notas o requerimientos especiales</label><textarea id="scNotas" rows="2">${s?esc(s.notas||""):""}</textarea></div>
   </div>
   <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
@@ -294,8 +309,10 @@ function ramificarVisita(v){
       const sc = {id:"SC"+Date.now(), fecha:"2026-08-11", prop:v.prop, propNombre:v.propNombre||"", contactoId:v.contactoId||null,
         contacto:v.contacto, correo:v.correo||"", alcance:v.notas, inspeccion:false, fechaObjetivo:"",
         notas:`Generada desde la visita comercial de ${v.quien||S.usuario} el ${v.fecha}.`,
-        quien:S.usuario, estado:"Lista para estimado", estimadoId:null};
+        quien:S.usuario, estado:"Lista para estimado", estimadoId:null, origen:"Visita", pidio:"", ...solSello()};
       S.solicitudesComerciales.unshift(sc); v.solicitudId = sc.id;
+      if(S.usuario!=="Claudia") avisar("Claudia","Nueva solicitud de estimado",
+        `${esc(sc.prop?P(sc.prop).nombre:(sc.propNombre||"Propiedad nueva"))} (Visita) — contestar antes de ${fmtLim(sc.limite)}`,"a");
     }
     toast("✓ Pasa a Solicitud Comercial",`Se creó la solicitud de <b>${esc(v.contacto)}</b> — ya se puede armar el estimado.`,"v");
   } else if(v.resultado==="Servicio directo"){
@@ -380,7 +397,8 @@ function leerSolComDraft(){
   const sel = document.getElementById("scContactoSel");
   return {id: btn?btn.dataset.id:"", prop:get("scProp"),
     contactoId: sel?sel.value:null, contacto:get("scContacto"), correo:get("scCorreo"), alcance:get("scAlcance"),
-    inspeccion:get("scInspeccion"), fecha:get("scFecha"), notas:get("scNotas")};
+    inspeccion:get("scInspeccion"), fecha:get("scFecha"), notas:get("scNotas"),
+    origen:get("scOrigen"), pidio:get("scPidio")};
 }
 function volverASolComDraft(dr){
   cm(); modalSolCom(dr.id||null);
@@ -392,7 +410,7 @@ function volverASolComDraft(dr){
   // puesta. Mismo mecanismo que en Visita Comercial.
   if(dr.prop) refSolCom(dr.contactoId);
   set("scContacto",dr.contacto); set("scCorreo",dr.correo);
-  set("scAlcance",dr.alcance); set("scInspeccion",dr.inspeccion); set("scFecha",dr.fecha); set("scNotas",dr.notas);
+  set("scAlcance",dr.alcance); set("scInspeccion",dr.inspeccion); set("scFecha",dr.fecha); set("scNotas",dr.notas); set("scOrigen",dr.origen); set("scPidio",dr.pidio);
 }
 function modalVisitaCom(id){
   const v = id ? by(S.visitas, id) : null;

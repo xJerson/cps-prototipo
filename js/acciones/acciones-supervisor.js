@@ -506,11 +506,11 @@ Object.assign(ACC, {
       const sc = {id:"SC"+Date.now(), fecha:"2026-08-11", quien:tecN(GUSTAVO), estimadoId:null,
         estado:"Lista para estimado", prop:r.prop, propNombre:"",
         contacto:ctc?ctc.nombre:"— por confirmar —", correo:ctc?ctc.mail:"",
-        alcance:r.adicional.trim(), inspeccion:false, fechaObjetivo:"",
+        alcance:r.adicional.trim(), inspeccion:false, fechaObjetivo:"", origen:"Gustavo", pidio:"", ...solSello(),
         notas:`Trabajo adicional recomendado por ${tecN(GUSTAVO)} durante la supervisión de ${esc(U(r.unidad).num)} (informe ${r.id}).`};
       S.solicitudesComerciales.unshift(sc); flash("solcom:"+sc.id);
       avisar("Claudia","Gustavo recomienda trabajo adicional",
-        `${esc(P(r.prop).nombre)} ${U(r.unidad)?esc(U(r.unidad).num):""} — ${esc(r.adicional.slice(0,90))}. Ya quedó como Solicitud Comercial, lista para armar el estimado.`,"a");
+        `${esc(P(r.prop).nombre)} ${U(r.unidad)?esc(U(r.unidad).num):""} — ${esc(r.adicional.slice(0,90))}. Ya quedó como Solicitud Comercial — contestar antes de ${fmtLim(sc.limite)}.`,"a");
     }
     if(pideDev){ ACC.gDevNueva({prop:r.prop, unidad:r.unidad, desc:g.problemas||g.nota||""}); return; }
     render();

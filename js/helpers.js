@@ -103,6 +103,28 @@ function unidadCardHTML(u){
   </div>`;
 }
 
+/* Reloj simulado: HOY_SUP + hora() — de ahí salen las 24h para contestar una Solicitud Comercial. */
+function ahoraSim(){ const [y,m,d]=HOY_SUP.split("-").map(Number); return new Date(y,m-1,d,0,S.reloj); }
+function isoMin(dt){ const p=n=>String(n).padStart(2,"0"); return `${dt.getFullYear()}-${p(dt.getMonth()+1)}-${p(dt.getDate())}T${p(dt.getHours())}:${p(dt.getMinutes())}`; }
+const isoADate = iso => { const [f,h]=iso.split("T"); const [y,m,d]=f.split("-").map(Number); const [hh,mm]=(h||"00:00").split(":").map(Number); return new Date(y,m-1,d,hh,mm); };
+/* Marca de creación + límite (+24h) para una solicitud nueva */
+function solSello(){ const c=ahoraSim(); return {creada:isoMin(c), limite:isoMin(new Date(c.getTime()+864e5))}; }
+/* "dd/mm HH:MM" de un ISO */
+const fmtLim = iso => { const d=isoADate(iso), p=n=>String(n).padStart(2,"0"); return `${p(d.getDate())}/${p(d.getMonth()+1)} ${p(d.getHours())}:${p(d.getMinutes())}`; };
+/* Plazo de 24h de una solicitud: {estado:"abierta"|"a tiempo"|"tarde", horas}
+   — abierta: horas que faltan (negativas si ya venció); cerrada: horas que tardó. Seeds sin creada: fecha+09:00. */
+function solPlazo(s){
+  const creada = isoADate(s.creada || (s.fecha+"T09:00"));
+  const limite = s.limite ? isoADate(s.limite) : new Date(creada.getTime()+864e5);
+  if(s.respondida){ const r=isoADate(s.respondida);
+    return {estado:r<=limite?"a tiempo":"tarde", horas:(r-creada)/36e5}; }
+  return {estado:"abierta", horas:(limite-ahoraSim())/36e5};
+}
+/* La primera respuesta cierra el plazo; nunca se pisa */
+function solResponder(s, como){ if(!s.respondida){ s.respondida=isoMin(ahoraSim()); s.respuesta=como; } }
+/* "3h" / "<1h" */
+const fmtHoras = h => { const a=Math.abs(h); return a<1?"<1h":Math.round(a)+"h"; };
+
 /* Hay cosas que le pasan a alguien que no está mirando la pantalla. Un adicional
    traba la Work Order y eso le desarma el día a Thalia — aunque la decisión no
    sea suya. `avisar` deja el mensaje en SU campanita, para cuando entre. */
@@ -354,5 +376,11 @@ function alertas(){
      nadie se enteraba, se reactivaba solo cuando alguien se acordaba. */
   S.visitas.filter(v=>v.tipo==="Comercial" && v.estado==="En seguimiento" && v.proximaAccion && v.proximaAccion<HOY_SUP)
     .forEach(v=>A.push({t:"Seguimiento comercial vencido",d:`${v.prop?P(v.prop).nombre:v.propNombre} · próxima acción era ${v.proximaAccion}`,q:"Lydia",n:"r"}));
+  /* Solicitudes comerciales sin contestar: 24h para responder (estimado, inspección o descartar) */
+  S.solicitudesComerciales.filter(s=>!s.respondida && s.estado!=="Estimado creado" && s.estado!=="Descartada").forEach(s=>{
+    const p=solPlazo(s), nom=s.prop?P(s.prop).nombre:(s.propNombre||"Propiedad nueva");
+    if(p.horas<0) A.push({t:"Solicitud sin contestar",d:`Solicitud de ${nom} sin contestar — vencida hace ${fmtHoras(p.horas)}`,q:"Claudia",n:"r"});
+    else if(p.horas<=4) A.push({t:"Solicitud por vencer",d:`Solicitud de ${nom} — faltan ${fmtHoras(p.horas)} para contestar`,q:"Claudia",n:"a"});
+  });
   return A;
 }
