@@ -385,7 +385,7 @@ function bloqueDineroVal(w,dr){
       <div class="fld"><label>Cobro</label><input id="vaCobro" class="mono" value="${esc(dr.cobro!==undefined?dr.cobro:num(cobro))}" placeholder="0.00"></div>
       <div class="fld"><label>Pago técnico</label><input id="vaPago" class="mono" value="${esc(dr.pago!==undefined?dr.pago:num(pago))}" placeholder="0.00"></div></div>
     <div class="fld"><label>Motivo</label><input id="vaMot" value="${esc(dr.mot||"")}" placeholder="Obligatorio si cambias Cobro o Pago"></div>
-    ${fila("Materiales",money(mat))}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:12px"><span style="color:var(--soft)">Materiales</span><span><span class="mono">${money(mat)}</span> <button class="btn sm" data-a="valMatModal" data-id="${w.id}">Ajustar</button></span></div>
     ${comp?fila("Gastos compartidos",money(comp)):""}
     ${ajC||ajP?fila("Extras y descuentos",`cobro ${ajC>=0?"+":"−"}${money(Math.abs(ajC))} · pago ${ajP>=0?"+":"−"}${money(Math.abs(ajP))}`):""}
     ${gan===null?"":`<div style="display:flex;justify-content:space-between;padding:7px 0 0;margin-top:4px;border-top:1px solid var(--line);font-weight:750"><span>Ganancia</span><span class="mono" style="color:${gan>=0?"var(--verde)":"var(--rojo)"}">${money(gan)}</span></div>`}
@@ -425,6 +425,28 @@ function aplicarEdicionVal(w){
     w.hist.push([hora(),`${c.etq} ${c.antes===null?"sin definir":money(c.antes)} → ${money(c.despues)} · ${mot}`,S.usuario]);
   });
   return true;
+}
+/* Materiales se corrigen desde Validar WO para que Erika no tenga que salir de
+   la revisión. Cada cambio actualiza la salida de inventario, el costo de la
+   WO y la utilidad; además invalida las aprobaciones previas. */
+function leerValMatDraft(){
+  const d=S._valMatDraft; if(!d) return;
+  d.filas.forEach((f,i)=>{
+    const p=document.getElementById("vmP"+i), c=document.getElementById("vmC"+i), t=document.getElementById("vmT"+i);
+    if(p) f.prod=p.value; if(c) f.cant=c.value; if(t) f.costo=t.value;
+  });
+}
+function modalMaterialesVal(w){
+  const d=(S._valMatDraft&&S._valMatDraft.wo===w.id)?S._valMatDraft:{wo:w.id,filas:S.movs
+    .filter(m=>m.wo===w.id&&m.tipo==="salida"&&!m.cliente)
+    .map(m=>({id:m.id,prod:m.prod,cant:String(m.cant),costo:String(m.costo)}))};
+  S._valMatDraft=d;
+  const prods=S.productos.filter(p=>p.consumible!==false&&p.cat!=="Suministros de oficina");
+  modal(`<div class="mh"><h3>Ajustar materiales · WO-${w.id}</h3><p>Cambia lo usado o agrega un material. El inventario y la utilidad se actualizan.</p></div>
+    <div class="mb">${d.filas.length?d.filas.map((f,i)=>`<div class="adfila"><select id="vmP${i}">${prods.map(p=>`<option value="${p.id}" ${p.id===f.prod?"selected":""}>${esc(p.nombre)} · ${esc(p.um)}</option>`).join("")}</select><button class="adx" data-a="valMatQuitar" data-id="${w.id}" data-i="${i}">−</button><div class="adnum"><label>Cant.<input id="vmC${i}" value="${esc(f.cant)}" inputmode="decimal"></label><label>Costo<input id="vmT${i}" value="${esc(f.costo)}" inputmode="decimal"></label></div></div>`).join(""):`<div class="hint">Sin materiales registrados.</div>`}
+      <button class="btn sm" data-a="valMatAgregar" data-id="${w.id}">+ Agregar</button>
+      <div class="hint" style="margin-top:8px">El costo es el total usado en esta WO. Guardar vuelve a abrir la validación.</div></div>
+    <div class="mf"><button class="btn" data-a="valMatVolver" data-id="${w.id}">Volver</button><button class="btn p" data-a="valMatGuardar" data-id="${w.id}">Guardar materiales</button></div>`);
 }
 /* Lee del DOM lo que el usuario tocó en el borrador (sin redibujar). Cada campo se lee solo si está en pantalla:
    con el editor de línea abierto no hay tabla, y leer "" borraría el límite. */
@@ -528,6 +550,32 @@ Object.assign(ACC, {
   /* «Revisar Work Order y verificar: servicios realizados, adicionales, materiales, observaciones»
      Erika valida antes de que se pueda facturar o pagar (Proceso de Facturación y Nómina) */
   validarModal: d => { S._valDraft=null; modalValidar(W(+d.id)); },
+  valMatModal: d => { const w=W(+d.id); if(!w) return; leerValDraft(w); modalMaterialesVal(w); },
+  valMatAgregar: d => { const w=W(+d.id); leerValMatDraft(); const f=S._valMatDraft&&S._valMatDraft.filas;
+    if(!w||!f) return; const p=S.productos.find(x=>x.consumible!==false&&x.cat!=="Suministros de oficina");
+    f.push({id:null,prod:p?p.id:"",cant:"1",costo:p?String(p.costo||0):"0"}); modalMaterialesVal(w); },
+  valMatQuitar: d => { const w=W(+d.id); leerValMatDraft(); const f=S._valMatDraft&&S._valMatDraft.filas;
+    if(!w||!f) return; f.splice(+d.i,1); modalMaterialesVal(w); },
+  valMatVolver: d => { const w=W(+d.id); if(!w) return; leerValMatDraft(); modalValidar(w); },
+  valMatGuardar: d => { const w=W(+d.id); if(!w) return; leerValMatDraft(); const filas=(S._valMatDraft&&S._valMatDraft.filas)||[];
+    const actuales=S.movs.filter(m=>m.wo===w.id&&m.tipo==="salida"&&!m.cliente), disponibles={};
+    S.productos.forEach(p=>{ disponibles[p.id]=stock(p.id); });
+    actuales.forEach(m=>{ disponibles[m.prod]=(disponibles[m.prod]||0)+m.cant; });
+    const limpias=[];
+    for(const f of filas){ const cant=parseFloat(f.cant), costo=parseFloat(f.costo), p=by(S.productos,f.prod);
+      if(!p||!(cant>0)||!(costo>=0)){ S.audOmitir=true; toast("Revisa materiales","Cada línea necesita material, cantidad mayor a 0 y costo válido.","r"); return; }
+      disponibles[f.prod]=(disponibles[f.prod]||0)-cant;
+      if(disponibles[f.prod]<-0.004){ S.audOmitir=true; toast("No hay suficiente stock",`${esc(p.nombre)} no tiene esa cantidad disponible en inventario.`,"r"); return; }
+      limpias.push({id:f.id,prod:f.prod,cant,costo});
+    }
+    const porId=new Map(actuales.map(m=>[m.id,m]));
+    const ids=new Set(limpias.filter(f=>f.id).map(f=>f.id));
+    S.movs=S.movs.filter(m=>!(m.wo===w.id&&m.tipo==="salida"&&!m.cliente&&!ids.has(m.id)));
+    limpias.forEach(f=>{ const m=f.id&&porId.get(f.id); if(m) Object.assign(m,{prod:f.prod,cant:f.cant,costo:f.costo});
+      else S.movs.push({id:"M"+nid("mv"),prod:f.prod,tipo:"salida",cant:f.cant,fecha:w.fecha,wo:w.id,costo:f.costo,tienda:"",quien:S.usuario,evid:false}); });
+    desvalidar(w); w.hist.push([hora(),`Materiales ajustados (${limpias.length} línea(s))`,S.usuario]);
+    S._valMatDraft=null; modalValidar(w); toast("✓ Materiales ajustados",`WO-${w.id}: inventario y utilidad actualizados. Se deben aprobar pago y factura nuevamente.`,"v"); render();
+  },
   valGuardar: d => { const w=W(+d.id); leerValDraft(w); if(!aplicarEdicionVal(w)) return;
     S._valDraft=null; toast("✓ Guardado",`WO-${w.id} · cambios guardados. Sigue sin validar.`,"v"); modalValidar(w); render(); },
   valAjAgregar: d => { const w=W(+d.id); leerValDraft(w);
