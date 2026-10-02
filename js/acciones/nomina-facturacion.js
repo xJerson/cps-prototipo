@@ -23,7 +23,13 @@ function asignarApprovalRequest(id, quien){
     anterior&&anterior!==quien?`${anterior} → ${quien}`:quien);
   Object.assign(destino,asignacion);
   flash("exc:"+id);
-  toast("Approval Request assigned",`<b>${esc(quien)}</b> is now working this request.`,"v");
+  // Antes nadie se enteraba: la fila salía de «Unassigned» y parecía desaparecer.
+  const x=excTodas().find(e=>e.id===id)||destino;
+  if(quien!==S.usuario) avisar(quien,"Te asignaron un Approval Request",
+    `${esc(x.tipo||"Request")}${x.wo?` · WO-${x.wo}`:""} — asignado por ${esc(S.usuario)}. Lo ves en Approval Requests → «Mine».`,"a");
+  toast("Approval Request assigned", quien===S.usuario
+    ? `Ahora es tuyo: lo ves en la pestaña <b>Mine</b>.`
+    : `<b>${esc(quien)}</b> ya tiene el aviso. Salió de «Unassigned»: lo ves en <b>All</b>, y ${esc(quien)} en su <b>Mine</b>.`,"v");
   render();
 }
 function registrarHistorialApproval(x, evento, detalle){
