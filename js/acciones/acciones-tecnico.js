@@ -3,6 +3,10 @@ const UNIDADES_COMPRA=["unidad","galón","cuarto","caja","libra","pie"];
 /* Lee de la hoja de Gustavo lo tecleado antes de re-dibujarla (sacar la foto la reconstruye). */
 function leerVeh(){ const sh=S.phSheet; if(!sh||sh.t!=="veh"||!document.getElementById("gvMonto")) return sh;
   Object.assign(sh,{tipo:val("gvTipoV"),veh:val("gvVeh"),fecha:val("gvFecha"),monto:val("gvMonto"),nota:val("gvNota")}); return sh; }
+// «Necesito ayuda» del celular: opciones rápidas (la 3.ª exige texto)
+const AYUDA_OPC=["No abre la llave / no puedo entrar","Falta material","Otro"];
+function leerAyuda(){ const sh=S.phSheet; if(!sh||sh.t!=="ayuda") return sh;
+  const e=document.getElementById("ayT"); if(e) sh.txt=e.value; return sh; }
 const filaCompra = () => ({nombre:"", cant:"1", um:"unidad", uso:"todo", usado:"", pago:""});
 
 Object.assign(ACC, {
@@ -122,6 +126,32 @@ Object.assign(ACC, {
     S.phSheet.filas.push({c: cs.find(c=>!ya.includes(c)) || cs[0], q:"1"});
     render(); },
   fAdicMenos: d => { leerAdic(); S.phSheet.filas.splice(+d.i,1); render(); },
+
+  /* «Necesito ayuda»: pedido a oficina que NO frena pago ni factura de la WO
+     (ver woBloqueada). Entra a Requests como "Ayuda en sitio", con SLA de 20 min. */
+  fAyuda: d => { S.phSheet={t:"ayuda", wo:+d.id, opc:"", txt:"", foto:null}; render(); },
+  fAyudaOpc: d => { leerAyuda(); S.phSheet.opc=AYUDA_OPC[+d.i]; render(); },
+  fAyudaFoto: () => { leerAyuda(); capturarFoto(url=>{ S.phSheet.foto=url; render(); }); },
+  fAyudaOK: d => {
+    const sh=leerAyuda(), w=W(+d.id); if(!sh||sh.t!=="ayuda"||!w) return;
+    const txt=(sh.txt||"").trim();
+    if(!sh.opc){ toast("Elegí qué pasa","Marcá una opción para que oficina sepa por dónde empezar.","r"); return; }
+    if(sh.opc==="Otro" && !txt){ toast("Contanos qué pasa","Con «Otro» hace falta una línea de texto.","r"); return; }
+    S.reloj+=3;
+    const nx={id:"X"+Date.now(), tipo:"Ayuda en sitio", wo:w.id, motivo:sh.opc+(txt?" — "+txt:""), monto:null,
+      pide:"Técnico", tec:w.tec, aprueba:"Thalia", estado:"Pendiente",
+      assignedTo:null, assignedBy:null, assignedAt:null, workStatus:"Unassigned",
+      fecha:HOY_SUP, foto:sh.foto||null, opcion:sh.opc, resol:null,
+      creada:{quien:tecN(w.tec),hora:hora(),minuto:S.reloj,fecha:HOY_SUP},
+      historial:[{evento:"Created",quien:tecN(w.tec),hora:hora(),fecha:HOY_SUP}]};
+    S.excepciones.push(nx);
+    w.hist.push([hora(),`Pidió ayuda en sitio · ${sh.opc}`,tecN(w.tec)]);
+    const cuerpo=`${tecN(w.tec)} · WO-${w.id} ${P(w.prop).nombre} ${U(w.unidad).num} — ${sh.opc}`;
+    avisar("Thalia","Un técnico necesita ayuda",cuerpo,"r");
+    avisar("Gustavo","Un técnico necesita ayuda",cuerpo,"r");
+    S.phSheet=null;
+    toast("✓ Pedido enviado","La oficina ya recibió tu pedido.","v"); render();
+  },
 
   /* ---- MATERIALES (lo que el técnico gastó) — flujograma de Técnicos: se
      sube junto con la evidencia, no aparte y no lo anota otra persona. ---- */
@@ -272,7 +302,7 @@ Object.assign(ACC, {
     w.hist.push([hora(),`Pidió aprobación de un adicional · ${lista}`,T(w.tec).nombre]);
     S.phSheet=null;
     toast("⚠ Adicional enviado a oficina",
-      `${sh.filas.length} concepto(s): ${esc(lista)}. Entró como <b>Approval Request</b>: Thalia recibe primero la decisión; si está fuera de su alcance puede reasignarla a Gustavo u otra persona. La WO no se paga ni factura hasta resolverla — pero podés seguir con lo programado.`,"w");
+      `${sh.filas.length} concepto(s): ${esc(lista)}. Entró como <b>Request</b>: Thalia recibe primero la decisión; si está fuera de su alcance puede reasignarla a Gustavo u otra persona. La WO no se paga ni factura hasta resolverla — pero podés seguir con lo programado.`,"w");
     avisar("Thalia","Adicional esperando aprobación",`WO-${w.id} · ${lista}. Revisa el alcance y aprueba o reasigna la solicitud.`,"r");
     render(); },
   fTermine: d => {

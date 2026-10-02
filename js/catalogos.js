@@ -108,7 +108,7 @@ const MODS = [
   {id:"despacho",  n:"Disponibilidad",       ic:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'},
   {id:"supervision",n:"Supervisión",         ic:'<path d="M20 6L9 17l-5-5"/>'},
   {id:"gustavoweb",n:"Vista de Gustavo (web)",ic:'<rect x="5" y="2" width="14" height="20" rx="3"/><path d="M9 18h6"/>'},
-  {id:"excepciones",n:"Approval Requests",         ic:'<path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>'},
+  {id:"excepciones",n:"Requests",         ic:'<path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>'},
   {id:"reportes",  n:"Reportes",              ic:'<path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/>'},
   {id:"buscar",    n:"Buscar",               ic:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>'},
   {g:"Comercial"},

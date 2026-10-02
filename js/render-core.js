@@ -175,7 +175,7 @@ function ayudaContexto(){
     return null;
   }
 
-  /* G · Approval Requests */
+  /* G · Requests */
   /* Primero dueño, después decisión: el botón para resolver solo le aparece
      al asignado o al approver, así que la guía no puede señalarlo antes. */
   if(S.mod==="excepciones" && excPend().length){
@@ -185,8 +185,8 @@ function ayudaContexto(){
       return {sel:'[data-a="excFiltro"][data-f="mine"]',
         txt:`Tenés ${mios.length} asignado(s) a vos. Abrí la pestaña «Mine» para resolverlos.`};
     if(mios.length)
-      return {sel:'[data-a="excTarifa"],[data-a="excAprob"],[data-a="excDefinirPrecio"],[data-a="excUnidadRevisar"]',
-        txt:"Resolvé cada uno con su botón — mientras siga pendiente, frena el pago y la factura de esa WO (solo de esa)."};
+      return {sel:'[data-a="excTarifa"],[data-a="excAprob"],[data-a="excDefinirPrecio"],[data-a="excUnidadRevisar"],[data-a="excAyudaResolver"]',
+        txt:"Resolvé cada uno con su botón — mientras siga pendiente, frena el pago y la factura de esa WO (solo de esa). «Resolver» (Ayuda en sitio) no frena nada."};
     if(pend.some(x=>!x.assignedTo))
       return {sel:'[data-a="excAsignarYo"],[data-a="excAsignarModal"]',
         txt:"Estos todavía no tienen dueño. Tocá «Assign to me» para tomarlo, o «Assign» para pasárselo a alguien (le llega un aviso). Al asignarlo sale de «Unassigned» y queda en «All»."};
@@ -292,13 +292,13 @@ const AYUDA_VISTA = {
   catalogos:{t:"Catálogos", d:"Las listas que llenan cada desplegable del sistema: zonas, tipos de servicio, ubicaciones, estados de la orden.",
     tips:["Se agregan y se quitan acá, sin tocar nada más."]},
   nomina:{t:"Nómina", d:"Se arma sola con las órdenes validadas. Las completas se validan solas; acá solo aparecen las que les falta algo. El período (semana / día / rango / mes) se elige arriba.",
-    tips:["Regla para pagarle al técnico: alcanza con que Erika la valide acá — no hace falta esperar que Gustavo la haya aprobado.","«Revisar y validar» abre el detalle de una orden. Ahí mismo se ajustan los materiales con «Ajustar».","Una WO con Approval Request pendiente no se paga hasta que se resuelva — el resto del período sí.",
+    tips:["Regla para pagarle al técnico: alcanza con que Erika la valide acá — no hace falta esperar que Gustavo la haya aprobado.","«Revisar y validar» abre el detalle de una orden. Ahí mismo se ajustan los materiales con «Ajustar».","Una WO con Request pendiente no se paga hasta que se resuelva — el resto del período sí.",
       "«Marcar pagado» pide el número de cheque y la foto del comprobante. Si pagás a todos juntos, la foto se agrega después con «Adjuntar» en el historial.",
       "«Descuento» (en la tarjeta del técnico): monto, concepto, WO y una descripción corta. El técnico lo ve en su celular.",
       "«Parcial» paga una parte de una WO; queda el saldo. Lo que no se pagó en su semana aparece la siguiente en «Pendientes anteriores».",
       "El historial se filtra por técnico, fechas o palabra (WO, propiedad, número de cheque). «Ver» abre qué WO incluyó cada pago."]},
   facturacion:{t:"Facturación", d:"De órdenes terminadas a factura, agrupadas por propiedad, sin volver a escribir nada. El período (semana / día / rango / mes) se elige arriba.",
-    tips:["Regla para poder facturar: hacen falta las DOS cosas juntas — aprobada por Gustavo (Supervisión) y validada por Erika (Nómina). Si falta una, no aparece.","La tabla «Por qué todavía no aparecen algunas WO» explica el motivo exacto de cada una que quedó afuera.","«Generar factura» crea la factura de esa propiedad.","Se frena solo la WO con Approval Request pendiente o sin tarifa, no toda la propiedad.",
+    tips:["Regla para poder facturar: hacen falta las DOS cosas juntas — aprobada por Gustavo (Supervisión) y validada por Erika (Nómina). Si falta una, no aparece.","La tabla «Por qué todavía no aparecen algunas WO» explica el motivo exacto de cada una que quedó afuera.","«Generar factura» crea la factura de esa propiedad.","Se frena solo la WO con Request pendiente o sin tarifa, no toda la propiedad.",
       "<b>Normal:</b> todo lo de la propiedad va junto en Factura 1. Solo si la propiedad lo pide separado, usá «Lote manual»: fechas + tipo (Clean, Paint, Extras) → Factura 1, 2, 3…",
       "<b>Vencimiento:</b> cuenta desde que se <b>envía</b>, con los días de crédito de la propiedad (30 si no tiene otro). Al enviar se puede cambiar.",
       "El buscador y los filtros (propiedad, estado, fechas) acotan la tabla de facturas.","El PDF se descarga con el número de factura, la fecha y la hora."]},
@@ -315,7 +315,7 @@ const AYUDA_VISTA = {
     tips:["Los filtros de arriba acotan por persona o por módulo."]},
   alertas:{t:"Alertas", d:"Cosas que vencen o que faltan (un seguro por vencer, una tarifa faltante, una orden sin técnico), recalculadas solas. Ninguna es genérica.",
     tips:[]},
-  excepciones:{t:"Approval Requests", d:"Pedidos que necesitan que alguien de oficina decida: un pago extra al técnico, una tarifa que no existe, un trabajo cerrado sin fotos, un adicional que pidió el técnico desde el celular. Mientras uno siga pendiente, frena el pago y la factura <b>solo de su WO</b> — el resto sigue normal.",
+  excepciones:{t:"Requests", d:"Pedidos que necesitan que alguien de oficina decida o responda: un pago extra al técnico, una tarifa que no existe, un trabajo cerrado sin fotos, un adicional que pidió el técnico desde el celular — o un técnico pidiendo ayuda en sitio (no abre la llave, falta material…). Mientras uno siga pendiente, frena el pago y la factura <b>solo de su WO</b> — el resto sigue normal. La excepción: «Ayuda en sitio» <b>no frena</b> ni pago ni factura, pero se vuelve URGENT a los 20 min.",
     tips:["<b>Primero se asigna un dueño:</b> «Assign to me» lo tomás vos; «Assign» se lo pasás a otra persona (a esa persona le llega un aviso).",
       "<b>Las pestañas:</b> «Unassigned» = nadie lo tomó todavía · «Mine» = los tuyos · «All» = todos. Al asignar uno, sale de «Unassigned» — no se borra: queda en «All» y en el «Mine» de quien lo recibió.",
       "El botón para resolver (Aprobar, Rechazar, «Definir tarifa»…) solo le aparece al dueño asignado o a quien figura como <b>approver</b>.",
@@ -351,7 +351,8 @@ const AYUDA_FON_TEC = {
   wo:{t:"Work Order", d:"Lo que el técnico hace en la unidad, paso a paso.",
     tips:["Al llegar, confirma que la unidad coincide («Sí, coincide — empezar») o avisa si no («No coincide — avisar»).",
       "«Foto del antes» y «Foto de cómo quedó»: sin fotos de cómo quedó, la oficina no puede cobrar el trabajo.",
-      "«Necesito aprobación»: si encontró trabajo extra que no estaba en la orden. Le llega a la oficina como Approval Request.",
+      "«Necesito ayuda»: si no puede entrar (la llave no abre), falta material u otra cosa. Le llega a Thalia y Gustavo como Request «Ayuda en sitio»; no frena su pago.",
+      "«Necesito aprobación»: si encontró trabajo extra que no estaba en la orden. Le llega a la oficina como Request.",
       "«Materiales» y «Compra de materiales»: lo que usó y lo que compró en la tienda (con el ticket).",
       "«Terminé» cierra el trabajo."]},
   subwo:{t:"Sub-Work Order", d:"Un trabajo extra dentro de una orden. Se hace solo lo que la oficina autorizó.", tips:[]},

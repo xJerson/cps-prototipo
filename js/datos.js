@@ -276,7 +276,7 @@ let S = {
            ["9:15","Aprobada por el cliente vía Llamada","Claudia"],
            ["9:20","Initial finding cargado desde oficina — el técnico no pudo adjuntarlo desde el celular","Claudia"]]},
     /* Pendiente: adicional recién enviado por Diego en WO-1050, todavía sin
-       decidir — el ejemplo que faltaba para Approval Requests. */
+       decidir — el ejemplo que faltaba para Requests. */
     {id:952, sol:"SOL20260812P", wo:1050, desc:"Grieta en el techo de la sala, no estaba en el pedido original.", ubic:"Sala",
      concepto:"Sheetrock", cant:1, precio:85, pago:45, precioOrigen:"manual", catalogoId:null,
      estado:"Pendiente", aprob:null, origen:"Técnico",
@@ -326,7 +326,7 @@ let S = {
      hist:[["9:05","Sub-WO planificada aprobada: Door","Claudia"],["9:10","Initial finding cargado","Diego Ramírez"],
            ["9:50","Evidencia cargada","Diego Ramírez"],["9:55","Sub-WO terminada","Diego Ramírez"]]},
     /* Aprobado SIN precio (Claudia): Thalia habló con la propiedad y aprobó,
-       pero el cliente no dijo cuánto — queda como Approval Request "Definir
+       pero el cliente no dijo cuánto — queda como Request "Definir
        precio del adicional" para Erika (o Claudia, si hay que estimarlo). */
     {id:958, sol:"SOL20260811B", wo:1040, desc:"Manchas de moho detrás del refrigerador — no estaba en el pedido original.", ubic:"Cocina",
      concepto:"Moho", cant:1, precio:null, pago:null, precioOrigen:null, catalogoId:null,

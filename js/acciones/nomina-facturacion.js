@@ -25,9 +25,9 @@ function asignarApprovalRequest(id, quien){
   flash("exc:"+id);
   // Antes nadie se enteraba: la fila salía de «Unassigned» y parecía desaparecer.
   const x=excTodas().find(e=>e.id===id)||destino;
-  if(quien!==S.usuario) avisar(quien,"Te asignaron un Approval Request",
-    `${esc(x.tipo||"Request")}${x.wo?` · WO-${x.wo}`:""} — asignado por ${esc(S.usuario)}. Lo ves en Approval Requests → «Mine».`,"a");
-  toast("Approval Request assigned", quien===S.usuario
+  if(quien!==S.usuario) avisar(quien,"Te asignaron un Request",
+    `${esc(x.tipo||"Request")}${x.wo?` · WO-${x.wo}`:""} — asignado por ${esc(S.usuario)}. Lo ves en Requests → «Mine».`,"a");
+  toast("Request assigned", quien===S.usuario
     ? `Ahora es tuyo: lo ves en la pestaña <b>Mine</b>.`
     : `<b>${esc(quien)}</b> ya tiene el aviso. Salió de «Unassigned»: lo ves en <b>All</b>, y ${esc(quien)} en su <b>Mine</b>.`,"v");
   render();
@@ -69,19 +69,39 @@ Object.assign(ACC, {
       fecha:HOY_SUP, creada:{quien:S.usuario,hora:hora(),minuto:S.reloj,fecha:HOY_SUP},
       historial:[{evento:"Created",quien:S.usuario,hora:hora(),fecha:HOY_SUP}], resol:null};
     S.excepciones.push(nx); flash("exc:"+nx.id);
-    cm(); toast("Approval Request created",`It is <b>Unassigned</b>. Assign an owner before starting work. WO-${nx.wo} no se paga ni se factura hasta resolverla.`,"w"); render();
+    cm(); toast("Request created",`It is <b>Unassigned</b>. Assign an owner before starting work. WO-${nx.wo} no se paga ni se factura hasta resolverla.`,"w"); render();
   },
   excFiltro: d => { S.excFiltro=d.f; render(); },
   excAsignarYo: d => asignarApprovalRequest(d.id,S.usuario),
   excAsignarModal: d => {
     const x=excTodas().find(y=>y.id===d.id); if(!x) return;
     const usuarios=Object.keys(ROLES);
-    modal(`<div class="mh"><h3>Assign Approval Request</h3><p>${esc(x.tipo)}${x.wo?` · WO-${x.wo}`:""}</p></div>
+    modal(`<div class="mh"><h3>Assign Request</h3><p>${esc(x.tipo)}${x.wo?` · WO-${x.wo}`:""}</p></div>
       <div class="mb"><div class="fld"><label>Assigned to</label><select id="excAsignada">${usuarios.map(u=>`<option ${u===x.assignedTo?"selected":""}>${esc(u)}</option>`).join("")}</select></div>
       <div class="hint">The assigned person owns the approval follow-up. First-line approval defaults to Thalia; Gustavo or another person can take it when it is outside Thalia's scope.</div></div>
       <div class="mf"><button class="btn" data-a="cm">Cancel</button><button class="btn p" data-a="excAsignarGuardar" data-id="${x.id}">Assign</button></div>`);
   },
   excAsignarGuardar: d => { const quien=val("excAsignada"); cm(); asignarApprovalRequest(d.id,quien); },
+  /* «Ayuda en sitio» (la pidió el técnico desde el celular): se resuelve con una
+     nota de qué se hizo y le llega un aviso al técnico. No toca pago ni factura. */
+  excAyudaResolver: d => {
+    const x=by(S.excepciones,d.id); if(!x) return;
+    modal(`<div class="mh"><h3>Resolver ayuda</h3><p>${esc(x.motivo)}${x.wo?` · WO-${x.wo}`:""}</p></div>
+      <div class="mb"><div class="fld"><label>¿Qué se hizo? <span class="req">*</span></label><textarea id="ayN" placeholder="Ej. Gustavo le llevó la llave"></textarea></div></div>
+      <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="excAyudaOK" data-id="${x.id}">Resolver</button></div>`);
+  },
+  excAyudaOK: d => {
+    const x=by(S.excepciones,d.id), nota=leerF("ayN","");
+    if(!x) return;
+    if(!nota){ marcaFalta(["ayN"]); toast("Falta información","Escribí qué se hizo.","r"); return; }
+    x.estado="Resuelta"; x.resol={quien:S.usuario,hora:hora(),nota};
+    registrarHistorialApproval(x,"Resolved",nota);
+    const w=W(x.wo);
+    if(w) w.hist.push([hora(),`Ayuda en sitio resuelta: ${nota}`,S.usuario]);
+    noti(`Ayuda en WO-${x.wo}`,`Ayuda: ${nota}`);
+    cm(); flash("exc:"+x.id);
+    toast("✓ Ayuda resuelta","Le avisamos al técnico en su celular.","v"); render();
+  },
   excUnidadRevisar: d => modalCorregirUnidad(d.id),
   excUnidadAplicar: d => {
     const x=by(S.excepciones,d.id), datos=x&&x.datosUnidad, pisos=parseInt(val("corrPisos"));
@@ -90,13 +110,13 @@ Object.assign(ACC, {
     const u=U(datos.unidad), w=W(x.wo); if(!u||!w) return;
     const anterior=u.pisos;
     u.pisos=pisos;
-    (u.cambios||=([])).push({campo:"pisos",anterior,nuevo:pisos,quien:S.usuario,hora:hora(),wo:w.id,origen:"Approval Request"});
+    (u.cambios||=([])).push({campo:"pisos",anterior,nuevo:pisos,quien:S.usuario,hora:hora(),wo:w.id,origen:"Request"});
     x.estado="Aprobada"; x.accion=`Updated unit floors: ${anterior} → ${pisos}`;
     x.resol={quien:S.usuario,hora:hora()};
     registrarHistorialApproval(x,"Approved",x.accion);
     w.hist.push([hora(),x.accion,S.usuario]);
     cm(); flash("exc:"+x.id);
-    toast("✓ Unit data updated",`Floors for ${esc(u.num)} changed from ${anterior} to ${pisos}. The audit stays on this Approval Request.`,"v");
+    toast("✓ Unit data updated",`Floors for ${esc(u.num)} changed from ${anterior} to ${pisos}. The audit stays on this Request.`,"v");
     render();
   },
   excAprob: d => {
@@ -191,7 +211,7 @@ Object.assign(ACC, {
                           : ` No se le factura nada a la propiedad por esto — queda como costo interno.`)
       : "";
     const notaPrecio = sinPrecio.length
-      ? `<br><br>⏳ <b>${sinPrecio.length} concepto(s) aprobado(s) sin precio</b>: ${esc(nom(sinPrecio))}. Queda una Approval Request "Definir precio del adicional" — hasta que se resuelva no entra a nómina ni a factura.`
+      ? `<br><br>⏳ <b>${sinPrecio.length} concepto(s) aprobado(s) sin precio</b>: ${esc(nom(sinPrecio))}. Queda una Request "Definir precio del adicional" — hasta que se resuelva no entra a nómina ni a factura.`
       : "";
     toast(no.length ? (ok.length?"Adicional aprobado en parte":"Adicional no aprobado") : "✓ Adicional aprobado",
       `${ok.length?`Sí: <b>${esc(nom(ok))}</b>. `:""}${no.length?`No: <b>${esc(nom(no))}</b>. `:""}${sustento}${plata}${notaPrecio} `
@@ -394,7 +414,7 @@ function nominaCalc(tec){
   return {ws,bloqueadas,previas,filas,tot:filas.reduce((a,f)=>a+f.tot,0)};
 }
 /* Claudia: se puede marcar pagado por técnico; lo que le quede pendiente
-   (Approval Request, Sub-WO, cliente) queda afuera y se paga después.
+   (Request, Sub-WO, cliente) queda afuera y se paga después.
    Un registro de nómina por técnico, con su cheque y comprobante (ext) si se dieron. */
 function pagarNomina(tec, ext){
   ext=ext||{};

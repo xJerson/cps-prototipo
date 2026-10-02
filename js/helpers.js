@@ -359,7 +359,7 @@ function alertas(){
   S.wos.filter(w=>w.tec && esAgendada(w.estado) && !asisDe(w.id)).forEach(w=>A.push({t:"Sin marcar llegada",d:`WO-${w.id} · ${tecN(w.tec)} no ha marcado llegada (programada ${w.horaProg||"9:00"})`,q:"Thalia",n:"g"}));
   solTodas().filter(solPend).forEach(s=>A.push({t:"Adicional esperando aprobación",
     d:`WO-${s.wo} · ${s.lineas.filter(l=>l.estado==="Pendiente").length} concepto(s): ${solTxt(s)}`,q:s.aprobador||"Thalia",n:"r"}));
-  /* Los SLA de Approval Requests se ven también fuera de la bandeja, para que
+  /* Los SLA de Requests se ven también fuera de la bandeja, para que
      una persona no tenga que acordarse de abrirla para enterarse del vencimiento. */
   excPend().forEach(x=>{ const sla=slaApprovalRequest(x); if(sla&&sla.alerta) A.push({
     t:sla.texto, d:`${x.wo?`WO-${x.wo} · `:""}${x.tipo}: ${x.motivo}`,

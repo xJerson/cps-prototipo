@@ -428,6 +428,20 @@ function hojaCel(sh){
   </div></div>`;
   }
 
+  if(sh.t==="ayuda") return `<div class="fscrim" data-a="fSheetNo"><div class="fsheet" data-stop>
+    <div class="grab"></div>
+    <h4>Necesito ayuda</h4>
+    <div class="sub">Le llega a oficina al instante. No frena tu pago.</div>
+    <label>¿Qué pasa? <span class="req">*</span></label>
+    ${AYUDA_OPC.map((o,i)=>`<button type="button" class="db ${sh.opc===o?"p":"g"}" style="margin:0 0 5px" data-a="fAyudaOpc" data-i="${i}">${esc(o)}</button>`).join("")}
+    <textarea id="ayT" placeholder="${sh.opc==="Falta material"?"¿Qué material?":sh.opc==="Otro"?"Contanos qué pasa":"Algo más (opcional)"}">${esc(sh.txt||"")}</textarea>
+    <button type="button" class="db g" style="margin-top:7px" data-a="fAyudaFoto">${sh.foto
+      ?`<img src="${sh.foto}" style="width:16px;height:16px;object-fit:cover;border-radius:3px"> Foto agregada — tocá para cambiar`
+      :"📷 Agregar foto (opcional)"}</button>
+    <button class="db p" style="margin-top:11px" data-a="fAyudaOK" data-id="${sh.wo}">Enviar</button>
+    <button class="db g" data-a="fSheetNo">Cancelar</button>
+  </div></div>`;
+
   /* Lo que el flujograma de Técnicos pide subir junto a la evidencia —
      "materiales utilizados... y observaciones" — no tenía dónde ponerse en
      el celular. Sin esto, materialWO() de la orden queda en $0 en silencio
@@ -521,7 +535,7 @@ function hojaCel(sh){
   if(sh.t==="corrobNo"){ const w=W(sh.wo), u=U(w.unidad); return `<div class="fscrim" data-a="fSheetNo"><div class="fsheet" data-stop>
     <div class="grab"></div>
     <h4>Corregir datos de la unidad</h4>
-    <div class="sub">Esto crea una Approval Request para oficina. Tú reportas lo que ves; oficina revisa y decide si actualiza el dato.</div>
+    <div class="sub">Esto crea una Request para oficina. Tú reportas lo que ves; oficina revisa y decide si actualiza el dato.</div>
     <label>Campo</label><input value="Floors" disabled>
     <label>Dato actual</label><input value="${esc(String(u.pisos))} floor(s)" disabled>
     <label>Floors observados</label><input id="cnPisos" type="number" min="1" value="${esc(String(u.pisos))}">

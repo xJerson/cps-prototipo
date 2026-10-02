@@ -49,6 +49,8 @@ const AUD = {
   woCorroboraNoOK:{a:"Reportó que la unidad no coincide", m:"Campo"},
   fFoto:{a:"Cargó evidencia", m:"Campo"},
   fAdicOK:{a:"Pidió aprobación de adicional", m:"Campo"},
+  fAyudaOK:{a:"Pidió ayuda en sitio", m:"Campo"},
+  excAyudaOK:{a:"Resolvió una ayuda en sitio", m:"Excepciones"},
   fMaterialOK:{a:"Registró material usado", m:"Campo"},
   fCompraOK:{a:"Registró una compra de materiales en tienda", m:"Campo"},
   subwoGuardar:{a:"Creó una Sub-Work Order", m:"Work Orders"},
