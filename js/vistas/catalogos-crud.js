@@ -130,11 +130,18 @@ function fichaProp(id){
     <tr><td style="color:var(--faint)">Dónde está el shop</td><td>${esc(p.shop)||"—"}</td></tr>
     <tr><td style="color:var(--faint)">Código del shop</td><td class="mono">${esc(p.shopCode)||"—"}</td></tr>
     <tr><td style="color:var(--faint)">Horario</td><td>${esc(p.horario)||"—"}</td></tr>
-    <tr><td style="color:var(--faint)">Información de pintura</td><td>${p.notasPaint?esc(p.notasPaint):'<span style="color:var(--rojo)">— falta, bloquea el Expediente —</span>'}</td></tr>
+    <tr><td style="color:var(--faint)">Información de pintura</td><td>${p.notasPaint?esc(p.notasPaint):(S.pinturas||[]).some(x=>x.prop===id)?'<span style="color:var(--soft)">ver la tarjeta Pinturas de abajo</span>':'<span style="color:var(--rojo)">— falta, bloquea el Expediente —</span>'}</td></tr>
     <tr><td style="color:var(--faint)">Al terminar</td><td>${esc(p.finalExp)||"—"}</td></tr>
     <tr><td style="color:var(--faint)">Ojo</td><td>${esc(p.notasTec)||"—"}</td></tr>
     <tr><td style="color:var(--faint)">Activa</td><td>${p.activa?'<span class="pill v">Sí</span>':'<span class="pill g">No</span>'}</td></tr>
   </tbody></table></div>
+  <div class="card" style="margin-top:14px"><div class="chd"><h3>Pinturas</h3>
+    <span class="s">lo que usan en esta propiedad — se agrega una fila por superficie</span>
+    <span class="r"><button class="btn sm p" data-a="pinturaNueva" data-id="${id}">+ Agregar pintura</button></span></div>
+    ${(S.pinturas||[]).filter(x=>x.prop===id).length?`<table><thead><tr><th>Superficie</th><th>Marca</th><th>Color</th><th>Código</th><th>Acabado</th><th>Nota</th><th></th></tr></thead><tbody>
+      ${(S.pinturas||[]).filter(x=>x.prop===id).map(x=>`<tr><td style="font-weight:650">${esc(x.superficie)}</td><td>${esc(x.marca)||"—"}</td><td>${esc(x.color)||"—"}</td><td class="mono">${esc(x.codigo)||"—"}</td><td>${esc(x.acabado)||"—"}</td><td style="color:var(--soft)">${esc(x.nota)||"—"}</td>
+        <td style="text-align:right;white-space:nowrap"><button class="btn sm" data-a="pinturaNueva" data-id="${id}" data-pin="${esc(x.id)}">Editar</button> <button class="btn sm r" data-a="pinturaQuitar" data-id="${id}" data-pin="${esc(x.id)}">Quitar</button></td></tr>`).join("")}
+    </tbody></table>`:`<div class="empty">Sin pinturas cargadas${p.notasPaint?" — la nota «Información de pintura» de arriba sigue valiendo":""}</div>`}</div>
   ${puedeVerIngreso()?`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:14px;margin-top:14px">${(()=>{ const mv=(S.creditosProp||[]).filter(c=>c.prop===id).slice().reverse();
     return `<div class="card"><div class="chd"><h3>Crédito: ${money(saldoCredito(id))}</h3>
       <span class="s">Se usa a mano en el borrador de factura</span>

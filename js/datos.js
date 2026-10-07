@@ -365,6 +365,8 @@ let S = {
       seguimiento:[{tipo:"pago",fecha:"2026-08-11",hora:"15:00",quien:"Claudia",nota:"Pago recibido y conciliado."},{tipo:"cierre",fecha:"2026-08-11",hora:"15:00",quien:"Claudia"}]}
   ],
   creditosProp:[{id:"CR0",prop:"P1",unidad:"U1",tipo:"Abono",monto:150,motivo:"Retraso en entrega",quien:"Claudia",fecha:"2026-08-05"}],
+  pinturas:[{id:"PT0",prop:"P1",superficie:"Paredes",marca:"Sherwin Williams",color:"",codigo:"ProMar 200",acabado:"Eggshell",nota:"",quien:"Claudia",fecha:"2026-08-05"},
+    {id:"PT1",prop:"P1",superficie:"Cielos",marca:"",color:"Blanco",codigo:"",acabado:"Flat",nota:"",quien:"Claudia",fecha:"2026-08-05"}],
   creditosServ:[{id:"CS0",prop:"P1",unidad:null,serv:"Full clean",cant:2,tipo:"Abono",motivo:"Cortesía por retraso",quien:"Claudia",fecha:"2026-08-05"}],
   pagos:[{id:"PG1",factura:"F601",monto:120,medio:"Check",referencia:"CHK-10488",fecha:"2026-08-11",evidencia:true,quien:"Claudia",nota:"Partial payment received"}], nomina:[], bitacora:[], audSeq:0, avisos:[], campana:false,
   /* Expedientes post-work enviados al cliente: se conserva el token para

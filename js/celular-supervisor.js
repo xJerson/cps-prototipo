@@ -434,7 +434,7 @@ function hojaCel(sh){
     <div class="sub">Le llega a oficina al instante. No frena tu pago.</div>
     <label>¿Qué pasa? <span class="req">*</span></label>
     ${AYUDA_OPC.map((o,i)=>`<button type="button" class="db ${sh.opc===o?"p":"g"}" style="margin:0 0 5px" data-a="fAyudaOpc" data-i="${i}">${esc(o)}</button>`).join("")}
-    <textarea id="ayT" placeholder="${sh.opc==="Falta material"?"¿Qué material?":sh.opc==="Otro"?"Contanos qué pasa":"Algo más (opcional)"}">${esc(sh.txt||"")}</textarea>
+    <textarea id="ayT" placeholder="${{"Falta material":"¿Qué material?","Falta pintura":"¿Qué pintura?","Unidad sin luz, agua u otro servicio":"¿Qué servicio falta?","Otro":"Contanos qué pasa"}[sh.opc]||"Algo más (opcional)"}">${esc(sh.txt||"")}</textarea>
     <button type="button" class="db g" style="margin-top:7px" data-a="fAyudaFoto">${sh.foto
       ?`<img src="${sh.foto}" style="width:16px;height:16px;object-fit:cover;border-radius:3px"> Foto agregada — tocá para cambiar`
       :"📷 Agregar foto (opcional)"}</button>

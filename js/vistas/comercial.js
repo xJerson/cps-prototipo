@@ -22,6 +22,7 @@ function expedienteDe(pid){
     ok: c.k==="contacto" ? S.contactos.some(x=>x.prop===pid)
       : c.k==="coi" ? coiVigente(pid)
       : c.k==="estimado" ? S.estimados.some(e=>e.prop===pid && e.estado==="Aprobado")
+      : c.k==="notasPaint" ? (!!String(p.notasPaint||"").trim() || (S.pinturas||[]).some(x=>x.prop===pid))
       : !!String(p[c.k]||"").trim()
   }));
 }

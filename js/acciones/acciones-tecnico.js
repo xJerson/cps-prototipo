@@ -4,7 +4,7 @@ const UNIDADES_COMPRA=["unidad","galón","cuarto","caja","libra","pie"];
 function leerVeh(){ const sh=S.phSheet; if(!sh||sh.t!=="veh"||!document.getElementById("gvMonto")) return sh;
   Object.assign(sh,{tipo:val("gvTipoV"),veh:val("gvVeh"),fecha:val("gvFecha"),monto:val("gvMonto"),nota:val("gvNota")}); return sh; }
 // «Necesito ayuda» del celular: opciones rápidas (la 3.ª exige texto)
-const AYUDA_OPC=["No abre la llave / no puedo entrar","Falta material","Otro"];
+const AYUDA_OPC=["No abre la llave / no puedo entrar","Sin acceso al shop","Falta pintura","Falta material","Unidad sin luz, agua u otro servicio","Otro"];
 function leerAyuda(){ const sh=S.phSheet; if(!sh||sh.t!=="ayuda") return sh;
   const e=document.getElementById("ayT"); if(e) sh.txt=e.value; return sh; }
 const filaCompra = () => ({nombre:"", cant:"1", um:"unidad", uso:"todo", usado:"", pago:""});

@@ -22,6 +22,29 @@ Object.assign(ACC, {
     cm(); toast("✓ Crédito agregado",`${esc(P(pid).nombre)} · saldo ${money(saldoCredito(pid))}.`,"v"); render();
   },
   /* Crédito de servicio (cortesías): N unidades de un servicio, de la propiedad o de una unidad. Se usan desde el borrador de factura. */
+  /* Pinturas de la propiedad: lista abierta (superficie libre con sugerencias); si falta un dato, se escribe y se agrega otra fila. */
+  pinturaNueva: d => { const pid=propIdDe(d.id), x=d.pin?(S.pinturas||[]).find(y=>y.id===d.pin):null;
+    const opt=a=>a.map(v=>`<option value="${esc(v)}">`).join("");
+    modal(`<div class="mh"><h3>${x?"Editar pintura":"Agregar pintura"}</h3><p>${esc(P(pid).nombre)}</p></div>
+    <div class="mb"><div class="fg c2">
+      <div class="fld"><label>Superficie <span class="req">*</span></label><input id="ptSup" list="ptSupL" value="${esc(x?x.superficie:"")}" placeholder="Paredes, Cielos, Trim…"><datalist id="ptSupL">${opt(["Paredes","Cielos","Trim","Puertas","Gabinetes"])}</datalist></div>
+      <div class="fld"><label>Marca</label><input id="ptMarca" value="${esc(x?x.marca:"")}" placeholder="Sherwin Williams, Behr…"></div>
+      <div class="fld"><label>Color</label><input id="ptColor" value="${esc(x?x.color:"")}"></div>
+      <div class="fld"><label>Código</label><input id="ptCod" class="mono" value="${esc(x?x.codigo:"")}"></div>
+      <div class="fld"><label>Acabado (sheen)</label><input id="ptAcab" list="ptAcabL" value="${esc(x?x.acabado:"")}"><datalist id="ptAcabL">${opt(["Flat","Matte","Eggshell","Satin","Semi-gloss","Gloss"])}</datalist></div></div>
+      <div class="fld"><label>Nota <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><input id="ptNota" value="${esc(x?x.nota:"")}"></div>
+      <div class="hint">Pon lo que tengas: con la superficie y el color o el código alcanza.</div></div>
+    <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="pinturaGuardar" data-id="${esc(d.id)}" ${x?`data-pin="${esc(x.id)}"`:""}>Guardar</button></div>`); },
+  pinturaGuardar: d => { const pid=propIdDe(d.id), sup=val("ptSup").trim(), color=val("ptColor").trim(), cod=val("ptCod").trim();
+    if(!sup||(!color&&!cod)){ S.audOmitir=true; marcaFalta(["ptSup"]); toast("Falta información","Escribe la superficie y, al menos, el color o el código.","r"); return; }
+    const datos={superficie:sup,marca:val("ptMarca").trim(),color,codigo:cod,acabado:val("ptAcab").trim(),nota:val("ptNota").trim()};
+    const lista=(S.pinturas=S.pinturas||[]), x=d.pin?lista.find(y=>y.id===d.pin):null;
+    if(x) Object.assign(x,datos,{quien:S.usuario,fecha:HOY_SUP}); else lista.push({id:"PT"+Date.now(),prop:pid,...datos,quien:S.usuario,fecha:HOY_SUP});
+    S._audPint=P(pid).nombre+" · "+sup;
+    cm(); toast("✓ Pintura guardada",`${esc(sup)} · ${esc(P(pid).nombre)}.`,"v"); render(); },
+  pinturaQuitar: d => { const pid=propIdDe(d.id), lista=S.pinturas||[], x=lista.find(y=>y.id===d.pin); if(!x) return;
+    S.pinturas=lista.filter(y=>y.id!==d.pin); S._audPint=P(pid).nombre+" · "+x.superficie;
+    toast("Pintura quitada",`${esc(x.superficie)} · ${esc(P(pid).nombre)}.`,"w"); render(); },
   creditoServNuevo: d => {
     const pid=propIdDe(d.id), fb=!!d.fb, unis=S.unidades.filter(u=>u.prop===pid);
     if(fb) leerBorrador();

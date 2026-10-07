@@ -225,7 +225,7 @@ function renderFon(){
         ? `<div class="dc" style="border-color:var(--rojo)"><div class="ds" style="color:var(--rojo)"><b>Pediste ayuda</b> · esperando respuesta</div></div>`
         : `<div class="dc" style="background:var(--verde-cl);border-color:transparent"><div class="ds" style="color:var(--verde)"><b>Ayuda resuelta:</b> ${esc((ayu.resol&&ayu.resol.nota)||"")}</div></div>`) : "")
       + ((!ayu||ayu.estado!=="Pendiente") ? `<button class="db" style="background:var(--rojo);color:#fff;border-color:transparent" data-a="fAyuda" data-id="${w.id}">${icBtn(IC_ALERTA)}Necesito ayuda</button>
-         <div class="ds" style="margin:-4px 0 7px;padding:0 2px">No abre la llave, falta material… le llega a oficina al instante.</div>` : "");
+         <div class="ds" style="margin:-4px 0 7px;padding:0 2px">No abre la llave, falta pintura o material, no hay luz o agua… le llega a oficina al instante.</div>` : "");
     const acciones = ayudaH +
       (espera && w.tec
         ? `<div class="dc" style="background:var(--ambar-cl);border-color:var(--ambar)">
