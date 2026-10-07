@@ -17,6 +17,13 @@ VIEWS.supervision = () => {
 };
 
 
+/* Pantalla propia de Devoluciones (la gestiona Lydia como área de calidad): registrar la solicitud y asignar la corrección. */
+VIEWS.devoluciones = () => `
+  <div class="ph"><div><h2>Devoluciones</h2>
+    <p>Trabajos que hay que corregir, vengan de Gustavo, de la propiedad o de un correo.</p></div>
+    <div class="act"><button class="btn p" data-a="devRegistrar">+ Registrar devolución</button></div></div>
+  ${vDevoluciones()}`;
+
 /* ── DEVOLUCIONES ──────────────────────────────────────────
    Antes una devolución era un estado de la Work Order que rebotaba a Thalia y
    se perdía de vista. Ahora vive hasta que Gustavo la verifica, y la CAUSA
@@ -32,7 +39,7 @@ function vDevoluciones(){
       <td style="font-weight:650">${esc(P(d.prop).nombre)}
         <div style="font-size:10.5px;color:var(--faint)">${U(d.unidad)?esc(U(d.unidad).num):"—"}${d.wo?` · WO-${d.wo}`:""}</div></td>
       <td>${esc(d.area)}
-        <div style="font-size:10.5px;color:var(--soft);max-width:230px">${esc(d.desc)}</div></td>
+        <div style="font-size:10.5px;color:var(--soft);max-width:230px">${esc(d.desc)}</div>${d.origen?`<div style="font-size:10px;color:var(--faint)">viene de: ${esc(d.origen)}</div>`:""}</td>
       <td><span class="pill ${c.paga?"g":"b"}">${esc(d.causa)}</span>
         <div style="font-size:10px;color:var(--faint);margin-top:2px">
           ${c.paga?"se le paga":"<b>no se le paga</b>"} · ${c.cobra?"cobrable":"no cobrable"}</div></td>

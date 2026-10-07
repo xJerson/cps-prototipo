@@ -90,10 +90,10 @@ const servTodos = t => CAT.servicios.filter(s=>s.tipo===t);
 /* ══════════ ROLES — quién ve qué (UC del módulo que le toca) ══════════ */
 const ROLES = {
   "Claudia":{i:"CV",r:"Administración / Estimados",m:"*"},
-  "Lydia":  {i:"LC",r:"Comercial",     m:["tablero","clientes","solicitudes","estimados","propiedades","wo","calendario","excepciones","reportes","alertas"]},
+  "Lydia":  {i:"LC",r:"Comercial",     m:["tablero","clientes","solicitudes","estimados","propiedades","wo","calendario","devoluciones","excepciones","reportes","alertas"]},
   "Thalia": {i:"TM",r:"Programación",  m:["tablero","wo","calendario","despacho","supervision","propiedades","tecnicos","catalogos","excepciones","reportes","alertas"]},
   "Gustavo":{i:"GA",r:"Supervisión",   m:["tablero","wo","calendario","supervision","gustavoweb","inventario","tecnicos","excepciones","reportes","alertas"]},
-  "Erika":  {i:"EM",r:"Administración",m:["tablero","wo","nomina","facturacion","cobranza","tarifario","inventario","finanzas","excepciones","reportes","buscar","alertas","bitacora"]}
+  "Erika":  {i:"EM",r:"Administración",m:["tablero","wo","devoluciones","nomina","facturacion","cobranza","tarifario","inventario","finanzas","excepciones","reportes","buscar","alertas","bitacora"]}
   ,"Contador":{i:"CT",r:"Contabilidad · solo lectura",m:["tablero","finanzas","inventario","reportes"]}
 };
 /* Teléfono que se le da al cajero cuando el técnico compra material en
@@ -107,6 +107,7 @@ const MODS = [
   {id:"calendario",n:"Calendario",           ic:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>'},
   {id:"despacho",  n:"Disponibilidad",       ic:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'},
   {id:"supervision",n:"Supervisión",         ic:'<path d="M20 6L9 17l-5-5"/>'},
+  {id:"devoluciones",n:"Devoluciones",    ic:'<path d="M9 14L4 9l5-5"/><path d="M20 20v-7a4 4 0 0 0-4-4H4"/>'},
   {id:"gustavoweb",n:"Vista de Gustavo (web)",ic:'<rect x="5" y="2" width="14" height="20" rx="3"/><path d="M9 18h6"/>'},
   {id:"excepciones",n:"Requests",         ic:'<path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>'},
   {id:"reportes",  n:"Reportes",              ic:'<path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/>'},

@@ -198,6 +198,8 @@ function fichaWO(id){
       ${puedeValidar()&&w.estado==="Completed"&&!(aprobPagoOK(w)&&aprobFacturaOK(w))?`<button class="btn p" data-a="validarModal" data-id="${w.id}">Revisar</button>`:""}
       ${w.tec && !["Canceled","Invoiced","Paid"].includes(w.estado)
         ?`<button class="btn" data-a="woReasignar" data-id="${w.id}">Reasignar técnico</button>`:""}
+      ${puede("devoluciones") && w.unidad && !w.touchup && w.estado!=="Canceled"
+        ?`<button class="btn" data-a="devRegistrar" data-wo="${w.id}">Registrar devolución</button>`:""}
       ${esAgendada(w.estado)
         ?`<button class="btn r" data-a="woCancelar" data-id="${w.id}">Cancelar WO</button>`:""}
       ${w.tec && !["Canceled","Invoiced","Paid","Completed"].includes(w.estado)
@@ -1143,6 +1145,17 @@ function modalProg(id){
    solo el nombre). `opts.actionSi/actionNo` cambian qué acción dispara el
    clic en cada pantalla; `opts.actualId`/`opts.tecOriginalId` solo agregan
    una etiqueta aclaratoria a la tarjeta que corresponda. */
+/* Técnicos con su carga del día, zona y última ubicación para decidir a quién mandar una corrección.
+   El cupo lleno no bloquea (una corrección puede ser urgente): solo el permiso o vacaciones. */
+function tuCandidatos(dv, fecha){
+  const orig=W(dv.wo), cat=orig?orig.cat:activos("categorias")[0];
+  const w={prop:dv.prop, unidad:dv.unidad, cat, fecha, tec:null};
+  const cand=candidatosTec(w).map(c=>c.est==="lleno"?{...c,est:"warn"}:c);
+  return cand.map(c=>candidatoCardHTML(c,dv.id,ESP_REQ[cat]||"Tecnico",{actionSi:"tuElegir",actionNo:"tuNoDisp",tecOriginalId:dv.responsable})).join("");
+}
+function tuMarcar(){ const s=document.getElementById("tuT"), c=document.getElementById("tuCand"); if(!s||!c) return;
+  c.querySelectorAll("button[data-tec]").forEach(b=>b.classList.toggle("p",b.dataset.tec===s.value)); }
+
 function candidatoCardHTML(c, id, espReq, opts={}){
   const dis = c.est==="bloq"||c.est==="lleno";
   const col = dis?"r":c.est==="warn"?"w":"v";

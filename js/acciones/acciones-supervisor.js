@@ -248,6 +248,10 @@ Object.assign(ACC, {
   gDevNo:    () => { S.gDev=null; render(); },
   gDevProp:  () => { leerDev(); const pr=val("dvP"); S.gDev.prop=pr;
     S.gDev.unidad=(S.unidades.filter(u=>u.prop===pr)[0]||{}).id||null; render(); },
+  /* Al cambiar de unidad se propone como responsable a quien hizo su último trabajo. */
+  gDevUni: () => { leerDev(); const g=S.gDev; if(!g) return;
+    const ult=S.wos.filter(w=>w.unidad===g.unidad&&w.estado!=="Canceled"&&!w.touchup).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""))[0];
+    g.wo=ult?ult.id:null; if(ult&&ult.tec) g.responsable=ult.tec; render(); },
   gDevCausa: d => { leerDev(); S.gDev.causa=d.c; render(); },
   gDevPrio:  d => { leerDev(); S.gDev.prioridad=d.p; render(); },
   gDevAmb:   d => { leerDev(); S.gDev.amb=d.u; render(); },

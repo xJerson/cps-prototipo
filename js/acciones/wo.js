@@ -733,6 +733,45 @@ Object.assign(ACC, {
       + (w.avanceNota?`<br>${esc(w.avanceNota)}`:""), "v");
     render(); },
 
+  /* Registrar una devolución sin pasar por Gustavo (la pide la propiedad, llega por correo o la reporta él). Quién la hizo se toma de la última WO de la unidad. */
+  devRegistrar: d => {
+    const keep=k=>(d&&d.keep&&document.getElementById(k)?document.getElementById(k).value:"");
+    const base=d&&d.wo?W(+d.wo):null;   // si viene de la ficha de una WO, ya se sabe propiedad, unidad y técnico
+    S._rgWO=base?base.id:(d&&d.keep?S._rgWO:null);
+    const props=S.propiedades.filter(p=>p.activa!==false), pid=keep("rgP")||(base?base.prop:props[0].id);
+    const unis=S.unidades.filter(u=>u.prop===pid), uid=unis.some(u=>u.id===keep("rgU"))?keep("rgU"):(base&&unis.some(u=>u.id===base.unidad)?base.unidad:(unis[0]&&unis[0].id)||"");
+    const ult=S.wos.filter(w=>w.unidad===uid&&w.estado!=="Canceled"&&w.tec&&!w.touchup).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""))[0];
+    const cambioU=!(d&&d.keep)||S._rgU!==uid;   // al cambiar de unidad se vuelve a proponer quién hizo la última WO
+    S._rgU=uid;
+    const quien=(!cambioU&&keep("rgT"))||(base&&base.unidad===uid&&base.tec?base.tec:(ult?ult.tec:""));
+    modal(`<div class="mh"><h3>Registrar devolución</h3><p>La solicitud queda abierta hasta que se corrija y se verifique.</p></div>
+    <div class="mb"><div class="fg c2">
+      <div class="fld"><label>Propiedad <span class="req">*</span></label><select id="rgP" data-a="devRegCambio">${props.map(p=>`<option value="${esc(p.id)}" ${p.id===pid?"selected":""}>${esc(p.nombre)}</option>`).join("")}</select></div>
+      <div class="fld"><label>Unidad <span class="req">*</span></label><select id="rgU" data-a="devRegCambio">${unis.length?unis.map(u=>`<option value="${esc(u.id)}" ${u.id===uid?"selected":""}>${esc(u.num)}</option>`).join(""):'<option value="">— sin unidades —</option>'}</select></div>
+      <div class="fld"><label>¿Quién lo pidió? <span class="req">*</span></label><select id="rgO">${["Gustavo","La propiedad","Correo","Otro"].map(o=>`<option ${o===keep("rgO")?"selected":""}>${o}</option>`).join("")}</select></div>
+      <div class="fld"><label>¿Quién hizo el trabajo? <span class="req">*</span></label><select id="rgT">${S.tecnicos.filter(t=>t.activo!==false&&t.id!==GUSTAVO).map(t=>`<option value="${t.id}" ${t.id===quien?"selected":""}>${esc(tecN(t.id))}</option>`).join("")}</select></div>
+      <div class="fld"><label>¿Dónde? <span class="req">*</span></label><select id="rgA">${activos("ubicaciones").map(u=>`<option ${u===keep("rgA")?"selected":""}>${esc(u)}</option>`).join("")}</select></div>
+      <div class="fld"><label>Causa <span class="req">*</span></label><select id="rgC" data-a="devRegCambio">${Object.keys(CAUSAS_DEV).map(c=>`<option ${c===keep("rgC")?"selected":""}>${esc(c)}</option>`).join("")}</select></div></div>
+      <div class="fld"><label>¿Qué está mal? <span class="req">*</span></label><textarea id="rgM" placeholder="Qué quedó mal y qué hay que corregir">${esc(keep("rgM"))}</textarea></div>
+      <div class="note w" id="rgEx">${causaDe(keep("rgC")||Object.keys(CAUSAS_DEV)[0]).ex}</div>
+      <div class="fg c2">
+        <div class="fld"><label>Prioridad</label><select id="rgR">${PRIOR_DEV.map(p=>`<option ${p===(keep("rgR")||"Alta")?"selected":""}>${esc(p)}</option>`).join("")}</select></div>
+        <div class="fld"><label>Fecha límite</label><input type="date" id="rgL" value="${esc(keep("rgL")||HOY_SUP)}"></div></div>
+      ${ult?`<div class="hint">Última WO de la unidad: WO-${ult.id} (${esc(ult.serv)}) de ${esc(tecN(ult.tec))}.</div>`:`<div class="hint">Esta unidad no tiene WO con técnico: elige quién hizo el trabajo.</div>`}</div>
+    <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="devRegistrarOK">Registrar</button></div>`); },
+  devRegCambio: () => { ACC.devRegistrar({keep:true}); },
+  devRegistrarOK: () => {
+    const pid=val("rgP"), uid=val("rgU"), m=val("rgM").trim(), area=val("rgA"), causa=val("rgC"), tec=val("rgT");
+    if(!uid||!m||!tec){ S.audOmitir=true; marcaFalta([!uid?"rgU":"",!m?"rgM":"",!tec?"rgT":""].filter(Boolean)); toast("Falta información","Elige la unidad, quién hizo el trabajo y escribe qué está mal.","r"); return; }
+    const ult=S.wos.filter(w=>w.unidad===uid&&w.estado!=="Canceled"&&!w.touchup).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""))[0];
+    const woDe=S._rgWO&&W(S._rgWO)&&W(S._rgWO).unidad===uid?S._rgWO:(ult?ult.id:null); S._rgWO=null;
+    const dv={id:"DV"+Date.now(), prop:pid, unidad:uid, wo:woDe, area, desc:m, causa, responsable:tec,
+      prioridad:val("rgR")||"Alta", fechaRep:HOY_SUP, fechaLimite:val("rgL")||HOY_SUP, estado:"Abierta",
+      lotesAntes:[], lotesDespues:[], verifica:null, quien:S.usuario, origen:val("rgO"),
+      hist:[[hora(),`Devolución registrada por ${S.usuario} (pedida por: ${val("rgO")})`,S.usuario]]};
+    S.devoluciones.push(dv); S._audDev=P(pid).nombre+" · "+(U(uid)?U(uid).num:"")+" — "+area; flash("dv:"+dv.id);
+    cm(); toast("Devolución registrada",`<b>${esc(P(pid).nombre)} ${U(uid)?esc(U(uid).num):""}</b> · ${esc(area)}. Ahora puedes crear el touch-up y ver quién está cerca.`,"w"); render(); },
+
   /* ── TOUCH-UP ───────────────────────────────────────
      Claudia: "cada unidad tiene a su tecnico responsable y el tiene que
      corregir su trabajo; si no va por x motivo se crea una nueva work order
@@ -767,7 +806,9 @@ Object.assign(ACC, {
                  <b>${esc(U(dv.unidad)?U(dv.unidad).rooms:"")}</b>. El touch-up se crea igual, pero
                  <b>queda como excepci\u00f3n</b> hasta que se defina la tarifa — si no, el descuento
                  al t\u00e9cnico se perder\u00eda sin que nadie se entere.</div>`;})()}
-        <div class="fld"><label>Fecha</label><input id="tuF" value="2026-08-13"></div>
+        <div class="fld"><label>Fecha</label><input id="tuF" type="date" value="${esc(S._tuFecha||HOY_SUP)}" data-a="tuFecha" data-id="${dv.id}"></div>
+        <div class="fld"><label>Quién está cerca <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— toca a quien quieras mandar</span></label>
+          <div id="tuCand">${tuCandidatos(dv, S._tuFecha||HOY_SUP)}</div></div>
         <div class="note"><b>C\u00f3mo queda la plata seg\u00fan a qui\u00e9n asignes:</b><br>
           · Si va <b>${esc(tecN(dv.responsable))}</b> — rehace su trabajo, <b>no se le paga</b> y no se descuenta nada.<br>
           · Si va <b>otro</b> — se le paga a ese, y <b>se le descuenta a ${esc(tecN(dv.responsable))}</b> el mismo monto.<br>
@@ -777,6 +818,12 @@ Object.assign(ACC, {
         <button class="btn p" data-a="devTouchupOK" data-id="${dv.id}">Crear touch-up</button></div>`);
   },
 
+  /* Cambiar la fecha recalcula quién está disponible y cerca ese día. */
+  tuFecha: d => { const dv=DV(d.id), f=val("tuF"); if(!dv||!f) return; S._tuFecha=f;
+    const c=document.getElementById("tuCand"); if(c){ c.innerHTML=tuCandidatos(dv,f); tuMarcar(); } },
+  tuElegir: d => { const s=document.getElementById("tuT"); if(s){ s.value=d.tec; tuMarcar(); } },
+  tuNoDisp: d => { const b=bloqueo(d.tec,val("tuF")||HOY_SUP);
+    toast("🚫 No disponible",`<b>${esc(tecN(d.tec))}</b> no está disponible${b?": "+esc(b.motivo):""}.`,"r"); },
   devTouchupOK: d => {
     const dv = DV(d.id), tec = val("tuT"), orig = W(dv.wo);
     const w = {id: Math.max(...S.wos.map(x=>x.id))+1, prop:dv.prop, unidad:dv.unidad,

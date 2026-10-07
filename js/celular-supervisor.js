@@ -317,9 +317,12 @@ function hojaDev(g){
       `<option value="${x.id}" ${x.id===g.prop?"selected":""}>${esc(x.nombre)}</option>`).join("")}</select>
 
     <label>Unidad</label>
-    <select id="dvU">${us.length?us.map(u=>
+    <select id="dvU" data-a="gDevUni">${us.length?us.map(u=>
       `<option value="${u.id}" ${u.id===g.unidad?"selected":""}>${esc(u.num)}</option>`).join("")
       :`<option value="">— sin unidades —</option>`}</select>
+
+    ${(()=>{ const ult=S.wos.filter(w=>w.unidad===g.unidad&&w.estado!=="Canceled"&&!w.touchup).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""))[0];
+      return ult?`<div class="dc" style="margin:6px 0 0"><div class="ds">Último trabajo de esta unidad: <b>WO-${ult.id}</b> · ${esc(ult.serv)} · ${ult.tec?esc(tecN(ult.tec)):"sin técnico"} · ${esc(ult.fecha||"")}</div></div>`:`<div class="dc" style="margin:6px 0 0"><div class="ds">Esta unidad todavía no tiene trabajos registrados.</div></div>`; })()}
 
     <label>Área que debe corregirse</label>
     <select id="dvA">${activos("ubicaciones").map(u=>

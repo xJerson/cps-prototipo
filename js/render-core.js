@@ -12,7 +12,7 @@ function render(){
   $("#side").innerHTML = MODS.map(m=>{
     if(m.g) return MODS.filter(x=>x.id&&puede(x.id)).length? `<div class="slbl">${m.g}</div>`:"";
     if(!puede(m.id)) return "";
-    const c = m.id==="alertas" ? nA : m.id==="excepciones" ? excPend().length : 0;
+    const c = m.id==="alertas" ? nA : m.id==="excepciones" ? excPend().length : m.id==="devoluciones" ? devAbiertas().length : 0;
     return `<button class="nav ${S.mod===m.id?"on":""}" data-a="ir" data-m="${m.id}">
       <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${m.ic}</svg>
       <span class="lb">${m.n}</span>${c?`<span class="n">${c}</span>`:""}</button>`;
@@ -265,6 +265,8 @@ const AYUDA_VISTA = {
     tips:["<b>Cupo del equipo</b> de un día = técnicos disponibles ese día × 2. Un técnico con permiso aprobado no cuenta.","<b>Trabajos del día</b> = todas las Work Orders con esa fecha. Si pasan el cupo, la fila se pone roja: hay que mover alguna a otro día.","La barra muestra cuánto del cupo ya está en uso (con técnico) y cuánto queda libre.","<b>Cerrar el día</b>: cuando ya no se juntan más trabajos y se empiezan a repartir a los técnicos.","«+ Registrar permiso» marca a un técnico como no disponible unos días — Gustavo lo aprueba, y esos días le baja el cupo al equipo."]},
   supervision:{t:"Supervisión", d:"La jornada de Gustavo: a dónde ir, qué revisar, las devoluciones y lo que quedó acordado con cada propiedad.",
     tips:["«De campo»: lo que Gustavo mandó desde el celular, esperando que decidas qué hacer con eso.","«Ruta del día»: las propiedades que le armaste para hoy.","«Por revisar»: Work Orders terminadas por el técnico, esperando que Gustavo apruebe o devuelva.","«Devoluciones»: lo que se mandó a corregir por calidad, con su motivo y estado.","«Reporte diario»: el resumen del día de Gustavo, se arma solo.","«Ver su celular» abre el simulador — ahí es donde se prueban todas estas acciones de verdad."]},
+  devoluciones:{t:"Devoluciones", d:"Los trabajos que hay que corregir. Aquí se registra la solicitud (venga de Gustavo, de la propiedad o de un correo), se ve quién puede ir y quién está más cerca, y se asigna la corrección.",
+    tips:["«Registrar devolución»: elige la propiedad y la unidad, quién hizo el trabajo y qué está mal.","«Crear touch-up»: muestra a cada técnico con su carga del día y su zona, para mandar a quien esté cerca.","La causa decide la plata: si el trabajo estaba mal hecho, al que lo hizo se le descuenta."]},
   reportes:{t:"Reportes", d:"Los números del trabajo cruzados como quieras: por semana, por zona, por servicio.",
     tips:["Tocá un número de la tabla para ver qué órdenes hay detrás."]},
   buscar:{t:"Buscar", d:"Filtra las Work Orders y mira cobro, pago y utilidad de cada una. Sirve para saber cuánto se pagó antes por un mismo trabajo.",
