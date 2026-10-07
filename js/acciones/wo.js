@@ -757,6 +757,7 @@ Object.assign(ACC, {
       <div class="fg c2">
         <div class="fld"><label>Prioridad</label><select id="rgR">${PRIOR_DEV.map(p=>`<option ${p===(keep("rgR")||"Alta")?"selected":""}>${esc(p)}</option>`).join("")}</select></div>
         <div class="fld"><label>Fecha límite</label><input type="date" id="rgL" value="${esc(keep("rgL")||HOY_SUP)}"></div></div>
+      <label style="display:flex;gap:8px;align-items:center;margin:4px 0 8px;font-weight:650"><input type="checkbox" id="rgUrg" ${(d&&d.keep&&document.getElementById("rgUrg")&&document.getElementById("rgUrg").checked)?"checked":""}> Entra un inquilino pronto (urgente)</label>
       ${ult?`<div class="hint">Última WO de la unidad: WO-${ult.id} (${esc(ult.serv)}) de ${esc(tecN(ult.tec))}.</div>`:`<div class="hint">Esta unidad no tiene WO con técnico: elige quién hizo el trabajo.</div>`}</div>
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="devRegistrarOK">Registrar</button></div>`); },
   devRegCambio: () => { ACC.devRegistrar({keep:true}); },
@@ -767,7 +768,7 @@ Object.assign(ACC, {
     const woDe=S._rgWO&&W(S._rgWO)&&W(S._rgWO).unidad===uid?S._rgWO:(ult?ult.id:null); S._rgWO=null;
     const dv={id:"DV"+Date.now(), prop:pid, unidad:uid, wo:woDe, area, desc:m, causa, responsable:tec,
       prioridad:val("rgR")||"Alta", fechaRep:HOY_SUP, fechaLimite:val("rgL")||HOY_SUP, estado:"Abierta",
-      lotesAntes:[], lotesDespues:[], verifica:null, quien:S.usuario, origen:val("rgO"),
+      lotesAntes:[], lotesDespues:[], verifica:null, quien:S.usuario, origen:val("rgO"), urgente:!!(document.getElementById("rgUrg")&&document.getElementById("rgUrg").checked),
       hist:[[hora(),`Devolución registrada por ${S.usuario} (pedida por: ${val("rgO")})`,S.usuario]]};
     S.devoluciones.push(dv); S._audDev=P(pid).nombre+" · "+(U(uid)?U(uid).num:"")+" — "+area; flash("dv:"+dv.id);
     cm(); toast("Devolución registrada",`<b>${esc(P(pid).nombre)} ${U(uid)?esc(U(uid).num):""}</b> · ${esc(area)}. Ahora puedes crear el touch-up y ver quién está cerca.`,"w"); render(); },
@@ -781,10 +782,12 @@ Object.assign(ACC, {
     const dv = DV(d.id);
     if(touchupDe(dv.id)){ toast("Ya tiene touch-up","Esta devoluci\u00f3n ya gener\u00f3 su Work Order de correcci\u00f3n.","w"); return; }
     const orig = W(dv.wo);
+    S._tuFecha = dv.urgente ? HOY_SUP : fechaMover(HOY_SUP,1);   // urgente: hoy; si no, el día siguiente
     modal(`<div class="mh"><h3>Crear touch-up de correcci\u00f3n</h3>
         <p>${esc(P(dv.prop).nombre)} · ${U(dv.unidad)?esc(U(dv.unidad).num):""} — ${esc(dv.area)}</p></div>
       <div class="mb">
         <div class="note w" style="margin:0 0 12px"><b>Lo que hay que corregir:</b> ${esc(dv.desc)}</div>
+        ${dv.urgente?`<div class="note r" style="margin:0 0 12px"><b>Entra un inquilino pronto.</b> Propongo la fecha de hoy.</div>`:""}
         <div class="fld"><label>¿Qui\u00e9n lo corrige? <span class="req">*</span></label>
           <select id="tuT">
             <option value="${dv.responsable}">${esc(tecN(dv.responsable))} — el responsable, corrige su propio trabajo</option>

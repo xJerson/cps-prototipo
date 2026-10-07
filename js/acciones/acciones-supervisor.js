@@ -270,6 +270,7 @@ Object.assign(ACC, {
       desc:g.desc.trim(), causa:g.causa, responsable:g.responsable, prioridad:g.prioridad,
       fechaRep:HOY_SUP, fechaLimite:g.fechaLimite||"2026-08-14", estado:"Abierta",
       lotesAntes:g.lotes.slice(), lotesDespues:[], verifica:null, quien:GUSTAVO,
+      urgente:!!g.urgente,
       hist:[[hora(),"Devoluci\u00f3n creada en campo",tecN(GUSTAVO)]]};
     S.devoluciones.push(d);
     anotarDia("devolucion",
@@ -308,6 +309,18 @@ Object.assign(ACC, {
       `${g.lotes.reduce((t,l)=>t+l.n,0)} foto(s) del despu\u00e9s. Ya puedes cerrarla para que deje de contar.`,"v");
     render();
   },
+  /* Cierre desde la oficina: cualquiera con el módulo Devoluciones, con la evidencia que mandó el técnico en la WO de corrección. */
+  devCerrar: d => {
+    const dv=DV(d.id); if(!dv||dv.estado!=="Corregida"||!puede("devoluciones")) return;
+    dv.estado="Cerrada"; dv.fechaCierre=HOY_SUP; dv.cerro={quien:S.usuario,fecha:HOY_SUP,hora:hora()};
+    dv.hist.push([hora(),"Cerrada por la oficina",S.usuario]);
+    S._audDev=P(dv.prop).nombre+" · "+(U(dv.unidad)?U(dv.unidad).num:"")+" — "+dv.area;
+    const c=causaDe(dv.causa); flash("dv:"+dv.id);
+    toast("Devolución cerrada",`Quedó el historial completo. Por la causa registrada, la corrección <b>${c.paga?"sí":"no"}</b> se le paga a ${esc(tecN(dv.responsable))}.`,"v");
+    if(S.usuario!=="Erika") avisar("Erika","Devolución cerrada — ya se puede facturar",`${esc(P(dv.prop).nombre)} ${U(dv.unidad)?esc(U(dv.unidad).num):""}. Corrección ${c.paga?"pagada":"no pagada"} al técnico.`,"v");
+    render(); },
+  /* En el celular de Gustavo: marca que entra un inquilino pronto. */
+  gDevUrg: () => { leerDev(); if(S.gDev){ S.gDev.urgente=!S.gDev.urgente; render(); } },
   gDevCerrar: d => {
     const dv = DV(d.id);
     S.reloj += 3;

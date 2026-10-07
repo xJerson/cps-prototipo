@@ -30,7 +30,7 @@ VIEWS.devoluciones = () => `
    deja resuelto de entrada si se le paga al técnico y si se le cobra al
    cliente — en lugar de discutirlo el viernes al armar la nómina. */
 function vDevoluciones(){
-  const ab = devAbiertas(), venc = ab.filter(devVencida);
+  const ab = devAbiertas().slice().sort((a,b)=>(b.urgente?1:0)-(a.urgente?1:0)), venc = ab.filter(devVencida);
   const ce = S.devoluciones.filter(d=>d.estado==="Cerrada");
   const noPaga = S.devoluciones.filter(d=>!causaDe(d.causa).paga);
   const fila = d => {
@@ -44,16 +44,17 @@ function vDevoluciones(){
         <div style="font-size:10px;color:var(--faint);margin-top:2px">
           ${c.paga?"se le paga":"<b>no se le paga</b>"} · ${c.cobra?"cobrable":"no cobrable"}</div></td>
       <td>${esc(tecN(d.responsable))}</td>
-      <td><span class="pill ${d.prioridad==="Alta"?"b":"g"}">${esc(d.prioridad)}</span></td>
+      <td><span class="pill ${d.prioridad==="Alta"?"b":"g"}">${esc(d.prioridad)}</span>${d.urgente&&d.estado!=="Cerrada"?`<div><span class="pill r" style="margin-top:3px">Entra inquilino pronto</span></div>`:""}</td>
       <td>${esc(d.fechaRep)}<div style="font-size:10.5px;color:${v?"var(--rojo)":"var(--faint)"}">límite ${esc(d.fechaLimite)}</div></td>
       <td class="num">${d.estado==="Cerrada"?"—":`<b style="color:${v?"var(--rojo)":"var(--tinta)"}">${dias}</b>`}</td>
       <td>${(d.lotesAntes||[]).reduce((t,l)=>t+l.n,0)} / ${(d.lotesDespues||[]).reduce((t,l)=>t+l.n,0)}</td>
       <td><span class="pill ${d.estado==="Cerrada"?"v":d.estado==="Corregida"?"a":"b"}">${esc(d.estado)}</span>
-        ${d.verifica?`<div style="font-size:10px;color:var(--verde)">✓ ${esc(tecN(d.verifica))}</div>`:""}</td>
+        ${d.verifica?`<div style="font-size:10px;color:var(--verde)">✓ ${esc(tecN(d.verifica))}</div>`:d.cerro?`<div style="font-size:10px;color:var(--verde)">✓ ${esc(d.cerro.quien)}</div>`:""}</td>
       <td style="text-align:right">${(()=>{ const tu=touchupDe(d.id);
         if(tu) return `<span class="pill m">WO-${tu.id}</span>
           <div style="font-size:10px;color:var(--faint);margin-top:2px">${esc(tecN(tu.tec))}${
-            tu.tec===tu.tecOriginal?" · sin pago":" · se le paga"}</div>`;
+            tu.tec===tu.tecOriginal?" · sin pago":" · se le paga"}</div>${
+            d.estado==="Corregida"&&puede("devoluciones")?`<button class="btn sm v" style="margin-top:5px" data-a="devCerrar" data-id="${d.id}">Cerrar</button>`:""}`;
         return d.estado==="Cerrada" ? "—"
           : `<button class="btn sm p" data-a="devTouchup" data-id="${d.id}">Crear touch-up</button>`;})()}</td>
     </tr>`;};

@@ -343,6 +343,9 @@ function hojaDev(g){
     <select id="dvR">${S.tecnicos.filter(t=>t.activo!==false && t.id!==GUSTAVO).map(t=>
       `<option value="${t.id}" ${t.id===g.responsable?"selected":""}>${esc(tecN(t.id))}</option>`).join("")}</select>
 
+    <label>¿Entra un inquilino pronto?</label>
+    <div class="gchips"><button class="gchip ${g.urgente?"on":""}" data-a="gDevUrg">${g.urgente?"✓ Sí, entra pronto — urgente":"No / no sé"}</button></div>
+
     <label>Prioridad</label>
     <div class="gchips">${PRIOR_DEV.map(pr=>
       `<button class="gchip ${g.prioridad===pr?"on":""}" data-a="gDevPrio" data-p="${pr}">${pr}</button>`).join("")}</div>

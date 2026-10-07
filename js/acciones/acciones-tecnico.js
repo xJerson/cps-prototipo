@@ -320,6 +320,13 @@ Object.assign(ACC, {
     if(a){ const [h1,m1]=a.horaReal.split(":").map(Number);
       w.horas = Math.max(0.5, Math.round(((S.reloj-(h1*60+m1))/60)*10)/10); }
     w.hist.push([hora(),`Terminó · ${w.evid} evidencia(s)${w.horas?` · ${w.horas} h en sitio`:""}`,T(w.tec).nombre]);
+    /* La corrección sigue el flujo de una WO normal: al terminarla con evidencia, la devolución queda lista para que la oficina la cierre. */
+    const dvC=w.touchup&&w.devOrigen?DV(w.devOrigen):null;
+    if(dvC && dvC.estado!=="Cerrada"){
+      dvC.estado="Corregida"; dvC.lotesDespues=[{amb:dvC.area,n:Math.max(1,w.evid||1)}];
+      dvC.hist.push([hora(),`Corrección terminada en WO-${w.id} · ${w.evid} evidencia(s)`,T(w.tec).nombre]);
+      avisar("Lydia","Una corrección está lista para cerrar",`${P(dvC.prop).nombre} ${U(dvC.unidad)?U(dvC.unidad).num:""} · ${dvC.area} — WO-${w.id} terminada por ${tecN(w.tec)}.`,"v");
+    }
     // WO enlazadas: al terminar esta, la que iba después queda libre y su técnico se entera
     S.wos.filter(x=>x.dependeDe===w.id && x.estado!=="Canceled").forEach(x=>{
       x.hist.push([hora(),`Ya puede empezar: terminó WO-${w.id}`,"Sistema"]);
