@@ -135,14 +135,21 @@ function fichaProp(id){
     <tr><td style="color:var(--faint)">Ojo</td><td>${esc(p.notasTec)||"—"}</td></tr>
     <tr><td style="color:var(--faint)">Activa</td><td>${p.activa?'<span class="pill v">Sí</span>':'<span class="pill g">No</span>'}</td></tr>
   </tbody></table></div>
-  ${puedeVerIngreso()?(()=>{ const mv=(S.creditosProp||[]).filter(c=>c.prop===id).slice().reverse();
-    return `<div class="card" style="margin-top:14px"><div class="chd"><h3>Crédito: ${money(saldoCredito(id))}</h3>
+  ${puedeVerIngreso()?`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(380px,1fr));gap:14px;margin-top:14px">${(()=>{ const mv=(S.creditosProp||[]).filter(c=>c.prop===id).slice().reverse();
+    return `<div class="card"><div class="chd"><h3>Crédito: ${money(saldoCredito(id))}</h3>
       <span class="s">Se usa a mano en el borrador de factura</span>
       <span class="r"><button class="btn sm p" data-a="creditoNuevo" data-id="${id}">Agregar crédito</button></span></div>
-      ${mv.length?`<table><thead><tr><th>Fecha</th><th>Tipo</th><th>Motivo</th><th>Quién</th><th class="num">Monto</th></tr></thead><tbody>
+      ${mv.length?`<table><thead><tr><th>Fecha</th><th>Tipo</th><th>Motivo</th><th>Unidad</th><th>Quién</th><th class="num">Monto</th></tr></thead><tbody>
         ${mv.slice(0,8).map(c=>`<tr><td class="mono">${esc(c.fecha)}</td><td><span class="pill ${c.tipo==="Abono"?"v":"a"}">${esc(c.tipo)}</span></td>
-          <td>${esc(c.motivo)}</td><td>${esc(c.quien)}</td><td class="num mono">${c.tipo==="Abono"?"":"−"}${money(c.monto)}</td></tr>`).join("")}
-      </tbody></table>`:`<div class="empty">Sin movimientos</div>`}</div>`; })():""}`:""}
+          <td>${esc(c.motivo)}</td><td class="mono">${c.unidad?esc(U(c.unidad).num):"—"}</td><td>${esc(c.quien)}</td><td class="num mono">${c.tipo==="Abono"?"":"−"}${money(c.monto)}</td></tr>`).join("")}
+      </tbody></table>`:`<div class="empty">Sin movimientos</div>`}</div>`; })()}${(()=>{ const mv=(S.creditosServ||[]).filter(c=>c.prop===id).slice().reverse(), sd=credServSaldos(id);
+    return `<div class="card"><div class="chd"><h3>Créditos de servicio</h3>
+      <span class="s">${sd.length?sd.map(x=>esc(x.serv)+" × "+x.saldo+(x.unidad?" · "+esc(U(x.unidad).num):"")).join(" · "):"Sin saldo"}</span>
+      <span class="r"><button class="btn sm p" data-a="creditoServNuevo" data-id="${id}">Agregar</button></span></div>
+      ${mv.length?`<table><thead><tr><th>Fecha</th><th>Tipo</th><th>Servicio</th><th>Unidad</th><th>Nota</th><th class="num">Cant.</th></tr></thead><tbody>
+        ${mv.slice(0,8).map(c=>`<tr><td class="mono">${esc(c.fecha)}</td><td><span class="pill ${c.tipo==="Abono"?"v":"a"}">${esc(c.tipo)}</span></td>
+          <td>${esc(c.serv)}</td><td class="mono">${c.unidad?esc(U(c.unidad).num):"—"}</td><td>${esc(c.motivo)}</td><td class="num mono">${c.tipo==="Abono"?"":"−"}${c.cant}</td></tr>`).join("")}
+      </tbody></table>`:`<div class="empty">Sin movimientos</div>`}</div>`; })()}</div>`:""}`:""}
 
   ${t==="unidades"?`<div class="card"><div class="chd"><h3>Unidades</h3>
     <span class="s">catálogo de referencia — no bloquea agendar, se va llenando solo con cada WO/Estimado</span>

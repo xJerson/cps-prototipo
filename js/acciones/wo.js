@@ -439,7 +439,7 @@ Object.assign(ACC, {
       w.fecha = f;
       if(inicio) w.horaProg=inicio;
       if(fin) w.horaFin=fin;
-      if(U(w.unidad).ocupacion==="Occupied" && inicio) programarRecordatorios(w,f,inicio);   // 1 día antes / 1 hora antes de la hora de inicio
+      if(inicio) programarRecordatorios(w,f,inicio);   // 1 día antes / 1 hora antes de la hora de inicio, para el técnico y el equipo
       w.confirmCliente = {fecha:f, medio, contacto, quien:S.usuario, hora:hora(), dia:HOY_SUP};
       if(w.estado==="Scheduled") w.estado = "Confirmed";
       if(motivo){ w.reagendada = (w.reagendada||0)+1; w.motivoReag = motivo; }
@@ -473,7 +473,7 @@ Object.assign(ACC, {
     S.progF = null; S.progTmp = null;
     if(inicio) w.horaProg=inicio;
     if(fin) w.horaFin=fin;
-    if(U(w.unidad).ocupacion==="Occupied" && inicio) programarRecordatorios(w,f,inicio);
+    if(inicio) programarRecordatorios(w,f,inicio);
     cm();
     toast("Anotado — falta que confirme",
       `Quedó tentativo el <b>${f}</b> con <b>${esc(contacto)}</b>. La orden sigue <b>sin confirmar</b>.`,"w");
@@ -1084,12 +1084,27 @@ Object.assign(ACC, {
     capturarFoto(url=>{ m.recibo=url; m.evid=true; render(); });
   },
 
-  /* ── Recordatorios de unidad ocupada: «Enviar» los marca como enviados (simulado; el texto al cliente va en inglés) ── */
+  /* ── Recordatorios: «Enviar» avisa al técnico y, si la unidad está ocupada, al cliente (simulado; el texto al cliente va en inglés) ── */
   recordatorioEnviar: d => { if(!puedeAvisarPend()) return;
     const r=(S.recordatoriosWO||[]).find(x=>x.id===d.id); if(!r||r.estado==="Sent") return;
-    r.estado="Sent"; r.enviado={quien:S.usuario,fecha:HOY_SUP,hora:hora()}; r.mensaje=textoRecordatorio(r);
-    const w=W(r.wo); if(w) w.hist.push([hora(),`Reminder sent to customer (${r.tipo})`,S.usuario]);
-    toast("✓ Recordatorio enviado",`WO-${r.wo} · ${esc(r.tipo)}. Registrado como enviado (simulado).`,"v"); render(); },
+    const w=W(r.wo), alCli=recordatorioAlCliente(r);
+    r.estado="Sent"; r.enviado={quien:S.usuario,fecha:HOY_SUP,hora:hora()}; r.mensaje=alCli?textoRecordatorio(r):"";
+    if(w&&w.tec) noti("Recordatorio de trabajo",textoRecordatorioTec(r));
+    if(w) w.hist.push([hora(),`Reminder sent to ${w.tec?"technician":"team"}${alCli?" and customer":""} (${r.tipo})`,S.usuario]);
+    toast("✓ Recordatorio enviado",`WO-${r.wo} · ${esc(r.tipo)} · ${w&&w.tec?"técnico":"equipo"}${alCli?" y cliente":""}. Registrado como enviado (simulado).`,"v"); render(); },
+  /* Seguimiento interno: alguien del equipo pregunta al técnico si va en camino y anota qué respondió. */
+  recordatorioSeg: d => { const r=(S.recordatoriosWO||[]).find(x=>x.id===d.id); if(!r||!puedeAvisarPend()) return;
+    const w=W(r.wo);
+    modal(`<div class="mh"><h3>¿Va en camino? · WO-${r.wo}</h3><p>${w&&w.tec?esc(tecN(w.tec)):"Sin técnico asignado"} · ${esc(r.tipo)} · ${esc(r.fecha)} ${esc(r.hora)}</p></div><div class="mb">
+      <div class="fld"><label>Qué respondió</label><select id="rsRes"><option>Va en camino</option><option>Sin respuesta</option><option>Hay que reprogramar</option></select></div>
+      <div class="fld"><label>Nota</label><input id="rsNota"></div>
+      <div class="hint">Queda en el historial de la WO con quién preguntó y la hora.</div></div>
+      <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="recordatorioSegOK" data-id="${esc(r.id)}">Guardar</button></div>`); },
+  recordatorioSegOK: d => { const r=(S.recordatoriosWO||[]).find(x=>x.id===d.id); if(!r||!puedeAvisarPend()) return;
+    const resultado=val("rsRes"), nota=val("rsNota"), w=W(r.wo);
+    r.seguimiento={resultado,nota,quien:S.usuario,fecha:HOY_SUP,hora:hora()};
+    if(w) w.hist.push([hora(),`Seguimiento al técnico (${r.tipo}): ${resultado}${nota?" · "+nota:""}`,S.usuario]);
+    cm(); toast("✓ Seguimiento anotado",`WO-${r.wo} · ${esc(resultado)}.`,resultado==="Va en camino"?"v":"w"); render(); },
 
   /* ── WO pendientes: selección en lote, aviso por propiedad y seguimiento de la respuesta ── */
   pendSel: d => { const id=+d.id, l=S.pendSel||(S.pendSel=[]);

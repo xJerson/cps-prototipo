@@ -98,20 +98,24 @@ VIEWS.wo = () => {
 /* WO que esperan algo del cliente: se avisan en lote y se les da seguimiento. */
 const ESTADOS_PEND = ["Pending","Detenido"];
 const MOTIVOS_PEND = ["Unit does not have electricity","Unit does not have water","Pest control is required","No access to the unit","Other"];
-/* Recordatorios de unidad ocupada: fecha/hora = cuándo se envían. «Enviar» los marca como enviados (simulado). */
+/* Recordatorios: fecha/hora = cuándo se envían. «Enviar» avisa al técnico (y al cliente si la unidad está ocupada); después el equipo anota si el técnico va en camino. */
 function filaRecordatorio(r, conWO){
-  const w=W(r.wo), tarde=r.estado==="Scheduled" && r.fecha<HOY_SUP;
+  const w=W(r.wo), tarde=r.estado==="Scheduled" && r.fecha<HOY_SUP, alCli=recordatorioAlCliente(r);
+  const para=(w&&w.tec?esc(tecN(w.tec)):"Sin técnico")+(alCli?" + cliente":"");
+  const seg=r.seguimiento?`<div style="font-size:10.5px;color:var(--faint)"><b>${esc(r.seguimiento.resultado)}</b>${r.seguimiento.nota?" · "+esc(r.seguimiento.nota):""} · ${esc(r.seguimiento.quien)} ${esc(r.seguimiento.hora)}</div>`:"";
   return `<tr>${conWO?`<td class="mono" style="font-weight:700">WO-${r.wo}</td><td>${w?esc(P(w.prop).nombre)+" · "+esc(U(w.unidad).num):"—"}</td>`:""}
-    <td>${esc(r.tipo)}</td><td class="mono">${esc(r.fecha)} ${esc(r.hora)}</td>
-    <td><span class="pill ${r.estado==="Sent"?"v":tarde?"w":"g"}">${r.estado==="Sent"?"Sent":tarde?"Scheduled · atrasado":"Scheduled"}</span>${r.enviado?`<div style="font-size:10.5px;color:var(--faint)">${esc(r.enviado.quien)} · ${esc(r.enviado.fecha)} ${esc(r.enviado.hora)}</div>`:""}</td>
-    <td style="text-align:right">${r.estado==="Scheduled"&&puedeAvisarPend()?`<button class="btn sm" data-a="recordatorioEnviar" data-id="${esc(r.id)}">Enviar</button>`:""}</td></tr>`;
+    <td>${esc(r.tipo)}</td><td style="font-size:11.5px">${para}</td><td class="mono">${esc(r.fecha)} ${esc(r.hora)}</td>
+    <td><span class="pill ${r.estado==="Sent"?"v":tarde?"w":"g"}">${r.estado==="Sent"?"Sent":tarde?"Scheduled · atrasado":"Scheduled"}</span>${r.enviado?`<div style="font-size:10.5px;color:var(--faint)">${esc(r.enviado.quien)} · ${esc(r.enviado.fecha)} ${esc(r.enviado.hora)}</div>`:""}${seg}</td>
+    <td style="text-align:right">${puedeAvisarPend()?(r.estado==="Scheduled"?`<button class="btn sm" data-a="recordatorioEnviar" data-id="${esc(r.id)}">Enviar</button>`
+      :`<button class="btn sm" data-a="recordatorioSeg" data-id="${esc(r.id)}">${r.seguimiento?"Actualizar":"¿Va en camino?"}</button>`):""}</td></tr>`;
 }
 function cardRecordatorios(){
-  const rs=(S.recordatoriosWO||[]).filter(r=>r.estado==="Scheduled" && W(r.wo) && W(r.wo).estado!=="Canceled")
+  const rs=(S.recordatoriosWO||[]).filter(r=>(r.estado==="Scheduled"||!r.seguimiento) && W(r.wo) && W(r.wo).estado!=="Canceled")
     .sort((a,b)=>(a.fecha+a.hora).localeCompare(b.fecha+b.hora));
   if(!rs.length) return "";
-  return `<div class="card"><div class="chd"><h3>Recordatorios</h3><span class="s">${rs.length} por enviar · unidades ocupadas</span></div>
-    <table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Tipo</th><th>Se envía</th><th>Estado</th><th></th></tr></thead><tbody>${rs.map(r=>filaRecordatorio(r,true)).join("")}</tbody></table></div>`;
+  const pend=rs.filter(r=>r.estado==="Scheduled").length, sinSeg=rs.length-pend;
+  return `<div class="card"><div class="chd"><h3>Recordatorios</h3><span class="s">${pend} por enviar · ${sinSeg} sin seguimiento al técnico</span></div>
+    <table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Tipo</th><th>Para</th><th>Se envía</th><th>Estado</th><th></th></tr></thead><tbody>${rs.map(r=>filaRecordatorio(r,true)).join("")}</tbody></table></div>`;
 }
 /* Comunicaciones abiertas con el cliente por WO pendientes: cada una espera su respuesta. */
 function cardSeguimientoPend(){
@@ -297,8 +301,8 @@ function fichaWO(id){
         </div></div>
 
       ${(()=>{ const rs=(S.recordatoriosWO||[]).filter(r=>r.wo===w.id); if(!rs.length) return "";
-        return `<div class="card"><div class="chd"><h3>Recordatorios</h3><span class="s">unidad ocupada · aviso al cliente</span></div>
-          <table><thead><tr><th>Tipo</th><th>Se envía</th><th>Estado</th><th></th></tr></thead><tbody>${rs.map(r=>filaRecordatorio(r,false)).join("")}</tbody></table></div>`; })()}
+        return `<div class="card"><div class="chd"><h3>Recordatorios</h3><span class="s">técnico y equipo · cliente si la unidad está ocupada</span></div>
+          <table><thead><tr><th>Tipo</th><th>Para</th><th>Se envía</th><th>Estado</th><th></th></tr></thead><tbody>${rs.map(r=>filaRecordatorio(r,false)).join("")}</tbody></table></div>`; })()}
 
       ${trazaWO(w)}
 

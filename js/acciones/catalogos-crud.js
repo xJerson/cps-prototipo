@@ -4,16 +4,42 @@ Object.assign(ACC, {
 
   propVer: d => { S.mod="propiedades"; S.sub=d.id; S.tab="datos"; render(); },
   /* Crédito de propiedad: solo abonos manuales acá; el uso se descuenta desde el borrador de factura. */
-  creditoNuevo: d => modal(`<div class="mh"><h3>Agregar crédito</h3><p>${esc(P(d.id).nombre)}</p></div>
+  creditoNuevo: d => {
+    const pid=propIdDe(d.id), fb=!!d.fb, unis=S.unidades.filter(u=>u.prop===pid);
+    if(fb) leerBorrador();   // desde el borrador de factura: se guarda lo tipeado y se vuelve ahí
+    modal(`<div class="mh"><h3>Agregar crédito</h3><p>${esc(P(pid).nombre)}</p></div>
     <div class="mb"><div class="fg c2">
       <div class="fld"><label>Monto <span class="req">*</span></label><input id="crMonto" class="mono" placeholder="0.00"></div>
-      <div class="fld"><label>Motivo <span class="req">*</span></label><input id="crMot"></div></div></div>
-    <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="creditoGuardar" data-id="${d.id}">Guardar</button></div>`),
+      <div class="fld"><label>Motivo <span class="req">*</span></label><input id="crMot"></div></div>
+      <div class="fld"><label>Unidad <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label>
+        <select id="crUni"><option value="">— toda la propiedad —</option>${unis.map(u=>`<option value="${esc(u.id)}">${esc(u.num)}</option>`).join("")}</select></div></div>
+    <div class="mf"><button class="btn" data-a="${fb?"facLineaVolver":"cm"}">Cancelar</button><button class="btn p" data-a="creditoGuardar" data-id="${esc(d.id)}" ${fb?'data-fb="1"':""}>Guardar</button></div>`); },
   creditoGuardar: d => {
-    const monto=parseFloat(val("crMonto")), motivo=val("crMot");
+    const pid=propIdDe(d.id), monto=parseFloat(val("crMonto")), motivo=val("crMot");
     if(!(monto>0)||!motivo){ S.audOmitir=true; marcaFalta(["crMonto","crMot"]); toast("Falta información","Escribe un monto mayor a 0 y el motivo.","r"); return; }
-    (S.creditosProp=S.creditosProp||[]).push({id:"CR"+Date.now(),prop:d.id,tipo:"Abono",monto,motivo,quien:S.usuario,fecha:HOY_SUP});
-    cm(); toast("✓ Crédito agregado",`${esc(P(d.id).nombre)} · saldo ${money(saldoCredito(d.id))}.`,"v"); render();
+    (S.creditosProp=S.creditosProp||[]).push({id:"CR"+Date.now(),prop:pid,unidad:val("crUni")||null,tipo:"Abono",monto,motivo,quien:S.usuario,fecha:HOY_SUP});
+    if(d.fb && S.facturaBorrador){ modalBorradorFactura(); toast("✓ Crédito agregado",`${esc(P(pid).nombre)} · saldo ${money(saldoCredito(pid))}.`,"v"); return; }
+    cm(); toast("✓ Crédito agregado",`${esc(P(pid).nombre)} · saldo ${money(saldoCredito(pid))}.`,"v"); render();
+  },
+  /* Crédito de servicio (cortesías): N unidades de un servicio, de la propiedad o de una unidad. Se usan desde el borrador de factura. */
+  creditoServNuevo: d => {
+    const pid=propIdDe(d.id), fb=!!d.fb, unis=S.unidades.filter(u=>u.prop===pid);
+    if(fb) leerBorrador();
+    const nombres=[...new Set(CAT.servicios.filter(x=>!x.baja).map(x=>x.nombre))];
+    modal(`<div class="mh"><h3>Agregar crédito de servicio</h3><p>${esc(P(pid).nombre)}</p></div>
+    <div class="mb"><div class="fg c2">
+      <div class="fld"><label>Servicio <span class="req">*</span></label><select id="crsServ"><option value="">— elegí —</option>${nombres.map(n=>`<option>${esc(n)}</option>`).join("")}</select></div>
+      <div class="fld"><label>Cantidad <span class="req">*</span></label><input id="crsCant" type="number" min="1" step="1" class="mono" value="1"></div></div>
+      <div class="fld"><label>Unidad <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label>
+        <select id="crsUni"><option value="">— toda la propiedad —</option>${unis.map(u=>`<option value="${esc(u.id)}">${esc(u.num)}</option>`).join("")}</select></div>
+      <div class="fld"><label>Nota <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><input id="crsMot"></div></div>
+    <div class="mf"><button class="btn" data-a="${fb?"facLineaVolver":"cm"}">Cancelar</button><button class="btn p" data-a="creditoServGuardar" data-id="${esc(d.id)}" ${fb?'data-fb="1"':""}>Guardar</button></div>`); },
+  creditoServGuardar: d => {
+    const pid=propIdDe(d.id), serv=val("crsServ"), cant=parseFloat(val("crsCant"));
+    if(!serv||!(cant>=1)||!Number.isInteger(cant)){ S.audOmitir=true; marcaFalta(["crsServ","crsCant"]); toast("Falta información","Elegí el servicio y una cantidad entera de 1 o más.","r"); return; }
+    (S.creditosServ=S.creditosServ||[]).push({id:"CS"+Date.now(),prop:pid,unidad:val("crsUni")||null,serv,cant,tipo:"Abono",motivo:val("crsMot")||"—",quien:S.usuario,fecha:HOY_SUP});
+    if(d.fb && S.facturaBorrador){ modalBorradorFactura(); toast("✓ Crédito de servicio agregado",`${esc(serv)} × ${cant} · ${esc(P(pid).nombre)}.`,"v"); return; }
+    cm(); toast("✓ Crédito de servicio agregado",`${esc(serv)} × ${cant} · ${esc(P(pid).nombre)}.`,"v"); render();
   },
   propNueva: d => { const p = d&&d.id ? P(d.id) : null;
     const op = (a,v) => a.map(x=>`<option ${x===v?"selected":""}>${esc(x)}</option>`).join("");

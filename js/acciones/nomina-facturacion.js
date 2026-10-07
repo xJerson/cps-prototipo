@@ -586,7 +586,34 @@ function leerBorrador(){
     l.seleccionada=sel.checked;
     const g=document.getElementById(id+"_grp"); if(g) l.grupo=+g.value||1;
   });
+  (b.extras||[]).forEach(e=>{   // filas de extras: se leen solo si están en pantalla
+    const q=k=>document.getElementById("fbx_"+e.id+"_"+k); if(!q("op")) return;
+    e.concepto=q("con").value.trim(); e.op=q("op").value;
+    e.valor=Math.max(0,parseFloat(q("val").value)||0);
+    e.tipoValor=(e.op==="+"||e.op==="-")&&q("tv")&&q("tv").value==="%"?"%":"$";
+    e.grupo=+q("grp").value||1;
+  });
+  for(let g=1; g<=6; g++) if(document.getElementById("fbAjF_"+g))   // lo tipeado en «Ajustar total» sobrevive al redibujo
+    (b.ajIn=b.ajIn||{})[g]={final:val("fbAjF_"+g),motivo:val("fbAjM_"+g)};
   return b;
+}
+/* Copia el formulario del editor de línea a la línea sin validar (para cambiar de modo / item sin perder lo escrito) */
+function leerLineaForm(l){
+  const g=id=>document.getElementById(id), num=id=>{ const v=parseFloat(g(id).value); return Number.isFinite(v)?v:0; };
+  if(g("fleNom")) l.nombre=g("fleNom").value.trim();
+  if(g("fleDes")) l.descripcion=g("fleDes").value.trim();
+  if(g("fleP")) l.precio=num("fleP");
+  if(g("fleC")) l.cantidad=Math.max(0,num("fleC"));
+  if(g("fleD")) l.desc=Math.max(0,num("fleD"));
+  if(g("fleT")) l.descTipo=g("fleT").value==="%"?"%":"$";
+  if(g("fleCat")) l.cat=g("fleCat").value||"Extras";
+  if(g("fleUni")) l.unidad=g("fleUni").value||"\u2014";
+  if(g("fleF")) l.fecha=g("fleF").value||l.fecha;
+}
+/* Abre el editor de una línea: guarda una copia para que «Cancelar» descarte lo tocado */
+function abrirEditorLinea(b, l){
+  b._fleModo=null; b._fleItem=null; b._fleBak={...l};
+  modalLineaFactura(l.clave);
 }
 Object.assign(ACC, {
   facturar: d => {
@@ -621,10 +648,30 @@ Object.assign(ACC, {
     const b=leerBorrador(); if(!b) return;
     const n=(b.lineas||[]).filter(l=>l.tipo==="Manual").length+1, clave="manual:"+Date.now()+":"+n;
     b.lineas.push({clave,tipo:"Manual",cat:"Extras",wo:null,subwo:null,unidad:"—",nombre:"Adjustment",descripcion:"",precio:0,cantidad:1,importe:0,evidencia:0,fecha:HOY_SUP,seleccionada:true,grupo:1});
-    modalLineaFactura(clave);   // se abre el editor: una línea manual nace en 0 y hay que llenarla
+    abrirEditorLinea(b, b.lineas[b.lineas.length-1]);   // se abre el editor: una línea manual nace en 0 y hay que llenarla
   },
-  facLineaEditar: d => { if(leerBorrador()) modalLineaFactura(d.k); },
-  facLineaVolver: () => modalBorradorFactura(),
+  facLineaEditar: d => { const b=leerBorrador(); const l=b&&b.lineas.find(x=>x.clave===d.k); if(l) abrirEditorLinea(b,l); },
+  facLineaVolver: () => {
+    const b=S.facturaBorrador;
+    if(b&&b._fleBak){ const l=b.lineas.find(x=>x.clave===b._fleBak.clave); if(l) Object.assign(l,b._fleBak); b._fleBak=null; }   // descarta lo tocado
+    if(b){ b._fleModo=null; b._fleItem=null; }
+    modalBorradorFactura();
+  },
+  /* Línea manual: «Del catálogo» / «Libre». Conserva lo escrito. */
+  facLineaModo: d => { const b=S.facturaBorrador, l=b&&b.lineas.find(x=>x.clave===d.k); if(!l) return;
+    leerLineaForm(l); b._fleModo=d.m==="libre"?"libre":"catalogo"; modalLineaFactura(l.clave); },
+  /* Item del catálogo: precarga nombre, tipo de trabajo y precio (por unidad si hay una elegida) */
+  facLineaItem: d => { const b=S.facturaBorrador, l=b&&b.lineas.find(x=>x.clave===d.k); if(!l) return;
+    leerLineaForm(l); const serv=val("fleItem"); b._fleItem=serv;
+    if(serv){ const it=itemsFactura(b.prop).find(i=>i.nombre===serv), u=l.unidad&&l.unidad!=="\u2014"?S.unidades.find(x=>x.prop===b.prop&&x.num===l.unidad):null;
+      l.nombre=serv; if(it&&["Extras",...CAT.categorias].includes(it.cat)) l.cat=it.cat;
+      l.precio=precioServicio(b.prop,serv,u); }   // sin tarifa → queda en blanco para escribirlo
+    modalLineaFactura(l.clave); },
+  /* Cambió la unidad: si ya hay un item del catálogo, el precio sigue a la unidad cuando hay tarifa */
+  facLineaUni: d => { const b=S.facturaBorrador, l=b&&b.lineas.find(x=>x.clave===d.k); if(!l) return;
+    leerLineaForm(l);
+    if(b._fleItem){ const u=l.unidad&&l.unidad!=="\u2014"?S.unidades.find(x=>x.prop===b.prop&&x.num===l.unidad):null, p=precioServicio(b.prop,b._fleItem,u); if(p>0) l.precio=p; }
+    modalLineaFactura(l.clave); },
   facLineaGuardar: d => {
     const b=S.facturaBorrador, l=b&&(b.lineas||[]).find(x=>x.clave===d.k); if(!l) return;
     const nombre=val("fleNom"), precio=parseFloat(val("fleP")), cant=parseFloat(val("fleC")), desc=parseFloat(val("fleD")||"0"), tipo=val("fleT")==="%"?"%":"$";
@@ -633,13 +680,64 @@ Object.assign(ACC, {
     Object.assign(l,{nombre,descripcion:val("fleDes"),precio,cantidad:cant,desc,descTipo:tipo});
     if(l.tipo==="Manual") Object.assign(l,{cat:val("fleCat")||"Extras",unidad:val("fleUni")||"—",fecha:val("fleF")||l.fecha});   // tipo para el lote y unidad opcional
     l.importe=importeLinea(l);
+    b._fleBak=null; b._fleModo=null; b._fleItem=null;
     modalBorradorFactura();
   },
+  /* ── Extras del borrador (+ − × ÷ N/A) ── */
+  facExtraAgregar: () => { const b=leerBorrador(); if(!b) return;
+    const r=resumenBorrador(b);
+    (b.extras=b.extras||[]).push({id:idExtra(),grupo:r.grupos.length?r.grupos[0].g:1,concepto:"",op:"+",valor:0,tipoValor:"$"});
+    modalBorradorFactura(); },
+  facExtraQuitar: d => { const b=leerBorrador(); if(!b) return;
+    b.extras=(b.extras||[]).filter(e=>e.id!==d.id); modalBorradorFactura(); },
+  /* Cambió una fila de extras: se recalcula todo; ÷ 0 se marca y avisa */
+  facExtraCambiar: () => { const b=leerBorrador(); if(!b) return;
+    modalBorradorFactura();
+    const mal=(b.extras||[]).filter(e=>e.op==="/"&&!(e.valor>0));
+    if(mal.length){ mal.forEach(e=>{ const el=document.getElementById("fbx_"+e.id+"_val"); if(el&&el.parentElement) el.parentElement.classList.add("bad"); });
+      toast("No se puede dividir entre 0","Escribí un factor mayor a 0 en el extra ÷.","r"); } },
+  /* «Agregar» de un crédito de servicio: fila Extra N/A «<Servicio> (complimentary)» con el precio real, ligada al crédito */
+  facCredServUsar: d => { const b=leerBorrador(); if(!b) return;
+    const x=credServSaldos(b.prop,b.id).find(y=>y.key===d.k), usadas=(b.extras||[]).filter(e=>e.credServ===d.k).length;
+    if(!x||x.saldo-usadas<1){ toast("Sin saldo","Ese crédito ya no tiene unidades disponibles.","r"); modalBorradorFactura(); return; }
+    const u=x.unidad?by(S.unidades,x.unidad):null, r=resumenBorrador(b);
+    (b.extras=b.extras||[]).push({id:idExtra(),grupo:r.grupos.length?r.grupos[0].g:1,concepto:x.serv+" (complimentary)",op:"NA",
+      valor:precioServicio(b.prop,x.serv,u),tipoValor:"$",credServ:x.key,unidad:u?u.num:null});
+    modalBorradorFactura(); },
+  /* ── Ajustar total de una factura: monto fijo + motivo; queda en la Bitácora (de → a · motivo) ── */
+  facAjusteAplicar: d => { const b=leerBorrador(); if(!b) return; const g=+d.g;
+    const x=resumenBorrador(b).grupos.find(y=>y.g===g); if(!x) return;
+    const inp=(b.ajIn||{})[g]||{}, fin=parseFloat(inp.final), mot=(inp.motivo||"").trim();
+    if(!Number.isFinite(fin)){ S.audOmitir=true; modalBorradorFactura(); marcaFalta(["fbAjF_"+g]); toast("Falta el total final","Escribí el total que va en esta factura.","r"); return; }
+    const delta=r2(fin-x.pre);
+    if(Math.abs(delta)<0.005 && !x.aj){ S.audOmitir=true; toast("Sin cambios","El total final es igual al calculado.","w"); return; }
+    if(Math.abs(delta)>=0.005 && !mot){ S.audOmitir=true; modalBorradorFactura(); marcaFalta(["fbAjM_"+g]); toast("Falta el motivo","Escribí por qué cambia el total.","r"); return; }
+    b.ajustes=b.ajustes||{};
+    if(Math.abs(delta)<0.005){ delete b.ajustes[g]; S._audAj=`${P(b.prop).nombre} · Factura ${g}: quitó el ajuste (${money(x.total)} \u2192 ${money(x.pre)})`; }
+    else { b.ajustes[g]={final:r2(fin),motivo:mot,delta,calc:x.pre};
+      S._audAj=`${P(b.prop).nombre} · Factura ${g}: ${money(x.total)} \u2192 ${money(fin)} \u00b7 ${mot}`; }
+    if(b.ajIn) delete b.ajIn[g];
+    modalBorradorFactura(); },
+  facAjusteQuitar: d => { const b=leerBorrador(); if(!b) return; const g=+d.g;
+    const x=resumenBorrador(b).grupos.find(y=>y.g===g); if(!x||!x.aj){ S.audOmitir=true; return; }
+    S._audAj=`${P(b.prop).nombre} · Factura ${g}: quitó el ajuste (${money(x.total)} \u2192 ${money(x.pre)}) \u00b7 ${x.aj.motivo}`;
+    delete b.ajustes[g]; if(b.ajIn) delete b.ajIn[g];
+    modalBorradorFactura(); },
   /* Una factura por grupo: la de menor número reusa el borrador que se edita (si lo hay), las demás nacen nuevas. */
   facBorradorGuardar: () => {
     const b=leerBorrador(); if(!b) return;
     const r=resumenBorrador(b);
     if(!r.grupos.length){ S.audOmitir=true; toast("Elige un concepto","Selecciona al menos una línea.","r"); return; }
+    // extras: con concepto, y ÷ solo con factor mayor a 0
+    const exAct=r.grupos.flatMap(x=>x.extras.map(z=>z.e)), sinCon=exAct.filter(e=>!e.concepto), div0=exAct.filter(e=>e.op==="/"&&!(e.valor>0));
+    if(sinCon.length||div0.length){ S.audOmitir=true; modalBorradorFactura();
+      marcaFalta(sinCon.map(e=>"fbx_"+e.id+"_con"));
+      div0.forEach(e=>{ const el=document.getElementById("fbx_"+e.id+"_val"); if(el&&el.parentElement) el.parentElement.classList.add("bad"); });
+      toast(div0.length?"No se puede dividir entre 0":"Falta el concepto del extra",div0.length?"Escribí un factor mayor a 0 en el extra ÷.":"Cada extra lleva su concepto.","r"); return; }
+    // créditos de servicio: no se puede usar más de lo disponible
+    const usoK={}; exAct.filter(e=>e.credServ).forEach(e=>{ usoK[e.credServ]=(usoK[e.credServ]||0)+1; });
+    const faltaCr=Object.keys(usoK).find(k=>{ const c=credServSaldos(b.prop,b.id).find(y=>y.key===k); return !c||c.saldo<usoK[k]; });
+    if(faltaCr){ S.audOmitir=true; toast("Crédito de servicio insuficiente","Hay más filas de cortesía que créditos disponibles de "+faltaCr.slice(0,faltaCr.lastIndexOf("|"))+".","r"); return; }
     const previa=(b.id&&by(S.facturas,b.id))||null;
     if(previa) (previa.conceptos||[]).forEach(c=>{   // se liberan las líneas del borrador; abajo se vuelven a reservar por grupo
       if(c.tipo==="WO"){const w=W(c.wo); if(w) w.facturada=false;}
@@ -647,11 +745,17 @@ Object.assign(ACC, {
     });
     // si se re-edita el borrador, se devuelve el crédito usado y se vuelve a descontar donde toque
     S.creditosProp=(S.creditosProp||[]).filter(c=>!(b.id&&c.factura===b.id&&c.tipo==="Uso"));
+    S.creditosServ=(S.creditosServ||[]).filter(c=>!(b.id&&c.factura===b.id&&c.tipo==="Uso"));   // idem servicios: vuelven al saldo y se reconsumen abajo
     const hechas=[], nuevas=[];
     r.grupos.forEach((x,i)=>{
       const conceptos=x.lineas.map(l=>{const {grupo,seleccionada,...c}=l; return {...c,importe:importeLinea(l)};});   // el importe ya sale con el descuento
+      x.extras.forEach(({e,delta})=>conceptos.push({tipo:"Extra",wo:null,subwo:null,unidad:e.unidad||"\u2014",nombre:e.concepto,descripcion:"",
+        op:e.op,valor:+e.valor||0,tipoValor:e.tipoValor==="%"?"%":"$",importe:e.op==="NA"?0:delta,valorRef:+e.valor||0,
+        ...(e.credServ?{credServ:e.credServ}:{}),evidencia:0,fecha:HOY_SUP}));   // después de las líneas, en orden
       if(x.cred>0.004) conceptos.push({clave:"credito",tipo:"Credito",wo:null,subwo:null,unidad:"—",nombre:"Credit applied",descripcion:"",
         precio:-x.cred,cantidad:1,importe:-x.cred,evidencia:0,fecha:HOY_SUP});
+      if(x.aj) conceptos.push({tipo:"AjusteTotal",wo:null,subwo:null,unidad:"\u2014",nombre:"Adjustment ("+x.aj.motivo+")",descripcion:"",
+        importe:x.aj.delta,motivo:x.aj.motivo,final:x.aj.final,calc:x.aj.calc,evidencia:0,fecha:HOY_SUP});   // monto fijo, no se recalcula
       let f=i===0?previa:null;
       if(f) f.conceptos=conceptos;
       else {
@@ -661,8 +765,12 @@ Object.assign(ACC, {
         nuevas.push(f);
       }
       f.lineas=[...new Set(conceptos.map(c=>c.wo).filter(Boolean))]; f.limite=b.limite||null;
-      f.total=conceptos.reduce((n,c)=>n+(c.importe||0),0);
+      f.total=r2(conceptos.reduce((n,c)=>n+(c.importe||0),0));
       if(x.cred>0.004) S.creditosProp.push({id:"CR"+Date.now(),prop:b.prop,tipo:"Uso",monto:x.cred,motivo:"Applied to "+f.num,factura:f.id,quien:S.usuario,fecha:HOY_SUP});
+      x.extras.filter(z=>z.e.credServ).forEach(({e},n)=>{   // cada fila de cortesía consume 1 del crédito de servicio
+        const i=e.credServ.lastIndexOf("|");
+        (S.creditosServ=S.creditosServ||[]).push({id:"CS"+Date.now()+"_"+i+"_"+(++_xSeq),prop:b.prop,unidad:e.credServ.slice(i+1)||null,serv:e.credServ.slice(0,i),
+          cant:1,tipo:"Uso",motivo:"Applied to "+f.num,factura:f.id,quien:S.usuario,fecha:HOY_SUP}); });
       conceptos.forEach(c=>{
         if(c.tipo==="WO"){
           const w=W(c.wo); if(w){w.facturada=true; w.hist.push([hora(),`Incluida en borrador ${f.num}`,S.usuario]);}

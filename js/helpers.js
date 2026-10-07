@@ -64,7 +64,15 @@ function recordatoriosDe(f, inicio){
 }
 function programarRecordatorios(w, f, inicio){
   S.recordatoriosWO=(S.recordatoriosWO||[]).filter(r=>r.wo!==w.id);
-  recordatoriosDe(f,inicio).forEach(r=>S.recordatoriosWO.push({id:"RW"+nid("rw"),wo:w.id,...r,estado:"Scheduled"}));
+  /* Todas las WO llevan recordatorio (técnico y equipo); el aviso al cliente solo si la unidad está ocupada. */
+  const cliente=U(w.unidad).ocupacion==="Occupied";
+  recordatoriosDe(f,inicio).forEach(r=>S.recordatoriosWO.push({id:"RW"+nid("rw"),wo:w.id,...r,cliente,estado:"Scheduled"}));
+}
+const recordatorioAlCliente = r => r.cliente!==false;
+/* Texto al técnico (en español, dentro de su app). */
+function textoRecordatorioTec(r){
+  const w=W(r.wo); if(!w) return "";
+  return `WO-${w.id} · ${w.serv} · ${P(w.prop).nombre} ${U(w.unidad).num} — ${w.fecha} ${w.horaProg||"9:00"}`;
 }
 /* Texto al cliente (en inglés) del recordatorio de una WO en unidad ocupada. */
 function textoRecordatorio(r){
@@ -274,6 +282,19 @@ const woEspera = w => { const p=w.dependeDe&&W(w.dependeDe); return p && p.estad
 /* Crédito de propiedad: saldo = abonos − usos. Solo se aplica a mano en la factura. */
 const saldoCredito = prop => Math.round(((S.creditosProp||[]).filter(c=>c.prop===prop)
   .reduce((n,c)=>n+(c.tipo==="Abono"?1:-1)*(+c.monto||0),0))*100)/100;
+/* Créditos de servicio por propiedad (y unidad opcional): movimientos Abono/Uso en S.creditosServ.
+   Un "grupo" es servicio+unidad; excluirFactura devuelve lo que ese borrador ya había usado. */
+const propIdDe = x => Number.isNaN(+x) ? x : +x;   // data-id llega como texto; las propiedades nuevas tienen id numérico
+const credKey = (serv,unidad) => serv+"|"+(unidad||"");
+function credServSaldos(prop, excluirFactura){
+  const m=new Map();
+  (S.creditosServ||[]).filter(c=>c.prop===prop).forEach(c=>{
+    if(excluirFactura && c.tipo==="Uso" && c.factura===excluirFactura) return;
+    const k=credKey(c.serv,c.unidad), o=m.get(k)||{key:k,serv:c.serv,unidad:c.unidad||null,saldo:0};
+    o.saldo+=(c.tipo==="Abono"?1:-1)*(+c.cant||0); m.set(k,o); });
+  return [...m.values()].filter(x=>x.saldo>0.0001);
+}
+const saldoServ = (prop,serv,unidad) => { const x=credServSaldos(prop).find(y=>y.key===credKey(serv,unidad)); return x?x.saldo:0; };
 function materialWO(w){ return S.movs.filter(m=>m.wo===w.id && m.tipo==="salida" && !m.cliente).reduce((a,m)=>a+m.costo,0); }
 /* Punto 10: el pago adicional que se aprueba al aceptar una Sub-Work
    Order (ver medioOK) queda en S.excepciones, no en egresoWO — así que

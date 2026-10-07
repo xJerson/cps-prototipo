@@ -364,7 +364,8 @@ let S = {
       pdf:"INV-2026-1045.pdf",pdfHora:"12:30",pdfQuien:"Erika",
       seguimiento:[{tipo:"pago",fecha:"2026-08-11",hora:"15:00",quien:"Claudia",nota:"Pago recibido y conciliado."},{tipo:"cierre",fecha:"2026-08-11",hora:"15:00",quien:"Claudia"}]}
   ],
-  creditosProp:[],
+  creditosProp:[{id:"CR0",prop:"P1",unidad:"U1",tipo:"Abono",monto:150,motivo:"Retraso en entrega",quien:"Claudia",fecha:"2026-08-05"}],
+  creditosServ:[{id:"CS0",prop:"P1",unidad:null,serv:"Full clean",cant:2,tipo:"Abono",motivo:"Cortesía por retraso",quien:"Claudia",fecha:"2026-08-05"}],
   pagos:[{id:"PG1",factura:"F601",monto:120,medio:"Check",referencia:"CHK-10488",fecha:"2026-08-11",evidencia:true,quien:"Claudia",nota:"Partial payment received"}], nomina:[], bitacora:[], audSeq:0, avisos:[], campana:false,
   /* Expedientes post-work enviados al cliente: se conserva el token para
      que el enlace pueda abrirse en otra pestaña del mismo origen. */
@@ -508,7 +509,7 @@ let S = {
     {id:"GC3",tipo:"Office",concepto:"Internet oficina",monto:95,fecha:"2026-08-01",vehiculo:"",evidencia:true,notas:"Gasto administrativo",asignaciones:[],quien:"Claudia"}
   ],
   vehiculos:[{id:"V1",nombre:"Ford Transit 12",placa:"FL CPS-012"},{id:"V2",nombre:"Chevrolet Silverado 8",placa:"FL CPS-008"}],
-  recordatoriosWO:[{id:"RW1",wo:1043,tipo:"1 day before",fecha:"2026-08-11",hora:"10:00",estado:"Scheduled"},{id:"RW2",wo:1043,tipo:"1 hour before",fecha:"2026-08-12",hora:"09:00",estado:"Scheduled"}],
+  recordatoriosWO:[{id:"RW1",wo:1043,tipo:"1 day before",fecha:"2026-08-11",hora:"10:00",cliente:true,estado:"Scheduled"},{id:"RW2",wo:1043,tipo:"1 hour before",fecha:"2026-08-12",hora:"09:00",cliente:true,estado:"Scheduled"}],
   comunicacionesWO:[{id:"CW1",wo:1042,medio:"Email",fecha:"2026-08-11",quien:"Thalia",motivo:"Unit does not have water",mensaje:"Hello, work order WO-1042 is pending because the unit does not have water. Please let us know when the unit is ready for service.",estado:"Sent"}],
   movs:[
     {id:"M1",prod:"PR1",tipo:"entrada",cant:24,fecha:"2026-08-03",wo:null,costo:780,tienda:"Sherwin Williams",quien:"Erika",evid:true},

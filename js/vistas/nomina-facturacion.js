@@ -660,33 +660,81 @@ function descuentoLinea(l){
 }
 const importeLinea = l => Math.round(((+l.precio||0)*(+l.cantidad||0)-descuentoLinea(l))*100)/100;
 const textoDescLinea = l => { const d=+l.desc||0; return d>0&&descuentoLinea(l)>0 ? (l.descTipo==="%"?`−${d}%`:`−${money(d)}`) : "—"; };
+/* Extras del borrador: operaciones sobre el total corriente de su factura, en orden.
+   + / − suman o restan ($ o % del corriente), × / ÷ multiplican o dividen (valor = factor), N/A no mueve nada. */
+const r2 = n => Math.round((+n||0)*100)/100;
+const OPS_EXTRA = {"+":"+ Suma","-":"− Resta","*":"× Multiplica","/":"÷ Divide","NA":"N/A No aplica"};
+let _xSeq = 0;
+const idExtra = () => "x"+Date.now().toString(36)+(++_xSeq);
+function deltaExtra(run, e){
+  const v=+e.valor||0, pc=e.tipoValor==="%";
+  if(e.op==="+") return r2(pc?run*v/100:v);
+  if(e.op==="-") return r2(-(pc?run*v/100:v));
+  if(e.op==="*") return r2(run*(v-1));
+  if(e.op==="/") return v>0?r2(run/v-run):0;   // ÷ 0 no calcula: se bloquea al guardar
+  return 0;
+}
+const sgnMoney = n => (n<0?"\u2212":"+")+money(Math.abs(n));
+/* "+ $50.00", "− 10%", "× 1.08", "÷ 2", "N/A": el texto de la operación (PDF y compositor) */
+function textoOpExtra(e){
+  const v=+e.valor||0;
+  if(e.op==="NA") return "N/A";
+  if(e.op==="*"||e.op==="/") return (e.op==="*"?"\u00d7":"\u00f7")+" "+v;
+  return (e.op==="+"?"+":"\u2212")+" "+(e.tipoValor==="%"?v+"%":money(v));
+}
+function efectoExtra(e, delta){
+  if(e.op==="NA") return "N/A";
+  if(e.op==="*"||e.op==="/") return textoOpExtra(e).replace(" ","")+" \u2192 "+sgnMoney(delta);
+  return (e.tipoValor==="%"?textoOpExtra(e).replace(" ","")+" \u2192 ":"")+sgnMoney(delta);
+}
+/* Precio real de un servicio para (propiedad, unidad): tarifario por unidad, luego el de la propiedad; 0 si no se sabe */
+function precioServicio(prop, serv, u){
+  const sv=CAT.servicios.find(x=>x.nombre===serv), cat=sv?sv.tipo:"";
+  let t=u?tarifa(prop,cat,serv,u.rooms,u.pisos):null;
+  if(!t) t=tarifa(prop,cat,serv,"",null);
+  if(!t){ const ts=tarifasDe(prop).filter(x=>(x.serv||x.nombre)===serv); t=ts.find(x=>x.prop===prop)||ts[0]; }
+  return t?+t.precio||0:0;
+}
 /* Una sola fuente para los totales por factura del borrador: la vista y el guardado leen lo mismo.
-   Cada grupo (Factura 1..6) es una factura; el crédito de la propiedad cae en un solo grupo y
-   se limita al subtotal de ese grupo. */
+   Cada grupo (Factura 1..6) es una factura. Orden: líneas → extras (en orden) → crédito (se limita al total
+   de ese punto, en un solo grupo) → ajuste fijo de total. Un extra N/A no mueve nada. */
 function resumenBorrador(b){
   const sel=(b.lineas||[]).filter(l=>l.seleccionada);
   const grupos=[...new Set(sel.map(l=>+l.grupo||1))].sort((x,y)=>x-y).map(g=>{
     const ls=sel.filter(l=>(+l.grupo||1)===g);
-    return {g,lineas:ls,subtotal:ls.reduce((n,l)=>n+importeLinea(l),0),cred:0,total:0};});
+    return {g,lineas:ls,subtotal:r2(ls.reduce((n,l)=>n+importeLinea(l),0)),extras:[],despues:0,cred:0,pre:0,aj:null,total:0};});
+  grupos.forEach(x=>{
+    let run=x.subtotal;
+    (b.extras||[]).filter(e=>(+e.grupo||1)===x.g).forEach(e=>{ const delta=deltaExtra(run,e); run=r2(run+delta); x.extras.push({e,delta}); });
+    x.despues=run;});
   const usoPrev=b.id?(S.creditosProp||[]).filter(c=>c.factura===b.id&&c.tipo==="Uso").reduce((n,c)=>n+c.monto,0):0;
   const disp=Math.max(0,saldoCredito(b.prop)+usoPrev);   // lo que este mismo borrador ya usó cuenta como disponible
   const gc=grupos.find(x=>x.g===(+b.creditoGrupo||1))||grupos[0];
-  const maxCred=gc?Math.max(0,Math.min(disp,gc.subtotal)):0;
+  const maxCred=gc?Math.max(0,Math.min(disp,gc.despues)):0;
   const cred=Math.min(Math.max(0,+b.credito||0),maxCred);
   if(gc) gc.cred=cred;
-  grupos.forEach(x=>{x.total=x.subtotal-x.cred;});
-  return {grupos,disp,maxCred,cred,credG:gc?gc.g:1,total:grupos.reduce((n,x)=>n+x.total,0)};
+  grupos.forEach(x=>{
+    x.pre=r2(x.despues-x.cred);
+    const a=b.ajustes&&b.ajustes[x.g];
+    x.aj=a?{...a,viejo:Math.abs(x.pre-a.calc)>0.004}:null;   // viejo: cambió algo después de ajustar
+    x.total=r2(x.pre+(a?a.delta:0));});
+  return {grupos,disp,maxCred,cred,credG:gc?gc.g:1,total:r2(grupos.reduce((n,x)=>n+x.total,0))};
 }
+const TIPOS_ESPECIALES = ["Credito","Extra","AjusteTotal"];   // conceptos que no son líneas del borrador
 function abrirBorradorFactura(prop, facturaId){
   const existente=facturaId&&by(S.facturas,facturaId);
+  const cs=existente?(existente.conceptos||[]):[];
   // Borradores viejos pueden no traer precio unitario: se deduce del importe
-  const actuales=existente?(existente.conceptos||[]).filter(c=>c.tipo!=="Credito").map(c=>({...c,seleccionada:true,grupo:1,
-    precio:c.precio!=null?c.precio:(c.importe||0)/(c.cantidad||1)})):[];
-  const credPrev=existente?(existente.conceptos||[]).filter(c=>c.tipo==="Credito").reduce((n,c)=>n-(c.importe||0),0):0;
+  const actuales=cs.filter(c=>!TIPOS_ESPECIALES.includes(c.tipo)).map(c=>({...c,seleccionada:true,grupo:1,
+    precio:c.precio!=null?c.precio:(c.importe||0)/(c.cantidad||1)}));
+  const credPrev=cs.filter(c=>c.tipo==="Credito").reduce((n,c)=>n-(c.importe||0),0);
+  const extras=cs.filter(c=>c.tipo==="Extra").map(c=>({id:idExtra(),grupo:1,concepto:c.nombre||"",op:c.op||"NA",valor:+c.valor||0,
+    tipoValor:c.tipoValor==="%"?"%":"$",credServ:c.credServ||null,unidad:c.unidad&&c.unidad!=="\u2014"?c.unidad:null}));
+  const aT=cs.find(c=>c.tipo==="AjusteTotal"), ajustes=aT?{1:{final:aT.final,motivo:aT.motivo||"",delta:aT.importe||0,calc:aT.calc}}:{};
   const porClave=new Map(actuales.map(l=>[l.clave,l]));
   lineasFacturablesFactura(prop,facturaId).forEach(l=>{if(!porClave.has(l.clave)) porClave.set(l.clave,{...l,grupo:1});});
   S.facturaBorrador={id:existente?existente.id:null,prop,lineas:[...porClave.values()],limite:existente?existente.limite||"":"",credito:credPrev||0,creditoGrupo:1,
-    lote:{desde:"",hasta:"",mes:"",tipo:"",factura:1}};
+    extras,ajustes,ajIn:{},lote:{desde:"",hasta:"",mes:"",tipo:"",factura:1}};
   modalBorradorFactura();
 }
 function idLineaBorrador(clave){ return "fb_"+String(clave).replace(/[^a-z0-9]/gi,"_"); }
@@ -696,7 +744,7 @@ function idLineaBorrador(clave){ return "fb_"+String(clave).replace(/[^a-z0-9]/g
 const tipoLoteLinea = l => l.tipo==="WO" ? `wo:${(W(l.wo)&&W(l.wo).cat)||"—"}`
   : l.tipo==="Manual"&&l.cat&&l.cat!=="Extras" ? `wo:${l.cat}` : "extra";   // una línea manual con tipo entra al lote de ese tipo
 /* Etiqueta de origen de un concepto ya facturado: nunca imprime "WO-undefined" */
-const etiquetaConcepto = x => x.tipo==="Manual"?"Manual":x.tipo==="Credito"?"Credit":!x.wo?"—"
+const etiquetaConcepto = x => x.tipo==="Manual"?"Manual":x.tipo==="Credito"?"Credit":x.tipo==="Extra"?"Extra":x.tipo==="AjusteTotal"?"Adjustment":!x.wo?"—"
   :`WO-${x.wo}${x.tipo==="Sub-WO"?" · Sub-WO":x.tipo==="Ajuste"?" · Adjustment":""}`;
 function opcionesTipoLote(lineas){
   const vistos=new Set(), opciones=[];
@@ -719,15 +767,58 @@ function modalBorradorFactura(){
   const tiposLote=opcionesTipoLote(lineas);
   const excede=g=>limite>0&&g.total>limite+.004, nExc=r.grupos.filter(excede).length;
   const paraDespues=lineas.filter(l=>!l.seleccionada).length;
+  /* Créditos de la propiedad: siempre a la vista. Los de una unidad que está en el borrador van primero. */
+  const unidsLinea=new Set(lineas.filter(l=>l.seleccionada&&l.unidad&&l.unidad!=="\u2014")
+    .map(l=>(S.unidades.find(u=>u.prop===b.prop&&u.num===l.unidad)||{}).id).filter(Boolean));
+  const sv=credServSaldos(b.prop,b.id).map(x=>({...x,rest:x.saldo-(b.extras||[]).filter(e=>e.credServ===x.key).length,match:!!x.unidad&&unidsLinea.has(x.unidad)}))
+    .sort((a,c)=>(c.match?1:0)-(a.match?1:0));
+  const abonosUni=[...unidsLinea].map(id=>({id,m:(S.creditosProp||[]).filter(c=>c.prop===b.prop&&c.unidad===id&&c.tipo==="Abono").reduce((n,c)=>n+(+c.monto||0),0)})).filter(x=>x.m>0);
+  const panelCred=`<div style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><b style="font-size:12.5px">Créditos de la propiedad</b>
+      <button type="button" class="btn sm" style="margin-left:auto" data-a="creditoNuevo" data-id="${esc(b.prop)}" data-fb="1">+ Agregar crédito</button></div>
+    ${r.disp>0.004?`<div class="fg c3"><div class="fld"><label>Crédito disponible</label><div class="note v" style="margin:0"><b class="mono">${money(r.disp)}</b></div></div>
+      <div class="fld"><label>Usar</label><input id="fbCredito" data-a="facBorradorCambiar" type="number" min="0" max="${r.maxCred}" step="0.01" value="${r.cred||""}" placeholder="0.00"></div>
+      <div class="fld"><label>Crédito en</label><select id="fbCredG" data-a="facBorradorCambiar">${(r.grupos.length?r.grupos.map(x=>x.g):[1]).map(g=>`<option value="${g}" ${g===r.credG?"selected":""}>Factura ${g}</option>`).join("")}</select></div></div>`
+      :`<div class="hint" style="margin:0">Sin crédito</div>`}
+    ${abonosUni.length?`<div class="hint">Abonado a unidades de esta factura: ${abonosUni.map(x=>esc(U(x.id).num)+" "+money(x.m)).join(" · ")}</div>`:""}
+    ${sv.length?`<div style="margin-top:8px;font-size:10.5px;color:var(--faint);font-weight:700;text-transform:uppercase;letter-spacing:.05em">Servicios</div>
+      ${sv.map(x=>`<div style="display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:6px;${x.match?"background:var(--azul-cl)":""}">
+        <span>${esc(x.serv)} · ${x.rest} ${x.rest===1?"disponible":"disponibles"}${x.unidad?" · "+esc(U(x.unidad).num):""}</span>
+        ${x.match?`<span class="pill v">esta unidad</span>`:""}
+        <button type="button" class="btn sm" style="margin-left:auto" data-a="facCredServUsar" data-k="${esc(x.key)}" ${x.rest>0?"":"disabled"}>Agregar</button></div>`).join("")}`:""}</div>`;
+  /* Extras: filas con operación sobre el total de su factura */
+  const efe=new Map(); r.grupos.forEach(x=>x.extras.forEach(z=>efe.set(z.e.id,z.delta)));
+  const gOpts=e=>[...new Set([...(r.grupos.length?r.grupos.map(x=>x.g):[1]),+e.grupo||1])].sort((a,c)=>a-c);
+  const extrasHTML=`<div style="margin-top:14px"><div style="font-weight:750;font-size:12.5px;margin-bottom:6px">Extras</div>
+    ${(b.extras||[]).length?`<table style="font-size:11.5px"><thead><tr><th>Concepto</th><th>Operación</th><th>Valor</th><th></th><th>Factura</th><th class="num">Efecto</th><th></th></tr></thead><tbody>
+      ${b.extras.map(e=>{ const k="fbx_"+e.id+"_", d=efe.get(e.id), pm=e.op==="+"||e.op==="-", mal=e.op==="/"&&!(+e.valor>0);
+        return `<tr><td><div class="fld" style="margin:0"><input id="${k}con" value="${esc(e.concepto||"")}" placeholder="Concepto"></div></td>
+        <td><select id="${k}op" data-a="facExtraCambiar">${Object.entries(OPS_EXTRA).map(([v,t])=>`<option value="${v}" ${v===e.op?"selected":""}>${t}</option>`).join("")}</select></td>
+        <td><div class="fld" style="margin:0"><input id="${k}val" data-a="facExtraCambiar" type="number" min="0" step="0.01" class="mono" value="${esc(+e.valor?e.valor:"")}" placeholder="0"></div></td>
+        <td>${pm?`<select id="${k}tv" data-a="facExtraCambiar"><option value="$" ${e.tipoValor==="%"?"":"selected"}>$</option><option value="%" ${e.tipoValor==="%"?"selected":""}>%</option></select>`:`<span style="color:var(--faint)">${e.op==="NA"?"$":"factor"}</span>`}</td>
+        <td><select id="${k}grp" data-a="facExtraCambiar">${gOpts(e).map(n=>`<option value="${n}" ${n===(+e.grupo||1)?"selected":""}>${n}</option>`).join("")}</select></td>
+        <td class="num mono" style="${e.op==="NA"?"color:var(--faint)":""}">${mal?`<span style="color:var(--rojo)">valor \u2260 0</span>`:d===undefined?"\u2014":esc(efectoExtra(e,d))}</td>
+        <td><button class="btn sm" data-a="facExtraQuitar" data-id="${esc(e.id)}">Quitar</button></td></tr>`;}).join("")}
+    </tbody></table>`:`<div class="hint" style="margin:0 0 6px">Sin extras. Sirven para recargos, descuentos, factores o un servicio de cortesía (N/A).</div>`}
+    <button class="btn sm" data-a="facExtraAgregar" style="margin-top:6px">+ Extra</button></div>`;
+  /* Ajustar total: monto fijo + motivo, por factura */
+  const ajHTML=r.grupos.length?`<div style="margin-top:14px"><div style="font-weight:750;font-size:12.5px">Ajustar total</div>
+    ${r.grupos.map(x=>{ const inp=(b.ajIn||{})[x.g]||{}, fin=inp.final!=null?inp.final:(x.aj?x.aj.final:""), mot=inp.motivo!=null?inp.motivo:(x.aj?x.aj.motivo:"");
+      return `<div style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px">
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b>Factura ${x.g}</b><span class="mono">Calculado ${money(x.pre)}</span>
+          ${x.aj?`<span class="pill a">Ajustado a ${money(x.aj.final)} (${sgnMoney(x.aj.delta)})</span>`:""}</div>
+        ${x.aj&&x.aj.viejo?`<div class="note w" style="margin:6px 0 0">Total ajustado a mano — revisalo</div>`:""}
+        <div class="fg c3" style="margin-top:8px"><div class="fld"><label>Total final</label><input id="fbAjF_${x.g}" type="number" step="0.01" class="mono" value="${esc(fin)}" placeholder="0.00"></div>
+          <div class="fld" style="grid-column:span 2"><label>Motivo <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— obligatorio si cambia</span></label><input id="fbAjM_${x.g}" value="${esc(mot)}"></div></div>
+        <div style="display:flex;gap:6px"><button class="btn sm p" data-a="facAjusteAplicar" data-g="${x.g}">Aplicar</button>
+          ${x.aj?`<button class="btn sm" data-a="facAjusteQuitar" data-g="${x.g}">Quitar ajuste</button>`:""}</div></div>`;}).join("")}</div>`:"";
   modal(`<div class="mh"><h3>${b.id?"Editar borrador":"Preparar factura"}</h3><p>${esc(p.nombre)} · normalmente todo va en Factura 1.</p></div>
   <div class="mb">
     <div class="note" style="margin-bottom:12px"><b>Regla normal:</b> Clean, Paint, Carpet y extras de esta propiedad van juntos en Factura 1. Agrupa por lote solo si la propiedad lo pidió; Erika lo decide ahora al facturar. Las líneas sin marcar quedan para después.</div>
     <div class="fg c2"><div class="fld"><label>Límite por factura <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label>
       <input id="fbLimite" data-a="facBorradorCambiar" type="number" min="0" step="0.01" value="${esc(b.limite||"")}" placeholder="Ej. 2500.00"></div>
       <div class="fld"><label>Total</label><div class="note ${nExc?"w":"v"}" style="margin:0"><b class="mono">${money(r.total)}</b>${limite>0?` · ${nExc?nExc+" supera(n)":"todas dentro de"} ${money(limite)}`:""}</div></div></div>
-    ${r.disp>0.004?`<div class="fg c3"><div class="fld"><label>Crédito disponible</label><div class="note v" style="margin:0"><b class="mono">${money(r.disp)}</b></div></div>
-      <div class="fld"><label>Usar</label><input id="fbCredito" data-a="facBorradorCambiar" type="number" min="0" max="${r.maxCred}" step="0.01" value="${r.cred||""}" placeholder="0.00"></div>
-      <div class="fld"><label>Crédito en</label><select id="fbCredG" data-a="facBorradorCambiar">${(r.grupos.length?r.grupos.map(x=>x.g):[1]).map(g=>`<option value="${g}" ${g===r.credG?"selected":""}>Factura ${g}</option>`).join("")}</select></div></div>`:""}
+    ${panelCred}
     ${lineas.length?`<div class="note" style="margin-bottom:8px"><b>Lote manual (solo excepción):</b> selecciona y asigna únicamente las líneas que coincidan. No quita ni mueve las demás.</div>
       <div class="fg c3"><div class="fld"><label>Mes</label><input id="fbLoteMes" data-a="facLoteMes" type="month" value="${esc(lote.mes||"")}"></div>
         <div class="fld"><label>Desde</label><input id="fbLoteDesde" type="date" value="${esc(lote.desde)}"></div>
@@ -751,20 +842,41 @@ function modalBorradorFactura(){
         <td><button class="btn sm" data-a="facLineaEditar" data-k="${esc(l.clave)}">Editar</button></td></tr>`;}).join("")}
     </tbody></table>`:`<div class="empty">Sin WO para facturar: agregá líneas manuales.</div>`}
     <button class="btn sm" data-a="facBorradorAgregarLinea">+ Agregar línea manual</button>
+    ${extrasHTML}
+    ${ajHTML}
   </div><div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="facBorradorGuardar" ${r.grupos.length?"":"disabled"}>Guardar</button></div>`,true);
 }
-/* Editor de una línea, como en cualquier app de facturas: nombre, descripción, precio, cantidad y descuento ($ o %). */
+/* Items que se pueden elegir en una línea manual: tarifas de la propiedad (y generales) + servicios del catálogo */
+function itemsFactura(prop){
+  const m=new Map(), tipoDe=n=>{ const sv=CAT.servicios.find(x=>x.nombre===n); return sv?sv.tipo:""; };
+  tarifasDe(prop).forEach(t=>{ const n=t.serv||t.nombre; if(n&&!m.has(n)) m.set(n,t.cat||tipoDe(n)); });
+  CAT.servicios.filter(x=>!x.baja).forEach(x=>{ if(!m.has(x.nombre)) m.set(x.nombre,x.tipo); });
+  return [...m.entries()].map(([nombre,cat])=>({nombre,cat})).sort((a,c)=>a.nombre.localeCompare(c.nombre));
+}
+/* Editor de una línea, como en cualquier app de facturas: nombre, descripción, precio, cantidad y descuento ($ o %).
+   Una línea sin WO (manual) puede armarse del catálogo (Item → precarga nombre y precio) o libre. */
 function modalLineaFactura(clave){
   const b=S.facturaBorrador, l=b&&(b.lineas||[]).find(x=>x.clave===clave); if(!l) return modalBorradorFactura();
-  const man=l.tipo==="Manual", unis=man?S.unidades.filter(u=>u.prop===b.prop):[];
+  const man=l.tipo==="Manual"||!l.wo, unis=man?S.unidades.filter(u=>u.prop===b.prop):[];
+  const items=man?itemsFactura(b.prop):[], esItem=items.some(i=>i.nombre===l.nombre);
+  if(man&&!b._fleModo) b._fleModo=(esItem||l.nombre==="Adjustment"||!l.nombre)?"catalogo":"libre";
+  const modo=b._fleModo, itemSel=man?(b._fleItem||(esItem?l.nombre:"")):"";
+  const uni=man&&l.unidad&&l.unidad!=="\u2014"?unis.find(u=>u.num===l.unidad):null;
+  const it=items.find(i=>i.nombre===itemSel);
   modal(`<div class="mh"><h3>Editar línea</h3><p>${man?"Manual adjustment":etiquetaConcepto(l)}</p></div>
   <div class="mb">
-    <div class="fld"><label>Nombre</label><input id="fleNom" value="${esc(l.nombre||"")}"></div>
+    ${man?`<div class="fld"><label>Cómo se arma</label><div style="display:flex;gap:6px">
+      <button type="button" class="btn sm ${modo==="catalogo"?"p":""}" data-a="facLineaModo" data-k="${esc(l.clave)}" data-m="catalogo">Del catálogo</button>
+      <button type="button" class="btn sm ${modo==="libre"?"p":""}" data-a="facLineaModo" data-k="${esc(l.clave)}" data-m="libre">Libre</button></div></div>
+    ${modo==="catalogo"?`<div class="fld"><label>Item</label><select id="fleItem" data-a="facLineaItem" data-k="${esc(l.clave)}"><option value="">— elegí —</option>${items.map(i=>`<option value="${esc(i.nombre)}" ${i.nombre===itemSel?"selected":""}>${esc(i.nombre)}</option>`).join("")}</select></div>`:""}`:""}
+    <div class="fld"><label>Nombre</label><input id="fleNom" value="${esc(l.nombre||"")}" ${man&&modo==="libre"?'list="fleNomList"':""}>
+      ${man&&modo==="libre"?`<datalist id="fleNomList">${items.map(i=>`<option value="${esc(i.nombre)}">`).join("")}</datalist>`:""}</div>
     ${man?`<div class="fg c2"><div class="fld"><label>Trabajo</label><select id="fleCat">${["Extras",...CAT.categorias].map(c=>`<option ${c===(l.cat||"Extras")?"selected":""}>${esc(c)}</option>`).join("")}</select></div>
-      <div class="fld"><label>Unidad <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><select id="fleUni"><option value="">— sin unidad —</option>${unis.map(u=>`<option ${u.num===l.unidad?"selected":""}>${esc(u.num)}</option>`).join("")}</select></div></div>
+      <div class="fld"><label>Unidad <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><select id="fleUni" data-a="facLineaUni" data-k="${esc(l.clave)}"><option value="">— sin unidad —</option>${unis.map(u=>`<option ${u.num===l.unidad?"selected":""}>${esc(u.num)}</option>`).join("")}</select></div></div>
     <div class="fld"><label>Fecha del trabajo</label><input id="fleF" type="date" value="${esc(l.fecha||"")}"></div>`:""}
     <div class="fld"><label>Descripción</label><input id="fleDes" value="${esc(l.descripcion||"")}"></div>
-    <div class="fg c2"><div class="fld"><label>Precio</label><input id="fleP" type="number" step="0.01" value="${esc(+l.precio||0)}"></div>
+    <div class="fg c2"><div class="fld"><label>Precio</label><input id="fleP" type="number" step="0.01" value="${esc(man&&!(+l.precio)?"":+l.precio||0)}" placeholder="0.00">
+        ${man&&puedeVerIngreso()?sugerenciasHTML("fleP",b.prop,it?it.cat:"",itemSel||servCanon(l.nombre),uni?uni.rooms:"",true):""}</div>
       <div class="fld"><label>Cantidad</label><input id="fleC" type="number" min="0" step="0.01" value="${esc(+l.cantidad||0)}"></div></div>
     <div class="fg c2"><div class="fld"><label>Descuento</label><input id="fleD" type="number" min="0" step="0.01" value="${esc(+l.desc||"")}" placeholder="0"></div>
       <div class="fld"><label>Tipo</label><select id="fleT"><option value="$" ${l.descTipo==="%"?"":"selected"}>$ monto</option><option value="%" ${l.descTipo==="%"?"selected":""}>% del subtotal</option></select></div></div>
@@ -924,9 +1036,13 @@ function conceptosFactura(f){
 function textoConceptoFactura(x){
   const nombre=x.nombre||x.descripcion||"—", detalle=x.nombre&&x.descripcion&&x.descripcion!==x.nombre?x.descripcion:"";
   // El descuento se ve en la línea (cliente en inglés); el importe ya viene descontado
-  const dsc=x.tipo!=="Credito"&&descuentoLinea(x)>0?`Discount ${x.descTipo==="%"?(+x.desc)+"% ":""}(\u2212${money(descuentoLinea(x))})`:"";
-  return `${esc(nombre)}${detalle?`<div class="s">${esc(detalle)}</div>`:""}${dsc?`<div class="s">${dsc}</div>`:""}`;
+  const dsc=!TIPOS_ESPECIALES.includes(x.tipo)&&descuentoLinea(x)>0?`Discount ${x.descTipo==="%"?(+x.desc)+"% ":""}(\u2212${money(descuentoLinea(x))})`:"";
+  const op=x.tipo==="Extra"?`<div class="s">Operation: ${esc(textoOpExtra(x))}</div>`:"";
+  return `${esc(nombre)}${detalle?`<div class="s">${esc(detalle)}</div>`:""}${dsc?`<div class="s">${dsc}</div>`:""}${op}`;
 }
+/* Importe de un concepto en el PDF / modal de la factura: un extra N/A muestra su valor en gris y suma $0 */
+const importeConceptoHTML = x => x.tipo==="Extra"&&x.op==="NA"
+  ? `<span style="color:#8a94a0">${money(+x.valor||0)} · N/A</span>` : money(x.importe||0);
 /* ── EL PDF DE LA FACTURA ─────────────────────────────────
    Abre el documento en una ventana aparte y lanza la impresión: el navegador
    lo guarda como PDF de verdad. No es una simulación — el archivo que sale es
@@ -938,8 +1054,8 @@ function abrirPDF(fid, imprimir){
   const filas = conceptos.map(x => `<tr>
       <td class="m">${etiquetaConcepto(x)}</td>
       <td>${esc(x.unidad||"\u2014")}</td>
-      <td>${textoConceptoFactura(x)}<div class="s">${esc(x.tipo==="Manual"&&x.cat&&x.cat!=="Extras"?x.cat:x.tipo||"WO")}${x.cantidad>1?` · Cantidad ${x.cantidad}`:""}</div></td>
-      <td class="n m">${money(x.importe||0)}</td></tr>`).join("");
+      <td>${textoConceptoFactura(x)}${["Extra","AjusteTotal"].includes(x.tipo)?"":`<div class="s">${esc(x.tipo==="Manual"&&x.cat&&x.cat!=="Extras"?x.cat:x.tipo||"WO")}${x.cantidad>1?` · Cantidad ${x.cantidad}`:""}</div>`}</td>
+      <td class="n m">${importeConceptoHTML(x)}</td></tr>`).join("");
 
   const doc = `<!doctype html><html lang="es"><head><meta charset="utf-8">
     <title>${esc(f.num)}</title>
@@ -1023,7 +1139,7 @@ function modalFactura(fid, enviando){
       <tbody>${conceptos.map(x=>`<tr><td class="mono">${etiquetaConcepto(x)}</td><td>${esc(x.unidad||"—")}</td>
         <td>${textoConceptoFactura(x)}</td>
         <td>${x.evidencia?`<span class="pill v">${x.evidencia} foto(s)</span>`:'<span class="pill w">—</span>'}</td>
-        <td class="num mono">${money(x.importe||0)}</td></tr>`).join("")}
+        <td class="num mono">${importeConceptoHTML(x)}</td></tr>`).join("")}
       <tr style="background:var(--surface-2);font-weight:750"><td colspan="4">Total</td>
         <td class="num mono" style="font-size:15px">${money(f.total)}</td></tr></tbody></table></div>
     ${enviando?`<div class="note v" style="margin-top:13px"><b>Expediente incluido con la factura:</b> ${expediente.antes} foto(s) de referencia/antes, ${expediente.despues} foto(s) post-work y ${expediente.aprobaciones} validación(es) o aprobación(es) registrada(s).<br><span style="font-size:11px">El PDF de la factura y estos respaldos quedan asociados a cada WO enviada.</span></div>
