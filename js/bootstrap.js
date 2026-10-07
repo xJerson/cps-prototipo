@@ -142,6 +142,7 @@ const AUD = {
   pendAvisarOK:{a:"Avisó a clientes por WO pendientes", m:"Work Orders"},
   pendRespuestaOK:{a:"Registró la respuesta del cliente a un aviso", m:"Work Orders"},
   recordatorioEnviar:{a:"Envió un recordatorio de agenda al técnico (y al cliente si la unidad está ocupada)", m:"Work Orders"},
+  recordatorioMoverOK:{a:"Movió la fecha u hora de un recordatorio", m:"Work Orders"},
   recordatorioSegOK:{a:"Anotó el seguimiento al técnico de un recordatorio", m:"Work Orders"},
   facAsignarCat:{a:"Asignó una categoría a una factura del borrador", m:"Facturación"},
   valGuardar:{a:"Guardó cobro/pago de una WO al validar", m:"Nómina"},

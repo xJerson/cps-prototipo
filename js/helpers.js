@@ -55,20 +55,28 @@ function pillsAprob(w){
 }
 /* Responsable de un activo: id de técnico o nombre de oficina. */
 const respN = v => v ? (T(v)?tecN(v):v) : "—";
-/* Recordatorios de unidad ocupada: fecha/hora son CUÁNDO se envían. Un día antes = día anterior a la
-   misma hora de inicio; una hora antes = inicio − 1 h (antes ambos quedaban con la hora de inicio). */
+/* Recordatorios: fecha/hora son CUÁNDO se envían. Técnico y equipo: 1 hora y 15 min antes de la hora de inicio.
+   Cliente (solo unidad ocupada): un día antes y 1 hora antes (la de 1 hora es compartida con el técnico). */
 const hmMin = h => { const [a,b]=String(h||"9:00").split(":"); return (parseInt(a)||0)*60+(parseInt(b)||0); };
 const minHM = m => { m=Math.max(0,m); return String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0"); };
-function recordatoriosDe(f, inicio){
-  return [{tipo:"1 day before",fecha:fechaMover(f,-1),hora:minHM(hmMin(inicio))},{tipo:"1 hour before",fecha:f,hora:minHM(hmMin(inicio)-60)}];
+function recordatoriosDe(f, inicio, cliente){
+  const m=hmMin(inicio), l=[];
+  if(cliente) l.push({tipo:"1 day before",fecha:fechaMover(f,-1),hora:minHM(m),cliente:true,tecnico:false});
+  l.push({tipo:"1 hour before",fecha:f,hora:minHM(m-60),cliente:!!cliente,tecnico:true});
+  l.push({tipo:"15 min before",fecha:f,hora:minHM(m-15),cliente:false,tecnico:true});
+  return l;
 }
+/* Al reagendar se recalculan los recordatorios, salvo los que alguien movió a mano y siguen pendientes. */
 function programarRecordatorios(w, f, inicio){
+  const previos=(S.recordatoriosWO||[]).filter(r=>r.wo===w.id);
+  const aMano=previos.filter(r=>r.movido && r.estado==="Scheduled");
   S.recordatoriosWO=(S.recordatoriosWO||[]).filter(r=>r.wo!==w.id);
-  /* Todas las WO llevan recordatorio (técnico y equipo); el aviso al cliente solo si la unidad está ocupada. */
+  aMano.forEach(r=>S.recordatoriosWO.push(r));
   const cliente=U(w.unidad).ocupacion==="Occupied";
-  recordatoriosDe(f,inicio).forEach(r=>S.recordatoriosWO.push({id:"RW"+nid("rw"),wo:w.id,...r,cliente,estado:"Scheduled"}));
+  recordatoriosDe(f,inicio,cliente).forEach(r=>{ if(!aMano.some(x=>x.tipo===r.tipo)) S.recordatoriosWO.push({id:"RW"+nid("rw"),wo:w.id,...r,estado:"Scheduled"}); });
 }
 const recordatorioAlCliente = r => r.cliente!==false;
+const recordatorioAlTecnico = r => r.tecnico!==false;
 /* Texto al técnico (en español, dentro de su app). */
 function textoRecordatorioTec(r){
   const w=W(r.wo); if(!w) return "";

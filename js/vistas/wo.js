@@ -101,16 +101,16 @@ const MOTIVOS_PEND = ["Unit does not have electricity","Unit does not have water
 /* Recordatorios: fecha/hora = cuándo se envían. «Enviar» avisa al técnico (y al cliente si la unidad está ocupada); después el equipo anota si el técnico va en camino. */
 function filaRecordatorio(r, conWO){
   const w=W(r.wo), tarde=r.estado==="Scheduled" && r.fecha<HOY_SUP, alCli=recordatorioAlCliente(r);
-  const para=(w&&w.tec?esc(tecN(w.tec)):"Sin técnico")+(alCli?" + cliente":"");
+  const para=[recordatorioAlTecnico(r)?(w&&w.tec?esc(tecN(w.tec)):"Sin técnico"):"",alCli?"cliente":""].filter(Boolean).join(" + ");
   const seg=r.seguimiento?`<div style="font-size:10.5px;color:var(--faint)"><b>${esc(r.seguimiento.resultado)}</b>${r.seguimiento.nota?" · "+esc(r.seguimiento.nota):""} · ${esc(r.seguimiento.quien)} ${esc(r.seguimiento.hora)}</div>`:"";
   return `<tr>${conWO?`<td class="mono" style="font-weight:700">WO-${r.wo}</td><td>${w?esc(P(w.prop).nombre)+" · "+esc(U(w.unidad).num):"—"}</td>`:""}
     <td>${esc(r.tipo)}</td><td style="font-size:11.5px">${para}</td><td class="mono">${esc(r.fecha)} ${esc(r.hora)}</td>
-    <td><span class="pill ${r.estado==="Sent"?"v":tarde?"w":"g"}">${r.estado==="Sent"?"Sent":tarde?"Scheduled · atrasado":"Scheduled"}</span>${r.enviado?`<div style="font-size:10.5px;color:var(--faint)">${esc(r.enviado.quien)} · ${esc(r.enviado.fecha)} ${esc(r.enviado.hora)}</div>`:""}${seg}</td>
-    <td style="text-align:right">${puedeAvisarPend()?(r.estado==="Scheduled"?`<button class="btn sm" data-a="recordatorioEnviar" data-id="${esc(r.id)}">Enviar</button>`
-      :`<button class="btn sm" data-a="recordatorioSeg" data-id="${esc(r.id)}">${r.seguimiento?"Actualizar":"¿Va en camino?"}</button>`):""}</td></tr>`;
+    <td><span class="pill ${r.estado==="Sent"?"v":tarde?"w":"g"}">${r.estado==="Sent"?"Sent":tarde?"Scheduled · atrasado":"Scheduled"}</span>${r.movido?`<div style="font-size:10.5px;color:var(--faint)">movido a mano · ${esc(r.movido.quien)}</div>`:""}${r.enviado?`<div style="font-size:10.5px;color:var(--faint)">${esc(r.enviado.quien)} · ${esc(r.enviado.fecha)} ${esc(r.enviado.hora)}</div>`:""}${seg}</td>
+    <td style="text-align:right;white-space:nowrap">${puedeAvisarPend()?(r.estado==="Scheduled"?`<button class="btn sm" data-a="recordatorioMover" data-id="${esc(r.id)}">Mover</button> <button class="btn sm" data-a="recordatorioEnviar" data-id="${esc(r.id)}">Enviar</button>`
+      :recordatorioAlTecnico(r)?`<button class="btn sm" data-a="recordatorioSeg" data-id="${esc(r.id)}">${r.seguimiento?"Actualizar":"¿Va en camino?"}</button>`:""):""}</td></tr>`;
 }
 function cardRecordatorios(){
-  const rs=(S.recordatoriosWO||[]).filter(r=>(r.estado==="Scheduled"||!r.seguimiento) && W(r.wo) && W(r.wo).estado!=="Canceled")
+  const rs=(S.recordatoriosWO||[]).filter(r=>(r.estado==="Scheduled"||(recordatorioAlTecnico(r)&&!r.seguimiento)) && W(r.wo) && W(r.wo).estado!=="Canceled")
     .sort((a,b)=>(a.fecha+a.hora).localeCompare(b.fecha+b.hora));
   if(!rs.length) return "";
   const pend=rs.filter(r=>r.estado==="Scheduled").length, sinSeg=rs.length-pend;

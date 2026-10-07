@@ -1087,11 +1087,25 @@ Object.assign(ACC, {
   /* ── Recordatorios: «Enviar» avisa al técnico y, si la unidad está ocupada, al cliente (simulado; el texto al cliente va en inglés) ── */
   recordatorioEnviar: d => { if(!puedeAvisarPend()) return;
     const r=(S.recordatoriosWO||[]).find(x=>x.id===d.id); if(!r||r.estado==="Sent") return;
-    const w=W(r.wo), alCli=recordatorioAlCliente(r);
+    const w=W(r.wo), alCli=recordatorioAlCliente(r), alTec=recordatorioAlTecnico(r);
     r.estado="Sent"; r.enviado={quien:S.usuario,fecha:HOY_SUP,hora:hora()}; r.mensaje=alCli?textoRecordatorio(r):"";
-    if(w&&w.tec) noti("Recordatorio de trabajo",textoRecordatorioTec(r));
-    if(w) w.hist.push([hora(),`Reminder sent to ${w.tec?"technician":"team"}${alCli?" and customer":""} (${r.tipo})`,S.usuario]);
-    toast("✓ Recordatorio enviado",`WO-${r.wo} · ${esc(r.tipo)} · ${w&&w.tec?"técnico":"equipo"}${alCli?" y cliente":""}. Registrado como enviado (simulado).`,"v"); render(); },
+    if(alTec&&w&&w.tec) noti("Recordatorio de trabajo",textoRecordatorioTec(r));
+    const dest=[alTec?(w&&w.tec?"technician":"team"):"",alCli?"customer":""].filter(Boolean).join(" and ");
+    if(w) w.hist.push([hora(),`Reminder sent to ${dest} (${r.tipo})`,S.usuario]);
+    toast("✓ Recordatorio enviado",`WO-${r.wo} · ${esc(r.tipo)} · ${[alTec?(w&&w.tec?"técnico":"equipo"):"",alCli?"cliente":""].filter(Boolean).join(" y ")}. Registrado como enviado (simulado).`,"v"); render(); },
+  /* Mover un recordatorio pendiente: los valores por defecto se pueden cambiar a mano. */
+  recordatorioMover: d => { const r=(S.recordatoriosWO||[]).find(x=>x.id===d.id); if(!r||r.estado!=="Scheduled"||!puedeAvisarPend()) return;
+    modal(`<div class="mh"><h3>Mover recordatorio · WO-${r.wo}</h3><p>${esc(r.tipo)} · hoy sale ${esc(r.fecha)} ${esc(r.hora)}</p></div><div class="mb">
+      <div class="fld"><label>Fecha <span class="req">*</span></label><input id="rmF" type="date" value="${esc(r.fecha)}"></div>
+      <div class="fld"><label>Hora <span class="req">*</span></label><input id="rmH" type="time" value="${esc(r.hora)}"></div>
+      <div class="hint">Si reagendan la WO, este recordatorio se queda donde lo pusiste.</div></div>
+      <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="recordatorioMoverOK" data-id="${esc(r.id)}">Guardar</button></div>`); },
+  recordatorioMoverOK: d => { const r=(S.recordatoriosWO||[]).find(x=>x.id===d.id); if(!r||r.estado!=="Scheduled"||!puedeAvisarPend()) return;
+    const f=val("rmF"), h=val("rmH");
+    if(!f||!h){ toast("Falta fecha u hora","Completa los dos campos para mover el recordatorio.","r"); return; }
+    const antes=`${r.fecha} ${r.hora}`; r.fecha=f; r.hora=h; r.movido={quien:S.usuario,antes,hora:hora()};
+    const w=W(r.wo); if(w) w.hist.push([hora(),`Reminder moved (${r.tipo}): ${antes} → ${f} ${h}`,S.usuario]);
+    cm(); toast("✓ Recordatorio movido",`WO-${r.wo} · ${esc(r.tipo)} · ${esc(f)} ${esc(h)}.`,"v"); render(); },
   /* Seguimiento interno: alguien del equipo pregunta al técnico si va en camino y anota qué respondió. */
   recordatorioSeg: d => { const r=(S.recordatoriosWO||[]).find(x=>x.id===d.id); if(!r||!puedeAvisarPend()) return;
     const w=W(r.wo);
