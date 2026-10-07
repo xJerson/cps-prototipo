@@ -120,12 +120,16 @@ const AUD = {
   solComGuardar:{a:"Registró una Solicitud Comercial", m:"Comercial"},
   visitaComGuardar:{a:"Registró una visita comercial", m:"Comercial"},
   estGuardar:{a:"Emitió un estimado", m:"Estimados"},
+  estLineaGuardar:{a:"Agregó o editó una línea de estimado", m:"Estimados"},
+  estDelLinea:{a:"Quitó una línea de estimado", m:"Estimados"},
+  alTarGuardar:{a:"Pasó un precio al tarifario", m:"Tarifario"},
   estMedioOK:{a:"Decidió la aprobación del estimado", m:"Estimados"},
   estEnviarOK:{a:"Envió un estimado al cliente", m:"Estimados"},
   estAgendar:{a:"Pasó el estimado a programación", m:"Estimados"},
   coiOK:{a:"Registró el COI", m:"Estimados"},
   facturar:{a:"Generó una factura", m:"Facturación"},
   facBorradorGuardar:{a:"Guardó borradores de factura", m:"Facturación"},
+  facManualOK:{a:"Abrió una factura manual", m:"Facturación"},
   buscarCSV:{a:"Exportó una búsqueda a CSV", m:"Reportes"},
   facEnviarOK:{a:"Envió una factura", m:"Facturación"},
   validarOK:{a:"Validó una Work Order", m:"Nómina"},
@@ -178,6 +182,7 @@ const AUD_POST = {
   estGuardar:  () => S.estimados.length   ? S.estimados[0].num : "",
   facturar:    () => S.facturas.length    ? S.facturas[0].num : "",
   facBorradorGuardar: () => (S._facGuardadas||[]).join(", "),
+  facManualOK: () => S.facturaBorrador ? P(S.facturaBorrador.prop).nombre : "",
   creditoGuardar: () => { const c=(S.creditosProp||[]).slice(-1)[0]; return c ? P(c.prop).nombre : ""; },
   woDupNueva:  () => S.wos.length ? "WO-"+S.wos[S.wos.length-1].id : "",
   tarGuardar:  () => { const t=S.tarifas[S.tarifas.length-1]; return t? (t.nombre||t.serv+" · "+t.variante) : ""; },
@@ -193,7 +198,10 @@ const AUD_POST = {
   excGuardar:  () => S.excepciones.length ? S.excepciones[S.excepciones.length-1].tipo : "",
   subwoFotoRef:  () => ultimoSubwoTocado!=null ? "WO-"+ultimoSubwoTocado : "",
   subwoFotoEvid: () => ultimoSubwoTocado!=null ? "WO-"+ultimoSubwoTocado : "",
-  estMedioOK:    () => ultimoEstTocado || ""
+  estMedioOK:    () => ultimoEstTocado || "",
+  estLineaGuardar: () => S.estHdr&&S.estHdr.num ? S.estHdr.num : "",
+  estDelLinea:   () => S.estHdr&&S.estHdr.num ? S.estHdr.num : "",
+  alTarGuardar:  () => S._alTarRef || ""
 };
 function refDe(d){
   if(!d) return "";

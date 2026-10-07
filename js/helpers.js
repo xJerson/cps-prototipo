@@ -155,15 +155,65 @@ const notiSinLeer = () => S.notis.filter(n=>!n.leido).length;
    pisos = null significa "aplica a cualquiera": así no hay que cargar 3 filas
    por servicio cuando el precio no cambia por pisos. */
 function tarifa(propId, cat, serv, variante, pisos){
-  const busca = (p, pi) => S.tarifas.find(t =>
-    t.prop === p && t.cat === cat && t.serv === serv && t.variante === variante &&
-    (pi === null ? (t.pisos == null) : t.pisos === pi));
+  /* variante vacía = «cualquier tamaño» (así se guarda un precio que se pasó
+     al tarifario sin elegir unidad); la fila con la variante exacta gana. */
+  const busca = (p, pi) => {
+    const m = S.tarifas.filter(t =>
+      t.prop === p && t.cat === cat && t.serv === serv &&
+      (pi === null ? (t.pisos == null) : t.pisos === pi));
+    return m.find(t => t.variante === variante) || m.find(t => !t.variante);
+  };
   let t;
   if((t = busca(propId, pisos))) return {...t, nivel:"Propiedad", detalle:`${variante} · ${pisos} piso(s)`};
   if((t = busca(propId, null)))  return {...t, nivel:"Propiedad", detalle:`${variante} · cualquier piso`};
   if((t = busca(null, pisos)))   return {...t, nivel:"General",   detalle:`${variante} · ${pisos} piso(s)`};
   if((t = busca(null, null)))    return {...t, nivel:"General",   detalle:`${variante} · cualquier piso`};
   return null;
+}
+/* Precios que ya se usaron antes para un mismo servicio, con qué frecuencia.
+   Fuentes: WOs con precio propio (las que nacieron de un estimado se saltan:
+   su línea ya cuenta) y líneas de estimados no rechazados. Cae por niveles:
+   misma propiedad y mismo tamaño de unidad → misma propiedad → otras
+   propiedades (otras:true). Devuelve [{precio,n,pct}] por n descendente. */
+function sugerenciasPrecio(prop, cat, serv, rooms){
+  if(!serv) return [];
+  const mismo = (c,s) => s===serv && (!cat || !c || c===cat);
+  const hist = [];
+  S.wos.forEach(w=>{
+    if(w.precio!=null && +w.precio>0 && !(w.origen && w.origen.tipo==="Estimado") && mismo(w.cat,w.serv))
+      hist.push({prop:w.prop, rooms:U(w.unidad).rooms, precio:Math.round(+w.precio*100)/100});
+  });
+  S.estimados.forEach(e=>{
+    if(e.estado==="Rechazado") return;
+    (e.lineas||[]).forEach(l=>{
+      const pr = precioLinea(e,l);
+      if(pr>0 && mismo(l.cat,l.serv)) hist.push({prop:e.prop, rooms:l.unidad?U(l.unidad).rooms:"", precio:Math.round(pr*100)/100});
+    });
+  });
+  const agrupa = arr => { const m={};
+    arr.forEach(h=>{ m[h.precio]=(m[h.precio]||0)+1; });
+    return Object.keys(m).map(k=>({precio:+k, n:m[k], pct:Math.round(m[k]/arr.length*100)}))
+      .sort((a,b)=>b.n-a.n || a.precio-b.precio); };
+  const deProp = prop ? hist.filter(h=>h.prop===prop) : [];
+  let r = rooms ? deProp.filter(h=>h.rooms===rooms) : [];
+  if(!r.length) r = deProp;
+  if(r.length) return agrupa(r);
+  const otras = agrupa(hist.filter(h=>!prop || h.prop!==prop));
+  otras.forEach(x=>{ x.otras=true; });
+  return otras;
+}
+/* Chips «$120 · 80% (800 veces)» bajo un campo de precio. Tocar uno llena el
+   input sin repintar el modal (ACC.sugPick). clic=false: solo informativo. */
+function sugerenciasHTML(inputId, prop, cat, serv, rooms, clic){
+  const sg = sugerenciasPrecio(prop, cat, serv, rooms).slice(0,4);
+  if(!sg.length) return "";
+  const pr = n => "$"+(Number.isInteger(n)?n:n.toFixed(2));
+  return `<div class="hint" style="margin-top:6px">${sg[0].otras?"Otras propiedades":"Se ha cobrado"}:</div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:4px">${sg.map(x=>{
+      const t = `${pr(x.precio)} · ${x.pct}% (${x.n} ${x.n===1?"vez":"veces"})`;
+      return clic===false ? `<span class="pill g">${t}</span>`
+        : `<button type="button" class="gchip" data-a="sugPick" data-i="${esc(inputId)}" data-v="${x.precio}">${t}</button>`;
+    }).join("")}</div>`;
 }
 function tarifaWO(w){ const u=U(w.unidad); return tarifa(w.prop,w.cat,w.serv,u.rooms,u.pisos); }
 /* Su tarifario tiene Precio Unitario y Cantidad: el importe es el producto de los dos.
@@ -365,7 +415,7 @@ function alertas(){
     t:sla.texto, d:`${x.wo?`WO-${x.wo} · `:""}${x.tipo}: ${x.motivo}`,
     q:x.assignedTo||x.aprueba, n:sla.nivel
   }); });
-  S.wos.filter(w=>!tarifaWO(w)).forEach(w=>A.push({t:"Tarifa faltante",d:`${w.serv} · ${U(w.unidad).rooms} en ${P(w.prop).nombre} — hoy saldría "NA"`,q:"Erika",n:"w"}));
+  S.wos.filter(w=>w.precio==null && !tarifaWO(w)).forEach(w=>A.push({t:"Tarifa faltante",d:`${w.serv} · ${U(w.unidad).rooms} en ${P(w.prop).nombre} — hoy saldría "NA"`,q:"Erika",n:"w"}));
   S.propiedades.filter(p=>!p.activa).forEach(p=>A.push({t:"Propiedad inactiva",d:`${p.nombre} no genera Work Orders`,q:"Lydia",n:"g"}));
   S.propiedades.filter(p=>!coiVigente(p.id)).forEach(p=>A.push({t:"COI sin registrar",d:`${p.nombre} no tiene certificado vigente`,q:"Claudia",n:"r"}));
   S.productos.filter(p=>stock(p.id)<p.min).forEach(p=>A.push({t:"Stock bajo",d:`${p.nombre}: ${stock(p.id)} ${p.um} (mínimo ${p.min})`,q:"Gustavo",n:"w"}));

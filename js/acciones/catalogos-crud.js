@@ -107,6 +107,13 @@ Object.assign(ACC, {
       toast("✓ Propiedad creada",`<b>${esc(np.nombre)}</b> ya está en la solicitud.`,"v");
       return;
     }
+    /* "Convertir en cliente" (estimado de prospecto aprobado): la propiedad
+       recién creada pasa a ser la del estimado. */
+    if(S.estConvDraft){
+      const dr = S.estConvDraft; S.estConvDraft = null;
+      estConvertirAplicar(dr.id, id);
+      return;
+    }
     cm(); toast("✓ Propiedad creada",`<b>${esc(np.nombre)}</b>. Ojo: sin COI registrado, ya te quedó una alerta.`,"v");
     S.mod="propiedades"; S.sub=id; S.tab="unidades"; render();
   },
@@ -115,6 +122,7 @@ Object.assign(ACC, {
     // escrito en la Solicitud o la Visita desde donde se abrió.
     if(S.visitaDraft){ const dr=S.visitaDraft; S.visitaDraft=null; volverAVisitaDraft(dr); return; }
     if(S.solComDraft){ const dr=S.solComDraft; S.solComDraft=null; volverASolComDraft(dr); return; }
+    S.estConvDraft=null;
     cm();
   },
   /* Reunión Claudia (feedback prototipo): antes acá faltaba directamente el

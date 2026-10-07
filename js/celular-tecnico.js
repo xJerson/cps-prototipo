@@ -125,7 +125,7 @@ function renderFon(){
        ese día a esa hora, con las notas de la WO (w.notasTec). */
     h=`<button class="db g" style="margin:5px 0 9px;padding:7px;font-size:11.5px" data-a="fView" data-v="agenda">‹ Mi agenda</button>
     <div class="dc"><div style="display:flex;justify-content:space-between;gap:7px">
-      <div style="min-width:0"><div class="dh">${esc(p.nombre)}</div><div class="ds">Unidad ${esc(u.num)} · ${esc(u.rooms)} · ${u.pisos} piso(s)</div></div>
+      <div style="min-width:0"><div class="dh">${esc(p.nombre)}</div><div class="ds">Unidad ${esc(u.num)} · ${esc(u.rooms)}${u.pisos?` · ${u.pisos} piso(s)`:""}</div></div>
       <span class="dtag" style="background:${col}22;color:${col};flex:none">${esc(estadoTec(w))}</span></div>
       <div style="margin-top:9px;padding-top:9px;border-top:1px solid var(--line)">
         ${dato("Servicio", w.serv)}
@@ -142,6 +142,11 @@ function renderFon(){
     </div>`:`<div class="dc" style="background:var(--verde-cl);border-color:transparent">
       <div class="ds" style="color:var(--verde)"><b>Unidad desocupada.</b> Sigue las instrucciones de acceso de la propiedad.</div>
     </div>`}
+
+    ${w.autorizado?`<div class="dc" style="border-color:var(--azul)">
+      <div class="dl" style="margin:0 0 6px;color:var(--azul)">Trabajo autorizado</div>
+      <div class="ds" style="white-space:pre-line">${esc(w.autorizado)}</div>
+      <div class="ds" style="margin-top:4px"><b>Cantidad:</b> ${w.cant||1}</div></div>`:""}
 
     <!--ACCIONES-->
 
@@ -517,6 +522,8 @@ const tarifasDe = pid => S.tarifas.filter(t=>!t.prop || t.prop===pid);
    no siempre el manager, a veces mantenimiento tambien lo quiere recibir.
    Los estimados sembrados sin "contactos" caen de vuelta al cliente/management. */
 const contactosEst = e => {
+  /* Estimado de prospecto: todavía no hay contactos registrados, solo el que dejó el prospecto. */
+  if(e.prospecto) return [{nombre:e.prospecto.nombre||"—", mail:e.prospecto.correo||""}];
   const cs = (e.contactos||[]).map(id=>by(S.contactos,id)).filter(Boolean);
   if(cs.length) return cs.map(c=>({nombre:c.nombre, mail:c.mail}));
   const cl = CLI(e.cliente);

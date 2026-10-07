@@ -5,7 +5,6 @@ const EXPEDIENTE = [
   {k:"zona",    n:"Zona (Area)"},
   {k:"door",    n:"Código de puerta"},
   {k:"pref",    n:"Default Contact Method"},
-  {k:"precios", n:"Price List"},
   {k:"coi",     n:"COI vigente"},
   {k:"contacto",n:"Al menos un contacto"},
   {k:"estimado",n:"Estimado aprobado"},
@@ -22,7 +21,6 @@ function expedienteDe(pid){
     ...c,
     ok: c.k==="contacto" ? S.contactos.some(x=>x.prop===pid)
       : c.k==="coi" ? coiVigente(pid)
-      : c.k==="precios" ? S.tarifas.some(t=>t.prop===pid)
       : c.k==="estimado" ? S.estimados.some(e=>e.prop===pid && e.estado==="Aprobado")
       : !!String(p[c.k]||"").trim()
   }));
@@ -31,8 +29,10 @@ function expedienteDe(pid){
    igual un Estimado aprobado antes de dejar pasar la propiedad — pero esa
    es justo la llamada que "Servicio directo" promete que no hace falta.
    sinEstimado=true se usa SOLO en ese camino: el resto del Expediente
-   (COI, contacto, Price List...) sigue exigiéndose igual — y el camino
-   normal ("Requiere estimado", Transferir a programación) no cambia. */
+   (COI, contacto...) sigue exigiéndose igual — y el camino normal
+   ("Requiere estimado", Transferir a programación) no cambia.
+   El Price List ya NO es parte del Expediente: el precio nace en el
+   estimado y el tarifario nunca bloquea (ver "Al tarifario"). */
 /* Reunión 2026-09-09: las Unidades dejaron de ser requisito para el
    Expediente. No es un bloqueo antes — es un catálogo que se va llenando
    solo conforme se crean Work Orders y Estimados (ver "+ Nueva unidad…"
@@ -44,10 +44,9 @@ const expedienteOK = (pid, opts) => {
 
 /* ── EXCEPCIONES ── la compuerta antes de cerrar la semana ── */
 function emailBodyDefaultEst(e){
-  const p = P(e.prop);
   return `Buenos días,
 
-Adjunto encontrarás el estimado para ${p.nombre}.
+Adjunto encontrarás el estimado para ${estPropNombre(e)}.
 
 Si el estimado es aprobado, por favor háznoslo saber y estaremos encantados de programar el trabajo en el momento que te sea conveniente.
 
@@ -60,19 +59,21 @@ Tel: (469) 219-6869
 Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
 }
 function modalEnviarEst(eid){
-  const e=by(S.estimados,eid), p=P(e.prop), cons=contactosEst(e);
+  const e=by(S.estimados,eid), cons=contactosEst(e);
+  /* Un prospecto solo se puede enviar si tiene correo; un cliente, si tiene contactos. */
+  const puedeEnviar = e.prospecto ? !!(e.prospecto.correo||"").trim() : cons.length>0;
   modal(`<div class="mh"><h3>Enviar ${esc(e.label||"Estimate")} ${esc(e.num)}</h3><p>Revisa o edita el correo antes de mandarlo — igual que lo hace Claudia.</p></div>
   <div class="mb">
     <div class="fld"><label>Para</label>
       <div class="hint">${cons.map(c=>esc(c.nombre)+" &lt;"+(esc(c.mail)||"sin correo")+"&gt;").join(", ")||"— sin contactos —"}</div></div>
-    <div class="fld"><label>Asunto</label><input id="envAsunto" value="${esc(e.envAsunto||(esc(e.label||"Estimate")+" "+e.num+" — "+p.nombre))}"></div>
+    <div class="fld"><label>Asunto</label><input id="envAsunto" value="${esc(e.envAsunto||(esc(e.label||"Estimate")+" "+e.num+" — "+estPropNombre(e)))}"></div>
     <div class="fld" style="margin-bottom:0"><label>Cuerpo del correo</label>
       <textarea id="envCuerpo" rows="12">${esc(e.correoTexto||emailBodyDefaultEst(e))}</textarea></div>
     <div class="hint" style="margin-top:8px">📎 Adjunto: ${esc(e.num)} — Invoice.pdf</div>
-    ${!cons.length?`<div class="note r" style="margin-top:10px">No hay contactos con correo para esta propiedad — agrega uno en su pestaña Contactos.</div>`:""}
+    ${!puedeEnviar?`<div class="note r" style="margin-top:10px">${e.prospecto?"El prospecto no tiene correo — sin eso no se puede enviar.":"No hay contactos con correo para esta propiedad — agrega uno en su pestaña Contactos."}</div>`:""}
   </div>
   <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
-    <button class="btn p" data-a="estEnviarOK" data-id="${eid}" ${cons.length?"":"disabled"}>Enviar</button></div>`,true);
+    <button class="btn p" data-a="estEnviarOK" data-id="${eid}" ${puedeEnviar?"":"disabled"}>Enviar</button></div>`,true);
 }
 
 /* Igual que modalMedio (trabajo adicional de Work Orders): antes de dar por
@@ -110,8 +111,14 @@ function precioLinea(e, l){
    Tax de la linea — antes el total ignoraba la Cantidad, y el correo mostraba
    un monto que no cuadraba con lo que la tabla del estimado ya sumaba. */
 const tasaLinea = l => l.tax ? ((by(S.impuestos,l.tax)||{}).tasa||0) : 0;
-const totalLinea = (e,l) => precioLinea(e,l)*(l.cantidad||1)*(1+tasaLinea(l)/100);
-const subtotalEst = e => e.lineas.reduce((a,l)=>a+precioLinea(e,l)*(l.cantidad||1),0);
+/* Misma cuenta que la factura (importeLinea): precio × cantidad − descuento,
+   y recién después el tax. Las líneas viejas sin cantidad/descuento dan igual. */
+const lnEst = (e,l) => ({...l, precio:precioLinea(e,l), cantidad:l.cantidad||1});
+const baseLinea = (e,l) => importeLinea(lnEst(e,l));
+const totalLinea = (e,l) => baseLinea(e,l)*(1+tasaLinea(l)/100);
+const subtotalEst = e => e.lineas.reduce((a,l)=>a+baseLinea(e,l),0);
+/* Precio por unidad que de verdad se cobra (ya con descuento): el que lleva la WO. */
+const precioNetoLinea = (e,l) => Math.round(baseLinea(e,l)/(l.cantidad||1)*100)/100;
 const totalEst = e => e.lineas.reduce((a,l)=>a+totalLinea(e,l),0);
 /* Total de lo que el cliente realmente aceptó (puede haber marcado solo algunas líneas) */
 const lineasAprobDe = e => e.lineasAprob || e.lineas.map((_,i)=>i);
@@ -120,21 +127,27 @@ const totalEstAprob = e => lineasAprobDe(e)
 /* Numero, Bill To y vigencia — igual que el Estimate real de vCita */
 const estSiguienteNum = () => "EST-2026-"+String(20+S.estimados.length).padStart(3,"0");
 const billToDe = pid => { const p=P(pid); return p.cliente ? esc(CLI(p.cliente).nombre)+" - "+esc(p.nombre) : esc(p.nombre); };
+/* Un estimado de prospecto no tiene propiedad registrada (e.prop=null): todo
+   lo que antes hacía P(e.prop) pasa por estas tres. */
+const estPropNombre = e => e.prospecto ? (e.prospecto.propiedad||e.prospecto.nombre||"—") : P(e.prop).nombre;
+const billToEst = e => e.prospecto ? esc(e.prospecto.nombre||"—")+(e.prospecto.propiedad?" - "+esc(e.prospecto.propiedad):"") : billToDe(e.prop);
+const estUniTxt = l => l.unidad ? U(l.unidad).num : "sin unidad";
 const NOTA_ESTIMADO_DEFAULT = "Please note that cleaning services requiring extra materials or additional time will incur an extra charge per item or supply used.\nWe also offer trash-out services, carpet cleaning, and more.\nFor painting, we can handle sheen changes (matte, satin, semi-gloss) and color changes — not just same-color refreshes.\nAdditionally, if you need repairs, we do it all: from the smallest fixes to more complex projects!\nIf you need a customized estimate, don't hesitate to contact us — we'll get it to you within 24 hours!";
 /* Solo cuenta como "inspeccion recibida" un reporte de campo tipo "previo"
    de esa propiedad, creado el mismo dia de la solicitud o despues. */
 const solInspeccionLista = s => !!s.prop && S.reportes.some(r=>r.tipo==="previo" && r.prop===s.prop && r.fecha>=s.fecha);
-/* No hay "+ Nuevo estimado" suelto: todo estimado nace de una Solicitud
-   Comercial ya registrada (solComEstimado). Esta funcion arma el borrador
-   en blanco que usa ese unico punto de entrada. */
-function estInicializarBorrador(prop, solicitudId){
-  S.draftEst=[];
+/* Un estimado nace de una Solicitud Comercial (solComEstimado) o directo
+   desde "+ Nuevo estimado" (directo=true: cliente existente o prospecto, sin
+   solicitud ni plazo de 24 h). Esta funcion arma el borrador en blanco. */
+function estInicializarBorrador(prop, solicitudId, directo){
+  S.draftEst=[]; S.estLin=null; S.estEditIdx=null;
   const cs=contactosDe(prop), hoy="2026-08-11";
   // Si la Solicitud ya dice con quién habló Lydia, es ese contacto el que
   // sale marcado — Claudia no tiene que volver a elegir con quién fue.
   const sol = solicitudId ? by(S.solicitudesComerciales,solicitudId) : null;
   const preferido = sol && cs.some(c=>c.id===sol.contactoId) ? sol.contactoId : (cs[0]&&cs[0].id);
   S.estHdr={prop,contactos:preferido?[preferido]:[], solicitudId:solicitudId||null,
+    modo:"cliente", directo:!!directo, prospecto:{nombre:"",correo:"",propiedad:""}, origen:solicitudId||"Directo",
     label:"Estimate", num:estSiguienteNum(), issueDate:hoy, expDate:sumarDias(hoy,30),
     po:"", docs:[], deposito:false, depositoMonto:"", firma:false, terminos:"",
     nota:NOTA_ESTIMADO_DEFAULT};
@@ -320,8 +333,8 @@ function ramificarVisita(v){
     /* "Servicio directo" no exige Estimado aprobado: esa es justo la
        llamada de negociar que este camino promete saltarse — pedirlo
        igual lo volvía imposible de cerrar la primera vez que se usaba una
-       propiedad nueva. El resto del Expediente (COI, contacto, Price
-       List...) sigue exigiéndose igual. */
+       propiedad nueva. El resto del Expediente (COI, contacto...)
+       sigue exigiéndose igual. */
     else if(!expedienteOK(v.prop,{sinEstimado:true})){ toast("Expediente incompleto",`Completa el expediente de <b>${esc(P(v.prop).nombre)}</b> antes de transferir a Thalia.`,"w"); }
     else if(!v.solicitudDirectaId){
       const p=P(v.prop);
@@ -458,14 +471,15 @@ function modalVisitaCom(id){
 
 VIEWS.estimados = () => `
   <div class="ph"><div><h2>Estimados</h2>
-    <p>Eliges propiedad, unidad y servicio; el sistema pone el precio desde el tarifario. Nadie teclea montos.</p></div>
-    <div class="act"><button class="btn" data-a="ir" data-m="solicitudes">Ir a Solicitudes</button></div></div>
-  <div class="note" style="margin-bottom:12px">No hay un «+ Nuevo estimado» suelto: todo estimado nace de una <b>Solicitud Comercial</b> ya registrada — así el embudo completo queda siempre completo, sin atajos que lo salteen.</div>
+    <p>Armás las líneas como en una factura: el precio se precarga del tarifario si existe, pero siempre se puede ajustar.</p></div>
+    <div class="act"><button class="btn" data-a="ir" data-m="solicitudes">Ir a Solicitudes</button>
+      <button class="btn p" data-a="estNuevo">+ Nuevo estimado</button></div></div>
+  <div class="note" style="margin-bottom:12px">Un estimado puede nacer de una <b>Solicitud Comercial</b> (corre el plazo de 24 h) o directo con «+ Nuevo estimado», para un cliente existente o un <b>prospecto nuevo</b> — sin registrar nada todavía.</div>
   <div class="card"><table>
     <thead><tr><th>Número</th><th>Propiedad</th><th>Contacto</th><th>Fecha</th><th class="num">Líneas</th><th class="num">Monto</th><th>Estado</th><th>Aprobación</th><th></th></tr></thead>
     <tbody>${S.estimados.map(e=>`<tr class="${fl("est:"+e.id)}">
       <td class="mono" style="font-weight:700">${esc(e.num)}</td>
-      <td>${esc(P(e.prop).nombre)}</td><td>${esc(contactosEst(e).map(c=>c.nombre).join(", "))}</td><td class="mono">${e.fecha.slice(5)}</td><td class="num mono">${e.lineas.length}</td>
+      <td>${esc(estPropNombre(e))}${e.prospecto?` <span class="pill w">prospecto</span>`:""}</td><td>${esc(contactosEst(e).map(c=>c.nombre).join(", "))}</td><td class="mono">${e.fecha.slice(5)}</td><td class="num mono">${e.lineas.length}</td>
       <td class="num mono" style="font-weight:700">${money(totalEst(e))}</td>
       <td><span class="pill ${e.estado==="Aprobado"?"v":e.estado==="Rechazado"?"r":"a"}">${esc(e.estado)}</span></td>
       <td>${e.aprob?`<span class="pill m">${esc(e.aprob.medio)}</span><div style="font-size:10px;color:var(--faint)">${esc(e.aprob.quien)} · ${esc(e.aprob.fecha)}${e.aprob.ip?" · IP "+e.aprob.ip:""}</div>`:'<span style="color:var(--faint)">esperando</span>'}</td>
@@ -476,9 +490,10 @@ VIEWS.estimados = () => `
         ${e.estado==="Enviado"?`<button class="btn sm" data-a="estClienteNo" data-id="${e.id}">Rechazar</button>
           <button class="btn sm v" data-a="estClienteOK" data-id="${e.id}">Aprobar</button>`:""}
         ${e.estado==="Rechazado"?`<button class="btn sm p" data-a="estModificar" data-id="${e.id}">Modificar propuesta y reenviar</button>`:""}
-        ${e.estado==="Aprobado"&&!coiVigente(e.prop)?`<button class="btn sm" style="border-color:var(--rojo);color:var(--rojo)" data-a="estCOI" data-id="${e.id}">Solicitar COI</button>`:""}
-        ${e.estado==="Aprobado"&&!expedienteOK(e.prop)?`<button class="btn sm" data-a="estIrExpediente" data-id="${e.id}">Completar Expediente</button>`:""}
-        ${e.estado==="Aprobado"?`<button class="btn sm ${expedienteOK(e.prop)?"p":""}" data-a="estAgendar" data-id="${e.id}" ${expedienteOK(e.prop)?"":"disabled"}>Transferir a programación</button>`:""}
+        ${e.estado==="Aprobado"&&e.prospecto?`<button class="btn sm p" data-a="estConvertir" data-id="${e.id}">Convertir en cliente</button>`:""}
+        ${e.estado==="Aprobado"&&!e.prospecto&&!coiVigente(e.prop)?`<button class="btn sm" style="border-color:var(--rojo);color:var(--rojo)" data-a="estCOI" data-id="${e.id}">Solicitar COI</button>`:""}
+        ${e.estado==="Aprobado"&&!e.prospecto&&!expedienteOK(e.prop)?`<button class="btn sm" data-a="estIrExpediente" data-id="${e.id}">Completar Expediente</button>`:""}
+        ${e.estado==="Aprobado"&&!e.prospecto?`<button class="btn sm ${expedienteOK(e.prop)?"p":""}" data-a="estAgendar" data-id="${e.id}" ${expedienteOK(e.prop)?"":"disabled"}>Transferir a programación</button>`:""}
         ${e.estado==="Transferido"?`<span class="pill v" style="margin-left:6px">Con Thalia</span>`:""}
       </td></tr>`).join("")||`<tr><td colspan="9" class="empty">Sin estimados todavía</td></tr>`}
     </tbody></table></div>
@@ -487,9 +502,9 @@ VIEWS.estimados = () => `
 
 function modalEst(){
   const h = S.estHdr;
-  const us = S.unidades.filter(u=>u.prop===h.prop);
+  const pros = h.modo==="prospecto", pr = h.prospecto||{};
   const lineas = S.draftEst;
-  const subtotal = lineas.reduce((a,l)=>a+(l.precio||0)*(l.cantidad||1),0);
+  const subtotal = lineas.reduce((a,l)=>a+baseLinea({prop:h.prop},l),0);
   const total = lineas.reduce((a,l)=>a+totalLinea({prop:h.prop},l),0);
   /* Agregar/quitar una línea reconstruye el modal entero (modalEst() se
      vuelve a llamar) — el nodo .mb es uno nuevo y su scroll arranca en 0,
@@ -503,7 +518,17 @@ function modalEst(){
     <details style="margin-bottom:10px"><summary style="cursor:pointer;font-weight:650;font-size:13px"><b>From:</b> Cordova Property Services LLC</summary>
       <div class="hint" style="margin-top:6px">922 Brookside Pl. · Pensacola, FL, 32503</div></details>
 
-    <div class="fld"><label>Bill To <span class="req">*</span> <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— la propiedad y su Management</span></label>
+    ${h.directo?`<div class="fld"><label>Para quién</label>
+      <div style="display:flex;gap:6px">
+        <button type="button" class="btn sm ${pros?"":"p"}" data-a="estModo" data-m="cliente">Cliente existente</button>
+        <button type="button" class="btn sm ${pros?"p":""}" data-a="estModo" data-m="prospecto">Prospecto nuevo</button></div></div>`:""}
+
+    ${pros?`<div class="fld"><label>Nombre <span class="req">*</span></label><input id="ePN" value="${esc(pr.nombre||"")}"></div>
+      <div class="fg c2">
+        <div class="fld"><label>Correo <span class="req">*</span></label><input id="ePC" value="${esc(pr.correo||"")}"></div>
+        <div class="fld"><label>Propiedad o dirección</label><input id="ePP" value="${esc(pr.propiedad||"")}"></div></div>
+      <div class="hint" style="margin:-4px 0 12px">No se registra propiedad ni contacto todavía. Si aprueba, lo convertís en cliente desde la lista.</div>`
+    :`<div class="fld"><label>Bill To <span class="req">*</span> <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— la propiedad y su Management</span></label>
       ${S.propiedades.length
         ? `<select id="eProp" data-a="estHdr">${S.propiedades.map(p=>`<option value="${p.id}" ${p.id===h.prop?"selected":""}>${esc(p.nombre)} — ${esc(p.zona)}</option>`).join("")}</select>
            <div class="hint">${billToDe(h.prop)}</div>`
@@ -518,7 +543,7 @@ function modalEst(){
                 <input type="checkbox" class="eCon" value="${c.id}" data-a="estConToggle" ${(h.contactos||[]).includes(c.id)?"checked":""} style="width:15px;height:15px">
                 ${esc(c.nombre)} — ${esc(c.tipo)}</label>`).join("")}</div>`
           : `<div class="note r" style="margin:0">Esta propiedad no tiene contactos. Crea uno en su pestaña <b>Contactos</b> antes de enviar.</div>`;
-      })()}</div>
+      })()}</div>`}
 
     <div style="border:1px solid var(--line);border-radius:9px;padding:11px;margin-bottom:12px;background:var(--surface-2)">
       <div style="font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);margin-bottom:8px">Estimate Details</div>
@@ -532,46 +557,26 @@ function modalEst(){
       <div class="fld" style="margin-top:9px;margin-bottom:0"><label>Purchase Order <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— optional</span></label><input id="ePO" value="${esc(h.po||"")}"></div>
     </div>
 
-    <div style="border:1px solid var(--line);border-radius:9px;padding:11px;margin-bottom:12px;background:var(--surface-2)">
-      <div style="font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);margin-bottom:8px">Agregar Item</div>
-      ${(()=>{ const generales = S.tarifas.filter(t=>!t.prop), propias = S.tarifas.filter(t=>t.prop===h.prop);
-        if(!generales.length && !propias.length) return `<div class="note r" style="margin:0"><b>No hay tarifas disponibles.</b> Crea una general en <b>Tarifario</b> o una propia en el Price List de esta propiedad.</div>`;
-        const modo = (h.tarModo==="propia" && propias.length) ? "propia" : (generales.length ? "general" : "propia");
-        const opt = t => `<option value="${t.id}">${esc(t.nombre||((t.serv||"")+" "+(t.variante||"")).trim())} — ${money(t.precio)}</option>`;
-        /* Reunión 2026-09-09: "si no quiere agregarlo dentro de unidad, no
-           hay problema" — un estimado suele ser por floor plan de toda la
-           propiedad, no por unidad puntual. La Unidad queda opcional, y
-           "+ Nueva unidad…" registra una al vuelo sin mandar a otra pantalla. */
-        return `<div class="fg c2">
-        <div class="fld" style="margin-bottom:0"><label>Unidad <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label>
-          <select id="eUni" data-a="estUniDetalle">
-            <option value="" ${us.length?"":"selected"}>— sin unidad específica —</option>
-            ${us.map((u,i)=>`<option value="${u.id}" ${i===0?"selected":""}>${esc(u.num)}</option>`).join("")}
-            <option value="__new__">+ Nueva unidad…</option>
-          </select>
-          <div id="eUniDetalle"></div><div id="eUniNueva"></div></div>
-        <div class="fld" style="margin-bottom:0"><label>Item (Add custom item)</label>
-          <div style="display:flex;gap:6px;margin-bottom:6px">
-            <button type="button" class="btn sm ${modo==="general"?"p":""}" data-a="estTarModo" data-m="general" ${generales.length?"":"disabled"}>General</button>
-            <button type="button" class="btn sm ${modo==="propia"?"p":""}" data-a="estTarModo" data-m="propia" ${propias.length?"":"disabled"}>Propia</button>
-          </div>
-          <select id="eTarGen" ${modo!=="general"?"disabled":""}>${generales.length?generales.map(opt).join(""):`<option>— sin tarifas generales —</option>`}</select>
-          <select id="eTarProp" style="margin-top:6px" ${modo!=="propia"?"disabled":""}>${propias.length?propias.map(opt).join(""):`<option>— sin tarifas propias —</option>`}</select></div></div>
-      <button class="btn p sm" style="margin-top:9px" data-a="estAddLinea">+ Agregar al estimado</button>`;
-      })()}
-    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+      <div style="font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);flex:1">Líneas del estimado</div>
+      <button class="btn p sm" data-a="estAddLinea">+ Agregar línea</button></div>
 
     ${lineas.length?`<table style="border:1px solid var(--line);border-radius:9px;overflow:hidden">
-      <thead><tr><th>Item</th><th class="num">Price</th><th class="num">Tax</th><th class="num">Total</th><th></th></tr></thead>
+      <thead><tr><th>Item</th><th class="num">Price</th><th class="num">Qty</th><th class="num">Disc.</th><th class="num">Tax</th><th class="num">Total</th><th></th></tr></thead>
       <tbody>${lineas.map((l,i)=>`<tr>
-        <td>${esc(l.serv)}<div style="font-size:10.5px;color:var(--faint)">${esc(U(l.unidad).num)} · ${esc(l.cat)}</div></td>
+        <td>${esc(l.serv)}${l.libre?` <span class="pill m">libre</span>`:""}${l.descripcion?`<div style="font-size:11px;color:var(--soft)">${esc(l.descripcion)}</div>`:""}
+          <div style="font-size:10.5px;color:var(--faint)">${esc(estUniTxt(l))} · ${esc(l.cat)}</div></td>
         <td class="num mono">${money(l.precio||0)}</td>
+        <td class="num mono">${l.cantidad||1}</td>
+        <td class="num mono">${textoDescLinea(l)}</td>
         <td class="num mono">${tasaLinea(l)?tasaLinea(l)+"%":"—"}</td>
         <td class="num mono" style="font-weight:700">${money(totalLinea({prop:h.prop},l))}</td>
-        <td style="text-align:right"><button class="btn sm" data-a="estDelLinea" data-i="${i}">Quitar</button></td></tr>`).join("")}
-      <tr><td colspan="3" style="text-align:right;color:var(--faint)">Subtotal</td>
+        <td style="text-align:right;white-space:nowrap"><button class="btn sm" data-a="estEditLinea" data-i="${i}">Editar</button>
+          ${!pros&&h.prop?(l.enTarifario?`<span class="pill v">en tarifario</span>`:`<button class="btn sm" data-a="alTarifario" data-src="draft" data-i="${i}">Al tarifario</button>`):""}
+          <button class="btn sm" data-a="estDelLinea" data-i="${i}">Quitar</button></td></tr>`).join("")}
+      <tr><td colspan="5" style="text-align:right;color:var(--faint)">Subtotal</td>
         <td class="num mono">${money(subtotal)}</td><td></td></tr>
-      <tr style="background:var(--surface-2)"><td colspan="3" style="font-weight:750">Total Amount</td>
+      <tr style="background:var(--surface-2)"><td colspan="5" style="font-weight:750">Total Amount</td>
         <td class="num mono" style="font-weight:750;font-size:15px">${money(total)}</td><td></td></tr>
       </tbody></table>`
       :`<div class="empty" style="border:1px dashed var(--line);border-radius:9px">Todavía sin líneas. Agrega la primera arriba.</div>`}
@@ -601,18 +606,152 @@ function modalEst(){
   <div class="mf"><button class="btn" data-a="cm">Cancel</button>
     <button class="btn" data-a="estGuardarBorrador">Save draft</button>
     <button class="btn p" data-a="estGuardar">Send</button></div>`,true);
+  const mbDespues = document.querySelector("#mroot .mb");
+  if(mbDespues && scrollAntes) mbDespues.scrollTop = scrollAntes;
+}
+/* ── EDITOR DE UNA LÍNEA DEL ESTIMADO ── los mismos campos que una línea de
+   factura (modalLineaFactura): Servicio, Descripción, Precio, Cantidad,
+   Descuento $/%. Tres modos: tarifa General, Propia de la propiedad, o
+   Concepto libre (lo que no está en ninguna tarifa). El precio se precarga
+   de la tarifa pero siempre se puede cambiar: el tarifario nunca bloquea.
+   S.estLin guarda el borrador del editor mientras se repinta; S.estEditIdx
+   es el índice de S.draftEst que se está editando (null = línea nueva). */
+const servCanon = n => { const x=CAT.servicios.find(s=>uNorm(s.nombre)===uNorm(n)); return x?x.nombre:String(n||"").trim(); };
+function estLinSnap(){
+  const L=S.estLin; if(!L || !document.getElementById("eLP")) return;
+  const g=id=>{ const e=document.getElementById(id); return e?e.value:undefined; };
+  const set=(k,id)=>{ const v=g(id); if(v!==undefined) L[k]=v; };
+  set("unidad","eUni"); set("tarId","eLTar"); set("nombre","eLNom"); set("cat","eLCat"); set("descripcion","eLDes");
+  set("precio","eLP"); set("cantidad","eLC"); set("desc","eLD"); set("descTipo","eLT"); set("tax","eLTax");
+}
+/* Sugerencias de precio para lo que hay en el editor ahora mismo */
+function estLinSugHTML(L){
+  if(!puedeVerIngreso()) return "";
+  const h=S.estHdr; let cat, serv;
+  if(L.modo==="libre"){ cat=L.cat; serv=servCanon(L.nombre); }
+  else { const t=by(S.tarifas,L.tarId); cat=t&&t.cat; serv=t&&(t.serv||t.nombre); }
+  const u = L.unidad && L.unidad!=="__new__" ? by(S.unidades,L.unidad) : null;
+  return sugerenciasHTML("eLP", h.modo==="prospecto"?null:h.prop, cat, serv, u?u.rooms:"", true);
+}
+function modalLineaEst(){
+  const h=S.estHdr, L=S.estLin, pros=h.modo==="prospecto";
+  const us = pros ? [] : S.unidades.filter(u=>u.prop===h.prop);
+  const generales = S.tarifas.filter(t=>!t.prop), propias = pros ? [] : S.tarifas.filter(t=>t.prop===h.prop);
+  const modo = L.modo;
+  const lista = modo==="propia" ? propias : generales;
+  const opt = t => `<option value="${t.id}" ${t.id===L.tarId?"selected":""}>${esc(t.nombre||((t.serv||"")+" "+(t.variante||"")).trim())} — ${money(t.precio)}</option>`;
+  const nombres = [...new Set(CAT.servicios.filter(s=>!s.baja).map(s=>s.nombre))];
+  const editando = S.estEditIdx!=null;
+  const mbAntes = document.querySelector("#mroot .mb"), scrollAntes = mbAntes ? mbAntes.scrollTop : 0;
+  modal(`<div class="mh"><h3>${editando?"Editar línea":"Agregar línea"}</h3><p>Servicio, descripción, precio, cantidad y descuento — igual que una línea de factura.</p></div>
+  <div class="mb">
+    <div class="fld"><label>Cómo se arma</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button type="button" class="btn sm ${modo==="general"?"p":""}" data-a="estLinModo" data-m="general" ${generales.length?"":"disabled"}>General</button>
+        <button type="button" class="btn sm ${modo==="propia"?"p":""}" data-a="estLinModo" data-m="propia" ${propias.length?"":"disabled"}>Propia</button>
+        <button type="button" class="btn sm ${modo==="libre"?"p":""}" data-a="estLinModo" data-m="libre">Concepto libre</button></div>
+      ${modo==="libre"?`<div class="hint">Para lo que no está en el tarifario. Al aprobarse igual se vuelve Work Order.</div>`:""}</div>
+
+    <div class="fld"><label>Unidad <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label>
+      ${pros
+        ? `<select id="eUni" disabled><option value="">— sin unidad específica —</option></select>`
+        : `<select id="eUni" data-a="estLinUni">
+            <option value="">— sin unidad específica —</option>
+            ${us.map(u=>`<option value="${u.id}" ${u.id===L.unidad?"selected":""}>${esc(u.num)}</option>`).join("")}
+            <option value="__new__" ${L.unidad==="__new__"?"selected":""}>+ Nueva unidad…</option>
+          </select>
+          <div id="eUniDetalle"></div><div id="eUniNueva"></div>`}</div>
+
+    ${modo==="libre"?`
+    <div class="fg c2">
+      <div class="fld"><label>Nombre <span class="req">*</span></label>
+        <input id="eLNom" list="eLNomList" data-a="estLinSug" value="${esc(L.nombre||"")}" placeholder="Drywall repair…">
+        <datalist id="eLNomList">${nombres.map(n=>`<option value="${esc(n)}">`).join("")}</datalist></div>
+      <div class="fld"><label>Tipo de servicio <span class="req">*</span></label>
+        <select id="eLCat" data-a="estLinSug"><option value="">— elegí —</option>${activos("categorias").map(c=>`<option ${c===L.cat?"selected":""}>${esc(c)}</option>`).join("")}</select></div></div>`
+    :`<div class="fld"><label>Servicio <span class="req">*</span></label>
+        <select id="eLTar" data-a="estLinTar">${lista.length?lista.map(opt).join(""):`<option value="">— sin tarifas —</option>`}</select></div>`}
+
+    <div class="fld"><label>Descripción <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><input id="eLDes" value="${esc(L.descripcion||"")}"></div>
+    <div class="fg c2">
+      <div class="fld"><label>Precio <span class="req">*</span></label><input id="eLP" type="number" step="0.01" min="0" class="mono" placeholder="0.00" value="${esc(L.precio==null?"":L.precio)}">
+        <div id="eLSug">${estLinSugHTML(L)}</div></div>
+      <div class="fld"><label>Cantidad <span class="req">*</span></label><input id="eLC" type="number" step="0.01" min="0" class="mono" value="${esc(L.cantidad==null?1:L.cantidad)}"></div></div>
+    <div class="fg c3">
+      <div class="fld" style="margin-bottom:0"><label>Descuento</label><input id="eLD" type="number" step="0.01" min="0" class="mono" placeholder="0" value="${esc(+L.desc||"")}"></div>
+      <div class="fld" style="margin-bottom:0"><label>Tipo</label><select id="eLT"><option value="$" ${L.descTipo==="%"?"":"selected"}>$ monto</option><option value="%" ${L.descTipo==="%"?"selected":""}>% del subtotal</option></select></div>
+      <div class="fld" style="margin-bottom:0"><label>Tax</label><select id="eLTax"><option value="">— no tax —</option>${S.impuestos.map(x=>`<option value="${x.id}" ${L.tax===x.id?"selected":""}>${esc(x.nombre)} (${x.tasa}%)</option>`).join("")}</select></div></div>
+  </div>
+  <div class="mf"><button class="btn" data-a="estLinVolver">Cancelar</button>
+    <button class="btn p" data-a="estLineaGuardar">${editando?"Guardar cambios":"Agregar al estimado"}</button></div>`,true);
   ACC.estUniDetalle();
   const mbDespues = document.querySelector("#mroot .mb");
   if(mbDespues && scrollAntes) mbDespues.scrollTop = scrollAntes;
 }
+
+/* ── AL TARIFARIO ── pasar el precio de una línea de estimado (o de una WO
+   con precio propio) al Price List de la propiedad. Siempre opcional: el
+   precio nace en el estimado y el tarifario nunca bloquea nada. S.alTar =
+   {src:"draft"|"est"|"wo", id, i}: de dónde viene el precio. */
+function alTarObj(){
+  const A=S.alTar; if(!A) return null;
+  if(A.src==="draft") return {o:S.draftEst[+A.i], prop:S.estHdr&&S.estHdr.prop};
+  if(A.src==="est"){ const e=by(S.estimados,A.id), l=e&&e.lineas[+A.i]; return l ? {o:{...l, precio:precioLinea(e,l)}, real:l, prop:e.prop} : null; }
+  const w=W(+A.id); return w ? {o:w, prop:w.prop} : null;
+}
+function alTarExiste(prop, o, variante, pisos){
+  return S.tarifas.find(t=>t.prop===prop && t.cat===o.cat && t.serv===o.serv && (t.variante||"")===variante && (t.pisos||null)===(pisos||null));
+}
+const alTarYaHTML = ya => ya ? `<div class="note w" style="margin-top:12px">Ya hay un precio para esta combinación (${money(ya.precio)}): se actualiza.</div>` : "";
+function modalAlTarifario(){
+  const x=alTarObj(); if(!x||!x.o){ cm(); return; }
+  const o=x.o, u=o.unidad?U(o.unidad):null, rooms=u&&u.rooms?u.rooms:"";
+  const salas=activos("rooms").slice(); if(rooms && !salas.includes(rooms)) salas.push(rooms);
+  const ya=alTarExiste(x.prop,o,rooms,null);
+  modal(`<div class="mh"><h3>Al tarifario</h3><p>${esc(o.serv)} · ${esc(P(x.prop).nombre)}</p></div>
+  <div class="mb">
+    <div class="note" style="margin:0 0 12px">Guarda este precio en el Price List de <b>${esc(P(x.prop).nombre)}</b>. Es opcional: no cambia el ${S.alTar.src==="wo"?"trabajo":"estimado"} ni frena nada, y el precio se puede seguir cambiando después.</div>
+    <div class="fg c2">
+      <div class="fld"><label>Precio <span class="req">*</span></label><input id="atP" type="number" step="0.01" min="0" class="mono" value="${esc(o.precio==null?"":o.precio)}">
+        <div id="atSug">${puedeVerIngreso()?sugerenciasHTML("atP",x.prop,o.cat,o.serv,rooms,true):""}</div></div>
+      <div class="fld"><label>Tamaño de unidad</label><select id="atR" data-a="alTarSug"><option value="">— cualquiera —</option>${salas.map(r=>`<option ${r===rooms?"selected":""}>${esc(r)}</option>`).join("")}</select></div></div>
+    <div class="fld" style="margin-bottom:0"><label>Piso <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— solo si el precio cambia según el piso</span></label>
+      <select id="atPi" data-a="alTarSug"><option value="">— cualquiera —</option>${activos("pisos").map(p=>`<option value="${p}">Floor ${p}</option>`).join("")}</select></div>
+    <div id="atYa">${alTarYaHTML(ya)}</div>
+  </div>
+  <div class="mf"><button class="btn" data-a="alTarVolver">Cancelar</button>
+    <button class="btn p" data-a="alTarGuardar">Guardar en el tarifario</button></div>`);
+}
+
+/* El prospecto aprobado ya es cliente: la propiedad recién creada pasa a ser la
+   del estimado, su contacto se registra como contacto de la propiedad y se
+   suelta el bloque «prospecto». */
+function estConvertirAplicar(eid, pid){
+  const e=by(S.estimados,eid), p=P(pid); if(!e||!e.prospecto) return;
+  const pr=e.prospecto;
+  const c={id:"C"+nid("c"), prop:pid, tipo:"Manager", nombre:pr.nombre, mail:pr.correo||"", tel:""};
+  S.contactos.push(c);
+  e.prop=pid; e.contactos=[c.id]; delete e.prospecto;
+  if(p.estado==="Prospect") p.estado="Active";
+  cm(); flash("est:"+e.id);
+  toast("✓ Prospecto convertido en cliente",`<b>${esc(p.nombre)}</b> ya está registrada y <b>${esc(c.nombre)}</b> quedó como su contacto. Ahora corren el COI y el Expediente.`,"v");
+  S.mod="estimados"; S.sub=null; S.tab=null; render();
+}
+
 /* "Save draft" y "Send" del formulario hacen exactamente lo mismo: guardar.
    Mandar el correo de verdad es un paso aparte (ver estEnviar/modalEnviarEst) —
    asi que ambos botones caen en esta misma funcion. */
 function estCrearEst(){
   estSnap();
-  const h=S.estHdr;
-  const datos = {num:h.num||estSiguienteNum(),label:h.label||"Estimate",prop:h.prop,
-    contactos:(h.contactos||[]).slice(),fecha:h.issueDate,vence:h.expDate,po:h.po||"",
+  const h=S.estHdr, pros=h.modo==="prospecto";
+  /* audOmitir: un guardado rechazado no es un alta — no va a la Bitácora. */
+  if(pros){
+    const pr=h.prospecto||{};
+    if(!pr.nombre||!pr.correo){ S.audOmitir=true; marcaFalta(["ePN","ePC"]); toast("Faltan datos","Para un prospecto, nombre y correo son obligatorios — sin correo no se le puede enviar.","r"); return; }
+  } else if(!h.prop){ S.audOmitir=true; toast("Falta la propiedad","Elegí una propiedad, o pasá a «Prospecto nuevo».","r"); return; }
+  const datos = {num:h.num||estSiguienteNum(),label:h.label||"Estimate",prop:pros?null:h.prop,
+    ...(pros?{prospecto:{...h.prospecto}}:{}), ...(h.origen?{origen:h.origen}:{}),
+    contactos:pros?[]:(h.contactos||[]).slice(),fecha:h.issueDate,vence:h.expDate,po:h.po||"",
     docs:(h.docs||[]).slice(),deposito:!!h.deposito,depositoMonto:h.depositoMonto||"",
     firma:!!h.firma,terminos:h.terminos||"",nota:h.nota||"",lineas:S.draftEst.slice()};
   /* "Modificar propuesta y reenviar" (flujograma de Propuestas y Estimados:
@@ -621,6 +760,7 @@ function estCrearEst(){
   if(h.editId){
     const e = by(S.estimados, h.editId);
     Object.assign(e, datos, {estado:"Borrador", aprob:null, correoTexto:"", envAsunto:""});
+    if(!pros) delete e.prospecto;
     flash("est:"+e.id);
     S.draftEst=[]; cm();
     toast("✓ Propuesta modificada",`<b>${esc(e.num)}</b> queda lista — dale <b>Enviar</b> desde la lista para mandarla de nuevo.`,"v"); render();
@@ -645,6 +785,9 @@ function estSnap(){
   const h = S.estHdr; if(!h) return;
   const campos = {eLabel:"label", eNum:"num", eIssue:"issueDate", eExp:"expDate", ePO:"po", eTerminos:"terminos", eNota:"nota", eDepositoMonto:"depositoMonto"};
   Object.keys(campos).forEach(id=>{ const el=document.getElementById(id); if(el) h[campos[id]]=el.value; });
+  const gp=id=>document.getElementById(id);
+  if(h.modo==="prospecto" && gp("ePN"))
+    h.prospecto={nombre:gp("ePN").value.trim(), correo:gp("ePC").value.trim(), propiedad:gp("ePP").value.trim()};
   const chkF=document.getElementById("eFirma"); if(chkF) h.firma=chkF.checked;
   const chkD=document.getElementById("eDepositoChk"); if(chkD) h.deposito=chkD.checked;
 }

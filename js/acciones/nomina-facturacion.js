@@ -579,6 +579,8 @@ function leerBorrador(){
   if(document.getElementById("fbLimite")) b.limite=val("fbLimite");
   if(document.getElementById("fbCredito")) b.credito=parseFloat(val("fbCredito"))||0;
   if(document.getElementById("fbCredG")) b.creditoGrupo=+val("fbCredG")||1;
+  if(document.getElementById("fbLoteDesde"))   // el lote tipeado sobrevive a cualquier redibujo del borrador
+    b.lote={desde:val("fbLoteDesde"),hasta:val("fbLoteHasta"),mes:val("fbLoteMes"),tipo:val("fbLoteTipo"),factura:+val("fbLoteFactura")||1};
   b.lineas.forEach(l=>{
     const id=idLineaBorrador(l.clave), sel=document.getElementById(id+"_sel"); if(!sel) return;
     l.seleccionada=sel.checked;
@@ -594,11 +596,31 @@ Object.assign(ACC, {
     }
     abrirBorradorFactura(prop);
   },
+  /* Factura manual: sin WO de por medio (p. ej. «una factura al mes con todas las pinturas»). Abre el mismo compositor, aunque no haya WO. */
+  facManualAbrir: () => {
+    const ps=S.propiedades.filter(p=>p.activa).sort((a,b)=>a.nombre.localeCompare(b.nombre));
+    modal(`<div class="mh"><h3>Factura manual</h3><p>Elegí la propiedad. Las WO listas aparecen solas; si no hay, agregás líneas a mano.</p></div>
+    <div class="mb"><div class="fld"><label>Propiedad <span class="req">*</span></label><select id="fmProp"><option value="">— elegí —</option>${ps.map(p=>`<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join("")}</select></div></div>
+    <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="facManualOK">Abrir</button></div>`);
+  },
+  facManualOK: () => {
+    const id=val("fmProp"), p=S.propiedades.find(x=>String(x.id)===id);
+    if(!p){ S.audOmitir=true; marcaFalta(["fmProp"]); toast("Elegí la propiedad","Sin propiedad no se puede armar la factura.","r"); return; }
+    abrirBorradorFactura(p.id);   // sin el guard de «Preparar factura»: abre aunque no haya WO
+  },
+  /* Mes → Desde/Hasta (primer y último día). Solo toca esos dos campos: el resto del borrador queda como está. */
+  facLoteMes: () => {
+    const m=val("fbLoteMes"), x=/^(\d{4})-(\d{2})$/.exec(m||""); if(!x) return;
+    const ult=new Date(+x[1],+x[2],0).getDate();
+    document.getElementById("fbLoteDesde").value=`${m}-01`;
+    document.getElementById("fbLoteHasta").value=`${m}-${String(ult).padStart(2,"0")}`;
+    leerBorrador();
+  },
   facBorradorCambiar: () => { if(leerBorrador()) modalBorradorFactura(); },
   facBorradorAgregarLinea: () => {
     const b=leerBorrador(); if(!b) return;
     const n=(b.lineas||[]).filter(l=>l.tipo==="Manual").length+1, clave="manual:"+Date.now()+":"+n;
-    b.lineas.push({clave,tipo:"Manual",wo:null,subwo:null,unidad:"—",nombre:"Adjustment",descripcion:"",precio:0,cantidad:1,importe:0,evidencia:0,fecha:HOY_SUP,seleccionada:true,grupo:1});
+    b.lineas.push({clave,tipo:"Manual",cat:"Extras",wo:null,subwo:null,unidad:"—",nombre:"Adjustment",descripcion:"",precio:0,cantidad:1,importe:0,evidencia:0,fecha:HOY_SUP,seleccionada:true,grupo:1});
     modalLineaFactura(clave);   // se abre el editor: una línea manual nace en 0 y hay que llenarla
   },
   facLineaEditar: d => { if(leerBorrador()) modalLineaFactura(d.k); },
@@ -609,6 +631,7 @@ Object.assign(ACC, {
     const mal=[!nombre&&"fleNom", !Number.isFinite(precio)&&"fleP", !(cant>=0)&&"fleC", !(desc>=0&&(tipo==="$"||desc<=100))&&"fleD"].filter(Boolean);
     if(mal.length){ S.audOmitir=true; marcaFalta(mal); toast("Revisa la línea","Nombre, precio, cantidad y descuento válidos (el % no pasa de 100).","r"); return; }
     Object.assign(l,{nombre,descripcion:val("fleDes"),precio,cantidad:cant,desc,descTipo:tipo});
+    if(l.tipo==="Manual") Object.assign(l,{cat:val("fleCat")||"Extras",unidad:val("fleUni")||"—",fecha:val("fleF")||l.fecha});   // tipo para el lote y unidad opcional
     l.importe=importeLinea(l);
     modalBorradorFactura();
   },
@@ -616,11 +639,11 @@ Object.assign(ACC, {
   facBorradorGuardar: () => {
     const b=leerBorrador(); if(!b) return;
     const r=resumenBorrador(b);
-    if(!r.grupos.length){ S.audOmitir=true; toast("Elige un concepto","Selecciona al menos una WO o Sub-WO.","r"); return; }
+    if(!r.grupos.length){ S.audOmitir=true; toast("Elige un concepto","Selecciona al menos una línea.","r"); return; }
     const previa=(b.id&&by(S.facturas,b.id))||null;
     if(previa) (previa.conceptos||[]).forEach(c=>{   // se liberan las líneas del borrador; abajo se vuelven a reservar por grupo
       if(c.tipo==="WO"){const w=W(c.wo); if(w) w.facturada=false;}
-      else {const a=by(S.adicionales,c.subwo); if(a){a.facturada=false; delete a.facturaId;}}
+      else if(c.tipo==="Sub-WO"){const a=by(S.adicionales,c.subwo); if(a){a.facturada=false; delete a.facturaId;}}   // Manual/Credito/Ajuste no tocan ninguna WO
     });
     // si se re-edita el borrador, se devuelve el crédito usado y se vuelve a descontar donde toque
     S.creditosProp=(S.creditosProp||[]).filter(c=>!(b.id&&c.factura===b.id&&c.tipo==="Uso"));
@@ -643,7 +666,7 @@ Object.assign(ACC, {
       conceptos.forEach(c=>{
         if(c.tipo==="WO"){
           const w=W(c.wo); if(w){w.facturada=true; w.hist.push([hora(),`Incluida en borrador ${f.num}`,S.usuario]);}
-        } else {
+        } else if(c.tipo==="Sub-WO"){
           const a=by(S.adicionales,c.subwo); if(a){a.facturada=true; a.facturaId=f.id;}
         }
       });
@@ -724,7 +747,7 @@ Object.assign(ACC, {
     const b=leerBorrador(); if(!b) return;
     const desde=val("fbLoteDesde"), hasta=val("fbLoteHasta"), tipo=val("fbLoteTipo");
     const factura=Math.min(6,Math.max(1,+val("fbLoteFactura")||1));
-    b.lote={desde,hasta,tipo,factura};
+    b.lote={desde,hasta,mes:val("fbLoteMes"),tipo,factura};
     if(!tipo){
       S.audOmitir=true; marcaFalta(["fbLoteTipo"]);
       toast("Elige el tipo","Selecciona Clean, Paint, Carpet o Extras para armar ese lote.","r"); return;

@@ -52,24 +52,19 @@ function fichaProp(id){
       <td style="color:${c.ok?"var(--soft)":"var(--rojo)"}">${c.ok
         ? esc(c.k==="contacto" ? S.contactos.filter(x=>x.prop===id).length+" contacto(s)"
             : c.k==="coi" ? p.polizas.length+" póliza(s)"
-            /* "precios" y "estimado" tampoco son campos de la propiedad
-               (p[c.k] no existe ahí) — mostraban literal "undefined" en
-               vez del dato real, apenas se resolvía este punto por primera
-               vez. Mismo error de fondo que el botón "Completar" de la
-               vez pasada: se trataron como si fueran campos de p. */
-            : c.k==="precios" ? S.tarifas.filter(t=>t.prop===id).length+" precio(s)"
+            /* "estimado" tampoco es un campo de la propiedad (p[c.k] no
+               existe ahí) — mostraba literal "undefined" en vez del dato
+               real. Se trata aparte, como los contactos y el COI. */
             : c.k==="estimado" ? (S.estimados.find(e=>e.prop===id && e.estado==="Aprobado")||{}).num+" aprobado"
             : String(p[c.k]))
         : "falta"}</td>
       <td style="text-align:right">${c.ok?"":(c.k==="contacto"
         ? `<button class="btn sm p" data-a="conNuevo" data-prop="${id}">+ Contacto</button>`
         : c.k==="coi" ? `<button class="btn sm p" data-a="coiDirecto" data-id="${id}">Registrar COI</button>`
-        /* "Price List" y "Estimado aprobado" no son campos de la propiedad
-           (nombre, dirección, etc.) — son datos de otras dos colecciones.
-           "Completar" los mandaba al formulario de "Editar propiedad",
-           que no tiene ningún campo para eso: el botón parecía funcionar
-           pero no había nada ahí que de verdad resolviera el punto. */
-        : c.k==="precios" ? `<button class="btn sm p" data-a="tab" data-t="precios" title="Se agrega desde la pestaña Price List de esta propiedad">Ir a Price List</button>`
+        /* "Estimado aprobado" no es un campo de la propiedad (nombre,
+           dirección, etc.) — es un dato de otra colección. "Completar" lo
+           mandaba al formulario de "Editar propiedad", que no tiene ningún
+           campo para eso: el botón parecía funcionar pero no resolvía nada. */
         : c.k==="estimado" ? (solLista
             ? `<button class="btn sm p" data-a="solComEstimado" data-id="${solLista.id}" title="Ya hay una Solicitud Comercial de esta propiedad esperando — arma el estimado desde ahí">Crear estimado</button>`
             : `<button class="btn sm p" data-a="ir" data-m="solicitudes" title="El estimado nace de una Solicitud Comercial — regístrala primero">Registrar Solicitud Comercial</button>`)

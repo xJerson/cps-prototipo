@@ -16,6 +16,8 @@ Object.assign(ACC, {
         S.wos.push({id,prop:s.prop,unidad:l.unidad,cat:l.cat,serv:l.serv,ubic:"",tec:null,
           estado:"Scheduled",semana:S.semana,fecha:"2026-08-14",horaProg:"9:00",po:"",asistencia:false,
           precio:l.precio,pago:l.pago||0,cant:l.cantidad||1,
+          /* Lo que el cliente autorizó (sin precio): es lo que ve el técnico en su celular. */
+          autorizado:l.autorizado||l.serv, desdeEstimado:s.estimadoNum,
           origen:{tipo:"Estimado",id:s.estimadoId,num:s.estimadoNum},
           evid:0,mats:[],notas:"",notasTec:"",hist:[[hora(),`Creada desde el estimado ${s.estimadoNum}`,S.usuario]]});
         n++;
@@ -178,7 +180,16 @@ Object.assign(ACC, {
     S.estHdr.contactos = Array.from(document.querySelectorAll("input.eCon:checked")).map(el=>el.value);
     modalEst();
   },
-  estTarModo: d => { estSnap(); S.estHdr.tarModo=d.m; modalEst(); },
+  /* "+ Nuevo estimado": directo, sin Solicitud Comercial (no corre el plazo de 24 h).
+     Cliente existente o prospecto nuevo (solo nombre, correo y propiedad/dirección). */
+  estNuevo: () => { estInicializarBorrador((S.propiedades[0]||{}).id||null, null, true); modalEst(); },
+  estModo: d => {
+    estSnap();
+    const h=S.estHdr; h.modo=d.m;
+    if(d.m==="prospecto") S.draftEst.forEach(l=>{ l.unidad=null; delete l.enTarifario; });   // un prospecto no tiene unidades
+    else if(!h.prop){ h.prop=(S.propiedades[0]||{}).id||""; const cs=contactosDe(h.prop); h.contactos=cs.length?[cs[0].id]:[]; }
+    modalEst();
+  },
   estDepositoToggle: () => { estSnap(); modalEst(); },
   estDocAgregar: () => {
     estSnap();
@@ -187,27 +198,148 @@ Object.assign(ACC, {
     modalEst();
   },
   estDocQuitar: d => { estSnap(); S.estHdr.docs.splice(+d.i,1); modalEst(); },
+  /* Agregar / editar una línea abre el editor (modalLineaEst): Servicio,
+     Descripción, Precio, Cantidad y Descuento, como una línea de factura.
+     estSnap primero: el editor reemplaza al modal y el borrador de arriba
+     (S.estHdr) se vuelve a pintar al volver. */
   estAddLinea: () => {
     estSnap();
-    let uid=val("eUni");
+    const h=S.estHdr, pros=h.modo==="prospecto";
+    const gen=S.tarifas.filter(t=>!t.prop), pro=pros?[]:S.tarifas.filter(t=>t.prop===h.prop);
+    const modo = gen.length?"general":pro.length?"propia":"libre";
+    const t = (modo==="general"?gen:modo==="propia"?pro:[])[0];
+    const us = pros?[]:S.unidades.filter(u=>u.prop===h.prop);
+    S.estEditIdx=null;
+    S.estLin={modo, unidad:us[0]?us[0].id:"", tarId:t?t.id:"", nombre:"", cat:"", descripcion:"",
+      precio:t?t.precio:"", cantidad:1, desc:"", descTipo:"$", tax:t?(t.tax||""):""};
+    modalLineaEst();
+  },
+  estEditLinea: d => {
+    estSnap();
+    const h=S.estHdr, l=S.draftEst[+d.i]; if(!l) return;
+    const modo = l.libre ? "libre" : (l.nivel==="Propiedad" ? "propia" : "general");
+    const t = by(S.tarifas, l.tarifa);
+    const okT = t && (modo==="propia" ? t.prop===h.prop : !t.prop);   // la tarifa sigue existiendo y es de ese modo
+    S.estEditIdx=+d.i;
+    S.estLin={modo:okT||modo==="libre"?modo:"libre", unidad:l.unidad||"", tarId:okT?t.id:"",
+      nombre:okT?"":l.serv, cat:okT?"":l.cat, descripcion:l.descripcion||"", precio:l.precio, cantidad:l.cantidad||1,
+      desc:l.desc||"", descTipo:l.descTipo||"$", tax:l.tax||""};
+    modalLineaEst();
+  },
+  estLinModo: d => {
+    estLinSnap();
+    const h=S.estHdr, L=S.estLin; L.modo=d.m;
+    if(d.m!=="libre"){
+      const t=S.tarifas.filter(x=>d.m==="propia"?x.prop===h.prop:!x.prop)[0];
+      L.tarId=t?t.id:""; if(t){ L.precio=t.precio; L.tax=t.tax||""; }
+    }
+    modalLineaEst();
+  },
+  /* Elegir otra tarifa precarga su precio (editable) — sin repintar el editor,
+     para no perder lo ya escrito. */
+  estLinTar: () => {
+    const t=by(S.tarifas,val("eLTar"));
+    if(t){ document.getElementById("eLP").value=t.precio; document.getElementById("eLTax").value=t.tax||""; }
+    ACC.estLinSug();
+  },
+  estLinSug: () => {
+    estLinSnap();
+    const b=document.getElementById("eLSug"); if(b) b.innerHTML=estLinSugHTML(S.estLin);
+  },
+  estLinUni: () => { ACC.estUniDetalle(); ACC.estLinSug(); },
+  /* Tocar un chip de sugerencia llena el campo de precio, sin repintar el modal */
+  sugPick: d => { const el=document.getElementById(d.i); if(el) el.value=d.v; },
+  estLinVolver: () => { S.estLin=null; S.estEditIdx=null; modalEst(); },
+  estLineaGuardar: () => {
+    estLinSnap();
+    const h=S.estHdr, L=S.estLin, pros=h.modo==="prospecto", libre=L.modo==="libre";
+    const precio=parseFloat(L.precio), cant=parseFloat(L.cantidad), desc=parseFloat(L.desc||"0")||0, descTipo=L.descTipo==="%"?"%":"$";
+    const t = libre ? null : by(S.tarifas,L.tarId);
+    const mal = marcaFalta(libre?["eLNom","eLCat","eLP","eLC"]:["eLP","eLC"]) || !Number.isFinite(precio) || precio<0
+      || !(cant>0) || desc<0 || (descTipo==="%"&&desc>100) || (!libre&&!t);
+    if(mal){ S.audOmitir=true;
+      toast("Revisá la línea", libre?"Nombre, tipo de servicio, precio y cantidad son obligatorios (el descuento % no pasa de 100).":"Elegí el servicio y poné precio y cantidad válidos (el descuento % no pasa de 100).","r"); return; }
+    let uid = pros ? "" : L.unidad;
     if(uid==="__new__"){
       const numR = val("eUniNum"), bld = val("eUniBld");
-      if(!numR){ toast("Falta el número","Escribe el número de la unidad nueva, o elige «— sin unidad específica —» si no aplica.","r"); return; }
+      if(!numR){ S.audOmitir=true; toast("Falta el número","Escribe el número de la unidad nueva, o elige «— sin unidad específica —» si no aplica.","r"); return; }
       const tipoE = val("eUniTipo")||"Residencial";
       const bedroomsE = tipoE==="Residencial"?parseInt(val("eUniBedrooms"))||0:null;
-      const nueva = {id:"U"+nid("u"), prop:S.estHdr.prop, building:bld, unidadNum:numR, num:uNumComp(bld,numR),
+      const nueva = {id:"U"+nid("u"), prop:h.prop, building:bld, unidadNum:numR, num:uNumComp(bld,numR),
         tipo:tipoE, bedrooms:bedroomsE, bathrooms:parseInt(val("eUniBathrooms"))||null,
         rooms:roomsDesde(tipoE,bedroomsE), pisos:parseInt(val("eUniPisos"))||null, detalle:[]};
       S.unidades.push(nueva); flash("uni:"+nueva.id);
       uid = nueva.id;
     }
-    const tid = S.estHdr.tarModo==="propia" ? val("eTarProp") : val("eTarGen");
-    const t=by(S.tarifas,tid);
-    S.draftEst.push({unidad:uid||null,cat:t.cat||"",serv:t.serv||t.nombre,tarifa:tid,
-      precio:t.precio,pago:t.pago||0,nivel:t.prop?"Propiedad":"General",cantidad:1,tax:t.tax||null});
+    /* Concepto libre: si el nombre ya existe en el catálogo (aunque cambie una
+       mayúscula), se usa el del catálogo — así «Drywall repair» y «Drywall
+       Repair» no terminan siendo dos servicios. */
+    const serv = libre ? servCanon(L.nombre) : (t.serv||t.nombre);
+    const cat = libre ? L.cat : (t.cat||"");
+    const old = S.estEditIdx!=null ? S.draftEst[S.estEditIdx] : null;
+    const nl = {unidad:uid||null, cat, serv, tarifa:libre?null:t.id, precio, pago:libre?0:(t.pago||0),
+      nivel:libre?"Libre":(t.prop?"Propiedad":"General"), cantidad:cant, tax:L.tax||null,
+      descripcion:(L.descripcion||"").trim(), desc, descTipo, ...(libre?{libre:true}:{}),
+      ...(old&&old.enTarifario&&old.serv===serv&&old.precio===precio?{enTarifario:true}:{})};
+    if(old) S.draftEst[S.estEditIdx]=nl; else S.draftEst.push(nl);
+    S.estLin=null; S.estEditIdx=null;
     modalEst();
   },
   estDelLinea: d => { estSnap(); S.draftEst.splice(+d.i,1); modalEst(); },
+
+  /* ---- AL TARIFARIO: pasar el precio de una línea / WO al Price List (siempre opcional) ---- */
+  alTarifario: d => {
+    if(d.src==="draft") estSnap();
+    S.alTar={src:d.src, id:d.id||null, i:d.i!=null?d.i:null};
+    modalAlTarifario();
+  },
+  alTarSug: () => {
+    const x=alTarObj(); if(!x||!x.o) return;
+    const rooms=val("atR"), pisos=val("atPi")?parseInt(val("atPi")):null;
+    const b=document.getElementById("atSug"); if(b) b.innerHTML=puedeVerIngreso()?sugerenciasHTML("atP",x.prop,x.o.cat,x.o.serv,rooms,true):"";
+    const y=document.getElementById("atYa"); if(y) y.innerHTML=alTarYaHTML(alTarExiste(x.prop,x.o,rooms,pisos));
+  },
+  alTarVolver: () => {
+    const A=S.alTar; S.alTar=null;
+    if(A&&A.src==="draft") modalEst(); else if(A&&A.src==="est") modalInvoice(A.id); else cm();
+  },
+  alTarGuardar: () => {
+    const x=alTarObj(); if(!x||!x.o){ S.audOmitir=true; cm(); return; }
+    const o=x.o, precio=parseFloat(val("atP")), variante=val("atR"), pisos=val("atPi")?parseInt(val("atPi")):null;
+    if(!(precio>0)){ S.audOmitir=true; marcaFalta(["atP"]); toast("Falta el precio","Poné un precio mayor a 0.","r"); return; }
+    const ex=alTarExiste(x.prop,o,variante,pisos);
+    let tid;
+    if(ex){ ex.precio=precio; tid=ex.id; }
+    else {
+      tid="TR"+Date.now();
+      S.tarifas.push({id:tid, prop:x.prop, nombre:`${P(x.prop).nombre} - ${(o.serv+" "+variante).trim()}`, cat:o.cat||"", serv:o.serv,
+        variante, pisos, banos:null, precio, pago:o.pago||0, desc:"", tax:o.tax||"", descuento:"", descuentoTipo:"%", cantidad:1});
+    }
+    /* Si el servicio todavía no existe en el catálogo, se crea con la misma forma que servSave */
+    const tipo=o.cat||"Otro";
+    if(!CAT.servicios.some(s=>s.tipo===tipo && uNorm(s.nombre)===uNorm(o.serv))){
+      CAT.servicios.push({id:"S"+Date.now(), tipo, nombre:o.serv});
+      if(!CAT.categorias.includes(tipo)) CAT.categorias.push(tipo);
+    }
+    const A=S.alTar; S.alTar=null;
+    if(A.src==="draft") S.draftEst[+A.i].enTarifario=true;
+    else if(A.src==="est") x.real.enTarifario=true;
+    else W(+A.id).enTarifario=true;
+    S._alTarRef=`${o.serv} · ${P(x.prop).nombre}`;
+    flash("tar:"+tid);
+    toast("✓ Al tarifario",`<b>${esc(o.serv)}</b> a ${money(precio)}${variante?" · "+esc(variante):" · cualquier tamaño"} quedó en el Price List de ${esc(P(x.prop).nombre)}.`,"v");
+    if(A.src==="draft") modalEst(); else if(A.src==="est") modalInvoice(A.id); else { cm(); render(); }
+  },
+  /* Un prospecto aprobado se convierte en cliente: se abre el alta de propiedad
+     ya con lo que dejó el prospecto, y al guardarla (propGuardar) el estimado
+     pasa a colgar de esa propiedad (estConvertirAplicar). */
+  estConvertir: d => {
+    const e=by(S.estimados,d.id); if(!e||!e.prospecto) return;
+    S.estConvDraft={id:e.id};
+    ACC.propNueva({});
+    const pr=e.prospecto, set=(id,v)=>{ const el=document.getElementById(id); if(el&&v) el.value=v; };
+    set("nP", pr.propiedad||pr.nombre); set("nD", pr.propiedad);
+  },
   /* "Save draft" y "Send" hacen lo mismo: solo guardan. Mandar el correo de
      verdad es un paso aparte — el boton "Enviar" de la lista, con el
      composer editable — no algo que pasa solo al crear el estimado. */
@@ -220,8 +352,10 @@ Object.assign(ACC, {
      cliente" — reabre el mismo formulario cargado con lo que ya tenía. */
   estModificar: d => {
     const e = by(S.estimados, d.id);
-    S.draftEst = e.lineas.map(l=>({...l}));
+    S.draftEst = e.lineas.map(l=>({...l})); S.estLin=null; S.estEditIdx=null;
     S.estHdr = {editId:e.id, prop:e.prop, contactos:(e.contactos||[]).slice(),
+      modo:e.prospecto?"prospecto":"cliente", directo:false, origen:e.origen,
+      prospecto:e.prospecto?{...e.prospecto}:{nombre:"",correo:"",propiedad:""},
       label:e.label, num:e.num, issueDate:e.fecha, expDate:e.vence, po:e.po||"",
       docs:(e.docs||[]).slice(), deposito:!!e.deposito, depositoMonto:e.depositoMonto||"",
       firma:!!e.firma, terminos:e.terminos||"", nota:e.nota||""};
@@ -257,7 +391,11 @@ Object.assign(ACC, {
       const p=P(e.prop); const era=p.estado;
       if(p.estado==="Prospect"){ p.estado="Active"; }
       toast("✓ El cliente aprobó",`<b>${esc(e.num)}</b> · ${esc(d.medio)}.`
-        + (era==="Prospect"?` <b>${esc(p.nombre)}</b> dejó de ser prospecto y ya es cliente.`:""),"v");
+        + (era==="Prospect"?` <b>${esc(p.nombre)}</b> dejó de ser prospecto y ya es cliente.`:"")
+        + (e.prospecto?` Tocá «Convertir en cliente» para poder transferirlo a programación.`:""),"v");
+      /* Un prospecto todavía no tiene propiedad: el COI y el Expediente vienen
+         después de convertirlo en cliente. */
+      if(e.prospecto){ cm(); render(); return; }
       /* Flujograma: apenas aprueba, se pide el COI — no queda como boton
          suelto que alguien tiene que acordarse de tocar. */
       if(!coiVigente(e.prop)){ render(); ACC.coiDirecto({id:e.prop, est:e.num}); return; }
@@ -278,11 +416,21 @@ Object.assign(ACC, {
      terminan en la misma solicitud que Thalia programa (solProgramar). */
   estAgendar: d => {
     const e=by(S.estimados,d.id);
+    if(e.prospecto){
+      S.audOmitir=true;
+      toast("🚫 Primero convertí al prospecto en cliente",`<b>${esc(e.num)}</b> es de un prospecto sin propiedad registrada. Tocá «Convertir en cliente» y después transferilo.`,"r"); return; }
+    /* El Price List ya no es requisito: el precio de cada línea viaja con el
+       estimado a la WO, haya o no tarifa para esa propiedad. */
     if(!expedienteOK(e.prop)){
-      toast("🚫 Expediente incompleto",`<b>${esc(P(e.prop).nombre)}</b> todavía no tiene el Expediente completo (COI, Price List, contacto, etc). Complétalo antes de transferir a programación.`,"r"); return; }
+      S.audOmitir=true;
+      toast("🚫 Expediente incompleto",`<b>${esc(P(e.prop).nombre)}</b> todavía no tiene el Expediente completo (COI, contacto, etc). Complétalo antes de transferir a programación.`,"r"); return; }
+    /* Cada línea viaja con su precio por unidad ya con descuento (el que se cobra) y el
+       texto de lo autorizado, que es lo único que verá el técnico (sin precio). */
     const nsol={id:"SOL"+Date.now(),prop:e.prop,cliente:P(e.prop).cliente,quien:S.usuario,hora:hora(),
       nota:`Desde el estimado ${e.num} — líneas ya aprobadas`,estado:"Pendiente",
-      estimadoId:e.id, estimadoNum:e.num, lineas:lineasAprobDe(e).map(i=>e.lineas[i])};
+      estimadoId:e.id, estimadoNum:e.num,
+      lineas:lineasAprobDe(e).map(i=>{ const l=e.lineas[i];
+        return {...l, precio:precioNetoLinea(e,l), autorizado:l.serv+(l.descripcion?": "+l.descripcion:"")}; })};
     S.solicitudes.push(nsol); flash("sol:"+nsol.id);
     e.estado="Transferido";
     toast("✓ Transferido a programación",`<b>${esc(e.num)}</b> le llegó a Thalia con las líneas ya aprobadas — no hay que volver a escribir nada.`,"v");

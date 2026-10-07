@@ -102,7 +102,6 @@ function ayudaContexto(){
       let sel, extra="Tocá el botón de esa fila para completarlo.";
       if(falta.k==="contacto") sel=`[data-a="conNuevo"][data-prop="${pid}"]`;
       else if(falta.k==="coi") sel=`[data-a="coiDirecto"][data-id="${pid}"]`;
-      else if(falta.k==="precios"){ sel=`[data-a="tab"][data-t="precios"]`; extra="Abrí la pestaña Price List (marcada arriba) y agregá al menos un precio."; }
       else if(falta.k==="estimado"){
         const solL = S.solicitudesComerciales.find(sc=>sc.prop===pid && sc.estado!=="Estimado creado" && sc.estado!=="Descartada");
         if(solL){ sel=`[data-a="solComEstimado"][data-id="${solL.id}"]`; extra="Tocá «Crear estimado» — ya hay una Solicitud Comercial esperando."; }
@@ -137,9 +136,11 @@ function ayudaContexto(){
   if(S.mod==="estimados"){
     const eB = S.estimados.find(e=>e.estado==="Borrador");
     if(eB) return {sel:`[data-a="estEnviar"][data-id="${eB.id}"]`, txt:`El estimado ${esc(eB.num)} está en borrador. Tocá «Enviar».`};
-    const eA = S.estimados.find(e=>e.estado==="Aprobado" && expedienteOK(e.prop));
+    const eP = S.estimados.find(e=>e.estado==="Aprobado" && e.prospecto);
+    if(eP) return {sel:`[data-a="estConvertir"][data-id="${eP.id}"]`, txt:`El prospecto de ${esc(eP.num)} aprobó. Tocá «Convertir en cliente» para registrar su propiedad y poder transferirlo.`};
+    const eA = S.estimados.find(e=>e.estado==="Aprobado" && !e.prospecto && expedienteOK(e.prop));
     if(eA) return {sel:`[data-a="estAgendar"][data-id="${eA.id}"]`, txt:`El estimado ${esc(eA.num)} está aprobado y su Expediente completo. Tocá «Transferir a programación».`};
-    const eX = S.estimados.find(e=>e.estado==="Aprobado" && !expedienteOK(e.prop));
+    const eX = S.estimados.find(e=>e.estado==="Aprobado" && !e.prospecto && !expedienteOK(e.prop));
     if(eX) return {sel:`[data-a="estIrExpediente"][data-id="${eX.id}"]`, txt:`Al estimado ${esc(eX.num)} le falta completar el Expediente de la propiedad.`};
     const eE = S.estimados.find(e=>e.estado==="Enviado");
     if(eE) return {sel:`[data-a="estClienteOK"][data-id="${eE.id}"]`, txt:`El estimado ${esc(eE.num)} está enviado. Cuando el cliente responda, marcá «Aprobar» o «Rechazar».`};
@@ -276,13 +277,17 @@ const AYUDA_VISTA = {
       "<b>Plazo de 24 h:</b> la columna «Respuesta» muestra cuánto falta. Amarilla con 4 h o menos, roja si se venció (y sale en Alertas). Si la registra otra persona, a Claudia le llega un aviso.",
       "<b>Contestar</b> = tocar «Crear estimado», «Asignar inspección a Gustavo» o «Descartar». Queda si fue a tiempo o tarde.",
       "«Cliente lo necesita» es para cuándo el cliente quiere el trabajo — no es el plazo de 24 h.",
+      "El plazo de 24 h corre solo para lo que entra por acá. Un estimado directo («+ Nuevo estimado» en Estimados) no tiene solicitud ni plazo.",
       "Si la conversación fue en una visita, registrala arriba con «+ Registrar visita»."]},
-  estimados:{t:"Estimados", d:"Las cotizaciones que se le mandan al cliente. Todo estimado nace de una Solicitud Comercial: así queda quién lo pidió y el plazo de respuesta.",
-    tips:["<b>Cómo se crea uno:</b> en «Solicitudes Comerciales», tocá «Crear estimado» en la solicitud. Se abre con la propiedad cargada.",
-      "Adentro: marcá a qué contactos se envía, elegí la Unidad (opcional — si es para toda la propiedad, dejala vacía), elegí el servicio de la tarifa <b>General</b> o <b>Propia</b> y tocá «+ Agregar al estimado». Repetí por cada servicio.",
+  estimados:{t:"Estimados", d:"Las cotizaciones que se le mandan al cliente. Se crean desde una Solicitud Comercial (corre el plazo de 24 h) o directo con «+ Nuevo estimado».",
+    tips:["<b>Cómo se crea uno:</b> «+ Nuevo estimado» arriba, o «Crear estimado» en una Solicitud Comercial. Directo, elegís arriba <b>Cliente existente</b> (propiedad y contactos) o <b>Prospecto nuevo</b> (solo nombre, correo y propiedad o dirección — no se registra nada todavía).",
+      "Cada línea se arma como una de factura: «+ Agregar línea» → servicio, descripción, <b>precio</b>, cantidad y descuento. «Editar» la reabre cuando haga falta.",
+      "El precio se precarga de la tarifa <b>General</b> o <b>Propia</b>, pero siempre lo podés cambiar. Si no hay tarifa, usá <b>Concepto libre</b> (nombre, tipo de servicio y precio): también se vuelve Work Order al aprobarse. Se pueden mezclar en un mismo estimado.",
+      "Bajo el precio ves lo que se cobró antes por ese servicio, con porcentaje y cuántas veces — tocá uno para usarlo.",
+      "«Al tarifario» (en cada línea) guarda ese precio en el Price List de la propiedad. Es opcional: <b>no hace falta tarifa para aprobar ni para transferir</b>.",
       "Opcional: depósito, documentos, firma del cliente, términos y nota. «Save draft» lo guarda; «Send» lo envía.",
-      "Los precios salen del tarifario — para un servicio nuevo, primero cargalo en «Tarifario» o en el Price List de la propiedad.",
-      "«Aprobar» / «Rechazar» se registra a mano cuando el cliente responde, indicando por qué medio avisó. Si lo rechaza: «Modificar propuesta y reenviar»."]},
+      "«Aprobar» / «Rechazar» se registra a mano cuando el cliente responde, indicando por qué medio avisó. Si lo rechaza: «Modificar propuesta y reenviar».",
+      "Un <b>prospecto</b> aprobado se pasa a cliente con «Convertir en cliente» (crea la propiedad con sus datos); recién ahí se puede transferir a programación."]},
   propiedades:{t:"Propiedades", d:"Cada edificio o complejo, con todo lo suyo adentro: unidades, contactos, seguro, precios.",
     tips:["Hacé clic en cualquier fila para abrir la ficha de esa propiedad.","Adentro, la pestaña «Expediente» te marca lo que falta para poder agendar.","«+ Nueva propiedad» solo pide nombre y dirección — el resto se completa después entrando a la ficha."]},
   tecnicos:{t:"Técnicos", d:"El equipo: quién está hoy en campo, la lista completa y el historial de asistencia.",
@@ -300,6 +305,8 @@ const AYUDA_VISTA = {
   facturacion:{t:"Facturación", d:"De órdenes terminadas a factura, agrupadas por propiedad, sin volver a escribir nada. El período (semana / día / rango / mes) se elige arriba.",
     tips:["Regla para poder facturar: hacen falta las DOS cosas juntas — aprobada por Gustavo (Supervisión) y validada por Erika (Nómina). Si falta una, no aparece.","La tabla «Por qué todavía no aparecen algunas WO» explica el motivo exacto de cada una que quedó afuera.","«Generar factura» crea la factura de esa propiedad.","Se frena solo la WO con Request pendiente o sin tarifa, no toda la propiedad.",
       "<b>Normal:</b> todo lo de la propiedad va junto en Factura 1. Solo si la propiedad lo pide separado, usá «Lote manual»: fechas + tipo (Clean, Paint, Extras) → Factura 1, 2, 3…",
+      "<b>+ Factura manual:</b> elegí la propiedad y armá la factura aunque no haya WO; agregá líneas manuales con su tipo y, si querés, su unidad. Ideal para facturas mensuales (todas las pinturas, todas las limpiezas, oficinas).",
+      "<b>Mes:</b> en «Lote manual», elegí un mes y se llenan Desde/Hasta; con Tipo (ej. Clean) y Factura destino, «Seleccionar y asignar lote» junta todo lo de ese mes.",
       "<b>Vencimiento:</b> cuenta desde que se <b>envía</b>, con los días de crédito de la propiedad (30 si no tiene otro). Al enviar se puede cambiar.",
       "El buscador y los filtros (propiedad, estado, fechas) acotan la tabla de facturas.","El PDF se descarga con el número de factura, la fecha y la hora."]},
   cobranza:{t:"Cobranza", d:"El seguimiento de las facturas emitidas. Al pasar su vencimiento sin pago, arranca la secuencia de reclamo.",
@@ -349,7 +356,8 @@ const AYUDA_FON_TEC = {
   agenda:{t:"Agenda", d:"Los trabajos del técnico, por día y hora. Cada tarjeta es una Work Order: tocala para abrirla.",
     tips:["«Pedir permiso o vacaciones» le avisa a la oficina."]},
   wo:{t:"Work Order", d:"Lo que el técnico hace en la unidad, paso a paso.",
-    tips:["Al llegar, confirma que la unidad coincide («Sí, coincide — empezar») o avisa si no («No coincide — avisar»).",
+    tips:["«Trabajo autorizado» (si aparece) es lo que el cliente aprobó en el estimado: hacé eso y nada más. No muestra precios.",
+      "Al llegar, confirma que la unidad coincide («Sí, coincide — empezar») o avisa si no («No coincide — avisar»).",
       "«Foto del antes» y «Foto de cómo quedó»: sin fotos de cómo quedó, la oficina no puede cobrar el trabajo.",
       "«Necesito ayuda»: si no puede entrar (la llave no abre), falta material u otra cosa. Le llega a Thalia y Gustavo como Request «Ayuda en sitio»; no frena su pago.",
       "«Necesito aprobación»: si encontró trabajo extra que no estaba en la orden. Le llega a la oficina como Request.",
