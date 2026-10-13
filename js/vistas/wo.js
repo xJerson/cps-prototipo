@@ -643,6 +643,15 @@ VIEWS.despacho = () => {
 };
 
 /* ── PROPIEDADES ── una ficha, no 27 columnas ── */
+/* Disponibilidad para asignar una Sub-WO: las mismas tarjetas que Asignar una WO, calculadas con la fecha de la Sub-WO (o la de su WO). */
+function subwoCandidatos(w, fecha, sel){
+  const cand = candidatosTec({...w, tec:null, fecha:fecha||w.fecha});
+  return cand.map(c=>candidatoCardHTML(c, w.id, ESP_REQ[w.cat]||"Tecnico", {actionSi:"subwoElegir", actionNo:"subwoNoDisp"})).join("");
+}
+function subwoMarcar(){
+  const s=document.getElementById("swTec")||document.getElementById("sgTec"), c=document.getElementById("swCand"); if(!s||!c) return;
+  c.querySelectorAll("button[data-tec]").forEach(b=>b.classList.toggle("p",b.dataset.tec===s.value));
+}
 function modalSubWO(woId){
   const w=W(woId), u=U(w.unidad);
   modal(`<div class="mh"><h3>Nueva Sub-Work Order</h3><p>WO-${w.id} · ${esc(P(w.prop).nombre)} ${esc(u.num)} — sin costo se agrega ya aprobada; con costo queda pendiente de aprobación en Excepciones.</p></div>
@@ -665,8 +674,10 @@ function modalSubWO(woId){
       <div class="fld"><label>Técnico <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional, si es distinto al de la WO</span></label>
         <select id="swTec"><option value="">— mismo técnico que WO-${w.id} —</option>${S.tecnicos.filter(t=>t.activo).map(t=>`<option value="${t.id}">${esc(t.nombre)} ${esc(t.apellido)}</option>`).join("")}</select></div>
       <div class="fld"><label>Fecha <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional, si es otro día</span></label>
-        <input type="date" id="swFecha" value=""></div>
+        <input type="date" id="swFecha" value="" data-a="subwoFecha" data-id="${w.id}"></div>
     </div>
+    <div class="fld"><label>Disponibilidad ese día <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— toca a quien quieras asignar</span></label>
+      <div id="swCand">${subwoCandidatos(w,"")}</div></div>
     <div class="note">La forma de facturar se decide después, en el borrador de factura de la propiedad. Ahí puedes juntar esta Sub-Work Order con otras o dejarla para una factura separada.</div>
     <div class="note">La Sub-Work Order tendrá su propia asignación, fecha, estado y evidencia, pero seguirá ligada a WO-${w.id}. Si tiene precio queda pendiente de aprobación; al aprobarla se activa en el celular del técnico elegido.</div>
     <div class="note">Las fotos (Photos) se agregan después, desde la tarjeta «Sub-Work Orders» de esta WO — hay dos tipos: de referencia (para que el técnico vea con anticipación) y de evidencia (el resultado, para returns).</div>
@@ -692,12 +703,15 @@ function modalGestionSubWO(id){
   modal(`<div class="mh"><h3>Gestionar Sub-Work Order</h3><p>WO-${w.id} · ${esc(a.concepto)}</p></div>
   <div class="mb"><div class="fg c2">
     <div class="fld"><label>Técnico</label><select id="sgTec"><option value="">— heredar de WO-${w.id} —</option>${S.tecnicos.filter(t=>t.activo).map(t=>`<option value="${t.id}" ${t.id===a.tec?"selected":""}>${esc(tecN(t.id))}</option>`).join("")}</select></div>
-    <div class="fld"><label>Fecha</label><input type="date" id="sgFecha" value="${esc(a.fecha||"")}"></div></div>
+    <div class="fld"><label>Fecha</label><input type="date" id="sgFecha" value="${esc(a.fecha||"")}" data-a="subwoFecha" data-id="${w.id}"></div></div>
+    <div class="fld"><label>Disponibilidad ese día <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— toca a quien quieras asignar</span></label>
+      <div id="swCand">${subwoCandidatos(w,a.fecha||"")}</div></div>
     <div class="fg c2"><div class="fld"><label>Estado operativo</label><select id="sgEstado" ${a.estado==="Pendiente"?"disabled":""}>
       ${["Unassigned","Assigned","In progress","Completed","Canceled"].map(x=>`<option ${x===estado?"selected":""}>${x}</option>`).join("")}</select>
       ${a.estado==="Pendiente"?'<div class="hint">Se activa cuando se apruebe.</div>':""}</div></div>
     <div class="note">La reasignación afecta la agenda móvil y la nómina de esta Sub-Work Order, no cambia al técnico de la WO principal. La agrupación de factura se decide al preparar la factura de la propiedad.</div>
   </div><div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="subwoGestionGuardar" data-id="${a.id}">Guardar</button></div>`);
+  subwoMarcar();
 }
 
 function modalClienteExpediente(woId){

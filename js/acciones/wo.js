@@ -1022,6 +1022,13 @@ Object.assign(ACC, {
   subwoNueva: d => modalSubWO(+d.id),
   subwoTipoRef: () => refSubWO(),
   subwoGestionar: d => modalGestionSubWO(+d.id),
+  /* Elegir técnico desde las tarjetas de disponibilidad (llenan el mismo select que ya usaba el guardado). */
+  subwoElegir: d => { const s=document.getElementById("swTec")||document.getElementById("sgTec"); if(s){ s.value=d.tec; subwoMarcar(); } },
+  subwoNoDisp: d => { const w=W(+d.id), f=val("swFecha")||val("sgFecha")||w.fecha, b=bloqueo(d.tec,f);
+    toast("🚫 No disponible", b ? `<b>${esc(tecN(d.tec))}</b> no está disponible: ${esc(b.motivo)}.` : `<b>${esc(tecN(d.tec))}</b> ya tiene ${CAP} Work Orders el ${f}.`,"r"); },
+  /* Cambiar la fecha recalcula quién está disponible ese día. */
+  subwoFecha: d => { const w=W(+d.id), f=val("swFecha")||val("sgFecha"), c=document.getElementById("swCand"); if(!w||!c) return;
+    c.innerHTML=subwoCandidatos(w,f); subwoMarcar(); },
   clienteExpediente: d => modalClienteExpediente(+d.id),
   clienteExpedienteEnviar: d => {
     const w=W(+d.id), p=w&&P(w.prop), mail=val("crMail"); if(!w||!mail){ toast("Falta el correo","Indica el correo del cliente para enviar el expediente.","r"); return; }
@@ -1070,6 +1077,8 @@ Object.assign(ACC, {
   subwoGestionGuardar: d => {
     const a=by(S.adicionales,+d.id), w=a&&W(a.wo); if(!a||!w) return;
     const antes=tecSubWO(a), tec=val("sgTec")||null, fecha=val("sgFecha")||null;
+    const bl = bloqueo(tec||w.tec, fecha||w.fecha);
+    if(bl && (tec||w.tec)){ toast("🚫 El técnico no está disponible",`<b>${esc(tecN(tec||w.tec))}</b> tiene permiso ese día: ${esc(bl.motivo)}. Elige otro técnico u otra fecha.`,"r"); return; }
     let estado=a.estado==="Pendiente"?"Pending approval":val("sgEstado");
     if(estado==="Unassigned" && (tec||w.tec)) estado="Assigned";
     if(estado==="Completed" && !(a.fotosEvidArr||[]).length){
@@ -1093,6 +1102,8 @@ Object.assign(ACC, {
     const specs={};
     specsDef.forEach((c,i)=>{ const v=val("swSpec"+i); if(v && v.trim()) specs[c]=v.trim(); });
     const tecOverride=val("swTec")||null, fechaOverride=val("swFecha")||null;
+    const bl = bloqueo(tecOverride||w.tec, fechaOverride||w.fecha);
+    if(bl){ toast("🚫 El técnico no está disponible",`<b>${esc(tecN(tecOverride||w.tec))}</b> tiene permiso ese día: ${esc(bl.motivo)}. Elige otro técnico u otra fecha.`,"r"); return; }
     const monto = (precio||0)*(cant||1);
     /* Sección 5 del feedback: "Approval, if required" — con costo, la Sub-WO
        no queda aprobada de una: se guarda como un adicional más (mismo
