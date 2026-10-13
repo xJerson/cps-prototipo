@@ -5,7 +5,7 @@ VIEWS.supervision = () => {
   const insp = S.visitas.filter(v=>v.tipo==="Inspección" && v.estado==="Pendiente");
   return `
   <div class="ph"><div><h2>Supervisión</h2>
-    <p>La jornada de Gustavo: a dónde ir, qué revisar y qué quedó acordado con cada propiedad.</p></div>
+    <p>Panel de oficina para la supervisión de Gustavo: lo que manda desde el campo, la ruta que se le arma, qué revisar y qué quedó acordado con cada propiedad.</p></div>
     <div class="act"><button class="btn" data-a="verGustavoCel">Ver su celular</button></div></div>
   <div class="tabs">${[["campo",`De campo (${repPend().length})`],["ruta","Ruta del día"],
       ["devs",`Devoluciones (${devAbiertas().length})`],["diario","Reporte diario"],
