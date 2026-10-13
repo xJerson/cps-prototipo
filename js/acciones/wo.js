@@ -1094,7 +1094,10 @@ Object.assign(ACC, {
     const despues=tecSubWO(a);
     a.hist.push([hora(),`Gestión actualizada · ${estado} · ${despues?tecN(despues):"sin técnico"}`,S.usuario]);
     w.hist.push([hora(),`Sub-Work Order ${a.concepto}: ${estado}${despues?" · "+tecN(despues):""}`,S.usuario]);
-    if(despues&&despues!==antes) avisar(tecN(despues),"Nueva Sub-Work Order",`WO-${w.id} · ${a.concepto} · ${fechaSubWO(a)||"sin fecha"}`,"a");
+    if(despues&&despues!==antes){
+      avisar(tecN(despues),"Nueva Sub-Work Order",`WO-${w.id} · ${a.concepto} · ${fechaSubWO(a)||"sin fecha"}`,"a");
+      if(a.estado==="Aprobado") noti("Te asignaron una Sub-Work Order", `${P(w.prop).nombre} ${U(w.unidad)?U(w.unidad).num:""} — WO-${w.id} · ${a.concepto} · ${fechaSubWO(a)||"sin fecha"}`);
+    }
     cm(); flash("wo:"+w.id); toast("✓ Sub-Work Order actualizada","La agenda y la nómina usarán esta asignación.","v"); render();
   },
   subwoGuardar: d => {
@@ -1124,6 +1127,9 @@ Object.assign(ACC, {
       hist:[[hora(), `Sub-Work Order planificada creada: ${tipo}`, S.usuario]]};
     S.adicionales.push(na);
     if(na.estado==="Aprobado") desvalidar(w);
+    /* Igual que una WO asignada: sin aviso el técnico se entera hasta que abre su agenda. Con costo se avisa al aprobarla (medioOK). */
+    const tecAviso = tecOverride||w.tec;
+    if(na.estado==="Aprobado" && tecAviso) noti("Tienes una Sub-Work Order", `${P(w.prop).nombre} ${U(w.unidad)?U(w.unidad).num:""} — WO-${w.id} · ${tipo} · ${fechaOverride||w.fecha}`);
     w.hist.push([hora(), `Sub-Work Order planificada: ${tipo}`, S.usuario]);
     cm();
     toast("✓ Sub-Work Order creada",
