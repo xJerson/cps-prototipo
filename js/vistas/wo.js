@@ -692,7 +692,10 @@ VIEWS.despacho = () => {
 /* Disponibilidad para asignar una Sub-WO: las mismas tarjetas que Asignar una WO, calculadas con la fecha de la Sub-WO (o la de su WO). */
 function subwoCandidatos(w, fecha, sel){
   const cand = candidatosTec({...w, tec:null, fecha:fecha||w.fecha});
-  return cand.map(c=>candidatoCardHTML(c, w.id, ESP_REQ[w.cat]||"Tecnico", {actionSi:"subwoElegir", actionNo:"subwoNoDisp"})).join("");
+  const heredado = `<button type="button" class="btn" style="width:100%;justify-content:flex-start;margin-bottom:7px;padding:10px 12px" data-a="subwoElegir" data-id="${w.id}" data-tec="">
+    <div style="flex:1;text-align:left"><div style="font-weight:700">El mismo técnico de la WO</div>
+      <div style="font-size:11px;color:var(--faint)">${w.tec?esc(tecN(w.tec)):"La WO todavía no tiene técnico"} · lo normal cuando se hace en la misma visita</div></div></button>`;
+  return heredado + cand.map(c=>candidatoCardHTML(c, w.id, ESP_REQ[w.cat]||"Tecnico", {actionSi:"subwoElegir", actionNo:"subwoNoDisp"})).join("");
 }
 function subwoMarcar(){
   const s=document.getElementById("swTec")||document.getElementById("sgTec"), c=document.getElementById("swCand"); if(!s||!c) return;
@@ -716,13 +719,10 @@ function modalSubWO(woId){
     <div id="swSpecs"></div>
     <div class="fld"><label>Notas (Notes)</label><textarea id="swNotas" placeholder="Cualquier detalle que no entre en los campos de arriba…"></textarea></div>
 
-    <div class="fg c2" style="margin-top:4px">
-      <div class="fld"><label>Técnico <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional, si es distinto al de la WO</span></label>
-        <select id="swTec"><option value="">— mismo técnico que WO-${w.id} —</option>${S.tecnicos.filter(t=>t.activo).map(t=>`<option value="${t.id}">${esc(t.nombre)} ${esc(t.apellido)}</option>`).join("")}</select></div>
-      <div class="fld"><label>Fecha <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional, si es otro día</span></label>
-        <input type="date" id="swFecha" value="" data-a="subwoFecha" data-id="${w.id}"></div>
-    </div>
-    <div class="fld"><label>Disponibilidad ese día <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— toca a quien quieras asignar</span></label>
+    <input type="hidden" id="swTec" value="">
+    <div class="fld" style="margin-top:4px"><label>Fecha <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional, si es otro día</span></label>
+      <input type="date" id="swFecha" value="" data-a="subwoFecha" data-id="${w.id}"></div>
+    <div class="fld"><label>Técnico <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— con su disponibilidad ese día; toca a quien quieras asignar</span></label>
       <div id="swCand">${subwoCandidatos(w,"")}</div></div>
     <div class="note">La forma de facturar se decide después, en el borrador de factura de la propiedad. Ahí puedes juntar esta Sub-Work Order con otras o dejarla para una factura separada.</div>
     <div class="note">La Sub-Work Order tendrá su propia asignación, fecha, estado y evidencia, pero seguirá ligada a WO-${w.id}. Si tiene precio queda pendiente de aprobación; al aprobarla se activa en el celular del técnico elegido.</div>
@@ -730,7 +730,7 @@ function modalSubWO(woId){
   </div>
   <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
     <button class="btn p" data-a="subwoGuardar" data-id="${w.id}">Crear Sub-Work Order</button></div>`);
-  refSubWO();
+  refSubWO(); subwoMarcar();
 }
 /* Specs propias según el tipo elegido — SUBWO_SPECS. Sin tipo con specs
    definidas, no se agrega nada (el campo Notas alcanza). */
@@ -748,9 +748,9 @@ function modalGestionSubWO(id){
   const estado=a.estado==="Pendiente"?"Pending approval":(a.estadoTrabajo||"Unassigned");
   modal(`<div class="mh"><h3>Gestionar Sub-Work Order</h3><p>WO-${w.id} · ${esc(a.concepto)}</p></div>
   <div class="mb"><div class="fg c2">
-    <div class="fld"><label>Técnico</label><select id="sgTec"><option value="">— heredar de WO-${w.id} —</option>${S.tecnicos.filter(t=>t.activo).map(t=>`<option value="${t.id}" ${t.id===a.tec?"selected":""}>${esc(tecN(t.id))}</option>`).join("")}</select></div>
+    <input type="hidden" id="sgTec" value="${esc(a.tec||"")}">
     <div class="fld"><label>Fecha</label><input type="date" id="sgFecha" value="${esc(a.fecha||"")}" data-a="subwoFecha" data-id="${w.id}"></div></div>
-    <div class="fld"><label>Disponibilidad ese día <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— toca a quien quieras asignar</span></label>
+    <div class="fld"><label>Técnico <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— con su disponibilidad ese día; toca a quien quieras asignar</span></label>
       <div id="swCand">${subwoCandidatos(w,a.fecha||"")}</div></div>
     <div class="fg c2"><div class="fld"><label>Estado operativo</label><select id="sgEstado" ${a.estado==="Pendiente"?"disabled":""}>
       ${["Unassigned","Assigned","In progress","Completed","Canceled"].map(x=>`<option ${x===estado?"selected":""}>${x}</option>`).join("")}</select>
