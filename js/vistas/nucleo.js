@@ -46,7 +46,7 @@ function vPendientes(){
     {n:"Work Orders sin técnico",  c:S.wos.filter(w=>!w.tec&&esAgendada(w.estado)).length, m:"wo",
      d:"Agendadas pero sin nadie asignado", k:"w"},
     {n:"Asignadas sin marcar llegada", c:S.wos.filter(w=>w.tec&&esAgendada(w.estado)&&!asisDe(w.id)).length, m:"tecnicos",
-     d:"Ya pasó su hora y el técnico no ha reportado", k:"w"},
+     d:"Ya pasó su hora y el técnico no ha reportado", k:"w", no:["Gustavo"]},
     {n:"Terminadas por supervisar", c:S.wos.filter(w=>w.estado==="Completed"&&!w.supervisada).length, m:"supervision",
      d:"No se pueden facturar hasta que Gustavo las revise", k:"a"},
     {n:"Listas para facturar",     c:S.wos.filter(w=>w.estado==="Completed"&&w.supervisada&&!w.facturada).length, m:"facturacion",
@@ -58,8 +58,8 @@ function vPendientes(){
     {n:"Facturas vencidas",        c:S.facturas.filter(facVencida).length, m:"cobranza",
      d:"Más de 30 días sin pago", k:"r"},
     {n:"Productos con stock bajo", c:S.productos.filter(p=>stock(p.id)<p.min).length, m:"inventario",
-     d:"Por debajo del mínimo", k:"w"}
-  ].filter(x=>x.c>0 && puede(x.m));
+     d:"Por debajo del mínimo", k:"w", no:["Gustavo"]}
+  ].filter(x=>x.c>0 && puede(x.m) && !(x.no||[]).includes(S.usuario));   // no:[...] = usuarios a quienes no se les muestra (esto lo ve la oficina)
   if(!items.length) return `<div class="card"><div class="cp"><div class="note v" style="margin:0">
     <b>Nada pendiente de tu parte.</b> No hay Requests pendientes, todo está asignado y nada espera decisión.</div></div></div>`;
   return `
