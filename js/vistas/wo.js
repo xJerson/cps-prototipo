@@ -276,7 +276,12 @@ function fichaWO(id){
         ${sols.length?`<table><thead><tr><th>Tipo</th><th>Origen</th><th>Ubicación</th><th class="num">Cant.</th>${puedeVerDinero?'<th class="num">P. unit.</th><th class="num">Importe</th>':""}<th>Estado</th><th>Fotos</th><th></th></tr></thead><tbody>
         ${sols.map(s=>`
           <tr><td colspan="${puedeVerDinero?9:7}" style="background:var(--azul-cl);color:var(--azul-s)">
-            <b>${s.origen==="Planificada"?"Sub-Work Order planificada":"Un solo aviso del técnico"}</b>${s.desc?" · "+esc(s.desc):""}</td></tr>
+            ${(()=>{ const x=solPend(s)?excTodas().find(y=>y.id==="AUTO-A"+s.sol):null;
+              const puede=x&&(x.assignedTo===S.usuario||x.aprueba===S.usuario);
+              /* Mismo Request que sale en la bandeja: aquí están las fotos, así que se decide desde esta WO. */
+              return `<div style="display:flex;align-items:center;gap:8px"><div style="flex:1"><b>${s.origen==="Planificada"?"Sub-Work Order planificada":"Un solo aviso del técnico"}</b>${s.desc?" · "+esc(s.desc):""}</div>${
+                x?(puede?`<button class="btn sm" data-a="excRech" data-id="AUTO-A${esc(s.sol)}">Rechazar</button><button class="btn sm v" data-a="excAprob" data-id="AUTO-A${esc(s.sol)}">Aprobar</button>`
+                  :`<span style="font-size:11px;color:var(--faint)">Pendiente · aprueba ${esc(x.assignedTo||x.aprueba)}</span>`):""}</div>`; })()}</td></tr>
           ${s.lineas.map(a=>`<tr><td><b>${esc(a.concepto)}</b></td><td><span class="pill ${a.origen==="Planificada"?"a":"m"}">${esc(a.origen||"Técnico")}</span></td><td>${esc(a.ubic)}</td>
             <td class="num mono">${a.cant||1}</td>
             ${puedeVerDinero?`<td class="num mono">${a.precio?money(a.precio):"—"}</td><td class="num mono">${a.precio?money(a.precio*(a.cant||1)):"—"}</td>`:""}
