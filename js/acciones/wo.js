@@ -373,8 +373,10 @@ Object.assign(ACC, {
     const w = W(+d.id), f = val("asF");
     if(!f || f===w.fecha) return;
     const antes = w.fecha;
+    const b = w.tec && bloqueo(w.tec,f);
+    if(b){ toast("🚫 El técnico no está disponible",`<b>${esc(tecN(w.tec))}</b> tiene permiso el ${f}: ${esc(b.motivo)}. Elige otra fecha o reasigna la WO.`,"r"); render(); return; }
     w.fecha = f;
-    w.semana = S.semana;
+    w.semana = semanaDe(f);
     w.hist.push([hora(), `Fecha movida del ${antes} al ${f}`, S.usuario]);
     if(w.confirmCliente && w.confirmCliente.fecha!==f){
       w.confirmCliente = null;
@@ -424,6 +426,9 @@ Object.assign(ACC, {
       const libres = S.tecnicos.filter(t=>t.activo&&!t.esp.includes("Supervisor")&&!ausente(t.id,f));
       const cupo = libres.length*CAP - S.wos.filter(x=>x.fecha===f&&x.tec&&x.id!==w.id).length;
       if(cupo<=0){ toast("🚫 Ese día no tiene cupo",`El ${f} ya está lleno. Claudia: «se debería pasar al otro día».`,"r"); return; }
+      /* El técnico ya asignado debe poder trabajar ese día: un permiso aprobado bloquea; su semana y su horario solo avisan. */
+      const b = bloqueo(w.tec,f);
+      if(b){ toast("🚫 El técnico no está disponible",`<b>${esc(tecN(w.tec))}</b> tiene permiso el ${f}: ${esc(b.motivo)}. Elige otra fecha o reasigna la WO.`,"r"); return; }
     }
 
     w.propuestas = (w.propuestas||[]).concat([{fecha:f, medio, contacto, respuesta:resp,
@@ -437,6 +442,7 @@ Object.assign(ACC, {
       const antes = w.fecha;
       w.fechaSolicitada = w.fechaSolicitada || antes;
       w.fecha = f;
+      w.semana = semanaDe(f);   // sin esto la WO sigue contando en la semana anterior (agenda, nómina y reportes)
       if(inicio) w.horaProg=inicio;
       if(fin) w.horaFin=fin;
       if(inicio) programarRecordatorios(w,f,inicio);   // 1 día antes / 1 hora antes de la hora de inicio, para el técnico y el equipo
@@ -874,6 +880,17 @@ Object.assign(ACC, {
   woReasignarOK: d => {
     const w = W(+d.id), antes = w.tec, nuevo = d.tec;
     if(antes===nuevo){ cm(); toast("Sin cambios","Es el mismo técnico.",""); return; }
+    /* Se revisa al ejecutar: el modal pudo quedar abierto mientras la WO se pagaba o el técnico pedía permiso. */
+    if(["Canceled","Invoiced","Paid"].includes(w.estado) || w.facturada || w.pagadaTec){ cm(); toast("🚫 No se puede reasignar",`WO-${w.id} ya está en estado <b>${esc(w.estado)}</b>.`,"r"); return; }
+    const bl = bloqueo(nuevo,w.fecha);
+    if(bl){ toast("🚫 No se puede reasignar",`<b>${esc(tecN(nuevo))}</b> no está disponible: ${esc(bl.motivo)}.`,"r"); return; }
+    if(S.wos.filter(x=>x.tec===nuevo && x.fecha===w.fecha && x.id!==w.id && x.estado!=="Canceled").length >= CAP){
+      toast("🚫 No se puede reasignar",`<b>${esc(tecN(nuevo))}</b> ya tiene ${CAP} Work Orders el ${w.fecha}.`,"r"); return; }
+    /* Lo que el técnico anterior marcó (llegada, corroboración) no vale para el nuevo. */
+    if(esAgendada(w.estado)){
+      S.asistencias = S.asistencias.filter(a=>a.wo!==w.id);
+      w.asistencia = false; w.corroborado = false;
+    }
     w.tec = nuevo;
     w.hist.push([hora(), "Reasignada de "+tecN(antes)+" a "+tecN(nuevo), S.usuario]);
     if(w.touchup){
@@ -907,11 +924,37 @@ Object.assign(ACC, {
   woCancelarOK: d => {
     const w=W(+d.id), motivo=val("wcMotivo"), nota=val("wcNota");
     if(!motivo){ marcaFalta(["wcMotivo"]); toast("Falta el motivo","Indica por qué se canceló esta Work Order.","r"); return; }
+    /* El modal pudo quedar abierto mientras la WO avanzaba: solo se cancela lo que todavía no empieza. */
+    if(!esAgendada(w.estado) || w.facturada || w.pagadaTec){ cm(); toast("Ya no se puede cancelar",`WO-${w.id} está en estado <b>${esc(w.estado)}</b>.`,"r"); return; }
     w.estado="Canceled"; w.motivoCancel=motivo; w.notaCancel=nota;
     w.propuestas=(w.propuestas||[]).concat([{fecha:w.fecha,medio:"Oficina",contacto:S.usuario,respuesta:"Cancelada",nota,motivo,quien:S.usuario,hora:hora(),dia:HOY_SUP}]);
     w.hist.push([hora(),`Cancelada: ${motivo}${nota?" — "+nota:""}`,S.usuario]);
+
+    /* Cascada: nada de lo que colgaba de esta WO debe seguir vivo. */
+    const cierre = {quien:S.usuario, hora:hora()};
+    const rec = (S.recordatoriosWO||[]).filter(r=>r.wo===w.id && r.estado==="Scheduled").length;
+    S.recordatoriosWO = (S.recordatoriosWO||[]).filter(r=>!(r.wo===w.id && r.estado==="Scheduled"));
+    const com = (S.comunicacionesWO||[]).filter(c=>c.wo===w.id && c.estado!=="Closed");
+    com.forEach(c=>{ c.estado="Closed"; c.cierre={...cierre, motivo:"WO cancelada"}; });
+    const adic = S.adicionales.filter(a=>a.wo===w.id && a.estado==="Pendiente");
+    adic.forEach(a=>{ a.estado="Rechazado"; a.aprob={medio:"Sistema", ...cierre, nota:"WO cancelada"}; });
+    S.adicionales.filter(a=>a.wo===w.id && a.origen==="Planificada" && a.estado==="Aprobado" && a.estadoTrabajo!=="Completed")
+      .forEach(a=>{ a.estadoTrabajo="Canceled"; });
+    const exc = (S.excepciones||[]).filter(x=>x.wo===w.id && x.estado==="Pendiente");
+    exc.forEach(x=>{ x.estado="Rechazada"; x.resol={...cierre, nota:"WO cancelada"}; });
+    /* Un touch-up cancelado deja la devolución sin corrección y retira el descuento que se había generado. */
+    if(w.touchup){
+      const dv = DV(w.devOrigen);
+      if(dv){ quitarDescuento(dv); dv.touchup=null; dv.hist.push([hora(), `Touch-up WO-${w.id} cancelado: ${motivo}`, S.usuario]); }
+    }
+    if(w.tec) noti("Cancelaron un trabajo", `${P(w.prop).nombre} ${U(w.unidad)?U(w.unidad).num:""} — WO-${w.id}. Motivo: ${motivo.toLowerCase()}.`);
+
+    const lim = [rec&&`${rec} recordatorio(s)`, com.length&&`${com.length} aviso(s) de pendiente`, adic.length&&`${adic.length} adicional(es) sin decidir`, exc.length&&`${exc.length} excepción(es)`].filter(Boolean);
     flash("wo:"+w.id); cm();
-    toast("WO cancelada",`WO-${w.id} queda en historial con el motivo: <b>${esc(motivo)}</b>. No se agregará a nómina ni facturación.`,"w"); render();
+    toast("WO cancelada",`WO-${w.id} queda en historial con el motivo: <b>${esc(motivo)}</b>. No se agregará a nómina ni facturación.`
+      + (lim.length?`<br><br>También se cerró: ${lim.join(", ")}.`:"")
+      + (w.touchup?`<br><br>La devolución quedó sin corrección: se puede crear otro touch-up.`:"")
+      + (w.tec?`<br><br>Se le avisó a <b>${esc(tecN(w.tec))}</b>.`:""),"w"); render();
   },
   /* Desde el detalle web de una WO: abrir esa orden en el celular del técnico
      que la tiene asignada (así no hay que buscar a mano de quién es). */
