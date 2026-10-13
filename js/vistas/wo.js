@@ -15,6 +15,9 @@ VIEWS.wo = () => {
   if(fechaRapida[filtroFecha.modo]) ws=ws.filter(w=>w.fecha===fechaRapida[filtroFecha.modo]);
   if(filtroFecha.modo==="semana") ws=ws.filter(w=>w.semana===filtroFecha.sem);
   if(filtroFecha.modo==="rango") ws=ws.filter(w=>(!filtroFecha.desde||w.fecha>=filtroFecha.desde)&&(!filtroFecha.hasta||w.fecha<=filtroFecha.hasta));
+  /* Se filtra tocando el tipo o la zona de cualquier fila. */
+  if(S.woFt) ws=ws.filter(w=>w.cat===S.woFt);
+  if(S.woFz) ws=ws.filter(w=>P(w.prop).zona===S.woFz);
   // «luego preguntan de unidades de hace dos meses, qué se hizo, qué pasó»
   // El identificador se compara también normalizado (sin guiones ni espacios)
   // para que "B102", "B 102" y "B-102" encuentren la misma unidad.
@@ -28,7 +31,7 @@ VIEWS.wo = () => {
       return (terms.length&&terms.every(term=>txt.includes(term))) || (qn && un&&uNorm(un.num).includes(qn)); }); }
 
   /* Sub-WO planificadas: cada WO las lleva desplegables; con un filtro activo, una WO sale también si alguna de sus Sub-WO coincide. */
-  const filtrando = f!=="todas" || filtroFecha.modo!=="todos" || !!S.busca;
+  const filtrando = f!=="todas" || filtroFecha.modo!=="todos" || !!S.busca || !!S.woFt || !!S.woFz;
   const subOk = (w,a) => {
     const fe=fechaSubWO(a)||w.fecha, sem=semanaDe(fe), tec=tecSubWO(a), et=a.estadoTrabajo;
     if(f==="semana" && sem!==S.semana) return false;
@@ -36,6 +39,8 @@ VIEWS.wo = () => {
     if(f==="curso" && et!=="In progress") return false;
     if(f==="camino" && !(tec && et==="Assigned")) return false;
     if(f==="pend") return false;   // «Pendientes» son WO que esperan algo del cliente
+    if(S.woFt && w.cat!==S.woFt) return false;
+    if(S.woFz && P(w.prop).zona!==S.woFz) return false;
     if(fechaRapida[filtroFecha.modo] && fe!==fechaRapida[filtroFecha.modo]) return false;
     if(filtroFecha.modo==="semana" && sem!==filtroFecha.sem) return false;
     if(filtroFecha.modo==="rango" && ((filtroFecha.desde&&fe<filtroFecha.desde)||(filtroFecha.hasta&&fe>filtroFecha.hasta))) return false;
@@ -87,10 +92,12 @@ VIEWS.wo = () => {
     ${[["todas","Todas"],["semana","Semana "+S.semana],["sin","Sin técnico"],["camino","Asignadas sin llegar"],["curso","En curso"],["pend","Pendientes"]].map(([k,n])=>
       `<button class="tab ${f===k?"on":""}" data-a="tab" data-t="${k}">${n}</button>`).join("")}
   </div>
-  <div class="note" style="margin-bottom:12px;display:flex;align-items:center;gap:10px"><span><b>${ws.length} resultado(s)${nSubVistas?` · ${nSubVistas} Sub-WO`:""}.</b> Los filtros de texto y fecha se mantienen juntos hasta que los cambies.</span>
+  <div class="note" style="margin-bottom:12px;display:flex;align-items:center;gap:10px"><span><b>${ws.length} resultado(s)${nSubVistas?` · ${nSubVistas} Sub-WO`:""}.</b> Los filtros de texto y fecha se mantienen juntos hasta que los cambies. Toca un tipo o una zona de la tabla para filtrar.</span>
+    ${S.woFt?`<span class="pill m" style="cursor:pointer" data-a="woFiltroQuitar" data-k="t" title="Quitar el filtro">Tipo: ${esc(S.woFt)} ✕</span>`:""}
+    ${S.woFz?`<span class="pill m" style="cursor:pointer" data-a="woFiltroQuitar" data-k="z" title="Quitar el filtro">Zona: ${esc(S.woFz)} ✕</span>`:""}
     ${selMode?`<button class="btn p" style="margin-left:auto" data-a="pendAvisar" ${sel.length?"":"disabled"}>Avisar (${sel.length})</button>`:""}</div>
   <div class="card"><table>
-    <thead><tr>${selMode?"<th></th>":""}<th>WO</th><th>Fecha</th><th>Hora</th><th>Sem</th><th>Propiedad · Unidad</th><th>Rooms</th><th>Tipo</th><th>Servicio</th><th>Técnico</th><th>Llegada</th><th>Estado</th>${puedeVerDinero?'<th class="num">Cobrado</th><th class="num">Pagado</th>':""}<th></th></tr></thead>
+    <thead><tr>${selMode?"<th></th>":""}<th>WO</th><th>Fecha</th><th>Hora</th><th>Sem</th><th>Propiedad · Unidad</th><th>Zona</th><th>Rooms</th><th>Tipo</th><th>Servicio</th><th>Técnico</th><th>Llegada</th><th>Estado</th>${puedeVerDinero?'<th class="num">Cobrado</th><th class="num">Pagado</th>':""}<th></th></tr></thead>
     <tbody>${ws.map(w=>{
       const t=tarifaWO(w);
       const subs=subsVistas[w.id]||[], todas=subsPlanDe(w), propia=propias.has(w.id);
@@ -101,10 +108,11 @@ VIEWS.wo = () => {
         <td class="mono" style="font-weight:700">WO-${w.id}</td>
         <td class="mono">${w.fecha.slice(5)}</td><td class="mono">${esc(w.horaProg||"9:00")}</td><td class="mono">${w.semana}</td>
         <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td>
+        <td>${P(w.prop).zona?`<span class="pill g" style="cursor:pointer" data-a="woFiltroZona" data-z="${esc(P(w.prop).zona)}" title="Filtrar por esta zona">${esc(P(w.prop).zona)}</span>`:"—"}</td>
         <td>${esc(U(w.unidad).rooms)}</td>
-        <td><span class="pill g">${esc(w.cat)}</span></td>
+        <td><span class="pill g" style="cursor:pointer" data-a="woFiltroTipo" data-t="${esc(w.cat)}" title="Filtrar por este tipo">${esc(w.cat)}</span></td>
         <td>${esc(w.serv)}</td>
-        <td>${w.tec?esc(tecN(w.tec)):'<span class="pill w">sin asignar</span>'}</td>
+        <td>${w.tec?esc(tecN(w.tec)):`<span class="pill w">sin asignar</span>${!["Canceled","Completed","Invoiced","Paid"].includes(w.estado)?` <button class="btn sm p" data-a="asigModal" data-id="${w.id}">Asignar</button>`:""}`}</td>
         <td>${asisDe(w.id)?`<span class="pill ${asisDe(w.id).puntualidad==="Tarde"?"w":"v"}"><span class="dot"></span>${esc(asisDe(w.id).horaReal)}</span>`:'<span style="color:var(--faint)">—</span>'}</td>
         <td><div style="display:flex;flex-direction:column;align-items:flex-start;gap:3px">
           <span class="pill ${estP(w.estado)}"><span class="dot"></span>${w.estado}</span>
@@ -125,6 +133,7 @@ VIEWS.wo = () => {
             <td class="mono" style="font-weight:700;padding-left:22px">↳ WO-${w.id} · Sub ${n}</td>
             <td class="mono">${fe.slice(5)}</td><td class="mono">${esc(w.horaProg||"9:00")}</td><td class="mono">${semanaDe(fe)}</td>
             <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td>
+            <td>${esc(P(w.prop).zona||"—")}</td>
             <td>${esc(U(w.unidad).rooms)}</td>
             <td><span class="pill a">Sub-WO</span></td>
             <td>${esc(a.concepto)}${(a.cant||1)>1?` ×${a.cant}`:""}${a.ubic?` · ${esc(a.ubic)}`:""}</td>
@@ -133,7 +142,7 @@ VIEWS.wo = () => {
             <td><span class="pill ${est==="Pending approval"?"w":estP(est)}"><span class="dot"></span>${esc(est)}</span></td>
             ${puedeVerDinero?'<td class="num mono">—</td><td class="num mono">—</td>':""}
             <td></td></tr>`; }).join(""):""}`;
-    }).join("")||`<tr><td colspan="${(puedeVerDinero?14:12)+(selMode?1:0)}" class="empty">Nada aquí</td></tr>`}</tbody>
+    }).join("")||`<tr><td colspan="${(puedeVerDinero?15:13)+(selMode?1:0)}" class="empty">Nada aquí</td></tr>`}</tbody>
   </table></div>`;
 };
 
@@ -1260,6 +1269,13 @@ function candidatoCardHTML(c, id, espReq, opts={}){
   </button>`;
 }
 
+/* Antes de asignar: las notas internas de la WO se leen y se aceptan. */
+function modalNotasAsig(w){
+  modal(`<div class="mh"><h3>Notas internas · WO-${w.id}</h3><p>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)} · ${esc(w.serv)}</p></div>
+  <div class="mb"><div class="note w" style="white-space:pre-line;margin:0 0 10px">${esc(w.notasOficina)}</div>
+    <div class="hint">Léelas antes de asignar. El técnico no ve estas notas.</div></div>
+  <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="asigNotasOK" data-id="${w.id}">Entendido, asignar</button></div>`);
+}
 function modalAsig(id){
   const w=W(id), p=P(w.prop);
   const espReq = ESP_REQ[w.cat] || "Tecnico";

@@ -490,7 +490,12 @@ Object.assign(ACC, {
     render();
   },
 
-  asigModal: d => modalAsig(+d.id),
+  /* Si la WO trae notas internas, primero se leen y se aceptan; sin notas no hay nada que aceptar. */
+  asigModal: d => { const w=W(+d.id); if(w && String(w.notasOficina||"").trim()) modalNotasAsig(w); else modalAsig(+d.id); },
+  asigNotasOK: d => modalAsig(+d.id),
+  woFiltroTipo: d => { S.woFt = S.woFt===d.t ? "" : d.t; render(); },
+  woFiltroZona: d => { S.woFz = S.woFz===d.z ? "" : d.z; render(); },
+  woFiltroQuitar: d => { if(d.k==="t") S.woFt=""; else S.woFz=""; render(); },
   asigNo: d => {
     const w=W(+d.id), t=T(d.tec), b=bloqueo(d.tec,w.fecha);
     toast("🚫 No se puede asignar", b
