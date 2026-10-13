@@ -172,7 +172,7 @@ Object.assign(ACC, {
     const fotoAprob = S._aprobFoto||null; S._aprobFoto=null;
     const sello = ip => ({medio:d.medio, quien:S.usuario, hora:hora(), ip, foto:fotoAprob});
     let pagoTec = 0, cobroCliente = 0; const sinPrecio = [];
-    ok.forEach(l=>{ l.estado="Aprobado"; l.aprob=sello(d.medio==="Enlace digital"?"72.14.201.38":null);
+    ok.forEach(l=>{ l.estado="Aprobado"; l.aprob=sello(null);
       (l.hist=l.hist||[]).push([hora(), `Aprobada por ${d.medio.toLowerCase()}`, S.usuario]);
       if(l.origen==="Planificada"){
         l.estadoTrabajo=tecSubWO(l)?"Assigned":"Unassigned";
@@ -202,10 +202,10 @@ Object.assign(ACC, {
     if(no.length) w.hist.push([hora(), `Adicional NO aprobado · ${nom(no)}`, S.usuario]);
     if(pagoTec>0) w.hist.push([hora(), `Nómina: ${money(pagoTec)} de pago adicional asignado según cada Sub-Work Order`, S.usuario]);
     cm();
-    const sustento = d.medio==="Enlace digital"
-      ? "Queda el clic real del cliente con hora e IP."
-      : `Registrado como <b>${esc(d.medio)}</b>: queda quién y cuándo, pero sin clic del cliente.`;
-    const plata = pagoTec>0
+    const sustento = `Registrado como <b>${esc(d.medio)}</b>: queda quién y cuándo.`;
+    const plata = pagoTec>0 && !puedeVerUtilidad()
+      ? `<br><br>Se asignó a la nómina del técnico.${cobroCliente>0?" También se agregó a lo que se factura a la propiedad.":""}`
+      : pagoTec>0
       ? `<br><br>💰 Se asigna a la nómina del técnico de cada Sub-Work Order: <b>${money(pagoTec)}</b>.`
         + (cobroCliente>0 ? ` Se le agrega a lo que se le factura a la propiedad: <b>${money(cobroCliente)}</b>.`
                           : ` No se le factura nada a la propiedad por esto — queda como costo interno.`)

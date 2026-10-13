@@ -272,6 +272,7 @@ function modalMedio(sol){
   const s = solTodas().find(x=>x.sol===sol), w = W(s.wo), p = P(w.prop);
   const pend = s.lineas.filter(l=>l.estado==="Pendiente");
   const tot = pend.reduce((t,l)=>t+(l.precio||0)*(l.cant||1),0);
+  const ver = puedeVerUtilidad();   // el precio solo lo ven Erika y Claudia; quien aprueba sin ese permiso decide igual, sin ver montos
   modal(`<div class="mh"><h3>¿Cómo aprobó el cliente?</h3>
     <p>WO-${w.id} · ${esc(p.nombre)} ${esc(U(w.unidad).num)} · ${esc(s.desc.length>70?s.desc.slice(0,70)+"…":s.desc)}</p></div>
   <div class="mb">
@@ -283,17 +284,17 @@ function modalMedio(sol){
         Lo aprobado con precio le queda pendiente de pago al técnico solo; tildá «Cobrar al cliente» aparte, por cada concepto, si además hay que facturárselo — a veces se hace de cortesía.
         El precio es opcional: si Thalia ya aprobó pero el cliente no dijo cuánto, déjalo en blanco — queda una Request para que Erika o Claudia lo definan antes de que entre a nómina y factura.</div>
       <table style="margin-top:6px"><tbody>
-      <tr><td></td><td></td><td class="num">Precio</td><td style="text-align:center">Cobrar<br>al cliente</td></tr>
+      <tr><td></td><td></td>${ver?`<td class="num">Precio</td>`:""}<td style="text-align:center">Cobrar<br>al cliente</td></tr>
       ${pend.map(l=>`<tr>
         <td style="width:34px"><input type="checkbox" class="adchk" data-lid="${l.id}" checked style="width:16px;height:16px"></td>
         <td><b>${esc(l.concepto)}</b>${(l.cant||1)>1?` <span style="color:var(--faint)">× ${l.cant}</span>`:""}
           ${l.ubic?`<div style="font-size:11.5px;color:var(--faint)">${esc(l.ubic)}</div>`:""}</td>
-        <td class="num mono">${l.precio?money(l.precio*(l.cant||1)):`<input class="adprecio mono" data-lid="${l.id}" placeholder="Precio — opcional" style="width:92px">`}</td>
+        ${ver?`<td class="num mono">${l.precio?money(l.precio*(l.cant||1)):`<input class="adprecio mono" data-lid="${l.id}" placeholder="Precio — opcional" style="width:92px">`}</td>`:""}
         <td style="text-align:center">${l.precio?`<input type="checkbox" class="adcobra" data-lid="${l.id}" style="width:16px;height:16px">`:"—"}</td></tr>`).join("")}
-      <tr><td></td><td style="color:var(--faint)">Total pedido</td><td class="num mono" style="font-weight:750">${money(tot)}</td><td></td></tr>
+      ${ver?`<tr><td></td><td style="color:var(--faint)">Total pedido</td><td class="num mono" style="font-weight:750">${money(tot)}</td><td></td></tr>`:""}
       </tbody></table></div>`
     :`<div class="note" style="margin-bottom:12px"><b>${esc(pend[0].concepto)}</b>${(pend[0].cant||1)>1?` × ${pend[0].cant}`:""}
-        ${pend[0].precio?` · ${money(pend[0].precio*(pend[0].cant||1))}`:` · <input class="adprecio mono" data-lid="${pend[0].id}" placeholder="Precio — opcional, si el cliente lo dio" style="width:200px">`}${pend[0].ubic?` · ${esc(pend[0].ubic)}`:""}
+        ${ver?(pend[0].precio?` · ${money(pend[0].precio*(pend[0].cant||1))}`:` · <input class="adprecio mono" data-lid="${pend[0].id}" placeholder="Precio — opcional, si el cliente lo dio" style="width:200px">`):""}${pend[0].ubic?` · ${esc(pend[0].ubic)}`:""}
         ${pend[0].precio?`<label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-weight:500">
           <input type="checkbox" class="adcobra" data-lid="${pend[0].id}" style="width:16px;height:16px"> Cobrar esto al cliente (además de pagárselo al técnico)</label>`:""}</div>`}
 
@@ -304,11 +305,6 @@ function modalMedio(sol){
       ?`<div class="note" style="margin-bottom:10px"><img src="${S._aprobFoto}" style="width:100%;max-height:130px;object-fit:cover;border-radius:9px;display:block;margin-bottom:6px">
           <button type="button" class="btn sm" data-a="aprobFoto" data-sol="${sol}">Cambiar comprobante</button></div>`
       :`<button type="button" class="btn" style="width:100%;justify-content:center;margin-bottom:10px" data-a="aprobFoto" data-sol="${sol}">📷 Adjuntar comprobante — opcional (captura del mensaje, correo, etc.)</button>`}
-    <button class="btn" style="width:100%;justify-content:flex-start;margin-bottom:8px;padding:11px 13px;border-color:var(--verde)"
-      data-a="medioOK" data-sol="${sol}" data-wo="${w.id}" data-medio="Enlace digital">
-      <div style="flex:1;text-align:left">
-        <div style="font-weight:750;color:var(--verde)">Enlace digital · clic real del cliente</div>
-        <div style="font-size:11.5px;color:var(--faint)">Se guarda fecha, hora e IP del dispositivo. Es el sustento más fuerte.</div></div></button>
     ${activos("medios").filter(m=>m!=="Enlace digital").map(m=>`
     <button class="btn" style="width:100%;justify-content:flex-start;margin-bottom:8px;padding:11px 13px"
       data-a="medioOK" data-sol="${sol}" data-wo="${w.id}" data-medio="${m}">
