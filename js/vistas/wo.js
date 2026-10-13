@@ -15,7 +15,7 @@ VIEWS.wo = () => {
   if(fechaRapida[filtroFecha.modo]) ws=ws.filter(w=>w.fecha===fechaRapida[filtroFecha.modo]);
   if(filtroFecha.modo==="semana") ws=ws.filter(w=>w.semana===filtroFecha.sem);
   if(filtroFecha.modo==="rango") ws=ws.filter(w=>(!filtroFecha.desde||w.fecha>=filtroFecha.desde)&&(!filtroFecha.hasta||w.fecha<=filtroFecha.hasta));
-  /* Se filtra tocando el tipo o la zona de cualquier fila. */
+  /* Se filtra desde el encabezado: Tipo y Zona abren su lista de valores. */
   if(S.woFt) ws=ws.filter(w=>w.cat===S.woFt);
   if(S.woFz) ws=ws.filter(w=>P(w.prop).zona===S.woFz);
   // «luego preguntan de unidades de hace dos meses, qué se hizo, qué pasó»
@@ -52,13 +52,14 @@ VIEWS.wo = () => {
   S.wos.forEach(w=>{ const subs=subsPlanDe(w); if(subs.length) subsVistas[w.id] = filtrando ? subs.filter(a=>subOk(w,a)) : subs; });
   if(filtrando) S.wos.forEach(w=>{ if(!propias.has(w.id) && (subsVistas[w.id]||[]).length) ws.push(w); });
   ws.sort((a,b)=>b.id-a.id);
+  const cuenta = f => S.wos.reduce((m,w)=>{ const v=f(w); if(v) m[v]=(m[v]||0)+1; return m; },{});
+  const cT = cuenta(w=>w.cat), cZ = cuenta(w=>P(w.prop).zona);
+  const tiposWO = activos("categorias").map(c=>[c,cT[c]||0]);
+  const zonasWO = zonasN().map(z=>[z,cZ[z]||0]);
   const nSubVistas = ws.reduce((n,w)=>n+(subsVistas[w.id]||[]).length,0);
   return `
   <div class="ph"><div><h2>Work Orders</h2><p>La pestaña <code>Schedule</code>, con los mismos campos — pero el técnico y la propiedad se eligen, no se escriben.</p></div>
     <div class="act">
-      <input id="woBuscar" value="${esc(S.busca||"")}" placeholder="Propiedad, unidad, técnico o palabras…"
-        style="font-family:inherit;font-size:12.5px;padding:7px 10px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink);width:220px">
-      <button class="btn" data-a="buscarUni">Buscar</button>
       <button class="btn p" data-a="woNueva">+ Nueva Work Order</button></div></div>
   <div class="card" style="margin-bottom:12px"><div class="cp" style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
     <span style="font-size:11px;color:var(--faint);font-weight:700;text-transform:uppercase">Fecha</span>
@@ -92,10 +93,18 @@ VIEWS.wo = () => {
     ${[["todas","Todas"],["semana","Semana "+S.semana],["sin","Sin técnico"],["camino","Asignadas sin llegar"],["curso","En curso"],["pend","Pendientes"]].map(([k,n])=>
       `<button class="tab ${f===k?"on":""}" data-a="tab" data-t="${k}">${n}</button>`).join("")}
   </div>
-  <div class="note" style="margin-bottom:12px;display:flex;align-items:center;gap:10px"><span><b>${ws.length} resultado(s)${nSubVistas?` · ${nSubVistas} Sub-WO`:""}.</b> Los filtros de texto y fecha se mantienen juntos hasta que los cambies. Toca un tipo o una zona de la tabla para filtrar.</span>
-    ${S.woFt?`<span class="pill m" style="cursor:pointer" data-a="woFiltroQuitar" data-k="t" title="Quitar el filtro">Tipo: ${esc(S.woFt)} ✕</span>`:""}
-    ${S.woFz?`<span class="pill m" style="cursor:pointer" data-a="woFiltroQuitar" data-k="z" title="Quitar el filtro">Zona: ${esc(S.woFz)} ✕</span>`:""}
+  <div class="note" style="margin-bottom:12px;display:flex;align-items:center;gap:10px"><span><b>${ws.length} resultado(s)${nSubVistas?` · ${nSubVistas} Sub-WO`:""}.</b> Los filtros de texto y fecha se mantienen juntos hasta que los cambies.</span>
     ${selMode?`<button class="btn p" style="margin-left:auto" data-a="pendAvisar" ${sel.length?"":"disabled"}>Avisar (${sel.length})</button>`:""}</div>
+  <div class="card" style="margin-bottom:10px"><div class="cp" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <input id="woBuscar" value="${esc(S.busca||"")}" placeholder="Buscar propiedad, unidad, técnico o palabras…"
+      style="font-family:inherit;font-size:12.5px;padding:7px 10px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink);width:260px">
+    <button class="btn" data-a="buscarUni">Buscar</button>
+    <span style="font-size:11px;color:var(--faint);font-weight:700;text-transform:uppercase;margin-left:6px">Tipo</span>
+    <select id="woFtSel" data-a="woFiltroTipo"><option value="">Todos los tipos</option>${tiposWO.map(([v,n])=>`<option value="${esc(v)}" ${S.woFt===v?"selected":""}>${esc(v)} (${n})</option>`).join("")}</select>
+    <span style="font-size:11px;color:var(--faint);font-weight:700;text-transform:uppercase;margin-left:6px">Zona</span>
+    <select id="woFzSel" data-a="woFiltroZona"><option value="">Todas las zonas</option>${zonasWO.map(([v,n])=>`<option value="${esc(v)}" ${S.woFz===v?"selected":""}>${esc(v)} (${n})</option>`).join("")}</select>
+    ${S.woFt||S.woFz?`<button class="btn sm" data-a="woFiltroQuitar">Quitar filtros</button>`:""}
+  </div></div>
   <div class="card"><table>
     <thead><tr>${selMode?"<th></th>":""}<th>WO</th><th>Fecha</th><th>Hora</th><th>Sem</th><th>Propiedad · Unidad</th><th>Zona</th><th>Rooms</th><th>Tipo</th><th>Servicio</th><th>Técnico</th><th>Llegada</th><th>Estado</th>${puedeVerDinero?'<th class="num">Cobrado</th><th class="num">Pagado</th>':""}<th></th></tr></thead>
     <tbody>${ws.map(w=>{
@@ -108,9 +117,9 @@ VIEWS.wo = () => {
         <td class="mono" style="font-weight:700">WO-${w.id}</td>
         <td class="mono">${w.fecha.slice(5)}</td><td class="mono">${esc(w.horaProg||"9:00")}</td><td class="mono">${w.semana}</td>
         <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td>
-        <td>${P(w.prop).zona?`<span class="pill g" style="cursor:pointer" data-a="woFiltroZona" data-z="${esc(P(w.prop).zona)}" title="Filtrar por esta zona">${esc(P(w.prop).zona)}</span>`:"—"}</td>
+        <td>${P(w.prop).zona?`<span class="pill g">${esc(P(w.prop).zona)}</span>`:"—"}</td>
         <td>${esc(U(w.unidad).rooms)}</td>
-        <td><span class="pill g" style="cursor:pointer" data-a="woFiltroTipo" data-t="${esc(w.cat)}" title="Filtrar por este tipo">${esc(w.cat)}</span></td>
+        <td><span class="pill g">${esc(w.cat)}</span></td>
         <td>${esc(w.serv)}</td>
         <td>${w.tec?esc(tecN(w.tec)):`<span class="pill w">sin asignar</span>${!["Canceled","Completed","Invoiced","Paid"].includes(w.estado)?` <button class="btn sm p" data-a="asigModal" data-id="${w.id}">Asignar</button>`:""}`}</td>
         <td>${asisDe(w.id)?`<span class="pill ${asisDe(w.id).puntualidad==="Tarde"?"w":"v"}"><span class="dot"></span>${esc(asisDe(w.id).horaReal)}</span>`:'<span style="color:var(--faint)">—</span>'}</td>
