@@ -276,12 +276,7 @@ function fichaWO(id){
         ${sols.length?`<table><thead><tr><th>Tipo</th><th>Origen</th><th>Ubicación</th><th class="num">Cant.</th>${puedeVerDinero?'<th class="num">P. unit.</th><th class="num">Importe</th>':""}<th>Estado</th><th>Fotos</th><th></th></tr></thead><tbody>
         ${sols.map(s=>`
           <tr><td colspan="${puedeVerDinero?9:7}" style="background:var(--azul-cl);color:var(--azul-s)">
-            ${(()=>{ const x=solPend(s)?excTodas().find(y=>y.id==="AUTO-A"+s.sol):null;
-              const puede=x&&(x.assignedTo===S.usuario||x.aprueba===S.usuario);
-              /* Mismo Request que sale en la bandeja: aquí están las fotos, así que se decide desde esta WO. */
-              return `<div style="display:flex;align-items:center;gap:8px"><div style="flex:1"><b>${s.origen==="Planificada"?"Sub-Work Order planificada":"Un solo aviso del técnico"}</b>${s.desc?" · "+esc(s.desc):""}</div>${
-                x?(puede?`<button class="btn sm" data-a="excRech" data-id="AUTO-A${esc(s.sol)}">Rechazar</button><button class="btn sm v" data-a="excAprob" data-id="AUTO-A${esc(s.sol)}">Aprobar</button>`
-                  :`<span style="font-size:11px;color:var(--faint)">Pendiente · aprueba ${esc(x.assignedTo||x.aprueba)}</span>`):""}</div>`; })()}</td></tr>
+            <b>${s.origen==="Planificada"?"Sub-Work Order planificada":"Un solo aviso del técnico"}</b>${s.desc?" · "+esc(s.desc):""}</td></tr>
           ${s.lineas.map(a=>`<tr><td><b>${esc(a.concepto)}</b></td><td><span class="pill ${a.origen==="Planificada"?"a":"m"}">${esc(a.origen||"Técnico")}</span></td><td>${esc(a.ubic)}</td>
             <td class="num mono">${a.cant||1}</td>
             ${puedeVerDinero?`<td class="num mono">${a.precio?money(a.precio):"—"}</td><td class="num mono">${a.precio?money(a.precio*(a.cant||1)):"—"}</td>`:""}
@@ -289,7 +284,13 @@ function fichaWO(id){
             <td><div style="display:flex;gap:4px"><button class="btn sm" title="Fotos de referencia" data-a="subwoFotoRef" data-id="${a.id}">📷 Ref ${(a.fotosRefArr||[]).length}</button>
               <button class="btn sm" title="Fotos de evidencia" data-a="subwoFotoEvid" data-id="${a.id}">📷 Evid ${(a.fotosEvidArr||[]).length}</button>
               <button class="btn sm" title="Hallazgo inicial — por si el técnico no pudo cargarlo" data-a="subwoFotoHallazgo" data-id="${a.id}">📷 Hallazgo${a.hallazgoFoto?" ✓":""}</button></div></td>
-            <td>${a.origen==="Planificada"?`<button class="btn sm" data-a="subwoGestionar" data-id="${a.id}">Gestionar</button>`:""}</td></tr>
+            <td style="white-space:nowrap">${a.origen==="Planificada"?`<button class="btn sm" data-a="subwoGestionar" data-id="${a.id}">Gestionar</button> `:""}${(()=>{
+              /* Mismo Request que sale en la bandeja: aquí están las fotos, así que cada concepto se decide desde esta WO. */
+              if(a.estado!=="Pendiente") return "";
+              const x=excTodas().find(y=>y.id==="AUTO-A"+s.sol); if(!x) return "";
+              return (x.assignedTo===S.usuario||x.aprueba===S.usuario)
+                ? `<button class="btn sm" data-a="adicRechazar" data-sol="${esc(s.sol)}" data-lid="${a.id}">Rechazar</button> <button class="btn sm v" data-a="adicAprobar" data-sol="${esc(s.sol)}" data-lid="${a.id}">Aprobar</button>`
+                : `<span style="font-size:11px;color:var(--faint)">Aprueba ${esc(x.assignedTo||x.aprueba)}</span>`; })()}</td></tr>
             ${(a.specs&&Object.keys(a.specs).length)||a.tec||a.fecha||a.estadoTrabajo||a.facturable||(a.aprob&&a.aprob.foto)?`<tr><td colspan="${puedeVerDinero?9:7}" style="padding-top:0;padding-bottom:9px">
               <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center">
                 ${Object.entries(a.specs||{}).map(([k,v])=>`<span class="pill">${esc(k)}: ${esc(v)}</span>`).join("")}

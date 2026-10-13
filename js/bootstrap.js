@@ -103,6 +103,7 @@ const AUD = {
   medioOK:{a:"Decidió un adicional", m:"Excepciones"},
   excAprob:{a:"Aprobó una excepción", m:"Excepciones"},
   excRech:{a:"Rechazó una excepción", m:"Excepciones"},
+  adicRechazar:{a:"Rechazó un adicional desde la Work Order", m:"Work Orders"},
   excGuardar:{a:"Levantó una excepción", m:"Excepciones"},
   tarifaGuardar:{a:"Definió una tarifa faltante", m:"Tarifario"},
   tarifaAvisarClaudia:{a:"Avisó a Claudia para definir una tarifa", m:"Excepciones"},

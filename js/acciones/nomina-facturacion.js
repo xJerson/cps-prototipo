@@ -57,6 +57,23 @@ function aplicarPagoFacturaAdicional(l, w, s, cobrar){
   }
   return {pagoTec:monto, cobroCliente};
 }
+/* Rechazo de uno o varios conceptos de un aviso: lo usa el Request (todo el aviso) y la tarjeta de la WO (un concepto). */
+function rechazarAdicional(sa, pend){
+  const w = W(sa.wo);
+  if(!pend.length) return;
+  pend.forEach(l=>{ l.estado="Rechazado"; l.aprob={medio:"—",quien:S.usuario,hora:hora(),ip:null};
+    if(l.origen==="Planificada") l.estadoTrabajo="Canceled";
+    (l.hist=l.hist||[]).push([hora(), "Rechazada", S.usuario]); });
+  if(w.estado==="Esperando aprobación"
+     && !S.adicionales.some(a=>a.wo===w.id && a.estado==="Pendiente")) w.estado="In progress";
+  flash("wo:"+w.id);
+  const nom = pend.map(l=>l.concepto).join(", ");
+  w.hist.push([hora(),`Adicional no aprobado · ${nom}`,S.usuario]);
+  toast("Adicional rechazado",`No se autorizó <b>${esc(nom)}</b>. <b>${esc(tecN(w.tec))}</b> ya fue avisado de que no lo ejecute; puede seguir con el trabajo original.`,"w");
+  noti("Adicional NO aprobado",`${S.usuario} no autorizó ${nom}. No lo ejecutes, sigue con lo original.`,false);
+  render();
+}
+
 Object.assign(ACC, {
 
 
@@ -119,6 +136,11 @@ Object.assign(ACC, {
     toast("✓ Unit data updated",`Floors for ${esc(u.num)} changed from ${anterior} to ${pisos}. The audit stays on this Request.`,"v");
     render();
   },
+  /* Desde la tarjeta Sub-Work Orders de la WO: decidir un solo concepto, con sus fotos a la vista. */
+  adicAprobar: d => { const s=solTodas().find(z=>z.sol===d.sol); if(s) modalMedio(s.sol, d.lid); },
+  adicRechazar: d => { const s=solTodas().find(z=>z.sol===d.sol); if(!s) return;
+    if(s.aprobador && s.aprobador!==S.usuario){ toast("Aprobación delegada",`Esta solicitud debe decidirla <b>${esc(s.aprobador)}</b>.`,"w"); return; }
+    rechazarAdicional(s, s.lineas.filter(l=>l.estado==="Pendiente" && l.id===+d.lid)); },
   excAprob: d => {
     const x = by(S.excepciones,d.id);
     if(x){ x.estado="Aprobada"; x.resol={quien:S.usuario,hora:hora()}; registrarHistorialApproval(x,"Approved"); flash("exc:"+x.id);
@@ -145,7 +167,8 @@ Object.assign(ACC, {
   medioOK: d => {
     const s = solTodas().find(z=>z.sol===d.sol), w = s&&W(s.wo);
     if(!s || (s.aprobador && s.aprobador!==S.usuario)){ toast("Aprobación delegada",`Esta solicitud debe aprobarla <b>${esc(s&&s.aprobador||"Thalia")}</b>. Si está fuera de su alcance, asígnala a Gustavo u otra persona antes de decidir.`,"w"); return; }
-    const pend = s.lineas.filter(l=>l.estado==="Pendiente");
+    const pend = s.lineas.filter(l=>l.estado==="Pendiente" && (!S._medioLid || l.id===S._medioLid));
+    S._medioLid = null;
     document.querySelectorAll(".adprecio").forEach(e=>{ const l=pend.find(x=>x.id===+e.dataset.lid); if(l){ const p=parseFloat(e.value); if(Number.isFinite(p)&&p>=0){ l.precio=p; l.precioOrigen="manual-aprobado"; } } });
     // Aprobar y ponerle precio son decisiones distintas (Claudia): el precio
     // es opcional acá — si queda sin él, se resuelve después como Approval
@@ -250,7 +273,7 @@ Object.assign(ACC, {
     const marc = new Set(Array.from(document.querySelectorAll(".adchk")).filter(c=>c.checked).map(c=>c.dataset.lid));
     const cobra = new Set(Array.from(document.querySelectorAll(".adcobra")).filter(c=>c.checked).map(c=>c.dataset.lid));
     capturarFoto(url=>{
-      S._aprobFoto=url; modalMedio(d.sol);
+      S._aprobFoto=url; modalMedio(d.sol, S._medioLid);
       document.querySelectorAll(".adchk").forEach(c=>{ c.checked=marc.size?marc.has(c.dataset.lid):true; });
       document.querySelectorAll(".adcobra").forEach(c=>{ c.checked=cobra.has(c.dataset.lid); });
     });
@@ -260,21 +283,7 @@ Object.assign(ACC, {
     if(x){ x.estado="Rechazada"; x.resol={quien:S.usuario,hora:hora()}; registrarHistorialApproval(x,"Rejected"); flash("exc:"+x.id);
       toast("Excepción rechazada","Queda registrado que no se autorizó.","w"); render(); return; }
     const sa = solTodas().find(z=>"AUTO-A"+z.sol===d.id);
-    if(sa){
-      const w = W(sa.wo);
-      const pend = sa.lineas.filter(l=>l.estado==="Pendiente");
-      pend.forEach(l=>{ l.estado="Rechazado"; l.aprob={medio:"—",quien:S.usuario,hora:hora(),ip:null};
-        if(l.origen==="Planificada") l.estadoTrabajo="Canceled";
-        (l.hist=l.hist||[]).push([hora(), "Rechazada", S.usuario]); });
-      if(w.estado==="Esperando aprobación"
-         && !S.adicionales.some(a=>a.wo===w.id && a.estado==="Pendiente")) w.estado="In progress";
-      flash("wo:"+w.id);
-      const nom = pend.map(l=>l.concepto).join(", ");
-      w.hist.push([hora(),`Adicional no aprobado · ${nom}`,S.usuario]);
-      toast("Adicional rechazado",`No se autorizó <b>${esc(nom)}</b>. <b>${esc(tecN(w.tec))}</b> ya fue avisado de que no lo ejecute; puede seguir con el trabajo original.`,"w");
-      noti("Adicional NO aprobado",`${S.usuario} no autorizó ${nom}. No lo ejecutes, sigue con lo original.`,false);
-      render(); return;
-    }
+    if(sa){ rechazarAdicional(sa, sa.lineas.filter(l=>l.estado==="Pendiente")); return; }
     const a=excAuto().find(y=>y.id===d.id);
     if(a){ const nx={...a,id:"X"+Date.now(),auto:false,estado:"Rechazada",resol:{quien:S.usuario,hora:hora()}};
       registrarHistorialApproval(nx,"Rejected"); S.excepciones.push(nx); }

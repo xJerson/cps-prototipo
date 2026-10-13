@@ -268,9 +268,10 @@ function modalInvoice(eid){
    mandarlo, tomando como base su propio formato de correo (formatocorreo.txt).
    Aqui se arma editable, jalando los correos de los contactos elegidos y
    con el Invoice como adjunto simulado. */
-function modalMedio(sol){
+function modalMedio(sol, lid){
   const s = solTodas().find(x=>x.sol===sol), w = W(s.wo), p = P(w.prop);
-  const pend = s.lineas.filter(l=>l.estado==="Pendiente");
+  S._medioLid = lid ? +lid : null;   // decidir un solo concepto desde la tarjeta de la WO; sin esto se decide toda la solicitud
+  const pend = s.lineas.filter(l=>l.estado==="Pendiente" && (!S._medioLid || l.id===S._medioLid));
   const tot = pend.reduce((t,l)=>t+(l.precio||0)*(l.cant||1),0);
   const ver = puedeVerUtilidad();   // el precio solo lo ven Erika y Claudia; quien aprueba sin ese permiso decide igual, sin ver montos
   modal(`<div class="mh"><h3>¿Cómo aprobó el cliente?</h3>
