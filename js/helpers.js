@@ -344,7 +344,10 @@ const ESP_REQ = {Clean:"Housekeeper", Resurface:"Resurface", Carpet:"Carpeter"};
 const especialidadOk = (t,cat) => t.esp.includes(ESP_REQ[cat] || "Tecnico");
 function bloqueo(tecId,fecha){
   const d = S.disponibilidad.find(x=>x.tec===tecId && x.estado==="Aprobado" && fecha>=x.desde && fecha<=x.hasta);
-  return d||null;
+  if(d) return d;
+  /* Un día que el técnico marcó «No» en su disponibilidad semanal cuenta como bloqueado (no pasa por Gustavo). */
+  const sem = dispDiaDe(tecId,fecha);
+  return sem && !sem.disp ? {id:"DS-"+tecId+"-"+fecha, tec:tecId, desde:fecha, hasta:fecha, motivo:"No disponible (su semana)", estado:"Semana", semanal:true} : null;
 }
 
 /* Disponibilidad de la semana siguiente: la arma el técnico desde su app (sin aprobación) y la oficina arma el calendario con eso.
