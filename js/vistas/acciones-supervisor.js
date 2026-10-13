@@ -496,24 +496,27 @@ function vCalidad(){
   const filas = tecs.map(t=>{
     const ws = S.wos.filter(w=>w.tec===t.id);
     const sup = ws.filter(w=>w.supervisada).length;
-    const dev = ws.reduce((a,w)=>a+(w.devuelta||0),0);
+    /* Calidad = unidades devueltas sobre unidades terminadas: de 10 trabajos, a cuántos le devolvieron. Cada devolución registrada
+       cuenta (la abra Gustavo en campo o la oficina); un trabajo devuelto dos veces cuenta una sola vez. */
+    const devIds = new Set(S.devoluciones.filter(d=>d.responsable===t.id).map(d=>d.wo));
+    const base = new Set(ws.filter(w=>w.estado==="Completed" && !w.touchup).map(w=>w.id));
+    devIds.forEach(id=>base.add(id));
     const sinEvid = ws.filter(w=>w.estado==="Completed"&&!w.evid).length;
-    const asis = S.asistencias.filter(a=>a.tec===t.id);
-    const tarde = asis.filter(a=>a.puntualidad==="Tarde"||a.puntualidad==="Declarada").length;
-    return {t,ws:ws.length,sup,dev,sinEvid,tarde,asis:asis.length};
+    return {t,ws:ws.length,sup,dev:devIds.size,base:base.size,sinEvid};
   }).filter(f=>f.ws>0);
   return `
   <div class="card"><div class="chd"><h3>Calidad por técnico</h3>
     <span class="s">lo que hoy no se mide: quién genera retrabajo</span></div>
     ${filas.length?`<table><thead><tr><th>Técnico</th><th class="num">Trabajos</th><th class="num">Aprobados</th>
-      <th class="num">Devueltos</th><th class="num">Sin evidencia</th><th class="num">Llegadas tarde</th><th>Señal</th></tr></thead>
+      <th class="num">Devueltos</th><th class="num">Sin evidencia</th><th>Calidad</th><th>Señal</th></tr></thead>
     <tbody>${filas.map(f=>{
-      const mal = f.dev + f.sinEvid + f.tarde;
+      const mal = f.dev + f.sinEvid;
+      const pct = f.base ? Math.round(f.dev/f.base*100) : 0;
       return `<tr><td style="font-weight:650">${esc(tecN(f.t.id))}<div style="font-size:10.5px;color:var(--faint)">${f.t.esp.join(", ")}</div></td>
         <td class="num mono">${f.ws}</td><td class="num mono" style="color:var(--verde)">${f.sup}</td>
         <td class="num mono" style="${f.dev?"color:var(--rojo);font-weight:700":""}">${f.dev||"—"}</td>
         <td class="num mono" style="${f.sinEvid?"color:var(--ambar)":""}">${f.sinEvid||"—"}</td>
-        <td class="num mono" style="${f.tarde?"color:var(--ambar)":""}">${f.tarde||"—"}</td>
+        <td style="white-space:nowrap">${f.base?`<b class="mono" style="${f.dev?"color:var(--rojo)":"color:var(--verde)"}">${f.dev} de ${f.base}</b> devueltas <span style="color:var(--faint)">· ${pct}%</span>`:"—"}</td>
         <td>${mal===0?'<span class="pill v">Sin observaciones</span>'
              :mal<=1?'<span class="pill w">Revisar</span>'
                    :'<span class="pill r"><span class="dot"></span>Atención</span>'}</td></tr>`;
