@@ -997,10 +997,10 @@ Object.assign(ACC, {
   },
   cobLlamadaModal: d => modalCobLlamada(d.id),
   cobLlamadaGuardar: d => {
-    const f=by(S.facturas,d.id), nota=val("clNota"), prom=val("clProm");
-    if(!nota){ toast("Falta la respuesta","Anota qué dijo el cliente.","r"); return; }
+    const f=by(S.facturas,d.id), nota=val("clNota").trim(), prom=val("clProm"), res=val("clRes"), ref=val("clRef").trim(), rev=val("clRev");
+    if(res==="Otro" && !nota){ toast("Falta la respuesta","Con «Otro», anota qué dijo el cliente.","r"); return; }
     f.seguimiento=f.seguimiento||[];
-    f.seguimiento.push({tipo:"llamada",fecha:HOY_SUP,hora:hora(),quien:S.usuario,nota,promesa:prom||null});
+    f.seguimiento.push({tipo:"llamada",fecha:HOY_SUP,hora:hora(),quien:S.usuario,resultado:res,nota,ref:ref||null,promesa:prom||null,revisar:rev||null});
     flash("fac:"+f.id);
     toast("✓ Llamada registrada",`Respuesta de ${esc(P(f.prop).nombre)} guardada.`,"v");
     modalCobranza(f.id);
