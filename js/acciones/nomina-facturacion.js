@@ -998,7 +998,7 @@ Object.assign(ACC, {
   cobLlamadaModal: d => modalCobLlamada(d.id),
   cobLlamadaGuardar: d => {
     const f=by(S.facturas,d.id), nota=val("clNota").trim(), prom=val("clProm"), res=val("clRes"), ref=val("clRef").trim(), rev=val("clRev");
-    if(res==="Otro" && !nota){ toast("Falta la respuesta","Con «Otro», anota qué dijo el cliente.","r"); return; }
+    if(res==="Otro" && !nota){ toast("Falta la respuesta","Con «Otro», agrega los comentarios del cliente.","r"); return; }
     f.seguimiento=f.seguimiento||[];
     f.seguimiento.push({tipo:"llamada",fecha:HOY_SUP,hora:hora(),quien:S.usuario,resultado:res,nota,ref:ref||null,promesa:prom||null,revisar:rev||null});
     flash("fac:"+f.id);

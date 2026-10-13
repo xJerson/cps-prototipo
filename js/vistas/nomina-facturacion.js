@@ -1188,8 +1188,8 @@ const vencidasPorCliente = () => {
   return [...m.entries()].map(([cli,fs])=>({cli, fs:fs.sort((a,b)=>a.vence<b.vence?-1:1), total:fs.reduce((a,f)=>a+f.total,0),
     ultimo:fs.flatMap(f=>(f.seguimiento||[]).filter(s=>s.tipo==="agrupado").map(s=>s.fecha)).sort().pop()||null}));
 };
-/* En qué quedó la llamada. "Ya lo mandaron a pago" no es una fecha de pago: el cliente pasó la factura a su área de pagos y se espera. */
-const LLAMADA_RES = ["Ya lo mandaron a pago","Prometió una fecha","No contestó","Pidió que reenviemos la factura","Otro"];
+/* En qué quedó la llamada. "Pago en proceso" no es una fecha de pago: el cliente pasó la factura a su área de pagos y se espera. */
+const LLAMADA_RES = ["Pago en proceso","Promesa de pago","Sin respuesta","Solicita reenvío de factura","Otro"];
 const ultLlamada = f => (f.seguimiento||[]).filter(s=>s.tipo==="llamada").pop() || null;
 const porRevisarHoy = f => { const u=ultLlamada(f); return facVencida(f) && !!u && !!u.revisar && u.revisar<=HOY_SUP; };
 const diasVencida = f => Math.round((new Date(HOY_SUP)-new Date(f.vence))/864e5);
@@ -1204,7 +1204,7 @@ VIEWS.cobranza = () => {
     <div class="kpi"><div class="l">Por cobrar</div><div class="v mono">${money(abiertas.reduce((a,f)=>a+f.total,0))}</div></div>
     <div class="kpi"><div class="l">Facturas abiertas</div><div class="v">${abiertas.length}</div></div>
     <div class="kpi"><div class="l">Vencidas</div><div class="v ${vencidas.length?"b":""}">${vencidas.length}</div></div>
-    <div class="kpi"><div class="l">Por revisar hoy</div><div class="v ${S.facturas.some(porRevisarHoy)?"a":""}">${S.facturas.filter(porRevisarHoy).length}</div></div>
+    <div class="kpi"><div class="l">Seguimiento hoy</div><div class="v ${S.facturas.some(porRevisarHoy)?"a":""}">${S.facturas.filter(porRevisarHoy).length}</div></div>
     <div class="kpi"><div class="l">Cobrado</div><div class="v g mono">${money(S.facturas.filter(f=>f.estado==="Pagada").reduce((a,f)=>a+f.total,0))}</div></div>
   </div>
   ${grupos.length?`<div class="card" style="margin-bottom:14px"><div class="chd"><h3>Vencidas por cliente</h3></div><table>
@@ -1215,12 +1215,12 @@ VIEWS.cobranza = () => {
       <td style="text-align:right"><button class="btn sm p" data-a="cobAgrupadoModal" data-cli="${esc(g.cli)}">Enviar recordatorio</button></td></tr>`).join("")}
     </tbody></table></div>`:""}
   <div class="card">${S.facturas.length?`${barraFiltroFac(filtradas.length)}<table>
-    <thead><tr><th>Número</th><th>Propiedad</th><th>Emisión</th><th>Vence</th><th>Estado</th><th>Seguimiento</th><th class="num">Total</th><th></th></tr></thead>
+    <thead><tr><th>Número</th><th>Propiedad</th><th>Emisión</th><th>Vence</th><th>Estado</th><th>Gestión</th><th class="num">Total</th><th></th></tr></thead>
     <tbody>${filtradas.map(f=>`<tr class="${fl("fac:"+f.id)}"><td class="mono" style="font-weight:700">${esc(f.num)}</td><td>${esc(P(f.prop).nombre)}</td>
       <td class="mono">${f.emision}</td><td class="mono">${esc(facVenceTxt(f))}</td>
       <td><span class="pill ${f.estado==="Pagada"?"v":facVencida(f)?"r":"a"}">${esc(facEstadoTexto(f))}</span></td>
       <td style="font-size:11.5px">${(()=>{ const u=facVencida(f)?ultLlamada(f):null; if(!u||!u.resultado) return `<span style="color:var(--faint)">—</span>`;
-        return `<div><span class="pill ${u.resultado==="Ya lo mandaron a pago"?"a":"g"}">${esc(u.resultado)}</span></div>${u.revisar?`<div style="color:${porRevisarHoy(f)?"var(--rojo)":"var(--faint)"};margin-top:2px">${porRevisarHoy(f)?"Revisar hoy":"Revisar el "+esc(u.revisar)}</div>`:""}`; })()}</td>
+        return `<div><span class="pill ${u.resultado==="Pago en proceso"?"a":"g"}">${esc(u.resultado)}</span></div>${u.revisar?`<div style="color:${porRevisarHoy(f)?"var(--rojo)":"var(--faint)"};margin-top:2px">${porRevisarHoy(f)?"Seguimiento hoy":"Seguimiento: "+esc(u.revisar)}</div>`:""}`; })()}</td>
       <td class="num mono">${money(f.total)}</td>
       <td style="text-align:right;white-space:nowrap">
         <button class="btn sm" data-a="facPDF" data-id="${f.id}">Ver PDF</button>
@@ -1247,10 +1247,10 @@ function modalCobranza(fid){
         <b>${esc(SEG_LABEL[s.tipo]||s.tipo)}</b>
         <span style="color:var(--faint);font-size:11.5px"> — ${esc(s.fecha)} ${esc(s.hora)} · ${esc(s.quien)}</span>
         ${s.nota?`<div style="font-size:12px;color:var(--soft);margin-top:3px">${esc(s.nota)}</div>`:""}
-        ${s.resultado?`<div style="font-size:12px;margin-top:3px"><span class="pill ${s.resultado==="Ya lo mandaron a pago"?"a":"g"}">${esc(s.resultado)}</span></div>`:""}
-        ${s.ref?`<div style="font-size:11px;color:var(--faint)">Referencia: ${esc(s.ref)}</div>`:""}
-        ${s.promesa?`<div style="font-size:11px;color:var(--faint)">Prometió pagar para el ${esc(s.promesa)}</div>`:""}
-        ${s.revisar?`<div style="font-size:11px;color:var(--faint)">Volver a revisar el ${esc(s.revisar)}</div>`:""}
+        ${s.resultado?`<div style="font-size:12px;margin-top:3px"><span class="pill ${s.resultado==="Pago en proceso"?"a":"g"}">${esc(s.resultado)}</span></div>`:""}
+        ${s.ref?`<div style="font-size:11px;color:var(--faint)">Referencia de pago: ${esc(s.ref)}</div>`:""}
+        ${s.promesa?`<div style="font-size:11px;color:var(--faint)">Promesa de pago: ${esc(s.promesa)}</div>`:""}
+        ${s.revisar?`<div style="font-size:11px;color:var(--faint)">Próximo seguimiento: ${esc(s.revisar)}</div>`:""}
         ${s.foto?`<div style="margin-top:4px">${miniRecibo(s.foto)} <span style="font-size:11px;color:var(--faint)">comprobante</span></div>`:""}
       </div>`).join(""):`<div class="empty" style="padding:14px 0">Todavía no hay seguimiento en esta factura.</div>`}
   </div>
@@ -1280,19 +1280,19 @@ function modalCobAgrupado(cli){
 }
 
 function modalCobLlamada(fid){
-  modal(`<div class="mh"><h3>Registrar llamada de cobranza</h3><p>Anota en qué quedó y cuándo hay que volver a revisar esta factura.</p></div>
+  modal(`<div class="mh"><h3>Registrar llamada de cobranza</h3><p>Registra el resultado y la fecha del próximo seguimiento.</p></div>
   <div class="mb">
-    <div class="fld"><label>¿En qué quedó? <span class="req">*</span></label>
+    <div class="fld"><label>Resultado de la llamada <span class="req">*</span></label>
       <select id="clRes">${LLAMADA_RES.map(r=>`<option>${esc(r)}</option>`).join("")}</select></div>
-    <div class="fld"><label>Qué respondió el cliente <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— obligatorio solo si eliges «Otro»</span></label><textarea id="clNota" rows="2"></textarea></div>
-    <div class="fld"><label>Cómo lo enviaron / referencia <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label>
-      <input id="clRef" placeholder="Ej. cheque, transferencia, número de confirmación"></div>
+    <div class="fld"><label>Comentarios del cliente <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— obligatorio si el resultado es «Otro»</span></label><textarea id="clNota" rows="2"></textarea></div>
+    <div class="fld"><label>Referencia de pago <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label>
+      <input id="clRef" placeholder="Ej. cheque, ACH o número de confirmación"></div>
     <div class="fg c2">
-      <div class="fld" style="margin-bottom:0"><label>Volver a revisar el <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— lo defines tú</span></label>
+      <div class="fld" style="margin-bottom:0"><label>Próximo seguimiento <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— define la oficina</span></label>
         <input type="date" id="clRev" value="${sumarDias(HOY_SUP,3)}"></div>
-      <div class="fld" style="margin-bottom:0"><label>Fecha que prometió <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label>
+      <div class="fld" style="margin-bottom:0"><label>Fecha de promesa de pago <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label>
         <input type="date" id="clProm"></div></div>
-    <div class="hint" style="margin-top:8px">Las fechas son solo notas de seguimiento: no cambian el vencimiento de la factura. Déjalas vacías si el cliente no dio fecha.</div>
+    <div class="hint" style="margin-top:8px">Las fechas son informativas y no modifican el vencimiento de la factura. Déjalas vacías si el cliente no confirmó fecha.</div>
   </div>
   <div class="mf"><button class="btn" data-a="cobGestionar" data-id="${fid}">Cancelar</button>
     <button class="btn p" data-a="cobLlamadaGuardar" data-id="${fid}">Guardar</button></div>`);
