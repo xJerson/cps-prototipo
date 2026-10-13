@@ -75,7 +75,7 @@ Object.assign(ACC, {
   excAsignarYo: d => asignarApprovalRequest(d.id,S.usuario),
   excAsignarModal: d => {
     const x=excTodas().find(y=>y.id===d.id); if(!x) return;
-    const usuarios=Object.keys(ROLES);
+    const usuarios=usuariosQueResuelven();
     modal(`<div class="mh"><h3>Assign Request</h3><p>${esc(x.tipo)}${x.wo?` · WO-${x.wo}`:""}</p></div>
       <div class="mb"><div class="fld"><label>Assigned to</label><select id="excAsignada">${usuarios.map(u=>`<option ${u===x.assignedTo?"selected":""}>${esc(u)}</option>`).join("")}</select></div>
       <div class="hint">The assigned person owns the approval follow-up. First-line approval defaults to Thalia; Gustavo or another person can take it when it is outside Thalia's scope.</div></div>

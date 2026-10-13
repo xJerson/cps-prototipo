@@ -39,6 +39,8 @@ const puedeVerUtilidad = () => ["Claudia","Erika"].includes(S.usuario);
 const puedeVerIngreso = () => ["Lydia","Erika","Claudia"].includes(S.usuario);
 /* Contabilidad solo mira y descarga: ninguna acción de captura le aparece. */
 const soloLectura = () => S.usuario==="Contador";
+/* Quién puede tener o aprobar un Request: el Contador solo consulta, no resuelve nada. */
+const usuariosQueResuelven = () => Object.keys(ROLES).filter(u=>u!=="Contador");
 /* Quién avisa a clientes por WO pendientes y envía recordatorios: programación y administración. */
 const puedeAvisarPend = () => ["Thalia","Claudia","Erika"].includes(S.usuario);
 /* Pago al técnico y factura al cliente se aprueban por separado (w.aprobPago / w.aprobFactura).

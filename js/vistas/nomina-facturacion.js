@@ -185,7 +185,7 @@ function modalExc(){
     <div class="fld"><label>Work Order <span class="req">*</span></label><select id="xW"><option value="">— selecciona —</option>
       ${S.wos.map(w=>`<option value="${w.id}">WO-${w.id} · ${esc(P(w.prop).nombre)} ${esc(U(w.unidad).num)}</option>`).join("")}</select></div>
     <div class="fld"><label>Quién debe aprobarla <span class="req">*</span></label>
-      <select id="xA">${Object.keys(ROLES).map(r=>`<option ${r==="Claudia"?"selected":""}>${r}</option>`).join("")}</select></div>
+      <select id="xA">${usuariosQueResuelven().map(r=>`<option ${r==="Claudia"?"selected":""}>${r}</option>`).join("")}</select></div>
     <div class="fld"><label>Motivo <span class="req">*</span></label><textarea id="xMo" placeholder="Por qué se sale de lo normal"></textarea></div>
   </div>
   <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="excGuardar">Levantar</button></div>`);
