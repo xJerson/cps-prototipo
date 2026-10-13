@@ -498,7 +498,7 @@ function vistaSemanal(sem){
       <td><div style="font-weight:650">${esc(t.nombre)} ${esc(t.apellido)}</div>
         <div style="font-size:10.5px;color:var(--faint)">${esc(t.zona)} · ${t.esp.join(", ")}</div></td>
       ${dias.map(d => {
-        const b = bloqueo(t.id, d);
+        const b = ausente(t.id, d);
         if (b) { const wb = S.wos.filter(w => w.tec === t.id && w.fecha === d && w.estado !== "Canceled");
           return `<td style="background:var(--rojo-cl)"><span class="pill r"><span class="dot"></span>${esc(b.motivo)}</span>${wb.map(w => `<div style="font-size:10.5px;margin-top:5px;cursor:pointer;color:var(--rojo);font-weight:700" data-a="woVer" data-id="${w.id}">⚠ WO-${w.id} · ${esc(P(w.prop).nombre)} — reasignar</div>`).join("")}</td>`; }
         const ws = S.wos.filter(w => w.tec === t.id && w.fecha === d && w.estado !== "Canceled");
@@ -592,7 +592,7 @@ VIEWS.despacho = () => {
       const ws  = S.wos.filter(w=>w.fecha===d && w.estado!=="Canceled");
       const conT = ws.filter(w=>w.tec).length;
       const sinT = ws.length - conT;
-      const libres = tecs.filter(t=>!bloqueo(t.id,d)).length;
+      const libres = tecs.filter(t=>!ausente(t.id,d)).length;
       const conPermiso = tecs.length - libres;
       const cupo = libres*CAP;
       const over = ws.length > cupo;                    // más trabajos que capacidad
@@ -1034,10 +1034,10 @@ function refAgendaNuevaWO(){
   const fecha=val("wFecha"), horaProg=val("wHora");
   if(!fecha){ caja.innerHTML=`<div class="hint" style="margin-top:7px">Elige una fecha para ver la disponibilidad del equipo.</div>`; return; }
   const filas=S.tecnicos.filter(t=>t.activo).map(t=>{
-    const permiso=bloqueo(t.id,fecha), carga=capacidadDia(t.id,fecha), disponible=!permiso&&carga<CAP;
+    const permiso=ausente(t.id,fecha), carga=capacidadDia(t.id,fecha), disponible=!permiso&&carga<CAP;
     return `<span class="pill ${disponible?"v":"w"}">${esc(tecN(t.id))}: ${permiso?"no disponible":carga+"/"+CAP+" WO"}</span>`;
   });
-  const libres=S.tecnicos.filter(t=>t.activo&&!bloqueo(t.id,fecha)&&capacidadDia(t.id,fecha)<CAP).length;
+  const libres=S.tecnicos.filter(t=>t.activo&&!ausente(t.id,fecha)&&capacidadDia(t.id,fecha)<CAP).length;
   const enHora=horaProg?S.wos.filter(w=>w.fecha===fecha&&w.horaProg===horaProg&&w.estado!=="Canceled").length:0;
   caja.innerHTML=`<div class="note ${libres?"v":"w"}" style="margin-top:8px"><b>${libres} técnico(s) disponible(s)</b> para esta fecha${horaProg?` · ${enHora} WO(s) a las ${esc(horaProg)}`:""}.<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">${filas.join("")}</div></div>`;
 }

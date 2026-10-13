@@ -75,7 +75,7 @@ Object.assign(ACC, {
     S.diasCerrados.push(d.d);
     const ws=S.wos.filter(w=>w.fecha===d.d&&w.estado!=="Canceled");
     const sin=ws.filter(w=>!w.tec).length;
-    const libres=S.tecnicos.filter(t=>t.activo&&!t.esp.includes("Supervisor")&&!bloqueo(t.id,d.d)).length;
+    const libres=S.tecnicos.filter(t=>t.activo&&!t.esp.includes("Supervisor")&&!ausente(t.id,d.d)).length;
     const cupo=libres*CAP, over=ws.length-cupo;
     toast("✓ Agendamiento cerrado",`El ${d.d} ya no admite trabajos nuevos.`
       + (over>0?` <b>Ojo:</b> hay ${ws.length} trabajos y el cupo del equipo es ${cupo} (${libres} téc. × ${CAP}) — <b>${over} de más</b>. Habría que mover alguno a otro día.`

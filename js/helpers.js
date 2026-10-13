@@ -344,11 +344,15 @@ const ESP_REQ = {Clean:"Housekeeper", Resurface:"Resurface", Carpet:"Carpeter"};
 const especialidadOk = (t,cat) => t.esp.includes(ESP_REQ[cat] || "Tecnico");
 function bloqueo(tecId,fecha){
   const d = S.disponibilidad.find(x=>x.tec===tecId && x.estado==="Aprobado" && fecha>=x.desde && fecha<=x.hasta);
-  if(d) return d;
-  /* Un día que el técnico marcó «No» en su disponibilidad semanal cuenta como bloqueado (no pasa por Gustavo). */
+  return d||null;
+}
+/* Un día que el técnico marcó «No» en su semana: se ve en el calendario y baja el cupo, pero NO bloquea asignar
+   (no lo aprueba nadie): al asignar solo sale el aviso de conflictoHorario. Los permisos aprobados sí bloquean. */
+function noDisp(tecId,fecha){
   const sem = dispDiaDe(tecId,fecha);
   return sem && !sem.disp ? {id:"DS-"+tecId+"-"+fecha, tec:tecId, desde:fecha, hasta:fecha, motivo:"No disponible (su semana)", estado:"Semana", semanal:true} : null;
 }
+const ausente = (tecId,fecha) => bloqueo(tecId,fecha) || noDisp(tecId,fecha);
 
 /* Disponibilidad de la semana siguiente: la arma el técnico desde su app (sin aprobación) y la oficina arma el calendario con eso.
    S.dispSemana: [{tec, lunes, dias:{"AAAA-MM-DD":{disp, desde, hasta}}, enviado:{fecha,hora}}]. Los permisos siguen en S.disponibilidad. */

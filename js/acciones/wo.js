@@ -421,7 +421,7 @@ Object.assign(ACC, {
     /* Si ya hay técnico asignado, mover la fecha le puede quitar el cupo a
        otro día lleno — antes esto solo se revisaba en "Reagendar". */
     if(!pendiente && w.tec){
-      const libres = S.tecnicos.filter(t=>t.activo&&!t.esp.includes("Supervisor")&&!bloqueo(t.id,f));
+      const libres = S.tecnicos.filter(t=>t.activo&&!t.esp.includes("Supervisor")&&!ausente(t.id,f));
       const cupo = libres.length*CAP - S.wos.filter(x=>x.fecha===f&&x.tec&&x.id!==w.id).length;
       if(cupo<=0){ toast("🚫 Ese día no tiene cupo",`El ${f} ya está lleno. Claudia: «se debería pasar al otro día».`,"r"); return; }
     }
