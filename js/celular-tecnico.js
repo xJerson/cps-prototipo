@@ -307,7 +307,9 @@ function renderFon(){
     h = h.replace("<!--ACCIONES-->", acciones);
   }
   else {
-    h=`<div class="dl" style="margin-top:5px">Mi agenda</div>`+((mias.length||subMias.length)?mias.map(w=>{
+    const sd=semSigDias();
+    h=(dispSemDe(t.id)?"":`<div class="dc" data-a="fDisp" style="cursor:pointer;border-left:4px solid #8a5a00;margin-top:5px"><div class="dh">Registra tu disponibilidad</div><div class="ds">Semana del ${sd[0].slice(8)}/${sd[0].slice(5,7)} al ${sd[5].slice(8)}/${sd[5].slice(5,7)}. Cada sábado por la noche te llega este aviso.</div><div class="ds" style="margin-top:5px;color:var(--azul);font-weight:650">Abrir ›</div></div>`)
+      +`<div class="dl" style="margin-top:5px">Mi agenda</div>`+((mias.length||subMias.length)?mias.map(w=>{
       const col={g:"#8a97a4",a:"#1f4e79",m:"#5b21b6",w:"#8a5a00",v:"#1e5c3a",r:"#9b2226"}[estP(estadoTec(w))];
       const a=asisDe(w.id);
       return `<div class="dc" data-a="fAbrir" data-id="${w.id}" style="cursor:pointer;${
@@ -338,6 +340,7 @@ function renderFon(){
         <div class="ds" style="margin-top:6px;color:var(--azul);font-weight:650">Abrir ›</div></div>`;
     }).join("") : `<div style="text-align:center;padding:40px 14px;color:var(--faint);font-size:11.5px">Sin trabajos asignados</div>`)
     + `<div class="dl">Otras cosas</div>
+       <button class="db g" data-a="fDisp">${dispSemDe(t.id)?"Cambiar mi disponibilidad de la semana":"Mi disponibilidad de la semana"}</button>
        <button class="db g" data-a="fPermiso">Pedir permiso o vacaciones</button>`;
   }
   $("#fbody").innerHTML=h;

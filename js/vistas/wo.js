@@ -95,6 +95,23 @@ VIEWS.wo = () => {
   </table></div>`;
 };
 
+/* Disponibilidad de la semana siguiente que cada técnico envía desde su app. */
+function cardDispSemana(){
+  const sd=semSigDias(), tecs=S.tecnicos.filter(t=>t.activo&&!t.esp.includes("Supervisor"));
+  const sin=tecs.filter(t=>!dispSemDe(t.id)).length;
+  return `<div class="card" style="margin-bottom:14px"><div class="chd"><h3>Disponibilidad de la semana siguiente</h3>
+    <span class="s">${sd[0].slice(8)}/${sd[0].slice(5,7)} al ${sd[5].slice(8)}/${sd[5].slice(5,7)} · ${tecs.length-sin} de ${tecs.length} enviaron</span>
+    ${sin?`<button class="btn sm" data-a="dispRecordar">Recordar a los ${sin} que faltan</button>`:""}</div>
+    <table><thead><tr><th>Técnico</th>${sd.map((f,i)=>`<th>${DIAS_SEM[i].slice(0,3)} ${f.slice(8)}</th>`).join("")}</tr></thead><tbody>
+    ${tecs.map(t=>{ const e=dispSemDe(t.id);
+      return `<tr class="${fl("dsem:"+t.id)}"><td style="font-weight:650">${esc(tecN(t.id))}</td>${e
+        ? sd.map(f=>{ const d=e.dias[f]||{disp:true}; return d.disp
+            ? `<td class="mono" style="font-size:11.5px">${d.desde||d.hasta?`${d.desde?"desde "+esc(d.desde):""}${d.desde&&d.hasta?" ":""}${d.hasta?"hasta "+esc(d.hasta):""}`:`<span style="color:var(--verde)">Disp.</span>`}</td>`
+            : `<td><span class="pill r">No</span></td>`; }).join("")
+        : `<td colspan="6"><span class="pill w">Sin enviar</span></td>`}</tr>`; }).join("")}
+    </tbody></table></div>`;
+}
+
 /* WO que esperan algo del cliente: se avisan en lote y se les da seguimiento. */
 const ESTADOS_PEND = ["Pending","Detenido"];
 const MOTIVOS_PEND = ["Unit does not have electricity","Unit does not have water","Pest control is required","No access to the unit","Other"];
@@ -607,6 +624,7 @@ VIEWS.despacho = () => {
       técnicos (Claudia: «una vez cerrado el agendamiento, ahí sí las empezamos a asignar»).</div></div>
   </div>
 
+  ${cardDispSemana()}
   <div class="card"><div class="chd"><h3>Permisos y vacaciones</h3>
     <span class="s">un técnico con permiso aprobado baja el cupo del equipo esos días y no aparece al asignar</span></div>
     ${S.disponibilidad.length?`<table><thead><tr><th>Técnico</th><th>Desde</th><th>Hasta</th><th>Motivo</th><th>Estado</th><th></th></tr></thead><tbody>

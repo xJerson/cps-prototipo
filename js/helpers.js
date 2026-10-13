@@ -347,6 +347,22 @@ function bloqueo(tecId,fecha){
   return d||null;
 }
 
+/* Disponibilidad de la semana siguiente: la arma el técnico desde su app (sin aprobación) y la oficina arma el calendario con eso.
+   S.dispSemana: [{tec, lunes, dias:{"AAAA-MM-DD":{disp, desde, hasta}}, enviado:{fecha,hora}}]. Los permisos siguen en S.disponibilidad. */
+const semSigDias = () => diasDeSemana(S.semana+1);
+const dispSemDe = tec => (S.dispSemana||[]).find(x=>x.tec===tec && x.lunes===semSigDias()[0]) || null;
+const horaAMin = s => { const [h,m]=String(s||"").split(":"); return (+h)*60+(+m||0); };
+const dispDiaDe = (tec,fecha) => { const e=(S.dispSemana||[]).find(x=>x.tec===tec && x.dias && x.dias[fecha]); return e?e.dias[fecha]:null; };
+/* Aviso (no bloquea) cuando el día o la hora de la WO no cuadran con lo que el técnico dijo que puede. */
+function conflictoHorario(tec,w){
+  const d=dispDiaDe(tec,w.fecha); if(!d) return "";
+  if(!d.disp) return "marcó que no está disponible ese día";
+  const h=horaAMin(w.horaProg||"9:00");
+  if(d.hasta && h>horaAMin(d.hasta)) return `solo disponible hasta las ${d.hasta}`;
+  if(d.desde && h<horaAMin(d.desde)) return `solo disponible a partir de las ${d.desde}`;
+  return "";
+}
+
 /* Candidatos técnico para una WO — cruza disponibilidad, carga del día, zona,
    especialidad y última ubicación conocida (la misma que UC-09 usa para
    sugerir el técnico más cercano). Una sola vez, así Asignar y Reasignar
@@ -372,6 +388,8 @@ function candidatosTec(w){
         ? `${carga}/${CAP} el ${w.fecha.slice(5)} · ${t.zona} — se mueve de zona`
         : `${carga}/${CAP} el ${w.fecha.slice(5)} — vive en ${t.zona} y no se mueve de zona, la propiedad está en ${p.zona}`;
       if(!zonaOk || !especialidadOk(t,w.cat)) est="warn";
+      const cf=conflictoHorario(t.id,w);
+      if(cf){ est="warn"; m+=` — ${cf}`; }
     }
     return {t, est, m, ubic: ultUbic(t.id)};
   }).sort((a,b)=>({ok:0,warn:1,lleno:2,bloq:3})[a.est]-({ok:0,warn:1,lleno:2,bloq:3})[b.est]);

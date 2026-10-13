@@ -258,6 +258,28 @@ Object.assign(ACC, {
   },
   fSheetNo: () => { S.phSheet=null; render(); },
   fPermiso: () => { S.phSheet={t:"permiso"}; render(); },
+  fDisp: () => { S.phSheet={t:"disp"}; render(); },
+  fDispOK: () => {
+    const sd=semSigDias(), dias={}; let mal="";
+    sd.forEach((f,i)=>{ const disp=document.getElementById("dpD"+i).checked, desde=val("dpA"+i), hasta=val("dpB"+i);
+      if(disp && desde && hasta && desde>=hasta) mal=DIAS_SEM[i];
+      dias[f]={disp, desde:disp?desde:"", hasta:disp?hasta:""}; });
+    if(mal){ toast("Revisa el horario",`El «a partir de» de ${mal.toLowerCase()} debe ser antes del «hasta».`,"r"); return; }
+    S.dispSemana=(S.dispSemana||[]).filter(x=>!(x.tec===S.phTec && x.lunes===sd[0]));
+    S.dispSemana.push({tec:S.phTec, lunes:sd[0], dias, enviado:{fecha:HOY_SUP,hora:hora()}});
+    S.phSheet=null; flash("dsem:"+S.phTec);
+    toast("Disponibilidad enviada",`<b>${esc(tecN(S.phTec))}</b> registró su semana. Oficina ya la ve en <b>Disponibilidad</b>.`,"v");
+    render();
+  },
+  /* Simula el aviso del sábado por la noche a quienes todavía no enviaron su semana. */
+  dispRecordar: () => {
+    const sin=S.tecnicos.filter(t=>t.activo&&!t.esp.includes("Supervisor")&&!dispSemDe(t.id));
+    if(!sin.length){ toast("Todos enviaron","Nadie tiene la disponibilidad pendiente.","v"); return; }
+    const sd=semSigDias();
+    noti("Registra tu disponibilidad", `Semana del ${sd[0].slice(8)}/${sd[0].slice(5,7)} al ${sd[5].slice(8)}/${sd[5].slice(5,7)}. Ábrela en Agenda.`);
+    toast("Recordatorio enviado",`Se avisó a ${sin.length} técnico(s) sin disponibilidad: ${sin.map(t=>esc(tecN(t.id))).join(", ")}.`,"w");
+    render();
+  },
   fPermisoOK: () => {
     const m=val("ppM");
     if(!m){ toast("Falta el motivo","Escribe por qué pides el permiso.","r"); return; }

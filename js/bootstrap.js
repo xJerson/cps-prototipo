@@ -95,6 +95,8 @@ const AUD = {
   fSubHallazgo:{a:"Registró un initial finding de una Sub-Work Order", m:"Campo"},
   fSubTerminar:{a:"Cerró una Sub-Work Order", m:"Campo"},
   fPermisoOK:{a:"Solicitó permiso", m:"Campo"},
+  fDispOK:{a:"Envió su disponibilidad de la semana", m:"Campo"},
+  dispRecordar:{a:"Recordó la disponibilidad a los técnicos", m:"Disponibilidad"},
   medioOK:{a:"Decidió un adicional", m:"Excepciones"},
   excAprob:{a:"Aprobó una excepción", m:"Excepciones"},
   excRech:{a:"Rechazó una excepción", m:"Excepciones"},

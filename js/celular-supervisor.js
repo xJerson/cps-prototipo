@@ -550,6 +550,21 @@ function hojaCel(sh){
     <button class="db g" data-a="fSheetNo">Cancelar</button>
   </div></div>`; }
 
+  if(sh.t==="disp"){
+    const sd=semSigDias(), prev=dispSemDe(S.phTec), dd=f=>(prev&&prev.dias[f])||{disp:true,desde:"",hasta:""};
+    return `<div class="fscrim" data-a="fSheetNo"><div class="fsheet" data-stop>
+    <div class="grab"></div>
+    <h4>Mi disponibilidad de la semana</h4>
+    <div class="sub">Semana del ${sd[0].slice(8)}/${sd[0].slice(5,7)} al ${sd[5].slice(8)}/${sd[5].slice(5,7)}. Marca los días que puedes y, si quieres, un horario. Oficina arma el calendario con esto.</div>
+    ${sd.map((f,i)=>{ const x=dd(f); return `<div class="dc" style="margin:6px 0">
+      <label style="display:flex;gap:8px;align-items:center;font-weight:700;margin:0"><input type="checkbox" id="dpD${i}" ${x.disp?"checked":""}> ${DIAS_SEM[i]} ${f.slice(8)}/${f.slice(5,7)}</label>
+      <div style="display:flex;gap:8px;margin-top:5px"><div style="flex:1"><label>A partir de</label><input type="time" id="dpA${i}" value="${esc(x.desde||"")}"></div>
+        <div style="flex:1"><label>Hasta</label><input type="time" id="dpB${i}" value="${esc(x.hasta||"")}"></div></div></div>`; }).join("")}
+    <div class="sub">Los horarios son opcionales: si los dejas vacíos, estás disponible todo el día.</div>
+    <button class="db p" style="margin-top:11px" data-a="fDispOK">Enviar</button>
+    <button class="db g" data-a="fSheetNo">Cancelar</button>
+  </div></div>`; }
+
   if(sh.t==="permiso") return `<div class="fscrim" data-a="fSheetNo"><div class="fsheet" data-stop>
     <div class="grab"></div>
     <h4>Pedir permiso o vacaciones</h4>
