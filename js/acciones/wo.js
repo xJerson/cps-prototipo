@@ -128,6 +128,8 @@ Object.assign(ACC, {
 
 
   woVer: d => { S.mod="wo"; S.sub=+d.id; render(); },
+  /* Desplegar o plegar las Sub-WO de una WO en la lista general. */
+  woSubToggle: d => { const a=S.woAbiertas||(S.woAbiertas=[]), id=+d.id, i=a.indexOf(id); if(i>-1) a.splice(i,1); else a.push(id); render(); },
   woVerDesdeModal: d => { cm(); S.mod="wo"; S.sub=+d.id; render(); },
   woNueva: () => modalWO(),
   woFotoRefAgregar: () => {

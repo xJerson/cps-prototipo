@@ -26,6 +26,28 @@ VIEWS.wo = () => {
       const txt=[un&&un.num,P(w.prop).nombre,w.serv,w.cat,w.id,w.notas,w.notasTec,
         w.tec?tecN(w.tec):"",fac&&fac.num].filter(Boolean).join(" ").toLowerCase();
       return (terms.length&&terms.every(term=>txt.includes(term))) || (qn && un&&uNorm(un.num).includes(qn)); }); }
+
+  /* Sub-WO planificadas: cada WO las lleva desplegables; con un filtro activo, una WO sale también si alguna de sus Sub-WO coincide. */
+  const filtrando = f!=="todas" || filtroFecha.modo!=="todos" || !!S.busca;
+  const subOk = (w,a) => {
+    const fe=fechaSubWO(a)||w.fecha, sem=semanaDe(fe), tec=tecSubWO(a), et=a.estadoTrabajo;
+    if(f==="semana" && sem!==S.semana) return false;
+    if(f==="sin" && tec) return false;
+    if(f==="curso" && et!=="In progress") return false;
+    if(f==="camino" && !(tec && et==="Assigned")) return false;
+    if(f==="pend") return false;   // «Pendientes» son WO que esperan algo del cliente
+    if(fechaRapida[filtroFecha.modo] && fe!==fechaRapida[filtroFecha.modo]) return false;
+    if(filtroFecha.modo==="semana" && sem!==filtroFecha.sem) return false;
+    if(filtroFecha.modo==="rango" && ((filtroFecha.desde&&fe<filtroFecha.desde)||(filtroFecha.hasta&&fe>filtroFecha.hasta))) return false;
+    if(S.busca){ const un=U(w.unidad), txt=[un&&un.num,P(w.prop).nombre,a.concepto,a.ubic,w.serv,w.cat,w.id,tec?tecN(tec):""].filter(Boolean).join(" ").toLowerCase();
+      if(!S.busca.toLowerCase().split(/\s+/).filter(Boolean).every(t=>txt.includes(t))) return false; }
+    return true;
+  };
+  const propias = new Set(ws.map(w=>w.id)), subsVistas = {};
+  S.wos.forEach(w=>{ const subs=subsPlanDe(w); if(subs.length) subsVistas[w.id] = filtrando ? subs.filter(a=>subOk(w,a)) : subs; });
+  if(filtrando) S.wos.forEach(w=>{ if(!propias.has(w.id) && (subsVistas[w.id]||[]).length) ws.push(w); });
+  ws.sort((a,b)=>b.id-a.id);
+  const nSubVistas = ws.reduce((n,w)=>n+(subsVistas[w.id]||[]).length,0);
   return `
   <div class="ph"><div><h2>Work Orders</h2><p>La pestaña <code>Schedule</code>, con los mismos campos — pero el técnico y la propiedad se eligen, no se escriben.</p></div>
     <div class="act">
@@ -65,13 +87,16 @@ VIEWS.wo = () => {
     ${[["todas","Todas"],["semana","Semana "+S.semana],["sin","Sin técnico"],["camino","Asignadas sin llegar"],["curso","En curso"],["pend","Pendientes"]].map(([k,n])=>
       `<button class="tab ${f===k?"on":""}" data-a="tab" data-t="${k}">${n}</button>`).join("")}
   </div>
-  <div class="note" style="margin-bottom:12px;display:flex;align-items:center;gap:10px"><span><b>${ws.length} resultado(s).</b> Los filtros de texto y fecha se mantienen juntos hasta que los cambies.</span>
+  <div class="note" style="margin-bottom:12px;display:flex;align-items:center;gap:10px"><span><b>${ws.length} resultado(s)${nSubVistas?` · ${nSubVistas} Sub-WO`:""}.</b> Los filtros de texto y fecha se mantienen juntos hasta que los cambies.</span>
     ${selMode?`<button class="btn p" style="margin-left:auto" data-a="pendAvisar" ${sel.length?"":"disabled"}>Avisar (${sel.length})</button>`:""}</div>
   <div class="card"><table>
-    <thead><tr>${selMode?"<th></th>":""}<th>WO</th><th>Fecha</th><th>Hora</th><th>Sem</th><th>Propiedad · Unidad</th><th>Rooms</th><th>Tipo</th><th>Servicio</th><th>Técnico</th><th>Llegada</th><th>Estado</th>${puedeVerDinero?'<th class="num">Cobrado</th><th class="num">Pagado</th>':""}</tr></thead>
+    <thead><tr>${selMode?"<th></th>":""}<th>WO</th><th>Fecha</th><th>Hora</th><th>Sem</th><th>Propiedad · Unidad</th><th>Rooms</th><th>Tipo</th><th>Servicio</th><th>Técnico</th><th>Llegada</th><th>Estado</th>${puedeVerDinero?'<th class="num">Cobrado</th><th class="num">Pagado</th>':""}<th></th></tr></thead>
     <tbody>${ws.map(w=>{
       const t=tarifaWO(w);
-      return `<tr class="cl${fl("wo:"+w.id)}" data-a="woVer" data-id="${w.id}">
+      const subs=subsVistas[w.id]||[], todas=subsPlanDe(w), propia=propias.has(w.id);
+      /* abierta a mano, o sola cuando la WO sale únicamente por una de sus Sub-WO */
+      const abierta = subs.length && ((S.woAbiertas||[]).includes(w.id) || !propia);
+      return `<tr class="cl${fl("wo:"+w.id)}" data-a="woVer" data-id="${w.id}"${propia?"":' style="opacity:.65"'}>
         ${selMode?`<td><input type="checkbox" data-a="pendSel" data-id="${w.id}" ${sel.includes(w.id)?"checked":""}></td>`:""}
         <td class="mono" style="font-weight:700">WO-${w.id}</td>
         <td class="mono">${w.fecha.slice(5)}</td><td class="mono">${esc(w.horaProg||"9:00")}</td><td class="mono">${w.semana}</td>
@@ -90,10 +115,31 @@ VIEWS.wo = () => {
           ${w.facRetenida&&!w.facturada?`<span class="pill w" title="${esc(w.facRetenida.motivo)}"><span class="dot"></span>Retenida</span>`:""}
         </div></td>
         ${puedeVerDinero?`<td class="num mono">${w.facturada&&ingresoWO(w)!==null?money(ingresoWO(w)):"—"}</td>
-          <td class="num mono">${w.pagadaTec&&egresoWO(w)!==null?money(egresoWO(w)):"—"}</td>`:""}</tr>`;
-    }).join("")||`<tr><td colspan="${(puedeVerDinero?13:11)+(selMode?1:0)}" class="empty">Nada aquí</td></tr>`}</tbody>
+          <td class="num mono">${w.pagadaTec&&egresoWO(w)!==null?money(egresoWO(w)):"—"}</td>`:""}
+        <td style="text-align:right;white-space:nowrap">${todas.length?`<button class="btn sm" data-a="woSubToggle" data-id="${w.id}" title="${abierta?"Ocultar":"Ver"} las Sub-WO de esta WO">${abierta?"▴":"▾"} ${todas.length} Sub-WO</button>`:""}</td></tr>
+        ${abierta?subs.map(a=>{
+          const fe=fechaSubWO(a)||w.fecha, tec=tecSubWO(a), n=subsTodasDe(w).indexOf(a)+1;
+          const est=a.estado==="Pendiente"?"Pending approval":(a.estadoTrabajo||"Unassigned");
+          return `<tr class="cl" data-a="woVer" data-id="${w.id}" style="background:var(--surface-2)">
+            ${selMode?"<td></td>":""}
+            <td class="mono" style="font-weight:700;padding-left:22px">↳ WO-${w.id} · Sub ${n}</td>
+            <td class="mono">${fe.slice(5)}</td><td class="mono">${esc(w.horaProg||"9:00")}</td><td class="mono">${semanaDe(fe)}</td>
+            <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td>
+            <td>${esc(U(w.unidad).rooms)}</td>
+            <td><span class="pill a">Sub-WO</span></td>
+            <td>${esc(a.concepto)}${(a.cant||1)>1?` ×${a.cant}`:""}${a.ubic?` · ${esc(a.ubic)}`:""}</td>
+            <td>${tec?esc(tecN(tec))+(a.tec?"":'<div style="font-size:10.5px;color:var(--faint)">la de la WO</div>'):'<span class="pill w">sin asignar</span>'}</td>
+            <td><span style="color:var(--faint)">—</span></td>
+            <td><span class="pill ${est==="Pending approval"?"w":estP(est)}"><span class="dot"></span>${esc(est)}</span></td>
+            ${puedeVerDinero?'<td class="num mono">—</td><td class="num mono">—</td>':""}
+            <td></td></tr>`; }).join(""):""}`;
+    }).join("")||`<tr><td colspan="${(puedeVerDinero?14:12)+(selMode?1:0)}" class="empty">Nada aquí</td></tr>`}</tbody>
   </table></div>`;
 };
+
+/* Sub-WO que se crean desde el botón de la WO (las del técnico en sitio no son trabajo aparte). Todas, para numerarlas; y las vivas, para listarlas. */
+const subsTodasDe = w => S.adicionales.filter(a=>a.wo===w.id && a.origen==="Planificada").sort((x,y)=>x.id-y.id);
+const subsPlanDe = w => subsTodasDe(w).filter(a=>a.estado!=="Rechazado" && a.estadoTrabajo!=="Canceled");
 
 /* Disponibilidad de la semana siguiente que cada técnico envía desde su app. */
 function cardDispSemana(){
