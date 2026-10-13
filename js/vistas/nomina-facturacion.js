@@ -401,6 +401,8 @@ function modalDefinirPrecio(id){
    perder la relación con ella (Main WO Full Paint → Sub-WO Door paint,
    Sub-WO Garage paint...). Oficina la crea acá ya aprobada — la que
    aprobar es la que descubre el técnico en sitio (fAdic / fAdicOK). */
+/* Una revisión ya validada se puede reabrir mientras no se haya movido dinero: sin pago al técnico (ni parcial) y sin entrar a una factura. */
+const revisionEditable = w => puedeValidar() && w.estado==="Completed" && (aprobPagoOK(w)||aprobFacturaOK(w)) && !w.pagadaTec && pagadoTecWO(w)===0 && !w.facturada;
 const woPagable = w => aprobPagoOK(w) && !w.pagadaTec && !woBloqueada(w.id) && !subWOsPendientesDeWO(w.id).length && !clienteRevisionPendienteDeWO(w.id);
 /* Arrastre: lo pagable de semanas anteriores que sigue sin pagarse entra a la nómina de la semana que se mira. */
 const woPendAnteriores = (tec,sem) => S.wos.filter(w=>w.estado==="Completed" && w.fecha && w.tec && (!tec||w.tec===tec) && semanaDe(w.fecha)<sem && woPagable(w));
@@ -428,7 +430,7 @@ VIEWS.nomina = () => {
       <td class="num mono">${U(w.unidad).pisos||"—"}</td>
       <td style="white-space:nowrap">${w.pagadaTec?'<span class="pill v">✓ sí</span>':woBloqueada(w.id)?'<span class="pill r">approval pending</span>':parc?`<span class="pill a">Parcial ${money(pg)}</span>`:'<span class="pill g">no</span>'}
         ${woPagable(w)&&saldoTecWO(w)>0.009?`<button class="btn sm" data-a="parcialModal" data-id="${w.id}">Parcial</button>`:""}</td>
-      <td style="white-space:nowrap">${pillsAprob(w)}</td>
+      <td style="white-space:nowrap">${pillsAprob(w)}${revisionEditable(w)?` <button class="btn sm" data-a="editarRevision" data-id="${w.id}" title="La regresa al cuadro de arriba para corregirla">Editar revisión</button>`:""}</td>
       <td class="num mono">${ingresoWO(w)!==null?money(ingresoWO(w)):'<span class="pill w">NA</span>'}</td>
       <td class="num mono">${e!==null?(parc?`${money(saldoTecWO(w))}<div style="font-size:10px;color:var(--faint)">de ${money(e)}</div>`:money(e)):"—"}</td>
       <td class="num mono">${materialWO(w)?money(materialWO(w)):"—"}</td>

@@ -814,6 +814,15 @@ Object.assign(ACC, {
   /* «Revisar Work Order y verificar: servicios realizados, adicionales, materiales, observaciones»
      Erika valida antes de que se pueda facturar o pagar (Proceso de Facturación y Nómina) */
   validarModal: d => { S._valDraft=null; modalValidar(W(+d.id)); },
+  /* Regresa la WO al cuadro «Solo estas necesitan tu revisión» y abre su revisión para corregirla. */
+  editarRevision: d => {
+    const w=W(+d.id);
+    if(!w||!revisionEditable(w)){ toast("🚫 Ya no se puede editar","Esta WO ya se pagó al técnico o entró a una factura.","r"); return; }
+    desvalidar(w);
+    w.hist.push([hora(),"Revisión reabierta: vuelve a «Solo estas necesitan tu revisión»",S.usuario]);
+    flash("wo:"+w.id); render();
+    S._valDraft=null; modalValidar(w);
+  },
   valMatModal: d => { const w=W(+d.id); if(!w) return; leerValDraft(w); S._valMatDraft=null; modalMaterialesVal(w); },   // siempre parte de lo guardado: lo no guardado se descarta
   valMatAgregar: d => { const w=W(+d.id); leerValMatDraft(); const f=S._valMatDraft&&S._valMatDraft.filas;
     if(!w||!f) return; const p=S.productos.find(x=>x.consumible!==false&&x.cat!=="Suministros de oficina");
