@@ -122,10 +122,11 @@ function cardSeguimientoPend(){
   const cs=(S.comunicacionesWO||[]).filter(c=>c.estado!=="Closed");
   if(!cs.length) return "";
   return `<div class="card"><div class="chd"><h3>Seguimiento</h3><span class="s">${cs.length} aviso(s) esperando respuesta</span></div>
-    <table><thead><tr><th>WO</th><th>Propiedad</th><th>Motivo</th><th>Medio</th><th class="num">Días</th><th>Respuesta</th><th></th></tr></thead><tbody>
+    <table><thead><tr><th>WO</th><th>Propiedad</th><th>Motivo</th><th>Medio</th><th class="num">Días</th><th>Responder antes del</th><th>Respuesta</th><th></th></tr></thead><tbody>
     ${cs.map(c=>{ const w=W(c.wo), dias=Math.max(0,Math.round((new Date(HOY_SUP)-new Date(c.fecha))/86400000));
       return `<tr class="${fl("com:"+c.id)}"><td class="mono" style="font-weight:700">WO-${c.wo}</td><td>${w?esc(P(w.prop).nombre)+" · "+esc(U(w.unidad).num):"—"}</td>
         <td>${esc(c.motivo)}</td><td>${esc(c.medio)}</td><td class="num mono"><b style="color:${dias>2?"var(--rojo)":"var(--tinta)"}">${dias}</b></td>
+        <td class="mono" style="${c.limite&&c.limite<=HOY_SUP?"color:var(--rojo);font-weight:700":""}">${c.limite?esc(c.limite)+(c.limite<HOY_SUP?" · vencida":c.limite===HOY_SUP?" · hoy":""):"—"}</td>
         <td>${c.respuesta?`<span class="pill w">${esc(c.respuesta.resultado)}</span>${c.respuesta.nota?`<div style="font-size:10.5px;color:var(--faint)">${esc(c.respuesta.nota)}</div>`:""}`:"—"}</td>
         <td style="text-align:right"><button class="btn sm" data-a="pendRespuesta" data-id="${esc(c.id)}">Respuesta</button></td></tr>`; }).join("")}
     </tbody></table></div>`;

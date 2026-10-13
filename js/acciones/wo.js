@@ -1181,16 +1181,17 @@ Object.assign(ACC, {
       <div class="fld"><label>Motivo <span class="req">*</span></label><select id="pnReason">${MOTIVOS_PEND.map(m=>`<option>${m}</option>`).join("")}</select></div>
       <div class="fld"><label>Detalle</label><input id="pnDetail"></div>
       <div class="fld"><label>Medio</label><select id="pnMedium"><option>Email</option><option>SMS</option></select></div>
+      <div class="fld"><label>Responder antes del <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><input type="date" id="pnLimite"></div>
       <div class="note">${props.map(pid=>{ const c=(contactosDe(pid)||[])[0]||CLI(P(pid).cliente); return `<b>${esc(P(pid).nombre)}</b> · ${esc(c.nombre||"Property contact")} · ${esc(c.mail||c.tel||"—")} — ${ws.filter(w=>w.prop===pid).map(w=>"WO-"+w.id).join(", ")}`; }).join("<br>")}<br>Envío simulado: queda registrado con su seguimiento.</div></div>
       <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="pendAvisarOK">Enviar</button></div>`); },
   pendAvisarOK: () => { if(!puedeAvisarPend()) return;
     const ws=(S.pendSel||[]).map(W).filter(w=>w&&ESTADOS_PEND.includes(w.estado)); if(!ws.length){ cm(); return; }
-    const motivo=val("pnReason"), detalle=val("pnDetail"), medio=val("pnMedium"); S.comunicacionesWO=S.comunicacionesWO||[];
+    const motivo=val("pnReason"), detalle=val("pnDetail"), medio=val("pnMedium"), limite=val("pnLimite")||null; S.comunicacionesWO=S.comunicacionesWO||[];
     const props=[...new Set(ws.map(w=>w.prop))], nuevas=[];
     props.forEach(pid=>{ const g=ws.filter(w=>w.prop===pid), grupo="M"+nid("gx");
       const lista=g.map(w=>`WO-${w.id} (unit ${U(w.unidad).num})`).join(", ");
       const msg=`Hello, the following work order${g.length>1?"s":""} at ${P(pid).nombre} ${g.length>1?"are":"is"} pending because ${motivo.toLowerCase()}: ${lista}${detalle?`. ${detalle}`:""}. Please let us know when the unit${g.length>1?"s are":" is"} ready for service.`;
-      g.forEach(w=>{ const c={id:"CW"+(S.comunicacionesWO.length+1+nuevas.length),wo:w.id,prop:pid,medio,fecha:HOY_SUP,hora:hora(),quien:S.usuario,motivo,mensaje:msg,estado:"Sent",grupo};
+      g.forEach(w=>{ const c={id:"CW"+(S.comunicacionesWO.length+1+nuevas.length),wo:w.id,prop:pid,medio,fecha:HOY_SUP,hora:hora(),quien:S.usuario,motivo,mensaje:msg,estado:"Sent",grupo,limite};
         nuevas.push(c); w.hist.push([hora(),`Customer notified by ${medio}: ${motivo}`,S.usuario]); }); });
     S.comunicacionesWO.unshift(...nuevas.slice().reverse()); S.pendSel=[]; flash(nuevas.map(c=>"com:"+c.id)); cm();
     toast("✓ Clientes avisados",`${props.length} mensaje(s) por ${medio} · ${nuevas.length} WO con seguimiento abierto.`,"v"); render(); },
@@ -1198,10 +1199,12 @@ Object.assign(ACC, {
     modal(`<div class="mh"><h3>Respuesta · WO-${c.wo}</h3><p>${esc(c.motivo)} · ${esc(c.medio)} · enviado ${esc(c.fecha)}</p></div><div class="mb">
       <div class="fld"><label>Respuesta</label><select id="prRes"><option>Ya se puede trabajar</option><option>Sigue pendiente</option></select></div>
       <div class="fld"><label>Nota</label><input id="prNota"></div>
+      <div class="fld"><label>Responder antes del <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><input type="date" id="prLimite" value="${esc(c.limite||"")}"></div>
       <div class="hint">«Ya se puede trabajar» cierra el seguimiento; «Sigue pendiente» lo deja abierto.</div></div>
       <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="pendRespuestaOK" data-id="${esc(c.id)}">Guardar</button></div>`); },
   pendRespuestaOK: d => { const c=(S.comunicacionesWO||[]).find(x=>x.id===d.id); if(!c||!puedeAvisarPend()) return;
     const resultado=val("prRes"), nota=val("prNota"), w=W(c.wo);
+    c.limite=val("prLimite")||null;
     c.respuesta={resultado,nota,quien:S.usuario,fecha:HOY_SUP,hora:hora()};
     if(resultado==="Ya se puede trabajar") c.estado="Closed";
     if(w) w.hist.push([hora(),`Cliente respondió: ${resultado}${nota?" · "+nota:""}`,S.usuario]);
