@@ -499,7 +499,8 @@ function vistaSemanal(sem){
         <div style="font-size:10.5px;color:var(--faint)">${esc(t.zona)} · ${t.esp.join(", ")}</div></td>
       ${dias.map(d => {
         const b = bloqueo(t.id, d);
-        if (b) return `<td style="background:var(--rojo-cl)"><span class="pill r"><span class="dot"></span>${esc(b.motivo)}</span></td>`;
+        if (b) { const wb = S.wos.filter(w => w.tec === t.id && w.fecha === d && w.estado !== "Canceled");
+          return `<td style="background:var(--rojo-cl)"><span class="pill r"><span class="dot"></span>${esc(b.motivo)}</span>${wb.map(w => `<div style="font-size:10.5px;margin-top:5px;cursor:pointer;color:var(--rojo);font-weight:700" data-a="woVer" data-id="${w.id}">⚠ WO-${w.id} · ${esc(P(w.prop).nombre)} — reasignar</div>`).join("")}</td>`; }
         const ws = S.wos.filter(w => w.tec === t.id && w.fecha === d && w.estado !== "Canceled");
         const lleno = ws.length >= CAP;
         return `<td style="${lleno ? "background:var(--ambar-cl)" : ""}">${ws.map(w => {

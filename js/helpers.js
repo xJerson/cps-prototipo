@@ -366,6 +366,12 @@ function conflictoHorario(tec,w){
   return "";
 }
 
+/* WO ya asignadas a un técnico que quedan en un día bloqueado o fuera de su horario. */
+const wosEnConflicto = (tec,desde,hasta) => S.wos.filter(w=>w.tec===tec && w.fecha>=desde && w.fecha<=hasta
+  && !["Canceled","Completed"].includes(w.estado) && !w.cobrada && (bloqueo(tec,w.fecha) || conflictoHorario(tec,w)));
+const avisoConflictos = (tec,cf) => cf.length
+  ? avisar("Thalia","Técnico con trabajos en días no disponibles",`${tecN(tec)} tiene ${cf.map(w=>"WO-"+w.id+" ("+w.fecha.slice(5)+")").join(", ")} en días u horarios que no puede. Hay que reasignarlas.`,"w") : null;
+
 /* Candidatos técnico para una WO — cruza disponibilidad, carga del día, zona,
    especialidad y última ubicación conocida (la misma que UC-09 usa para
    sugerir el técnico más cercano). Una sola vez, así Asignar y Reasignar

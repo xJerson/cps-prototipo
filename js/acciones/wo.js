@@ -535,7 +535,8 @@ Object.assign(ACC, {
   },
   apruebaPermiso: d => {
     const p = by(S.disponibilidad,d.id); p.estado="Aprobado"; flash("dis:"+p.id);
-    toast("✓ Permiso aprobado",`${esc(tecN(p.tec))} sale de las sugerencias de asignación del ${p.desde} al ${p.hasta}.`,"v");
+    const cf=wosEnConflicto(p.tec,p.desde,p.hasta); avisoConflictos(p.tec,cf);
+    toast("✓ Permiso aprobado",`${esc(tecN(p.tec))} sale de las sugerencias de asignación del ${p.desde} al ${p.hasta}.${cf.length?`<br><br><b>Ojo:</b> tiene ${cf.length} WO en esas fechas (${cf.map(w=>"WO-"+w.id).join(", ")}). Hay que reasignarlas.`:""}`,cf.length?"w":"v");
     render();
   },
 
@@ -829,7 +830,8 @@ Object.assign(ACC, {
     toast("🚫 No disponible",`<b>${esc(tecN(d.tec))}</b> no está disponible${b?": "+esc(b.motivo):""}.`,"r"); },
   devTouchupOK: d => {
     const dv = DV(d.id), tec = val("tuT"), orig = W(dv.wo);
-    const w = {id: Math.max(...S.wos.map(x=>x.id))+1, prop:dv.prop, unidad:dv.unidad,
+    const idTU = Math.max(ID.w, ...S.wos.map(x=>x.id)) + 1; ID.w = idTU;   // sube el contador: la próxima WO nueva no repite este número
+    const w = {id: idTU, prop:dv.prop, unidad:dv.unidad,
       cat: orig?orig.cat:activos("categorias")[0], serv: val("tuS"), tec,
       estado:"Scheduled", semana:S.semana, fecha:val("tuF"), horaProg:"9:00", po:"",
       asistencia:false, evid:0, mats:[], notas:"", notasTec:"",

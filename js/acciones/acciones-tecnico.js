@@ -268,7 +268,8 @@ Object.assign(ACC, {
     S.dispSemana=(S.dispSemana||[]).filter(x=>!(x.tec===S.phTec && x.lunes===sd[0]));
     S.dispSemana.push({tec:S.phTec, lunes:sd[0], dias, enviado:{fecha:HOY_SUP,hora:hora()}});
     S.phSheet=null; flash("dsem:"+S.phTec);
-    toast("Disponibilidad enviada",`<b>${esc(tecN(S.phTec))}</b> registró su semana. Oficina ya la ve en <b>Disponibilidad</b>.`,"v");
+    const cf=wosEnConflicto(S.phTec,sd[0],sd[5]); avisoConflictos(S.phTec,cf);
+    toast("Disponibilidad enviada",`<b>${esc(tecN(S.phTec))}</b> registró su semana. Oficina ya la ve en <b>Disponibilidad</b>.${cf.length?` Tiene ${cf.length} WO en días u horarios que marcó como no disponibles: se avisó a Thalia.`:""}`,cf.length?"w":"v");
     render();
   },
   /* Simula el aviso del sábado por la noche a quienes todavía no enviaron su semana. */
