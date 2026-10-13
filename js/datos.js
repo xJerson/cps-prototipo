@@ -1,6 +1,6 @@
 "use strict";
 /* ══════════ DATOS SEMILLA ══════════ */
-let ID = {p:100,u:200,c:300,t:400,w:1062,e:500,f:605,pr:700,mv:800,cl:900,ad:958,cm:960,rw:10,gx:10,inv:10};
+let ID = {p:100,u:200,c:300,t:400,w:1062,e:500,f:605,pr:700,mv:800,cl:900,ad:962,cm:960,rw:10,gx:10,inv:10};
 const nid = k => ++ID[k];
 /* Fotos semilla: no hay cámara real en el arranque del prototipo, pero la
    galería/miniatura necesita una URL de imagen real (no un contador ni
@@ -334,7 +334,37 @@ let S = {
      fotosRefArr:[], fotosEvidArr:[], hallazgoFoto:{url:FOTO_SEED, quien:"Diego", hora:"9:30"},
      specs:{}, tec:null, fecha:null, facturaSeparada:false, facturable:false,
      hist:[["9:30","Creada por el técnico en sitio: Moho · precio manual pendiente","Diego Ramírez"],
-           ["9:35","Aprobada por llamada — sin precio, falta definirlo","Thalia"]]}
+           ["9:35","Aprobada por llamada — sin precio, falta definirlo","Thalia"]]},
+    /* Más Sub-WO planificadas, una por cada situación que se ve en la lista general:
+       pendiente de aprobación (con costo), asignada a otro técnico, en curso y sin técnico. */
+    {id:959, sol:"SUBP-1044A", wo:1044, desc:"Cambio de la puerta del baño, el cliente la pidió aparte del clean.", ubic:"Bano",
+     concepto:"Door", cant:1, precio:95, pago:50, precioOrigen:"manual", catalogoId:null,
+     estado:"Pendiente", aprob:null, origen:"Planificada",
+     fotosRefArr:[], fotosEvidArr:[], hallazgoFoto:null,
+     specs:{}, tec:null, fecha:"2026-08-13", facturaSeparada:false, facturable:true,
+     estadoTrabajo:"Pending approval", cantRealizada:0, cantPendiente:0, parcial:false, facturada:false,
+     hist:[["10:20","Sub-Work Order planificada creada: Door","Thalia"]]},
+    {id:960, sol:"SUBP-1048A", wo:1048, desc:"Retoque de tape en el cuarto, lo hace otro técnico ese mismo día.", ubic:"Dormitorio",
+     concepto:"Tape", cant:1, precio:null, pago:null, precioOrigen:null, catalogoId:null,
+     estado:"Aprobado", aprob:{medio:"Directo", quien:"Thalia", fecha:"10:30"}, origen:"Planificada",
+     fotosRefArr:[], fotosEvidArr:[], hallazgoFoto:null,
+     specs:{}, tec:"T5", fecha:"2026-08-13", facturaSeparada:false, facturable:false,
+     estadoTrabajo:"Assigned", cantRealizada:0, cantPendiente:0, parcial:false, facturada:false,
+     hist:[["10:30","Sub-Work Order planificada creada: Tape","Thalia"]]},
+    {id:961, sol:"SUBP-1049A", wo:1049, desc:"Reparación de sheetrock en el pasillo, se hace durante el clean.", ubic:"Pasillo",
+     concepto:"Sheetrock", cant:1, precio:85, pago:45, precioOrigen:"manual", catalogoId:null,
+     estado:"Aprobado", aprob:{medio:"Llamada", quien:"Rick Halloway", hora:"9:40"}, origen:"Planificada",
+     fotosRefArr:[], fotosEvidArr:[], hallazgoFoto:{url:FOTO_SEED, quien:"T1", hora:"13:30"},
+     specs:{}, tec:null, fecha:"2026-08-12", facturaSeparada:false, facturable:true,
+     estadoTrabajo:"In progress", cantRealizada:0, cantPendiente:0, parcial:false, facturada:false,
+     hist:[["9:40","Sub-WO planificada aprobada: Sheetrock","Claudia"],["13:30","Initial finding cargado","Diego Ramírez"]]},
+    {id:962, sol:"SUBP-1042A", wo:1042, desc:"Limpieza de moho en el baño, sin técnico todavía porque la unidad no tiene agua.", ubic:"Bano",
+     concepto:"Moho", cant:1, precio:null, pago:null, precioOrigen:null, catalogoId:null,
+     estado:"Aprobado", aprob:{medio:"Directo", quien:"Thalia", fecha:"10:40"}, origen:"Planificada",
+     fotosRefArr:[], fotosEvidArr:[], hallazgoFoto:null,
+     specs:{}, tec:null, fecha:"2026-08-14", facturaSeparada:false, facturable:false,
+     estadoTrabajo:"Unassigned", cantRealizada:0, cantPendiente:0, parcial:false, facturada:false,
+     hist:[["10:40","Sub-Work Order planificada creada: Moho","Thalia"]]}
   ],
   /* Facturación y Cobranza arrancan con ejemplos completos: una factura dentro
      del plazo, otra vencida con reminder, otra escalada hasta llamada y una ya

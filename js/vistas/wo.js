@@ -120,7 +120,7 @@ VIEWS.wo = () => {
         ${abierta?subs.map(a=>{
           const fe=fechaSubWO(a)||w.fecha, tec=tecSubWO(a), n=subsTodasDe(w).indexOf(a)+1;
           const est=a.estado==="Pendiente"?"Pending approval":(a.estadoTrabajo||"Unassigned");
-          return `<tr class="cl" data-a="woVer" data-id="${w.id}" style="background:var(--surface-2)">
+          return `<tr class="cl" data-a="woVerSub" data-id="${w.id}" data-lid="${a.id}" title="Abrir WO-${w.id} en esta Sub-WO" style="background:var(--surface-2)">
             ${selMode?"<td></td>":""}
             <td class="mono" style="font-weight:700;padding-left:22px">↳ WO-${w.id} · Sub ${n}</td>
             <td class="mono">${fe.slice(5)}</td><td class="mono">${esc(w.horaProg||"9:00")}</td><td class="mono">${semanaDe(fe)}</td>
@@ -323,7 +323,7 @@ function fichaWO(id){
         ${sols.map(s=>`
           <tr><td colspan="${puedeVerDinero?9:7}" style="background:var(--azul-cl);color:var(--azul-s)">
             <b>${s.origen==="Planificada"?"Sub-Work Order planificada":"Un solo aviso del técnico"}</b>${s.desc?" · "+esc(s.desc):""}</td></tr>
-          ${s.lineas.map(a=>`<tr><td><b>${esc(a.concepto)}</b></td><td><span class="pill ${a.origen==="Planificada"?"a":"m"}">${esc(a.origen||"Técnico")}</span></td><td>${esc(a.ubic)}</td>
+          ${s.lineas.map(a=>`<tr class="${fl("sub:"+a.id).trim()}"><td><b>${esc(a.concepto)}</b></td><td><span class="pill ${a.origen==="Planificada"?"a":"m"}">${esc(a.origen||"Técnico")}</span></td><td>${esc(a.ubic)}</td>
             <td class="num mono">${a.cant||1}</td>
             ${puedeVerDinero?`<td class="num mono">${a.precio?money(a.precio):"—"}</td><td class="num mono">${a.precio?money(a.precio*(a.cant||1)):"—"}</td>`:""}
             <td><span class="pill ${a.estado==="Aprobado"?"v":a.estado==="Rechazado"?"r":"w"}">${a.estado}</span></td>
