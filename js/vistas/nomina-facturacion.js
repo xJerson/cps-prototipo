@@ -54,6 +54,13 @@ function excAuto(){
         monto:null, pide:"Sistema", aprueba:"Erika", estado:"Pendiente", fecha:"", resol:null}));
     });
   });
+  /* Cada devolución abierta o corregida también sale aquí, sin dueño hasta que alguien la tome.
+     No frena pago ni factura: eso ya lo controla la propia devolución (ver woBloqueada). */
+  S.devoluciones.filter(dv=>dv.estado!=="Cerrada").forEach(dv=>{
+    out.push(conAsignacion({id:"AUTO-V"+dv.id, tipo:"Devolución", wo:dv.wo, dev:dv.id, auto:true,
+      motivo:`${dv.area}: ${dv.desc} — responsable ${tecN(dv.responsable)}${dv.touchup?` · touch-up WO-${dv.touchup}`:" · falta crear el touch-up"}.`,
+      monto:null, pide:dv.quien||"Gustavo", aprueba:null, estado:"Pendiente", fecha:dv.fechaRep, resol:null}));
+  });
   // La primera vez que el sistema detecta cada una queda su hora — así se ve
   // desde cuándo está esperando, no solo cuándo se resolvió.
   out.forEach(x=>{
@@ -102,8 +109,8 @@ function slaApprovalRequest(x){
 /* Toda Request debe estar ligada a una WO. Por eso solo frena esa
    orden: las demás nóminas y facturas pueden continuar. */
 const excBloqueaTodo = () => false;
-// «Ayuda en sitio» (el técnico pide una mano) no frena pago ni factura de la WO.
-const woBloqueada = wid => excPend().some(x=>x.wo===wid && x.tipo!=="Ayuda en sitio");
+// «Ayuda en sitio» (el técnico pide una mano) y «Devolución» (ya la controla la propia devolución) no frenan pago ni factura de la WO.
+const woBloqueada = wid => excPend().some(x=>x.wo===wid && x.tipo!=="Ayuda en sitio" && x.tipo!=="Devolución");
 function historialApproval(x){
   const hs=x.historial||[];
   return hs.length?`<div style="font-size:9.5px;color:var(--faint);margin-top:5px">${hs.map(h=>
@@ -120,7 +127,7 @@ VIEWS.excepciones = () => {
   pend.forEach(x=>porTipo[x.tipo]=(porTipo[x.tipo]||0)+1);
   return `
   <div class="ph"><div><h2>Requests</h2>
-    <p>Solicitudes que necesitan que <b>alguien de oficina</b> decida. Cada una frena el pago y la factura de su propia WO — no de las demás. Las de «Ayuda en sitio» (técnico pidiendo una mano) no frenan nada.</p></div>
+    <p>Solicitudes que necesitan que <b>alguien de oficina</b> decida. Cada una frena el pago y la factura de su propia WO — no de las demás. Las de «Ayuda en sitio» (técnico pidiendo una mano) y las de «Devolución» no frenan el pago ni la factura.</p></div>
     <div class="act"><button class="btn p" data-a="excNueva">+ New Request</button></div></div>
 
   ${pend.length
@@ -144,7 +151,11 @@ VIEWS.excepciones = () => {
       <td style="text-align:right;white-space:nowrap">
         ${x.assignedTo===S.usuario?"":`<button class="btn sm" data-a="excAsignarYo" data-id="${x.id}">Assign to me</button>`}
         <button class="btn sm" data-a="excAsignarModal" data-id="${x.id}">Assign</button>
-        ${(x.assignedTo===S.usuario || x.aprueba===S.usuario) ? (x.tipo==="Ayuda en sitio"
+        ${(x.assignedTo===S.usuario || x.aprueba===S.usuario) ? (x.tipo==="Devolución"
+          ? (DV(x.dev)&&DV(x.dev).touchup
+              ? `<button class="btn sm" data-a="woVer" data-id="${DV(x.dev).touchup}">Ver touch-up</button>`
+              : `<button class="btn sm p" data-a="devTouchup" data-id="${x.dev}">Crear touch-up</button>`)
+          : x.tipo==="Ayuda en sitio"
           ? `<button class="btn sm v" data-a="excAyudaResolver" data-id="${x.id}">Resolver</button>`
           : x.tipo==="Unit data mismatch"
           ? `<button class="btn sm p" data-a="excUnidadRevisar" data-id="${x.id}">Review correction</button>`
