@@ -968,7 +968,7 @@ Object.assign(ACC, {
     toast("✓ Vencimiento cambiado",`<b>${esc(f.num)}</b> vence ${esc(v)}.`,"v");
     render(); modalCobranza(f.id); },
   /* Escalera de cobranza del flujograma: Reminder → Correo Overdue → Llamada.
-     Cada paso solo se habilita cuando ya pasó el anterior (ver modalCobranza). */
+     Es una guía, no un candado: mientras la factura siga vencida, cada paso se puede repetir las veces que haga falta. */
   cobRecordatorio: d => {
     const f=by(S.facturas,d.id);
     f.seguimiento=f.seguimiento||[];

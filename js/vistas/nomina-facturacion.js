@@ -1247,9 +1247,9 @@ function modalCobranza(fid){
   <div class="mf" style="flex-wrap:wrap;gap:7px">
     <button class="btn" data-a="cm">Cerrar</button>
     ${f.estado!=="Pagada"?`
-    ${venc&&!tieneReminder?`<button class="btn" data-a="cobRecordatorio" data-id="${f.id}">Enviar reminder</button>`:""}
-    ${venc&&tieneReminder&&!tieneOverdue?`<button class="btn" style="border-color:var(--rojo);color:var(--rojo)" data-a="cobOverdue" data-id="${f.id}">Enviar correo overdue</button>`:""}
-    ${venc&&tieneOverdue?`<button class="btn" data-a="cobLlamadaModal" data-id="${f.id}">Registrar llamada</button>`:""}
+    ${venc?`<button class="btn" data-a="cobRecordatorio" data-id="${f.id}">${tieneReminder?"Enviar otro reminder":"Enviar reminder"}</button>`:""}
+    ${venc?`<button class="btn" style="border-color:var(--rojo);color:var(--rojo)" data-a="cobOverdue" data-id="${f.id}">${tieneOverdue?"Enviar otro correo overdue":"Enviar correo overdue"}</button>`:""}
+    ${venc?`<button class="btn" data-a="cobLlamadaModal" data-id="${f.id}">${seg.some(s=>s.tipo==="llamada")?"Registrar otra llamada":"Registrar llamada"}</button>`:""}
     <button class="btn p" data-a="cobrar" data-id="${f.id}">Registrar pago</button>`:""}
   </div>`);
 }
