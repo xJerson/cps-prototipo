@@ -382,21 +382,38 @@ Tel: (469) 219-6869
 Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
     modal(`<div class="mh"><h3>Enviar lista de precios</h3><p>${esc(p.nombre)} · ${ft?esc(ft):"todos los tipos"} · ${ts.length} precio(s)</p></div>
     <div class="mb">
-      <div class="fld"><label>Para</label><div class="hint">${cs.map(c=>esc(c.nombre)+" &lt;"+(esc(c.mail)||"sin correo")+"&gt;").join(", ")||"— sin contactos —"}</div></div>
+      <div class="fld"><label>Para</label>
+        ${cs.length?cs.map(c=>`<label style="display:flex;align-items:center;gap:7px;font-weight:500;text-transform:none;letter-spacing:0;font-size:12.5px;margin:3px 0;${c.mail?"":"opacity:.55"}">
+          <input type="checkbox" id="tpC_${esc(c.id)}" ${c.mail?"checked":"disabled"} style="width:15px;height:15px"> ${esc(c.nombre)} &lt;${esc(c.mail)||"sin correo"}&gt;</label>`).join(""):`<div class="hint">— esta propiedad no tiene contactos —</div>`}
+        <input id="tpOtro" style="margin-top:7px" placeholder="Otro correo (varios separados por coma)">
+        ${(()=>{ const usados=((S.correosPropiedad||{})[fp]||[]).filter(m=>!cs.some(c=>c.mail===m));
+          return usados.length?`<div style="margin-top:6px;font-size:11.5px;color:var(--faint)">Usados antes en esta propiedad: ${usados.map(m=>`<button type="button" class="btn sm" style="margin:2px 3px 0 0" data-a="tarUsarCorreo" data-m="${esc(m)}">${esc(m)}</button>`).join("")}</div>`:""; })()}
+        ${!puede?`<div class="note w" style="margin:8px 0 0">Esta propiedad no tiene contactos con correo. Escribe un correo arriba, o agrégalo como contacto de la propiedad.
+          <button type="button" class="btn sm" style="margin-left:6px" data-a="conNuevo" data-prop="${fp}">+ Agregar contacto</button></div>`:""}</div>
       <div class="fld"><label>Asunto</label><input id="tpAsunto" value="${esc("Lista de precios — "+p.nombre+(ft?" — "+ft:""))}"></div>
       <div class="fld" style="margin-bottom:0"><label>Cuerpo del correo</label><textarea id="tpCuerpo" rows="14">${esc(cuerpo)}</textarea></div>
-      ${!puede?`<div class="note r" style="margin-top:10px">No hay contactos con correo para esta propiedad — agrega uno en su pestaña Contactos.</div>`:""}
     </div>
-    <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="tarEnviarOK" ${puede?"":"disabled"}>Enviar</button></div>`,true);
+    <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="tarEnviarOK">Enviar</button></div>`,true);
   },
+  /* Un correo usado antes se vuelve a poner con un clic. */
+  tarUsarCorreo: d => { const e=document.getElementById("tpOtro"); if(!e) return;
+    const lista=e.value.split(/[,;\s]+/).filter(Boolean); if(!lista.includes(d.m)) lista.push(d.m); e.value=lista.join(", "); },
   tarEnviarOK: () => {
-    const fp=S.tarFp||"", ft=S.tarFt||"", ts=tarSeleccion(), cs=contactosDe(fp).filter(c=>c.mail);
-    if(!fp||!ts.length||!cs.length) return;
-    const x={id:"LP"+Date.now(), prop:fp, tipo:ft||"Todos", filas:ts.length, para:cs.map(c=>c.nombre), asunto:val("tpAsunto"), cuerpo:val("tpCuerpo"),
+    const fp=S.tarFp||"", ft=S.tarFt||"", ts=tarSeleccion();
+    if(!fp||!ts.length) return;
+    const cs=contactosDe(fp).filter(c=>c.mail && (document.getElementById("tpC_"+c.id)||{}).checked);
+    const otros=val("tpOtro").split(/[,;\s]+/).map(s=>s.trim()).filter(Boolean), malos=otros.filter(m=>!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(m));
+    if(malos.length){ marcaFalta(["tpOtro"]); toast("Revisa el correo",`No parece un correo válido: ${esc(malos.join(", "))}.`,"r"); return; }
+    if(!cs.length && !otros.length){ toast("Falta el destinatario","Marca un contacto o escribe un correo.","r"); return; }
+    const para=cs.map(c=>c.nombre).concat(otros);
+    const x={id:"LP"+Date.now(), prop:fp, tipo:ft||"Todos", filas:ts.length, para, asunto:val("tpAsunto"), cuerpo:val("tpCuerpo"),
       quien:S.usuario, fecha:HOY_SUP, hora:hora()};
     (S.listasPrecio=S.listasPrecio||[]).unshift(x);
+    /* Los correos escritos a mano se recuerdan por propiedad: la próxima vez el sistema los sugiere. */
+    const mem=(S.correosPropiedad=S.correosPropiedad||{}), previos=mem[fp]||[];
+    mem[fp]=otros.concat(previos.filter(m=>!otros.includes(m))).slice(0,8);
     flash("lp:"+x.id); cm();
-    toast("✓ Lista enviada",`Se mandó la lista de <b>${esc(P(fp).nombre)}</b> (${ts.length} precio${ts.length===1?"":"s"}${ft?", "+esc(ft):""}) a ${cs.map(c=>esc(c.nombre)).join(", ")}.`,"v"); render();
+    toast("✓ Lista enviada",`Se mandó la lista de <b>${esc(P(fp).nombre)}</b> (${ts.length} precio${ts.length===1?"":"s"}${ft?", "+esc(ft):""}) a ${para.map(esc).join(", ")}.`,"v"); render();
   },
   tarNueva: d => { const t = d&&d.id ? by(S.tarifas,d.id) : null;
     const op = (a,v) => a.map(x=>`<option ${String(x)===String(v)?"selected":""}>${esc(String(x))}</option>`).join("");
