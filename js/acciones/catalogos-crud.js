@@ -353,13 +353,19 @@ Object.assign(ACC, {
     cm(); toast("✓ Técnico dado de alta",`${esc(nt.nombre)} ${esc(nt.apellido)} — ${esc(esp.join(", "))}. Ya aparece al asignar.`,"v"); render();
   },
 
-  tarFiltro: () => { S.tarFp=val("tarFp"); S.tarFt=val("tarFt"); render(); },
-  tarFiltroQuitar: () => { S.tarFp=""; S.tarFt=""; render(); },
+  tarFiltro: () => { S.tarFp=val("tarFp"); S.tarFt=val("tarFt"); S.tarOff=[]; render(); },
+  tarFiltroQuitar: () => { S.tarFp=""; S.tarFt=""; S.tarOff=[]; render(); },
+  /* Casillas: por defecto va todo lo filtrado; se desmarca lo que no se quiere mandar. */
+  tarMarca: d => { const off=S.tarOff||(S.tarOff=[]), id=String(d.id), i=off.indexOf(id); if(i>-1) off.splice(i,1); else off.push(id); render(); },
+  tarMarcaTodos: () => {
+    const ts=listaPrecios(S.tarFp||"",S.tarFt||""), todos=ts.every(t=>!(S.tarOff||[]).includes(String(t.id)));
+    S.tarOff = todos ? (S.tarOff||[]).concat(ts.map(t=>String(t.id))) : (S.tarOff||[]).filter(id=>!ts.some(t=>String(t.id)===id));
+    render(); },
   /* Enviar al cliente la lista de precios que se está viendo (la de su propiedad, con el tipo elegido). */
   tarEnviar: () => {
-    const fp=S.tarFp||"", ft=S.tarFt||"", ts=listaPrecios(fp,ft);
+    const fp=S.tarFp||"", ft=S.tarFt||"", ts=tarSeleccion();
     if(!fp){ toast("Elige una propiedad","La lista se envía a los contactos de una propiedad. Elígela arriba, en «Propiedad».","w"); return; }
-    if(!ts.length){ toast("Sin precios","No hay tarifas con ese filtro.","r"); return; }
+    if(!ts.length){ toast("Sin precios marcados","Marca al menos un precio para enviar.","r"); return; }
     const cs=contactosDe(fp), p=P(fp), puede=cs.some(c=>c.mail);
     const cuerpo=`Buenos días,
 
@@ -384,7 +390,7 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="tarEnviarOK" ${puede?"":"disabled"}>Enviar</button></div>`,true);
   },
   tarEnviarOK: () => {
-    const fp=S.tarFp||"", ft=S.tarFt||"", ts=listaPrecios(fp,ft), cs=contactosDe(fp).filter(c=>c.mail);
+    const fp=S.tarFp||"", ft=S.tarFt||"", ts=tarSeleccion(), cs=contactosDe(fp).filter(c=>c.mail);
     if(!fp||!ts.length||!cs.length) return;
     const x={id:"LP"+Date.now(), prop:fp, tipo:ft||"Todos", filas:ts.length, para:cs.map(c=>c.nombre), asunto:val("tpAsunto"), cuerpo:val("tpCuerpo"),
       quien:S.usuario, fecha:HOY_SUP, hora:hora()};

@@ -354,6 +354,8 @@ function listaPrecios(prop, tipo){
   return propias.concat(generales).filter(t=>!tipo||t.cat===tipo)
     .sort((a,b)=>String(a.cat).localeCompare(String(b.cat))||String(a.serv).localeCompare(String(b.serv))||((a.pisos==null?-1:a.pisos)-(b.pisos==null?-1:b.pisos)));
 }
+/* Lo que se va a enviar: los precios del filtro actual, menos los que se desmarcaron. */
+const tarSeleccion = () => listaPrecios(S.tarFp||"", S.tarFt||"").filter(t=>!(S.tarOff||[]).includes(String(t.id)));
 /* Texto del correo: solo el precio al cliente, nunca lo que se le paga al técnico. */
 function textoListaPrecios(ts){
   const porTipo={}; ts.forEach(t=>{ (porTipo[t.cat||"—"]=porTipo[t.cat||"—"]||[]).push(t); });
@@ -362,7 +364,7 @@ function textoListaPrecios(ts){
 }
 VIEWS.tarifario = () => {
   const fp=S.tarFp||"", ft=S.tarFt||"";
-  const base=listaPrecios(fp,""), ts=base.filter(t=>!ft||t.cat===ft);
+  const base=listaPrecios(fp,""), ts=base.filter(t=>!ft||t.cat===ft), sel=ts.filter(t=>!(S.tarOff||[]).includes(String(t.id)));
   const nPorTipo={}; base.forEach(t=>{ nPorTipo[t.cat]=(nPorTipo[t.cat]||0)+1; });
   const props=S.propiedades.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre));
   const enviadas=(S.listasPrecio||[]).slice(0,6);
@@ -376,19 +378,21 @@ VIEWS.tarifario = () => {
     <span style="font-size:11px;color:var(--faint);font-weight:700;text-transform:uppercase;margin-left:6px">Tipo</span>
     <select id="tarFt" data-a="tarFiltro"><option value="">Todos los tipos (${base.length})</option>${activos("categorias").filter(c=>nPorTipo[c]).map(c=>`<option value="${esc(c)}" ${ft===c?"selected":""}>${esc(c)} (${nPorTipo[c]})</option>`).join("")}</select>
     ${fp||ft?`<button class="btn sm" data-a="tarFiltroQuitar">Quitar filtros</button>`:""}
-    <button class="btn p" style="margin-left:auto" data-a="tarEnviar" ${ts.length?"":"disabled"}>Enviar lista de precios${ts.length?` (${ts.length})`:""}</button>
+    <span style="margin-left:auto;font-size:12px;color:var(--soft)">${sel.length} de ${ts.length} precio(s) marcados</span>
+    <button class="btn p" data-a="tarEnviar" ${sel.length?"":"disabled"}>Enviar lista de precios${sel.length?` (${sel.length})`:""}</button>
   </div></div>
   <div class="card"><table>
-    <thead><tr><th>Tipo</th><th>Servicio</th><th>Detail</th><th>Piso</th><th>Baños</th><th>Description</th>${fp?"<th>Origen</th>":""}<th class="num">Price</th><th></th></tr></thead>
+    <thead><tr><th style="width:30px"><input type="checkbox" data-a="tarMarcaTodos" title="Marcar o desmarcar todos los que se ven" ${ts.length&&sel.length===ts.length?"checked":""}></th><th>Tipo</th><th>Servicio</th><th>Detail</th><th>Piso</th><th>Baños</th><th>Description</th>${fp?"<th>Origen</th>":""}<th class="num">Price</th><th></th></tr></thead>
     <tbody>${ts.map(t=>{
       return `<tr class="${fl('tar:'+t.id)}">
+      <td><input type="checkbox" data-a="tarMarca" data-id="${t.id}" ${(S.tarOff||[]).includes(String(t.id))?"":"checked"}></td>
       <td>${esc(t.cat)||"—"}</td><td>${esc(t.serv)||"—"}</td><td>${esc(t.variante)||"—"}</td>
       <td>${t.pisos!=null?"Floor "+t.pisos:'<span class="pill g">cualquiera</span>'}</td>
       <td>${t.banos!=null?t.banos:'<span class="pill g">—</span>'}</td><td>${esc(t.desc)||"—"}</td>
       ${fp?`<td><span class="pill ${t.prop?"a":"g"}">${t.prop?"Propia":"General"}</span></td>`:""}
       <td class="num mono">${money(t.precio)}</td>
       <td style="text-align:right"><button class="btn sm" data-a="tarNueva" data-id="${t.id}">Editar</button></td></tr>`;
-    }).join("")||`<tr><td colspan="${fp?9:8}" class="empty">Sin tarifas con ese filtro</td></tr>`}</tbody></table></div>
+    }).join("")||`<tr><td colspan="${fp?10:9}" class="empty">Sin tarifas con ese filtro</td></tr>`}</tbody></table></div>
   ${enviadas.length?`<div class="card" style="margin-top:12px"><div class="chd"><h3>Listas de precios enviadas</h3><span class="s">las últimas ${enviadas.length}</span></div>
     <table><thead><tr><th>Propiedad</th><th>Tipo</th><th class="num">Precios</th><th>Para</th><th>Quién</th><th>Cuándo</th></tr></thead><tbody>
     ${enviadas.map(x=>`<tr class="${fl('lp:'+x.id)}"><td>${esc(P(x.prop).nombre)}</td><td>${esc(x.tipo)}</td><td class="num mono">${x.filas}</td><td>${esc(x.para.join(", "))}</td><td>${esc(x.quien)}</td><td class="mono">${esc(x.fecha.slice(5))} ${esc(x.hora)}</td></tr>`).join("")}
