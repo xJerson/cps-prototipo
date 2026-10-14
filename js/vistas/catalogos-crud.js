@@ -345,29 +345,61 @@ const vTecLista = () => `
   <div class="tr">La «última ubicación» es lo que UC-09 usa para sugerir al técnico más cercano. Sale sola de la llegada que él marca.</div>`;
 
 /* ── TARIFARIO ── Ingreso Fijo + Ingreso Variable, juntos ── */
+/* Lista de precios que se ve y se envía: la general, o la de una propiedad (sus tarifas propias reemplazan a la general del mismo servicio). */
+function listaPrecios(prop, tipo){
+  const llave = t => [t.cat,t.serv,t.variante,t.pisos,t.banos].join("|");
+  const propias = prop ? S.tarifas.filter(t=>t.prop===prop) : [];
+  const usadas = new Set(propias.map(llave));
+  const generales = S.tarifas.filter(t=>!t.prop && !usadas.has(llave(t)));
+  return propias.concat(generales).filter(t=>!tipo||t.cat===tipo)
+    .sort((a,b)=>String(a.cat).localeCompare(String(b.cat))||String(a.serv).localeCompare(String(b.serv))||((a.pisos==null?-1:a.pisos)-(b.pisos==null?-1:b.pisos)));
+}
+/* Texto del correo: solo el precio al cliente, nunca lo que se le paga al técnico. */
+function textoListaPrecios(ts){
+  const porTipo={}; ts.forEach(t=>{ (porTipo[t.cat||"—"]=porTipo[t.cat||"—"]||[]).push(t); });
+  return Object.entries(porTipo).map(([cat,fs])=>cat.toUpperCase()+"\n"+fs.map(t=>
+    `• ${t.serv||cat}${t.variante?" ("+t.variante+")":""}${t.pisos!=null?" · Floor "+t.pisos:""}${t.desc?" — "+t.desc:""}: ${money(t.precio)}`).join("\n")).join("\n\n");
+}
 VIEWS.tarifario = () => {
-  const ts=S.tarifas.filter(t=>!t.prop);
+  const fp=S.tarFp||"", ft=S.tarFt||"";
+  const base=listaPrecios(fp,""), ts=base.filter(t=>!ft||t.cat===ft);
+  const nPorTipo={}; base.forEach(t=>{ nPorTipo[t.cat]=(nPorTipo[t.cat]||0)+1; });
+  const props=S.propiedades.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  const enviadas=(S.listasPrecio||[]).slice(0,6);
   return `
   <div class="ph"><div><h2>Tarifario</h2>
-    <p>Precios generales, de <code>Ingreso Fijo</code> — aplican a toda propiedad que no tenga una negociada aparte.</p></div>
+    <p>${fp?`Lista de precios de <b>${esc(P(fp).nombre)}</b>: sus tarifas propias y las generales que no tiene negociadas.`:`Precios generales, de <code>Ingreso Fijo</code> — aplican a toda propiedad que no tenga una negociada aparte.`}</p></div>
     <div class="act"><button class="btn p" data-a="tarNueva">+ Nueva tarifa</button></div></div>
+  <div class="card" style="margin-bottom:10px"><div class="cp" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <span style="font-size:11px;color:var(--faint);font-weight:700;text-transform:uppercase">Propiedad</span>
+    <select id="tarFp" data-a="tarFiltro"><option value="">Tarifario general</option>${props.map(p=>`<option value="${p.id}" ${fp===p.id?"selected":""}>${esc(p.nombre)}</option>`).join("")}</select>
+    <span style="font-size:11px;color:var(--faint);font-weight:700;text-transform:uppercase;margin-left:6px">Tipo</span>
+    <select id="tarFt" data-a="tarFiltro"><option value="">Todos los tipos (${base.length})</option>${activos("categorias").filter(c=>nPorTipo[c]).map(c=>`<option value="${esc(c)}" ${ft===c?"selected":""}>${esc(c)} (${nPorTipo[c]})</option>`).join("")}</select>
+    ${fp||ft?`<button class="btn sm" data-a="tarFiltroQuitar">Quitar filtros</button>`:""}
+    <button class="btn p" style="margin-left:auto" data-a="tarEnviar" ${ts.length?"":"disabled"}>Enviar lista de precios${ts.length?` (${ts.length})`:""}</button>
+  </div></div>
   <div class="card"><table>
-    <thead><tr><th>Tipo</th><th>Servicio</th><th>Detail</th><th>Piso</th><th>Baños</th><th>Description</th><th class="num">Price</th><th></th></tr></thead>
+    <thead><tr><th>Tipo</th><th>Servicio</th><th>Detail</th><th>Piso</th><th>Baños</th><th>Description</th>${fp?"<th>Origen</th>":""}<th class="num">Price</th><th></th></tr></thead>
     <tbody>${ts.map(t=>{
       return `<tr class="${fl('tar:'+t.id)}">
       <td>${esc(t.cat)||"—"}</td><td>${esc(t.serv)||"—"}</td><td>${esc(t.variante)||"—"}</td>
       <td>${t.pisos!=null?"Floor "+t.pisos:'<span class="pill g">cualquiera</span>'}</td>
       <td>${t.banos!=null?t.banos:'<span class="pill g">—</span>'}</td><td>${esc(t.desc)||"—"}</td>
+      ${fp?`<td><span class="pill ${t.prop?"a":"g"}">${t.prop?"Propia":"General"}</span></td>`:""}
       <td class="num mono">${money(t.precio)}</td>
       <td style="text-align:right"><button class="btn sm" data-a="tarNueva" data-id="${t.id}">Editar</button></td></tr>`;
-    }).join("")}</tbody></table></div>
-  <div class="note"><b>Cómo resuelve el precio</b> — la misma llave de su Tabla Maestra (Rooms + Pisos + Servicio), en cuatro pasos:
+    }).join("")||`<tr><td colspan="${fp?9:8}" class="empty">Sin tarifas con ese filtro</td></tr>`}</tbody></table></div>
+  ${enviadas.length?`<div class="card" style="margin-top:12px"><div class="chd"><h3>Listas de precios enviadas</h3><span class="s">las últimas ${enviadas.length}</span></div>
+    <table><thead><tr><th>Propiedad</th><th>Tipo</th><th class="num">Precios</th><th>Para</th><th>Quién</th><th>Cuándo</th></tr></thead><tbody>
+    ${enviadas.map(x=>`<tr class="${fl('lp:'+x.id)}"><td>${esc(P(x.prop).nombre)}</td><td>${esc(x.tipo)}</td><td class="num mono">${x.filas}</td><td>${esc(x.para.join(", "))}</td><td>${esc(x.quien)}</td><td class="mono">${esc(x.fecha.slice(5))} ${esc(x.hora)}</td></tr>`).join("")}
+    </tbody></table></div>`:""}
+  <div class="note" style="margin-top:12px"><b>Cómo resuelve el precio</b> — la misma llave de su Tabla Maestra (Rooms + Pisos + Servicio), en cuatro pasos:
     primero la tarifa negociada de esa propiedad para esos pisos; si no, la de la propiedad para cualquier piso;
     si no, la general para esos pisos; si no, la general para cualquier piso. Si no hay ninguna, levanta una
     <b>excepción</b> en vez de inventar un número.</div>
   <div class="note w" style="margin-top:9px"><b>Para evitar vueltas:</b> dejar los pisos en <i>«cualquiera»</i> cuando el precio no cambia por pisos.
     Así se carga una fila por servicio en vez de tres. Solo se especifica el piso donde de verdad cambia el precio, como en Studio.</div>
-  <div class="tr" style="margin-top:8px">El técnico solo ve la columna <b>«se paga»</b> — nunca el precio al cliente.</div>`;
+  <div class="tr" style="margin-top:8px">El técnico solo ve la columna <b>«se paga»</b> — nunca el precio al cliente. Al enviar una lista solo sale el precio al cliente.</div>`;
 };
 
 /* ── CATÁLOGOS ── cada lista es una tabla, no una constante del código ── */

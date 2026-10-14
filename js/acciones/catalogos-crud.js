@@ -353,6 +353,45 @@ Object.assign(ACC, {
     cm(); toast("✓ Técnico dado de alta",`${esc(nt.nombre)} ${esc(nt.apellido)} — ${esc(esp.join(", "))}. Ya aparece al asignar.`,"v"); render();
   },
 
+  tarFiltro: () => { S.tarFp=val("tarFp"); S.tarFt=val("tarFt"); render(); },
+  tarFiltroQuitar: () => { S.tarFp=""; S.tarFt=""; render(); },
+  /* Enviar al cliente la lista de precios que se está viendo (la de su propiedad, con el tipo elegido). */
+  tarEnviar: () => {
+    const fp=S.tarFp||"", ft=S.tarFt||"", ts=listaPrecios(fp,ft);
+    if(!fp){ toast("Elige una propiedad","La lista se envía a los contactos de una propiedad. Elígela arriba, en «Propiedad».","w"); return; }
+    if(!ts.length){ toast("Sin precios","No hay tarifas con ese filtro.","r"); return; }
+    const cs=contactosDe(fp), p=P(fp), puede=cs.some(c=>c.mail);
+    const cuerpo=`Buenos días,
+
+Te compartimos la lista de precios de ${p.nombre}${ft?` — ${ft}`:""}:
+
+${textoListaPrecios(ts)}
+
+Si necesitas un precio de algo que no está en la lista, avísanos y con gusto lo cotizamos.
+
+Claudia S. Cordova
+CEO | Cordova Property Services LLC
+Pensacola, FL | Sirviendo al Noroeste de Florida, Sur de Alabama y Mississippi
+Tel: (469) 219-6869
+Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
+    modal(`<div class="mh"><h3>Enviar lista de precios</h3><p>${esc(p.nombre)} · ${ft?esc(ft):"todos los tipos"} · ${ts.length} precio(s)</p></div>
+    <div class="mb">
+      <div class="fld"><label>Para</label><div class="hint">${cs.map(c=>esc(c.nombre)+" &lt;"+(esc(c.mail)||"sin correo")+"&gt;").join(", ")||"— sin contactos —"}</div></div>
+      <div class="fld"><label>Asunto</label><input id="tpAsunto" value="${esc("Lista de precios — "+p.nombre+(ft?" — "+ft:""))}"></div>
+      <div class="fld" style="margin-bottom:0"><label>Cuerpo del correo</label><textarea id="tpCuerpo" rows="14">${esc(cuerpo)}</textarea></div>
+      ${!puede?`<div class="note r" style="margin-top:10px">No hay contactos con correo para esta propiedad — agrega uno en su pestaña Contactos.</div>`:""}
+    </div>
+    <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="tarEnviarOK" ${puede?"":"disabled"}>Enviar</button></div>`,true);
+  },
+  tarEnviarOK: () => {
+    const fp=S.tarFp||"", ft=S.tarFt||"", ts=listaPrecios(fp,ft), cs=contactosDe(fp).filter(c=>c.mail);
+    if(!fp||!ts.length||!cs.length) return;
+    const x={id:"LP"+Date.now(), prop:fp, tipo:ft||"Todos", filas:ts.length, para:cs.map(c=>c.nombre), asunto:val("tpAsunto"), cuerpo:val("tpCuerpo"),
+      quien:S.usuario, fecha:HOY_SUP, hora:hora()};
+    (S.listasPrecio=S.listasPrecio||[]).unshift(x);
+    flash("lp:"+x.id); cm();
+    toast("✓ Lista enviada",`Se mandó la lista de <b>${esc(P(fp).nombre)}</b> (${ts.length} precio${ts.length===1?"":"s"}${ft?", "+esc(ft):""}) a ${cs.map(c=>esc(c.nombre)).join(", ")}.`,"v"); render();
+  },
   tarNueva: d => { const t = d&&d.id ? by(S.tarifas,d.id) : null;
     const op = (a,v) => a.map(x=>`<option ${String(x)===String(v)?"selected":""}>${esc(String(x))}</option>`).join("");
     /* Si venimos de "+ Add new tax", se recupera lo que ya se había escrito

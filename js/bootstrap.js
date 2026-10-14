@@ -141,6 +141,7 @@ const AUD = {
   facManualOK:{a:"Abrió una factura manual", m:"Facturación"},
   buscarCSV:{a:"Exportó una búsqueda a CSV", m:"Reportes"},
   facEnviarOK:{a:"Envió una factura", m:"Facturación"},
+  tarEnviarOK:{a:"Envió una lista de precios", m:"Tarifario"},
   validarOK:{a:"Validó una Work Order", m:"Nómina"},
   aprobPago:{a:"Aprobó una WO para nómina", m:"Nómina"},
   aprobFactura:{a:"Aprobó una WO para facturación", m:"Nómina"},
