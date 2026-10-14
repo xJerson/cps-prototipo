@@ -137,6 +137,10 @@ const NOTA_ESTIMADO_DEFAULT = "Please note that cleaning services requiring extr
 /* Solo cuenta como "inspeccion recibida" un reporte de campo tipo "previo"
    de esa propiedad, creado el mismo dia de la solicitud o despues. */
 const solInspeccionLista = s => !!s.prop && S.reportes.some(r=>r.tipo==="previo" && r.prop===s.prop && r.fecha>=s.fecha);
+/* Tipo de estimado: «Tarifario» arma los precios con el tarifario; «Proyecto especial» lleva precios especiales por proyecto
+   (conceptos libres). Los estimados anteriores sin tipo se deducen de sus líneas. */
+const TIPOS_EST = ["Tarifario","Proyecto especial"];
+const estTipo = e => e.tipo || ((e.lineas||[]).some(l=>l.libre||l.nivel==="Libre") ? "Proyecto especial" : "Tarifario");
 /* Un estimado nace de una Solicitud Comercial (solComEstimado) o directo
    desde "+ Nuevo estimado" (directo=true: cliente existente o prospecto, sin
    solicitud ni plazo de 24 h). Esta funcion arma el borrador en blanco. */
@@ -151,7 +155,7 @@ function estInicializarBorrador(prop, solicitudId, directo){
     modo:"cliente", directo:!!directo, prospecto:{nombre:"",correo:"",propiedad:""}, origen:solicitudId||"Directo",
     label:"Estimate", num:estSiguienteNum(), issueDate:hoy, expDate:sumarDias(hoy,30),
     po:"", docs:[], deposito:false, depositoMonto:"", firma:false, terminos:"",
-    nota:NOTA_ESTIMADO_DEFAULT};
+    nota:NOTA_ESTIMADO_DEFAULT, tipo:"Tarifario", notasInt:""};
 }
 
 /* ── SOLICITUDES COMERCIALES ── paso 1 del flujograma «Gestión de Propuestas
@@ -479,8 +483,8 @@ VIEWS.estimados = () => `
   <div class="card"><table>
     <thead><tr><th>Número</th><th>Propiedad</th><th>Contacto</th><th>Fecha</th><th class="num">Líneas</th><th class="num">Monto</th><th>Estado</th><th>Aprobación</th><th></th></tr></thead>
     <tbody>${S.estimados.map(e=>`<tr class="${fl("est:"+e.id)}">
-      <td class="mono" style="font-weight:700">${esc(e.num)}</td>
-      <td>${esc(estPropNombre(e))}${e.prospecto?` <span class="pill w">prospecto</span>`:""}</td><td>${esc(contactosEst(e).map(c=>c.nombre).join(", "))}</td><td class="mono">${e.fecha.slice(5)}</td><td class="num mono">${e.lineas.length}</td>
+      <td class="mono" style="font-weight:700">${esc(e.num)}<div><span class="pill ${estTipo(e)==="Proyecto especial"?"a":"g"}" style="margin-top:3px">${esc(estTipo(e))}</span></div></td>
+      <td>${esc(estPropNombre(e))}${e.prospecto?` <span class="pill w">prospecto</span>`:""}${e.notasInt?`<div class="note r" style="margin:5px 0 0;font-size:11px;white-space:pre-line"><b>Importante:</b> ${esc(e.notasInt)}</div>`:""}</td><td>${esc(contactosEst(e).map(c=>c.nombre).join(", "))}</td><td class="mono">${e.fecha.slice(5)}</td><td class="num mono">${e.lineas.length}</td>
       <td class="num mono" style="font-weight:700">${money(totalEst(e))}</td>
       <td><span class="pill ${e.estado==="Aprobado"?"v":e.estado==="Rechazado"?"r":"a"}">${esc(e.estado)}</span></td>
       <td>${e.aprob?`<span class="pill m">${esc(e.aprob.medio)}</span><div style="font-size:10px;color:var(--faint)">${esc(e.aprob.quien)} · ${esc(e.aprob.fecha)}${e.aprob.ip?" · IP "+e.aprob.ip:""}</div>`:'<span style="color:var(--faint)">esperando</span>'}</td>
@@ -557,6 +561,12 @@ function modalEst(){
         <div class="fld" style="margin-bottom:0"><label>Currency</label><select disabled><option>USD</option></select></div></div>
       <div class="fld" style="margin-top:9px;margin-bottom:0"><label>Purchase Order <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— optional</span></label><input id="ePO" value="${esc(h.po||"")}"></div>
     </div>
+
+    <div class="fld"><label>Tipo de estimado</label>
+      <select id="eTipo" data-a="estTipo">${TIPOS_EST.map(t=>`<option ${(h.tipo||"Tarifario")===t?"selected":""}>${t}</option>`).join("")}</select>
+      <div class="hint">${(h.tipo||"Tarifario")==="Tarifario"?"Los precios salen del tarifario de la propiedad o el general.":"Precios especiales por proyecto: se pueden agregar conceptos libres con su propio precio."}</div></div>
+    <div class="fld"><label style="color:var(--rojo)">Notas internas — importantes <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">· no las ve el cliente; pasan a cada WO para agendar y asignar</span></label>
+      <textarea id="eNotasInt" rows="3" placeholder="Ej. acceso, horarios, acuerdos con el cliente, algo que oficina deba saber antes de agendar">${esc(h.notasInt||"")}</textarea></div>
 
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
       <div style="font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);flex:1">Líneas del estimado</div>
@@ -650,7 +660,8 @@ function modalLineaEst(){
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button type="button" class="btn sm ${modo==="general"?"p":""}" data-a="estLinModo" data-m="general" ${generales.length?"":"disabled"}>General</button>
         <button type="button" class="btn sm ${modo==="propia"?"p":""}" data-a="estLinModo" data-m="propia" ${propias.length?"":"disabled"}>Propia</button>
-        <button type="button" class="btn sm ${modo==="libre"?"p":""}" data-a="estLinModo" data-m="libre">Concepto libre</button></div>
+        ${(S.estHdr&&S.estHdr.tipo==="Proyecto especial")||modo==="libre"?`<button type="button" class="btn sm ${modo==="libre"?"p":""}" data-a="estLinModo" data-m="libre">Concepto libre</button>`:""}</div>
+      ${S.estHdr&&S.estHdr.tipo!=="Proyecto especial"&&modo!=="libre"?`<div class="hint">Estimado de Tarifario: los precios salen del tarifario. Para precios especiales por proyecto, cambia el tipo a «Proyecto especial».</div>`:""}
       ${modo==="libre"?`<div class="hint">Para lo que no está en el tarifario. Al aprobarse igual se vuelve Work Order.</div>`:""}</div>
 
     <div class="fld"><label>Unidad <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label>
@@ -754,7 +765,7 @@ function estCrearEst(){
     ...(pros?{prospecto:{...h.prospecto}}:{}), ...(h.origen?{origen:h.origen}:{}),
     contactos:pros?[]:(h.contactos||[]).slice(),fecha:h.issueDate,vence:h.expDate,po:h.po||"",
     docs:(h.docs||[]).slice(),deposito:!!h.deposito,depositoMonto:h.depositoMonto||"",
-    firma:!!h.firma,terminos:h.terminos||"",nota:h.nota||"",lineas:S.draftEst.slice()};
+    firma:!!h.firma,terminos:h.terminos||"",nota:h.nota||"",tipo:h.tipo||"Tarifario",notasInt:(h.notasInt||"").trim(),lineas:S.draftEst.slice()};
   /* "Modificar propuesta y reenviar" (flujograma de Propuestas y Estimados:
      cliente rechazó → modificar propuesta → reenviar) reusa este mismo
      formulario, pero actualiza el estimado existente en vez de crear otro. */
@@ -784,7 +795,7 @@ function estCrearEst(){
    en los campos sueltos (Label, fechas, PO, Terms, Note...), se pierde. */
 function estSnap(){
   const h = S.estHdr; if(!h) return;
-  const campos = {eLabel:"label", eNum:"num", eIssue:"issueDate", eExp:"expDate", ePO:"po", eTerminos:"terminos", eNota:"nota", eDepositoMonto:"depositoMonto"};
+  const campos = {eLabel:"label", eNum:"num", eIssue:"issueDate", eExp:"expDate", ePO:"po", eTerminos:"terminos", eNota:"nota", eNotasInt:"notasInt", eTipo:"tipo", eDepositoMonto:"depositoMonto"};
   Object.keys(campos).forEach(id=>{ const el=document.getElementById(id); if(el) h[campos[id]]=el.value; });
   const gp=id=>document.getElementById(id);
   if(h.modo==="prospecto" && gp("ePN"))

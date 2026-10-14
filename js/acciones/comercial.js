@@ -19,6 +19,8 @@ Object.assign(ACC, {
           /* Lo que el cliente autorizó (sin precio): es lo que ve el técnico en su celular. */
           autorizado:l.autorizado||l.serv, desdeEstimado:s.estimadoNum,
           origen:{tipo:"Estimado",id:s.estimadoId,num:s.estimadoNum},
+          /* Las notas internas del estimado viajan a la WO: son las que se leen y aceptan antes de asignar. */
+          notasOficina:s.notasInt?`Estimado ${s.estimadoNum}: ${s.notasInt}`:"",
           evid:0,mats:[],notas:"",notasTec:"",hist:[[hora(),`Creada desde el estimado ${s.estimadoNum}`,S.usuario]]});
         n++;
       });
@@ -49,6 +51,15 @@ Object.assign(ACC, {
      hace desde el mismo botón/modal ("Programar con el cliente" / "Ver
      coordinación con el cliente"), con el campo opcional "¿Qué pasó?" que
      aparece solo si ya hay técnico asignado. Ver progOK. */
+
+  /* Cambiar el tipo del estimado: un estimado de Tarifario no lleva conceptos libres (precios especiales). */
+  estTipo: () => {
+    estSnap(); const h=S.estHdr, nuevo=h.tipo, libres=(S.draftEst||[]).filter(l=>l.libre||l.nivel==="Libre").length;
+    if(nuevo==="Tarifario" && libres){
+      h.tipo="Proyecto especial";
+      toast("Hay precios especiales",`El estimado tiene ${libres} concepto(s) libre(s). Quítalos para pasarlo a Tarifario.`,"r"); }
+    modalEst();
+  },
 
   /* ---- SOLICITUDES COMERCIALES: lo que Lydia recibe antes de armar el estimado ---- */
   solComNueva: d => modalSolCom(d&&d.id),
@@ -358,7 +369,7 @@ Object.assign(ACC, {
       prospecto:e.prospecto?{...e.prospecto}:{nombre:"",correo:"",propiedad:""},
       label:e.label, num:e.num, issueDate:e.fecha, expDate:e.vence, po:e.po||"",
       docs:(e.docs||[]).slice(), deposito:!!e.deposito, depositoMonto:e.depositoMonto||"",
-      firma:!!e.firma, terminos:e.terminos||"", nota:e.nota||""};
+      firma:!!e.firma, terminos:e.terminos||"", nota:e.nota||"", tipo:estTipo(e), notasInt:e.notasInt||""};
     modalEst();
   },
   estEnviarOK: d => {
@@ -428,7 +439,7 @@ Object.assign(ACC, {
        texto de lo autorizado, que es lo único que verá el técnico (sin precio). */
     const nsol={id:"SOL"+Date.now(),prop:e.prop,cliente:P(e.prop).cliente,quien:S.usuario,hora:hora(),
       nota:`Desde el estimado ${e.num} — líneas ya aprobadas`,estado:"Pendiente",
-      estimadoId:e.id, estimadoNum:e.num,
+      estimadoId:e.id, estimadoNum:e.num, tipo:estTipo(e), notasInt:e.notasInt||"",
       lineas:lineasAprobDe(e).map(i=>{ const l=e.lineas[i];
         return {...l, precio:precioNetoLinea(e,l), autorizado:l.serv+(l.descripcion?": "+l.descripcion:"")}; })};
     S.solicitudes.push(nsol); flash("sol:"+nsol.id);

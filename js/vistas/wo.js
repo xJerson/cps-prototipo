@@ -82,7 +82,7 @@ VIEWS.wo = () => {
     ${S.solicitudes.filter(x=>x.estado==="Pendiente").map(s=>`<tr class="${fl("sol:"+s.id)}">
       <td style="font-weight:650">${esc(P(s.prop).nombre)}<div style="font-size:10.5px;color:var(--faint)">${esc(P(s.prop).zona)} · ${esc(P(s.prop).dir)}</div></td>
       <td>${esc(CLI(s.cliente).nombre)}</td><td>${esc(s.quien)} · ${esc(s.hora)}</td>
-      <td style="font-size:11.5px;color:var(--soft)">${esc(s.nota)||"—"}${s.lineas&&s.lineas.length?` <span class="pill m">${s.lineas.length} línea(s) ya cotizadas</span>`:""}</td>
+      <td style="font-size:11.5px;color:var(--soft)">${esc(s.nota)||"—"}${s.notasInt?`<div class="note r" style="margin:5px 0 0;font-size:11px;white-space:pre-line"><b>Importante:</b> ${esc(s.notasInt)}</div>`:""}${s.lineas&&s.lineas.length?` <span class="pill m">${s.lineas.length} línea(s) ya cotizadas</span>`:""}</td>
       <td style="text-align:right"><button class="btn sm p" data-a="solProgramar" data-id="${s.id}">Programar</button></td></tr>`).join("")}
     </tbody></table></div>`:""}
 
