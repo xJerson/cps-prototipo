@@ -748,6 +748,8 @@ Object.assign(ACC, {
     const faltaCr=Object.keys(usoK).find(k=>{ const c=credServSaldos(b.prop,b.id).find(y=>y.key===k); return !c||c.saldo<usoK[k]; });
     if(faltaCr){ S.audOmitir=true; toast("Crédito de servicio insuficiente","Hay más filas de cortesía que créditos disponibles de "+faltaCr.slice(0,faltaCr.lastIndexOf("|"))+".","r"); return; }
     const previa=(b.id&&by(S.facturas,b.id))||null;
+    const totalAntes=previa?previa.total:null;
+    if(previa && previa.estado!=="Borrador" && !puedeEditarMontoFactura()){ S.audOmitir=true; toast("Solo Claudia","Los montos de una factura ya emitida los modifica Claudia.","r"); return; }
     if(previa) (previa.conceptos||[]).forEach(c=>{   // se liberan las líneas del borrador; abajo se vuelven a reservar por grupo
       if(c.tipo==="WO"){const w=W(c.wo); if(w) w.facturada=false;}
       else if(c.tipo==="Sub-WO"){const a=by(S.adicionales,c.subwo); if(a){a.facturada=false; delete a.facturaId;}}   // Manual/Credito/Ajuste no tocan ninguna WO
@@ -790,11 +792,52 @@ Object.assign(ACC, {
       hechas.push(f);
     });
     S.facturas.unshift(...nuevas);
+    const emitida = previa && previa.estado!=="Borrador";
+    if(emitida){
+      /* Queda constancia en la factura y se cierran los Requests de cambio de monto que esperaban esto. */
+      (previa.seguimiento=previa.seguimiento||[]).push({tipo:"cambio",fecha:HOY_SUP,hora:hora(),quien:S.usuario,nota:`Monto modificado: ${money(totalAntes)} → ${money(previa.total)}`});
+      previa.pdfHora=hora(); previa.pdfQuien=S.usuario;
+      S.excepciones.filter(x=>x.tipo==="Cambio de monto en factura" && x.factura===previa.id && x.estado==="Pendiente").forEach(x=>{
+        x.estado="Aprobada"; x.resol={quien:S.usuario,hora:hora(),nota:"Factura modificada"};
+        registrarHistorialApproval(x,"Resolved",`Factura modificada: ${money(totalAntes)} → ${money(previa.total)}`); });
+    }
     S._facGuardadas=hechas.map(f=>f.num);
     flash("fac:"+hechas[0].id); S.facturaBorrador=null; cm();
+    if(emitida){ flash("fac:"+hechas[0].id); S.facturaBorrador=null; cm();
+      toast("✓ Factura modificada",`<b>${esc(previa.num)}</b>: ${money(totalAntes)} → ${money(previa.total)}. Quedó anotado en su seguimiento y se cerró la solicitud de cambio.`,"v"); render(); return; }
     toast("✓ Borrador guardado",hechas.length===1
       ? `<b>${esc(hechas[0].num)}</b> · ${hechas[0].conceptos.length} concepto(s) · ${money(hechas[0].total)}. Puedes editarlo antes de enviarlo al cliente.`
       : `${hechas.length} facturas: ${hechas.map(f=>`<b>${esc(f.num)}</b> ${money(f.total)}`).join(" · ")}. Puedes editarlas antes de enviarlas al cliente.`,"v"); render();
+  },
+  /* Quien no es Claudia no cambia montos de una factura ya emitida: pide el cambio, con qué y por qué. */
+  facSolicitarCambio: d => {
+    const f=by(S.facturas,d.id); if(!f||!facMontoEditable(f)) return;
+    modal(`<div class="mh"><h3>Solicitar cambio de monto</h3><p>${esc(f.num)} · ${esc(P(f.prop).nombre)} · ${money(f.total)}</p></div>
+    <div class="mb">
+      <div class="fld"><label>¿Qué hay que cambiar? <span class="req">*</span></label><textarea id="fcQue" rows="3" placeholder="Ej. quitar la línea del Full clean de A-204 o cambiar su precio a $120"></textarea></div>
+      <div class="fld"><label>Motivo <span class="req">*</span></label><textarea id="fcPor" rows="2" placeholder="Por qué se necesita el cambio"></textarea></div>
+      <div class="hint">Le llega a Claudia, que revisa y modifica la factura. La factura no cambia hasta entonces.</div></div>
+    <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="facSolicitarCambioOK" data-id="${f.id}">Enviar solicitud</button></div>`);
+  },
+  facSolicitarCambioOK: d => {
+    const f=by(S.facturas,d.id), que=val("fcQue").trim(), por=val("fcPor").trim(); if(!f) return;
+    if(!que||!por){ marcaFalta([!que?"fcQue":"",!por?"fcPor":""].filter(Boolean)); toast("Falta información","Escribe qué hay que cambiar y por qué.","r"); return; }
+    const x={id:"X"+Date.now(), tipo:"Cambio de monto en factura", wo:null, factura:f.id,
+      motivo:`${f.num}: ${que} — Motivo: ${por}`, monto:null, pide:S.usuario, aprueba:"Claudia",
+      estado:"Pendiente", assignedTo:null, assignedBy:null, assignedAt:null, workStatus:"Unassigned",
+      fecha:HOY_SUP, creada:{quien:S.usuario,hora:hora(),minuto:S.reloj,fecha:HOY_SUP},
+      historial:[{evento:"Created",quien:S.usuario,hora:hora(),fecha:HOY_SUP}], resol:null};
+    S.excepciones.push(x);
+    (f.seguimiento=f.seguimiento||[]).push({tipo:"cambio",fecha:HOY_SUP,hora:hora(),quien:S.usuario,nota:`Solicitó cambio de monto: ${que} — Motivo: ${por}`});
+    avisar("Claudia","Cambio de monto en una factura",`${f.num}: ${que}. Pide ${S.usuario}.`,"w");
+    flash("exc:"+x.id); cm();
+    toast("Solicitud enviada",`Le llegó a <b>Claudia</b> para que modifique ${esc(f.num)}. La factura no cambia hasta entonces.`,"v"); render();
+  },
+  facEditarEmitida: d => {
+    const f=by(S.facturas,d.id);
+    if(!f||!facMontoEditable(f)){ toast("No se puede editar","La factura ya se pagó o sigue en borrador.","r"); return; }
+    if(!puedeEditarMontoFactura()){ toast("Solo Claudia","Los montos de una factura ya emitida los modifica Claudia. Usa «Solicitar cambio de monto».","w"); return; }
+    abrirBorradorFactura(f.prop,f.id);
   },
   facEditarBorrador: d => { const f=by(S.facturas,d.id); if(f&&f.estado==="Borrador") abrirBorradorFactura(f.prop,f.id); },
   /* Retener factura: la WO ya validada sale de los candidatos del borrador; la nómina no se toca. */

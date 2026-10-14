@@ -151,7 +151,10 @@ VIEWS.excepciones = () => {
       <td style="text-align:right;white-space:nowrap">
         ${x.assignedTo===S.usuario?"":`<button class="btn sm" data-a="excAsignarYo" data-id="${x.id}">Assign to me</button>`}
         <button class="btn sm" data-a="excAsignarModal" data-id="${x.id}">Assign</button>
-        ${(x.assignedTo===S.usuario || x.aprueba===S.usuario) ? (x.tipo==="Devolución"
+        ${(x.assignedTo===S.usuario || x.aprueba===S.usuario) ? (x.tipo==="Cambio de monto en factura"
+          ? `<button class="btn sm" data-a="excRech" data-id="${x.id}">Rechazar</button>
+             <button class="btn sm p" data-a="facEditarEmitida" data-id="${x.factura}">Editar factura</button>`
+          : x.tipo==="Devolución"
           ? (DV(x.dev)&&DV(x.dev).touchup
               ? `<button class="btn sm" data-a="woVer" data-id="${DV(x.dev).touchup}">Ver touch-up</button>`
               : `<button class="btn sm p" data-a="devTouchup" data-id="${x.dev}">Crear touch-up</button>`)
@@ -1032,6 +1035,9 @@ VIEWS.facturacion = () => {
         ${["Emitida","Borrador"].includes(f.estado)
           ? `<button class="btn sm p" data-a="facEnviar" data-id="${f.id}">Enviar al cliente</button>`
           : `<button class="btn sm" data-a="facVer" data-id="${f.id}">Detalle</button>`}
+        ${facMontoEditable(f)&&!soloLectura()?(puedeEditarMontoFactura()
+          ? `<button class="btn sm" data-a="facEditarEmitida" data-id="${f.id}">Editar factura</button>`
+          : `<button class="btn sm" data-a="facSolicitarCambio" data-id="${f.id}">Solicitar cambio de monto</button>`):""}
         ${f.pdf?`<div style="font-size:10px;color:var(--faint);margin-top:3px">📎 ${esc(f.pdf)} · guardado ${esc(f.pdfHora||"")}</div>`:""}
       </td></tr>`).join("")||`<tr><td colspan="8" class="empty">Sin resultados</td></tr>`}
     </tbody></table></div>`;})():""}`;
@@ -1185,10 +1191,13 @@ function resumenExpedienteFactura(f){
    encendía. facVencida() lo calcula en vivo, igual que devVencida(). */
 /* Un borrador no tiene fecha de vencimiento: nace al enviarse (emisión + días de crédito de la propiedad). */
 const facVenceTxt = f => f.vence || (f.estado==="Borrador"?"Al enviar":"—");
+/* Factura ya emitida o enviada y sin pagar: los montos solo los cambia Claudia; los demás piden el cambio con motivo. */
+const facMontoEditable = f => !["Borrador","Pagada"].includes(f.estado);
+const puedeEditarMontoFactura = () => S.usuario==="Claudia";
 const facCambiaVence = f => !["Pagada","Borrador"].includes(f.estado) && f.vence;
 const facVencida = f => !["Pagada","Borrador"].includes(f.estado) && !!f.vence && f.vence < HOY_SUP;
 const facEstadoTexto = f => f.estado==="Pagada" ? "Pagada" : facVencida(f) ? "Vencida" : f.estado;
-const SEG_LABEL = {vence:"Cambio de vencimiento", reminder:"Reminder enviado", overdue:"Correo overdue enviado",
+const SEG_LABEL = {cambio:"Cambio de monto", vence:"Cambio de vencimiento", reminder:"Reminder enviado", overdue:"Correo overdue enviado",
   agrupado:"Recordatorio agrupado enviado", llamada:"Llamada de cobranza", pago:"Pago registrado", cierre:"Invoice y Work Orders cerrados"};
 /* Vencidas agrupadas por cliente (dueño de las propiedades): un solo correo con todas sus facturas vencidas. */
 const clienteFac = f => P(f.prop).cliente || "—";
