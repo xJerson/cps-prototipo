@@ -51,6 +51,8 @@ function vPendientes(){
      d:"No se pueden facturar hasta que Gustavo las revise", k:"a"},
     {n:"Listas para facturar",     c:S.wos.filter(w=>w.estado==="Completed"&&w.supervisada&&!w.facturada).length, m:"facturacion",
      d:"Trabajo hecho que todavía no se cobra", k:"a"},
+    {n:"Respuestas del cliente vencidas o para hoy", c:puedeAvisarPend()?respuestasVencidas().length:0, m:"wo",
+     d:"Unidades pendientes cuya fecha límite de respuesta llegó o ya pasó", k:"w"},
     {n:"Estimados esperando al cliente", c:S.estimados.filter(e=>e.estado==="Enviado").length, m:"estimados",
      d:"Enviados y sin respuesta", k:"g"},
     {n:"Permisos por aprobar",     c:S.disponibilidad.filter(d=>d.estado==="Pendiente").length, m:"despacho",

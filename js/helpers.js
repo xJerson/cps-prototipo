@@ -43,6 +43,8 @@ const soloLectura = () => S.usuario==="Contador";
 const usuariosQueResuelven = () => Object.keys(ROLES).filter(u=>u!=="Contador");
 /* Quién avisa a clientes por WO pendientes y envía recordatorios: programación y administración. */
 const puedeAvisarPend = () => ["Thalia","Claudia","Erika"].includes(S.usuario);
+/* Avisos al cliente por una WO pendiente que siguen sin respuesta y cuya fecha de «Responder antes del» llegó o ya pasó. */
+const respuestasVencidas = () => (S.comunicacionesWO||[]).filter(c=>c.estado!=="Closed" && c.limite && c.limite<=HOY_SUP);
 /* Pago al técnico y factura al cliente se aprueban por separado (w.aprobPago / w.aprobFactura).
    w.validada queda como "las dos" y como marca de las WO anteriores a este cambio: por eso los
    helpers la aceptan — nómina y facturación leen siempre estos dos, nunca w.validada directo. */
@@ -469,6 +471,8 @@ function alertas(){
   S.wos.filter(w=>!w.tec && esAgendada(w.estado)).forEach(w=>A.push({t:"Work Order sin técnico",d:`WO-${w.id} · ${P(w.prop).nombre} ${U(w.unidad).num}`,q:"Thalia",n:"w"}));
   S.asistencias.filter(a=>a.puntualidad==="Tarde").forEach(a=>A.push({t:"Llegada tarde",d:`${tecN(a.tec)} llegó ${a.horaReal} a WO-${a.wo} (programada ${a.horaProg})`,q:"Gustavo",n:"w"}));
   S.wos.filter(w=>w.tec && esAgendada(w.estado) && !asisDe(w.id)).forEach(w=>A.push({t:"Sin marcar llegada",d:`WO-${w.id} · ${tecN(w.tec)} no ha marcado llegada (programada ${w.horaProg||"9:00"})`,q:"Thalia",n:"g"}));
+  respuestasVencidas().forEach(c=>{ const w=W(c.wo), vencida=c.limite<HOY_SUP; A.push({t:vencida?"Respuesta del cliente vencida":"Respuesta del cliente para hoy",
+    d:`WO-${c.wo}${w?` · ${P(w.prop).nombre} ${U(w.unidad).num}`:""} · ${c.motivo} — responder antes del ${c.limite}`,q:"Thalia",n:vencida?"r":"w"}); });
   solTodas().filter(solPend).forEach(s=>A.push({t:"Adicional esperando aprobación",
     d:`WO-${s.wo} · ${s.lineas.filter(l=>l.estado==="Pendiente").length} concepto(s): ${solTxt(s)}`,q:s.aprobador||"Thalia",n:"r"}));
   /* Los SLA de Requests se ven también fuera de la bandeja, para que
