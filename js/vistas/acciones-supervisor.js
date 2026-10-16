@@ -8,7 +8,7 @@ VIEWS.supervision = () => {
     <p>Panel de oficina para la supervisión de Gustavo: lo que manda desde el campo, la ruta que se le arma, qué revisar y qué quedó acordado con cada propiedad.</p></div>
     <div class="act"><button class="btn" data-a="verGustavoCel">Ver su celular</button></div></div>
   <div class="tabs">${[["campo",`De campo (${repPend().length})`],["ruta","Ruta del día"],
-      ["devs",`Devoluciones (${devAbiertas().length})`],["diario","Reporte diario"],
+      ["devs",`Returns (${devAbiertas().length})`],["diario","Reporte diario"],
       ["revisar",`Por revisar (${rev.length})`],
       ["insp",`Inspecciones (${insp.length})`],["calidad","Calidad por técnico"],["reporte","Resumen del día"]]
     .map(([k,n])=>`<button class="tab ${t===k?"on":""}" data-a="tab" data-t="${k}">${n}</button>`).join("")}</div>
@@ -19,13 +19,13 @@ VIEWS.supervision = () => {
 
 /* Pantalla propia de Devoluciones (la gestiona Lydia como área de calidad): registrar la solicitud y asignar la corrección. */
 VIEWS.devoluciones = () => `
-  <div class="ph"><div><h2>Devoluciones</h2>
+  <div class="ph"><div><h2>Returns</h2>
     <p>Trabajos que hay que corregir, vengan de Gustavo, de la propiedad o de un correo.</p></div>
-    <div class="act"><button class="btn p" data-a="devRegistrar">+ Registrar devolución</button></div></div>
+    <div class="act"><button class="btn p" data-a="devRegistrar">+ Registrar return</button></div></div>
   ${vDevoluciones()}`;
 
 /* ── DEVOLUCIONES ──────────────────────────────────────────
-   Antes una devolución era un estado de la Work Order que rebotaba a Thalia y
+   Antes un return era un estado de la Work Order que rebotaba a Thalia y
    se perdía de vista. Ahora vive hasta que Gustavo la verifica, y la CAUSA
    deja resuelto de entrada si se le paga al técnico y si se le cobra al
    cliente — en lugar de discutirlo el viernes al armar la nómina. */
@@ -56,31 +56,31 @@ function vDevoluciones(){
             tu.tec===tu.tecOriginal?" · sin pago":" · se le paga"}</div>${
             d.estado==="Corregida"&&puede("devoluciones")?`<button class="btn sm v" style="margin-top:5px" data-a="devCerrar" data-id="${d.id}">Cerrar</button>`:""}`;
         return d.estado==="Cerrada" ? "—"
-          : `<button class="btn sm p" data-a="devTouchup" data-id="${d.id}">Crear touch-up</button>`;})()}</td>
+          : `<button class="btn sm p" data-a="devTouchup" data-id="${d.id}">Crear return fix</button>`;})()}</td>
     </tr>`;};
   return `
   <div class="kpis">
-    <div class="kpi"><div class="l">Abiertas</div><div class="v ${ab.length?"b":""}">${ab.length}</div></div>
-    <div class="kpi"><div class="l">Pasadas de fecha</div><div class="v ${venc.length?"b":""}">${venc.length}</div></div>
-    <div class="kpi"><div class="l">Cerradas</div><div class="v g">${ce.length}</div></div>
+    <div class="kpi"><div class="l">Abiertos</div><div class="v ${ab.length?"b":""}">${ab.length}</div></div>
+    <div class="kpi"><div class="l">Pasados de fecha</div><div class="v ${venc.length?"b":""}">${venc.length}</div></div>
+    <div class="kpi"><div class="l">Cerrados</div><div class="v g">${ce.length}</div></div>
     <div class="kpi"><div class="l">Que no se pagan</div><div class="v">${noPaga.length}</div></div>
   </div>
 
-  <div class="card"><div class="chd"><h3>Devoluciones abiertas</h3>
-    <span class="s">siguen contando hasta que Gustavo verifica la corrección con fotos</span></div>
+  <div class="card"><div class="chd"><h3>Returns abiertos</h3>
+    <span class="s">siguen contando hasta que Gustavo verifica el return fix con fotos</span></div>
     ${ab.length?`<table><thead><tr><th>Propiedad</th><th>Área y problema</th><th>Causa</th>
-      <th>Corrige</th><th>Prior.</th><th>Fechas</th><th class="num">Días</th><th>Fotos a/d</th><th>Estado</th><th>Corrección</th></tr></thead>
+      <th>Corrige</th><th>Prior.</th><th>Fechas</th><th class="num">Días</th><th>Fotos a/d</th><th>Estado</th><th>Return fix</th></tr></thead>
       <tbody>${ab.map(fila).join("")}</tbody></table>`
-    :`<div class="empty">Ninguna devolución abierta. Todo lo corregido está verificado.</div>`}
+    :`<div class="empty">Ningún return abierto. Todo lo corregido está verificado.</div>`}
     <div class="cp" style="border-top:1px solid var(--line)"><div class="tr" style="margin:0">
       La columna <b>Causa</b> es la que decide la plata. Se pregunta en campo, cuando Gustavo está mirando
       el problema — no el viernes, cuando ya nadie se acuerda de quién tuvo la culpa.</div></div>
   </div>
 
-  ${ce.length?`<div class="card"><div class="chd"><h3>Cerradas</h3>
+  ${ce.length?`<div class="card"><div class="chd"><h3>Cerrados</h3>
     <span class="s">con el historial completo de fotos de antes y después</span></div>
     <table><thead><tr><th>Propiedad</th><th>Área y problema</th><th>Causa</th>
-      <th>Corrigió</th><th>Prior.</th><th>Fechas</th><th class="num">Días</th><th>Fotos a/d</th><th>Estado</th><th>Corrección</th></tr></thead>
+      <th>Corrigió</th><th>Prior.</th><th>Fechas</th><th class="num">Días</th><th>Fotos a/d</th><th>Estado</th><th>Return fix</th></tr></thead>
       <tbody>${ce.map(fila).join("")}</tbody></table></div>`:""}`;
 }
 
@@ -129,7 +129,7 @@ function vDiarioWeb(){
 
 /* ── LO QUE LLEGA DEL CAMPO ───────────────────────────────────────────────
    La bandeja de Claudia. Gustavo reporta, ella decide: de aquí sale un
-   estimado, una Work Order o una devolución. El estado previo no sale a
+   estimado, una Work Order o un return. El estado previo no sale a
    ningún lado — se queda pegado a la unidad esperando el día del reclamo. */
 function vCampoRep(){
   const nuevos = S.reportes.filter(r=>r.estado==="Nuevo").slice().reverse();
@@ -229,7 +229,7 @@ function vCampoRep(){
   ${nuevos.map(tarjeta).join("")}
   ${resto.length?`<h3 style="margin:18px 0 10px;font-size:12.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em">Ya resueltos</h3>
     ${resto.map(tarjeta).join("")}`:""}
-  <div class="tr">Su flujograma termina en «entregar reporte a Claudia con fotografías, observaciones, devoluciones,
+  <div class="tr">Su flujograma termina en «entregar reporte a Claudia con fotografías, observaciones, returns,
     inspecciones realizadas, materiales requeridos y avances». Esto es eso — pero sin que él tenga que escribirlo.</div>`;
 }
 
@@ -251,7 +251,7 @@ function vPrevio(pid){
     quién la tomó — sin tener que recordar qué día fue. <b>Nunca se borra.</b></div>
 
   ${(()=>{ const dv = S.devoluciones.filter(d=>d.prop===pid);
-    return dv.length?`<div class="card"><div class="chd"><h3>Devoluciones de esta propiedad</h3>
+    return dv.length?`<div class="card"><div class="chd"><h3>Returns de esta propiedad</h3>
       <span class="s">${dv.filter(d=>d.estado!=="Cerrada").length} abierta(s) de ${dv.length}</span></div>
       <table><thead><tr><th>Unidad</th><th>Área y problema</th><th>Causa</th><th>Corrige</th>
         <th>Reportada</th><th>Estado</th></tr></thead>
@@ -448,7 +448,7 @@ function vRutaCalc(){
   <div class="tr">Ordenada por zona porque el traslado quita tiempo. Es la misma razón por la que se asigna por cercanía.</div>`;
 }
 
-/* UC-12 — aprobar O DEVOLVER, con la devolución medida por técnico (H-10) */
+/* UC-12 — aprobar O DEVOLVER, con el return medido por técnico (H-10) */
 function vRevisar(rev){
   return `
   <div class="card"><div class="chd"><h3>Por revisar</h3>
@@ -459,14 +459,14 @@ function vRevisar(rev){
       <td>${esc(w.serv)}</td><td>${esc(tecN(w.tec))}</td>
       <td>${w.evid?`<span class="pill v">${w.evid} foto(s)</span>`:'<span class="pill r"><span class="dot"></span>sin evidencia</span>'}
         ${w.revisionCalidad?`<div><span class="pill w">${esc(w.revisionCalidad.estado)}</span>${w.revisionCalidad.motivo?`<div style="font-size:10px;color:var(--faint)">${esc(w.revisionCalidad.motivo)}</div>`:""}</div>`:""}
-        ${w.devuelta?`<div><span class="pill w">devuelta ${w.devuelta}×</span></div>`:""}</td>
+        ${w.devuelta?`<div><span class="pill w">con return ${w.devuelta}×</span></div>`:""}</td>
       <td style="text-align:right;white-space:nowrap">
-        <button class="btn sm" data-a="devolverModal" data-id="${w.id}">Devolver</button>
+        <button class="btn sm" data-a="devolverModal" data-id="${w.id}">Hacer return</button>
         <button class="btn sm" data-a="noSupervisarModal" data-id="${w.id}">No se pudo supervisar</button>
         <button class="btn sm ${w.evid?"v":""}" data-a="supervisar" data-id="${w.id}">Revisada sin observaciones</button></td></tr>`).join("")}
     </tbody></table>`:`<div class="empty"><div class="b">✓</div>Nada pendiente de revisar</div>`}
   </div>
-  <div class="tr">Si no hubo acceso, registra el motivo y reagenda cuando corresponda. Una devolución crea una corrección asignable sin reabrir la WO original.</div>`;
+  <div class="tr">Si no hubo acceso, registra el motivo y reagenda cuando corresponda. Un return crea un return fix asignable sin reabrir la WO original.</div>`;
 }
 
 /* UC-04b — inspecciones que le manda Claudia */
@@ -490,13 +490,13 @@ function vInsp(){
   <div class="tr">Las medidas y fotos quedan contra la propiedad, no en el mensaje de alguien. Claudia cotiza con eso ya cargado.</div>`;
 }
 
-/* H-10 — devoluciones medidas por técnico */
+/* H-10 — returns medidos por técnico */
 function vCalidad(){
   const tecs = S.tecnicos.filter(t=>!t.esp.includes("Supervisor"));
   const filas = tecs.map(t=>{
     const ws = S.wos.filter(w=>w.tec===t.id);
     const sup = ws.filter(w=>w.supervisada).length;
-    /* Calidad = unidades devueltas sobre unidades terminadas: de 10 trabajos, a cuántos le devolvieron. Cada devolución registrada
+    /* Calidad = unidades devueltas sobre unidades terminadas: de 10 trabajos, a cuántos le devolvieron. Cada return registrado
        cuenta (la abra Gustavo en campo o la oficina); un trabajo devuelto dos veces cuenta una sola vez. */
     const devIds = new Set(S.devoluciones.filter(d=>d.responsable===t.id).map(d=>d.wo));
     const base = new Set(ws.filter(w=>w.estado==="Completed" && !w.touchup).map(w=>w.id));
@@ -508,7 +508,7 @@ function vCalidad(){
   <div class="card"><div class="chd"><h3>Calidad por técnico</h3>
     <span class="s">lo que hoy no se mide: quién genera retrabajo</span></div>
     ${filas.length?`<table><thead><tr><th>Técnico</th><th class="num">Trabajos</th><th class="num">Aprobados</th>
-      <th class="num">Devueltos</th><th class="num">Sin evidencia</th><th>Calidad</th><th>Señal</th></tr></thead>
+      <th class="num">Con return</th><th class="num">Sin evidencia</th><th>Calidad</th><th>Señal</th></tr></thead>
     <tbody>${filas.map(f=>{
       const mal = f.dev + f.sinEvid;
       const pct = f.base ? Math.round(f.dev/f.base*100) : 0;
@@ -516,13 +516,13 @@ function vCalidad(){
         <td class="num mono">${f.ws}</td><td class="num mono" style="color:var(--verde)">${f.sup}</td>
         <td class="num mono" style="${f.dev?"color:var(--rojo);font-weight:700":""}">${f.dev||"—"}</td>
         <td class="num mono" style="${f.sinEvid?"color:var(--ambar)":""}">${f.sinEvid||"—"}</td>
-        <td style="white-space:nowrap">${f.base?`<b class="mono" style="${f.dev?"color:var(--rojo)":"color:var(--verde)"}">${f.dev} de ${f.base}</b> devueltas <span style="color:var(--faint)">· ${pct}%</span>`:"—"}</td>
+        <td style="white-space:nowrap">${f.base?`<b class="mono" style="${f.dev?"color:var(--rojo)":"color:var(--verde)"}">${f.dev} de ${f.base}</b> con return <span style="color:var(--faint)">· ${pct}%</span>`:"—"}</td>
         <td>${mal===0?'<span class="pill v">Sin observaciones</span>'
              :mal<=1?'<span class="pill w">Revisar</span>'
                    :'<span class="pill r"><span class="dot"></span>Atención</span>'}</td></tr>`;
     }).join("")}</tbody></table>`:`<div class="empty">Todavía sin datos suficientes</div>`}
   </div>
-  <div class="tr">Hallazgo H-10 del informe: hoy las devoluciones no tienen tratamiento y nadie sabe de quién vienen.</div>`;
+  <div class="tr">Hallazgo H-10 del informe: hoy los returns no tienen tratamiento y nadie sabe de quién vienen.</div>`;
 }
 
 /* UC-12b — «todo lo registrado durante la jornada arma solo el reporte diario» */
@@ -541,7 +541,7 @@ function vReporteDia(){
       <div class="kpis" style="margin:0 0 14px">
         <div class="kpi"><div class="l">Propiedades visitadas</div><div class="v">${vis.filter(v=>v.tipo==="Supervisión").length}</div></div>
         <div class="kpi"><div class="l">Trabajos aprobados</div><div class="v g">${apro.length}</div></div>
-        <div class="kpi"><div class="l">Devueltos</div><div class="v ${dev.length?"b":""}">${dev.length}</div></div>
+        <div class="kpi"><div class="l">Con return</div><div class="v ${dev.length?"b":""}">${dev.length}</div></div>
         <div class="kpi"><div class="l">Inspecciones</div><div class="v">${vis.filter(v=>v.tipo==="Inspección"&&v.estado==="Cerrada").length}</div></div>
       </div>
       <ul class="traza">
@@ -553,7 +553,7 @@ function vReporteDia(){
         <div class="tt">Aprobó WO-${w.id} · ${esc(P(w.prop).nombre)} ${esc(U(w.unidad).num)}</div>
         <div class="dd">${esc(w.serv)} · ${esc(tecN(w.tec))} · ${w.evid} evidencia(s)</div></div></li>`).join("")}
       ${dev.map(w=>`<li class="pend"><span class="mk">↩</span><div>
-        <div class="tt">Devolvió WO-${w.id} · ${esc(P(w.prop).nombre)}</div>
+        <div class="tt">Hizo return de WO-${w.id} · ${esc(P(w.prop).nombre)}</div>
         <div class="dd">${esc(w.motivoDev||"")}</div><div class="qq">${esc(tecN(w.tec))}</div></div></li>`).join("")}
       ${mats.map(m=>`<li class="hecho"><span class="mk">✓</span><div>
         <div class="tt">Registró material · ${esc(by(S.productos,m.prod).nombre)}</div>
@@ -563,7 +563,7 @@ function vReporteDia(){
   </div>
   ${nada?"":`<div class="card"><div class="cp" style="display:flex;align-items:center;gap:12px">
     <div><div style="font-weight:650">Entregar el reporte a Claudia</div>
-      <div style="font-size:11.5px;color:var(--faint)">Con fotografías, observaciones, devoluciones, inspecciones y materiales requeridos</div></div>
+      <div style="font-size:11.5px;color:var(--faint)">Con fotografías, observaciones, returns, inspecciones y materiales requeridos</div></div>
     <button class="btn p" style="margin-left:auto" data-a="reporteEnviar">Enviar reporte diario</button></div></div>`}
   <div class="tr">Es la contraparte presencial de la supervisión por evidencia: revisar fotos no reemplaza ir, la complementa.</div>`;
 }

@@ -127,7 +127,7 @@ VIEWS.wo = () => {
           <span class="pill ${estP(w.estado)}"><span class="dot"></span>${w.estado}</span>
           ${w.reagendada?`<span class="pill w" title="${esc(w.motivoReag||"Se movió de fecha")}"><span class="dot"></span>Reagendada${w.reagendada>1?" · "+w.reagendada+"x":""}</span>`:""}
           ${fechaSinConfirmar(w)?`<span class="pill w" title="Se le propuso una fecha al cliente y todavía no la confirmó"><span class="dot"></span>Sin confirmar</span>`:""}
-          ${bloqueadaPorDev(w)?`<span class="pill r" title="${esc(devAbiertaDeWO(w.id).area)}: ${esc(devAbiertaDeWO(w.id).desc)}"><span class="dot"></span>Devolución abierta</span>`:""}
+          ${bloqueadaPorDev(w)?`<span class="pill r" title="${esc(devAbiertaDeWO(w.id).area)}: ${esc(devAbiertaDeWO(w.id).desc)}"><span class="dot"></span>Return abierto</span>`:""}
           ${woEspera(w)?`<span class="pill w" title="Empieza cuando termine WO-${woEspera(w).id}"><span class="dot"></span>Espera WO-${woEspera(w).id}</span>`:""}
           ${w.facRetenida&&!w.facturada?`<span class="pill w" title="${esc(w.facRetenida.motivo)}"><span class="dot"></span>Retenida</span>`:""}
         </div></td>
@@ -281,7 +281,7 @@ function fichaWO(id){
       ${w.tec && !["Canceled","Invoiced","Paid"].includes(w.estado)
         ?`<button class="btn" data-a="woReasignar" data-id="${w.id}">Reasignar técnico</button>`:""}
       ${puede("devoluciones") && w.unidad && !w.touchup && w.estado!=="Canceled"
-        ?`<button class="btn" data-a="devRegistrar" data-wo="${w.id}">Registrar devolución</button>`:""}
+        ?`<button class="btn" data-a="devRegistrar" data-wo="${w.id}">Registrar return</button>`:""}
       ${esAgendada(w.estado)
         ?`<button class="btn r" data-a="woCancelar" data-id="${w.id}">Cancelar WO</button>`:""}
       ${w.tec && !["Canceled","Invoiced","Paid","Completed"].includes(w.estado)
@@ -305,17 +305,17 @@ function fichaWO(id){
           ${puedeValidar()&&w.estado==="Completed"?`<span style="margin-left:5px">${pillsAprob(w)}</span>`:""}
           ${w.reagendada?`<span class="pill w" style="margin-left:5px" title="${esc(w.motivoReag||"")}">↻ reagendada${w.reagendada>1?" "+w.reagendada+"x":""}</span>`:""}
           ${fechaSinConfirmar(w)?`<span class="pill w" style="margin-left:5px" title="Se le propuso una fecha al cliente y todavía no la confirmó">⏳ fecha sin confirmar</span>`:""}
-          ${bloqueadaPorDev(w)?`<span class="pill r" style="margin-left:5px">⚠ devolución abierta</span>`:""}
+          ${bloqueadaPorDev(w)?`<span class="pill r" style="margin-left:5px">⚠ return abierto</span>`:""}
           ${woEspera(w)?`<span class="pill w" style="margin-left:5px">Espera WO-${woEspera(w).id}</span>`:""}
           ${w.facRetenida&&!w.facturada?`<span class="pill w" style="margin-left:5px" title="${esc(w.facRetenida.motivo)}">Retenida · ${esc(w.facRetenida.motivo)}</span>`:""}</span></div>
         ${(()=>{ const d=devAbiertaDeWO(w.id); if(!d) return "";
           const tu=touchupDe(d.id);
           return `<div class="cp" style="border-top:1px solid var(--line)"><div class="note r" style="margin:0">
-            <b>Esta Work Order tiene una devolución abierta</b> — ${esc(d.area)}: ${esc(d.desc)}.
-            ${tu?`Ya tiene un touch-up de corrección: <b>WO-${tu.id}</b> con ${esc(tecN(tu.tec))}.`
-                :`Todavía no se le creó un touch-up de corrección.`}
-            La corrección se gestiona aparte y no reabre la nómina ni la factura original.
-            <button class="btn sm" style="margin-top:6px" data-a="ir" data-m="supervision">Ver devolución</button></div></div>`;
+            <b>Esta Work Order tiene un return abierto</b> — ${esc(d.area)}: ${esc(d.desc)}.
+            ${tu?`Ya tiene un return fix: <b>WO-${tu.id}</b> con ${esc(tecN(tu.tec))}.`
+                :`Todavía no se le creó un return fix.`}
+            El return fix se gestiona aparte y no reabre la nómina ni la factura original.
+            <button class="btn sm" style="margin-top:6px" data-a="ir" data-m="supervision">Ver return</button></div></div>`;
         })()}
         <table><tbody>
           <tr><td style="color:var(--faint);width:170px">Propiedad</td><td>${esc(p.nombre)} · ${esc(p.zona)}</td></tr>
@@ -954,13 +954,13 @@ function modalDupWO(dup, edicion){
   if(!edicion) return modal(`<div class="mh"><h3>Ya existe una WO igual</h3></div>
   <div class="mb">
     <div class="note w">WO-${dup.id} ya es <b>${esc(dup.serv)}</b> para esta unidad (${esc(dup.fecha||"sin fecha")} · ${esc(dup.estado)})${dup.ubic?` en «${esc(dup.ubic)}»`:""}.</div>
-    ${woHecha(dup)?`<div class="note" style="margin-top:10px">Si el cliente reclama este trabajo, no crees otra WO: <b>registra la devolución en WO-${dup.id}</b>. Así no se le cobra al cliente ni se le paga dos veces al técnico.</div>`:""}
+    ${woHecha(dup)?`<div class="note" style="margin-top:10px">Si el cliente reclama este trabajo, no crees otra WO: <b>registra el return en WO-${dup.id}</b>. Así no se le cobra al cliente ni se le paga dos veces al técnico.</div>`:""}
     <div class="fld" style="margin-top:12px"><label>Motivo <span class="req">*</span></label>
       <textarea id="dpMot" placeholder="${woHecha(dup)?"Qué hay que corregir, o por qué se necesita otra":"Por qué se necesita otra igual"}"></textarea></div>
   </div>
   <div class="mf">
     <button class="btn" data-a="woVerDesdeModal" data-id="${dup.id}">Abrir WO-${dup.id}</button>
-    ${woHecha(dup)?`<button class="btn" data-a="woDupReturn" data-id="${dup.id}">Ir a WO-${dup.id} y registrar devolución</button>`:""}
+    ${woHecha(dup)?`<button class="btn" data-a="woDupReturn" data-id="${dup.id}">Ir a WO-${dup.id} y registrar return</button>`:""}
     <button class="btn p" data-a="woDupNueva" data-id="${dup.id}">Crear nueva</button>
   </div>`);
   modal(`<div class="mh"><h3>Ya existe una Work Order igual</h3></div>
@@ -1316,7 +1316,7 @@ function modalReasignar(id){
   const cand = candidatosTec(w);
   modal(`
   <div class="mh"><h3>Reasignar WO-${id}</h3>
-    <p>${esc(p.nombre)} · ${U(w.unidad)?esc(U(w.unidad).num):""} · ${esc(w.serv)}${w.touchup?" — touch-up de corrección":""}</p></div>
+    <p>${esc(p.nombre)} · ${U(w.unidad)?esc(U(w.unidad).num):""} · ${esc(w.serv)}${w.touchup?" — return fix":""}</p></div>
   <div class="mb">
     ${w.touchup?`<div class="note w" style="margin:0 0 12px">Al cambiar de técnico, la Work Order pasa a ser de él:
       <b>${esc(tecN(w.tec))} deja de verla en su celular</b>.<br><br>

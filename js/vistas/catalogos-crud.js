@@ -538,7 +538,7 @@ VIEWS.catalogos = () => {
         "Scheduled":"Agendada, sin técnico todavía","Confirmed":"Con técnico asignado y confirmado",
         "In progress":"El técnico está en la propiedad","Esperando aprobación":"Frenada por un adicional sin decidir",
         "Detenido":"Empezó pero está frenado por algo externo","Completed":"Trabajo terminado","Pending":"En espera de algo externo","Rescheduled":"Se movió de fecha",
-        "Returned":"El cliente la devolvió","Corrected":"Se corrigió una devolución","Canceled":"Cancelada",
+        "Returned":"Con return","Corrected":"Se corrigió un return","Canceled":"Cancelada",
         "Inspeccion":"Visita de inspección, no es trabajo"}[e.n]||"")}</td></tr>`).join("")}
     </tbody></table>
     <div class="cp" style="border-top:1px solid var(--line)"><div class="note w" style="margin:0">

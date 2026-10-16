@@ -160,7 +160,7 @@ let S = {
            ["9:20","Initial finding agregado a Sub-WO · Sheetrock (desde oficina)","Claudia"],
            ["9:30","Compró en tienda (Home Depot): Sellador de grout × 3 · usó 2 · sobró 1 (queda en inventario) · con foto del ticket","Diego"]]},
     /* Estado "Returned" y devuelta:1 a propósito: es la WO que trae la
-       devolución DV1 sembrada más abajo — así queda un ejemplo real y
+       return DV1 sembrada más abajo — así queda un ejemplo real y
        visible desde que abre el prototipo, sin tener que armar uno a
        mano para poder mostrarlo. */
     {id:1041,prop:"P1",unidad:"U2",cat:"Paint",serv:"Full paint",tec:"T2",estado:"Returned",devuelta:1,
@@ -168,7 +168,7 @@ let S = {
      semana:33,fecha:"2026-08-11",horaProg:"9:00",po:"",asistencia:true,evid:1,mats:[],notas:"",
      notasTec:"Color change aprobado por manager",
      hist:[["8:20","Creada","Thalia"],["8:21","Asignada a Marcos Ayala","Thalia"],
-           ["14:10","Devuelta por supervisión: Quedó pintura en el marco de la puerta y el zócalo sin retocar.","Gustavo"]]},
+           ["14:10","Return por supervisión: Quedó pintura en el marco de la puerta y el zócalo sin retocar.","Gustavo"]]},
     {id:1042,prop:"P2",unidad:"U5",cat:"Clean",serv:"Deep clean",tec:null,estado:"Pending",semana:33,fecha:"2026-08-12",horaProg:"9:00",po:"",asistencia:false,evid:0,mats:[],notas:"Waiting for water service",notasTec:"",hist:[["7:50","Creada","Claudia"],["8:10","Pending: unit does not have water","Thalia"]]},
     {id:1043,prop:"P3",unidad:"U7",cat:"Repair",serv:"Drywall repair",tec:"T4",estado:"Confirmed",semana:33,fecha:"2026-08-12",horaProg:"10:00",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",
      /* Confirmada con el cliente; la 1044 queda sin confirmar. El técnico
@@ -227,11 +227,11 @@ let S = {
      hist:[["13:40","Creada","Thalia"],["13:41","Asignada a Diego Ramírez","Thalia"],["14:05","Llegó a la propiedad","Diego"],
            ["14:10","Confirmó la unidad","Diego"],["14:30","Pidió aprobación de un adicional · Sheetrock","Diego"]]},
     /* Touch-up de corrección (w.touchup): Diego rehaciendo su propia WO-1038
-       por la devolución DV2 — no se le paga por ser su propio error. */
+       por el return DV2 — no se le paga por ser su propio error. */
     {id:1051,prop:"P1",unidad:"U1",cat:"Clean",serv:"Full clean",tec:"T1",estado:"Confirmed",semana:33,fecha:"2026-08-13",horaProg:"9:00",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",
      touchup:true,facturable:false,devOrigen:"DV2",woOrigen:1038,tecOriginal:"T1",avance:0,
      confirmCliente:{fecha:"2026-08-13",medio:"Llamada",contacto:"Danielle Pratt",quien:"Thalia",hora:"9:20"},
-     hist:[["9:15","Touch-up creado desde la devolución — no facturable","Gustavo Andrade"],["9:16","Asignado a Diego Ramírez","Gustavo Andrade"],["9:20","Confirmada por el cliente vía Llamada","Thalia"]]},
+     hist:[["9:15","Return fix creado desde el return — no facturable","Gustavo Andrade"],["9:16","Asignado a Diego Ramírez","Gustavo Andrade"],["9:20","Confirmada por el cliente vía Llamada","Thalia"]]},
     /* Más ejemplos para probar Facturación y Cobranza (pedido de Claudia): Harbor
        Pointe lista para facturar con 2 WO, una con Sub-WO facturable en la misma
        factura y otra en factura separada. */
@@ -259,7 +259,7 @@ let S = {
     /* Touch-up de DV1 hecho por Andrés (no por Marcos, el responsable): origina el descuento DS-SEED1. */
     {id:1061,prop:"P1",unidad:"U2",cat:"Paint",serv:"Touch up paint",tec:"T4",estado:"Completed",semana:33,fecha:"2026-08-11",horaProg:"14:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T4",hora:"15:30"}],supervisada:true,validada:true,pagadaTec:false,facturada:false,pago:60,mats:[],notas:"",notasTec:"",
      touchup:true,facturable:false,devOrigen:"DV1",woOrigen:1041,tecOriginal:"T2",avance:100,
-     hist:[["8:55","Touch-up creado desde la devolución — no facturable","Gustavo Andrade"],["8:56","Asignado a Andrés Solís","Gustavo Andrade"],["15:30","Terminó · 1 evidencia","Andrés"],["15:45","Validada","Erika"]]}
+     hist:[["8:55","Return fix creado desde el return — no facturable","Gustavo Andrade"],["8:56","Asignado a Andrés Solís","Gustavo Andrade"],["15:30","Terminó · 1 evidencia","Andrés"],["15:45","Validada","Erika"]]}
   ],
   /* Hallazgo real encontrado en sitio (WO-1040, en progreso): Diego reportó
      la humedad desde su celular pero no pudo cargar la foto (mala señal).
@@ -474,17 +474,17 @@ let S = {
      prioridad:"Alta", fechaRep:"2026-08-09", fechaLimite:"2026-08-12",
      estado:"Abierta", lotesAntes:[{amb:"Baño",n:4}], lotesDespues:[],
      verifica:null, quien:"T6", touchup:1061,
-     hist:[["8:52","Devolución creada desde informe de supervisión","Gustavo Andrade"],
-           ["8:56","Se creó el touch-up WO-1061 para Andrés Solís","Gustavo Andrade"]]},
-    /* Genera el touch-up WO-1051, del propio Diego corrigiendo su propia WO-1038. */
+     hist:[["8:52","Return creado desde informe de supervisión","Gustavo Andrade"],
+           ["8:56","Se creó el return fix WO-1061 para Andrés Solís","Gustavo Andrade"]]},
+    /* Genera la corrección WO-1051, del propio Diego corrigiendo su propia WO-1038. */
     {id:"DV2", prop:"P1", unidad:"U1", wo:1038, area:"Cocina",
      desc:"Faltó limpiar el interior del refrigerador y el microondas.",
      causa:"Trabajo mal ejecutado por el técnico", responsable:"T1",
      prioridad:"Media", fechaRep:"2026-08-11", fechaLimite:"2026-08-14",
      estado:"Abierta", lotesAntes:[{amb:"Cocina",n:2}], lotesDespues:[],
      verifica:null, quien:"T6", touchup:1051,
-     hist:[["9:10","Devolución creada desde informe de supervisión","Gustavo Andrade"],
-           ["9:15","Se creó el touch-up WO-1051 para Diego Ramírez","Gustavo Andrade"]]}
+     hist:[["9:10","Return creado desde informe de supervisión","Gustavo Andrade"],
+           ["9:15","Se creó el return fix WO-1051 para Diego Ramírez","Gustavo Andrade"]]}
   ],
 
   /* ── REPORTE DIARIO ───────────────────────────────────────────────────
@@ -504,10 +504,10 @@ let S = {
   /* Ejemplo: Marcos hizo mal WO-1041, Andrés lo corrigió (WO-1061); Erika/Claudia decide si se descuenta. */
   descuentos:[
     {id:"DS-SEED1", tec:"T2", wo:1061, dev:"DV1", monto:60, montoReal:60, tope:false, semana:33, fecha:"2026-08-11", estado:"Por decidir",
-     motivo:"Corrección de Baño en la unidad A-211 — lo corrigió Andrés Solís"}
+     motivo:"Return fix de Baño en la unidad A-211 — lo corrigió Andrés Solís"}
   ],
   repDiario:[],
-  phDev:null,      // devolución abierta en el celular
+  phDev:null,      // return abierto en el celular
   phDiaId:null,    // si mira un reporte de otro día
   gDia:null,        // la entrada que esta escribiendo
   gDev:null,        // la devolucion que esta creando o verificando

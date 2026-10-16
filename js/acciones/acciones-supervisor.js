@@ -159,7 +159,7 @@ Object.assign(ACC, {
       r.avisado = true;
       toast("Antes de cerrar, ojo con esto",
         [sinVisitar.length?`Te quedan <b>${sinVisitar.length} parada(s) sin visitar</b>.`:"",
-         devs.length?`Hay <b>${devs.length} devoluci\u00f3n(es) pasada(s) de fecha</b>.`:""].filter(Boolean).join("<br>")
+         devs.length?`Hay <b>${devs.length} return(s) pasado(s) de fecha</b>.`:""].filter(Boolean).join("<br>")
         + `<br><br>Si igual quieres cerrarlo, vuelve a tocar <b>Finalizar</b>.`,"w");
       render(); return;
     }
@@ -263,7 +263,7 @@ Object.assign(ACC, {
   gDevOK: () => {
     leerDev(); const g=S.gDev;
     if(!g.desc || !g.desc.trim()){ toast("Falta la descripci\u00f3n","Escribe qu\u00e9 est\u00e1 mal.","r"); return; }
-    if(!g.lotes.length){ toast("Sin fotos","Una devoluci\u00f3n sin foto de lo que est\u00e1 mal no se puede sostener.","r"); return; }
+    if(!g.lotes.length){ toast("Sin fotos","Un return sin foto de lo que est\u00e1 mal no se puede sostener.","r"); return; }
     if(!g.unidad){ toast("Falta la unidad","Esta propiedad no tiene unidades registradas.","r"); return; }
     const c = causaDe(g.causa);
     const d = {id:"DV"+Date.now(), prop:g.prop, unidad:g.unidad, wo:g.wo, area:g.area,
@@ -271,20 +271,20 @@ Object.assign(ACC, {
       fechaRep:HOY_SUP, fechaLimite:g.fechaLimite||"2026-08-14", estado:"Abierta",
       lotesAntes:g.lotes.slice(), lotesDespues:[], verifica:null, quien:GUSTAVO,
       urgente:!!g.urgente,
-      hist:[[hora(),"Devoluci\u00f3n creada en campo",tecN(GUSTAVO)]]};
+      hist:[[hora(),"Return creado en campo",tecN(GUSTAVO)]]};
     S.devoluciones.push(d);
     anotarDia("devolucion",
       `${esc(P(d.prop).nombre)} ${U(d.unidad)?esc(U(d.unidad).num):""} — ${esc(d.area)}: ${d.desc.slice(0,60)}`,
       d.id, {prop:d.prop, unidad:d.unidad, fotos:d.lotesAntes.reduce((t,l)=>t+l.n,0)});
     S.gDev=null; S.phDev=d.id; S.phView="dev"; S.reloj+=6;
     flash("dv:"+d.id);
-    toast("Devoluci\u00f3n abierta",
+    toast("Return abierto",
       `<b>${esc(tecN(d.responsable))}</b> tiene que corregir <b>${esc(d.area)}</b> antes del <b>${esc(d.fechaLimite)}</b>.<br><br>`
       + `Causa: ${esc(d.causa)} — ${c.ex}<br><br>`
       + `Sigue contando abierta hasta que t\u00fa la verifiques con fotos.`,"w");
-    avisar("Claudia","Gustavo abri\u00f3 una devoluci\u00f3n",
+    avisar("Claudia","Gustavo abri\u00f3 un return",
       `${esc(P(d.prop).nombre)} ${U(d.unidad)?esc(U(d.unidad).num):""} · ${esc(d.area)} · ${esc(d.prioridad)} · ${esc(tecN(d.responsable))}.`,"w");
-    avisar("Thalia","Devoluci\u00f3n por reagendar",
+    avisar("Thalia","Return por reagendar",
       `${esc(P(d.prop).nombre)} ${U(d.unidad)?esc(U(d.unidad).num):""} — ${esc(tecN(d.responsable))} debe corregir ${esc(d.area)} antes del ${esc(d.fechaLimite)}.`,"w");
     render();
   },
@@ -302,22 +302,22 @@ Object.assign(ACC, {
     d.notaVerif = g.nota||"";
     d.hist.push([hora(),"Verificada en campo — fotos del despu\u00e9s cargadas",tecN(GUSTAVO)]);
     anotarDia("devolucion",
-      `Verificada la correcci\u00f3n en ${esc(P(d.prop).nombre)} ${U(d.unidad)?esc(U(d.unidad).num):""} — ${esc(d.area)}`,
+      `Verificado el return fix en ${esc(P(d.prop).nombre)} ${U(d.unidad)?esc(U(d.unidad).num):""} — ${esc(d.area)}`,
       d.id, {prop:d.prop, unidad:d.unidad, fotos:g.lotes.reduce((t,l)=>t+l.n,0)});
     S.gDev=null; flash("dv:"+d.id);
     toast("✓ Corregida",
       `${g.lotes.reduce((t,l)=>t+l.n,0)} foto(s) del despu\u00e9s. Ya puedes cerrarla para que deje de contar.`,"v");
     render();
   },
-  /* Cierre desde la oficina: cualquiera con el módulo Devoluciones, con la evidencia que mandó el técnico en la WO de corrección. */
+  /* Cierre desde la oficina: cualquiera con el módulo Returns, con la evidencia que mandó el técnico en la WO de return fix. */
   devCerrar: d => {
     const dv=DV(d.id); if(!dv||dv.estado!=="Corregida"||!puede("devoluciones")) return;
     dv.estado="Cerrada"; dv.fechaCierre=HOY_SUP; dv.cerro={quien:S.usuario,fecha:HOY_SUP,hora:hora()};
     dv.hist.push([hora(),"Cerrada por la oficina",S.usuario]);
     S._audDev=P(dv.prop).nombre+" · "+(U(dv.unidad)?U(dv.unidad).num:"")+" — "+dv.area;
     const c=causaDe(dv.causa); flash("dv:"+dv.id);
-    toast("Devolución cerrada",`Quedó el historial completo. Por la causa registrada, la corrección <b>${c.paga?"sí":"no"}</b> se le paga a ${esc(tecN(dv.responsable))}.`,"v");
-    if(S.usuario!=="Erika") avisar("Erika","Devolución cerrada — ya se puede facturar",`${esc(P(dv.prop).nombre)} ${U(dv.unidad)?esc(U(dv.unidad).num):""}. Corrección ${c.paga?"pagada":"no pagada"} al técnico.`,"v");
+    toast("Return cerrado",`Quedó el historial completo. Por la causa registrada, el return fix <b>${c.paga?"sí":"no"}</b> se le paga a ${esc(tecN(dv.responsable))}.`,"v");
+    if(S.usuario!=="Erika") avisar("Erika","Return cerrado — ya se puede facturar",`${esc(P(dv.prop).nombre)} ${U(dv.unidad)?esc(U(dv.unidad).num):""}. Return fix ${c.paga?"pagado":"no pagado"} al técnico.`,"v");
     render(); },
   /* En el celular de Gustavo: marca que entra un inquilino pronto. */
   gDevUrg: () => { leerDev(); if(S.gDev){ S.gDev.urgente=!S.gDev.urgente; render(); } },
@@ -330,14 +330,14 @@ Object.assign(ACC, {
     dv.hist.push([hora(),"Cerrada por el supervisor",tecN(GUSTAVO)]);
     const c = causaDe(dv.causa);
     flash("dv:"+dv.id);
-    toast("Devoluci\u00f3n cerrada",
+    toast("Return cerrado",
       `Qued\u00f3 el historial completo: ${dv.lotesAntes.reduce((t,l)=>t+l.n,0)} foto(s) de antes y `
       + `${dv.lotesDespues.reduce((t,l)=>t+l.n,0)} del despu\u00e9s.<br><br>`
-      + `Por la causa registrada, la correcci\u00f3n <b>${c.paga?"s\u00ed":"no"}</b> se le paga a ${esc(tecN(dv.responsable))}.`,"v");
-    avisar("Claudia","Devoluci\u00f3n cerrada",
+      + `Por la causa registrada, el return fix <b>${c.paga?"s\u00ed":"no"}</b> se le paga a ${esc(tecN(dv.responsable))}.`,"v");
+    avisar("Claudia","Return cerrado",
       `${esc(P(dv.prop).nombre)} ${U(dv.unidad)?esc(U(dv.unidad).num):""} · ${esc(dv.area)} — verificada por Gustavo.`,"v");
-    avisar("Erika","Devoluci\u00f3n cerrada — ya se puede facturar",
-      `${esc(P(dv.prop).nombre)} ${U(dv.unidad)?esc(U(dv.unidad).num):""}. Correcci\u00f3n ${c.paga?"pagada":"no pagada"} al t\u00e9cnico.`,"v");
+    avisar("Erika","Return cerrado — ya se puede facturar",
+      `${esc(P(dv.prop).nombre)} ${U(dv.unidad)?esc(U(dv.unidad).num):""}. Return fix ${c.paga?"pagado":"no pagado"} al t\u00e9cnico.`,"v");
     render();
   },
 
@@ -511,7 +511,7 @@ Object.assign(ACC, {
       if(ctc) toast("✓ Copia enviada al cliente",
         `${esc(ctc.nombre)} (${esc(ctc.mail)}) recibió copia del informe por correo.`,"");
     }
-    /* Si marcó «requiere corrección», la devolución se abre en el acto: si se
+    /* Si marcó «requiere corrección», el return se abre en el acto: si se
        deja para después, no se crea nunca y el trabajo malo queda facturado. */
     /* El trabajo adicional recomendado no se entierra en el informe: antes
        solo avisaba a Claudia y ella tenía que crear la Solicitud Comercial

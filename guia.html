@@ -151,10 +151,10 @@ main{max-width:1100px;margin:0 auto;padding-top:16px;padding-bottom:max(110px,ca
 <script>
 /* ═══ People ═══ */
 const PEOPLE={
-  Lydia:{c:"#7a4fb0",r:"Comercial",d:"Visita clientes, crea solicitudes y estimados, y lleva Devoluciones como área de calidad."},
+  Lydia:{c:"#7a4fb0",r:"Comercial",d:"Visita clientes, crea solicitudes y estimados, y lleva Returns como área de calidad."},
   Claudia:{c:"#b0563a",r:"Administración y estimados",d:"Arma los estimados, aprueba excepciones, arma la ruta de Gustavo y valida trabajos."},
   Thalia:{c:"#2a6fb0",r:"Programación",d:"Coordina fechas con el cliente, asigna técnicos y avisa al cliente cuando una unidad queda pendiente."},
-  Gustavo:{c:"#2e7a43",r:"Supervisor en campo",d:"Inspecciona para estimados, supervisa trabajos y abre devoluciones desde su celular."},
+  Gustavo:{c:"#2e7a43",r:"Supervisor en campo",d:"Inspecciona para estimados, supervisa trabajos y abre returns desde su celular."},
   Erika:{c:"#0f6b66",r:"Administración",d:"Valida trabajos, paga nómina, factura y cobra."},
   Técnico:{c:"#8a5a00",r:"Celular del técnico",d:"Marca llegada, toma fotos, registra materiales y cierra el trabajo."},
   Cliente:{c:"#566868",r:"Propiedad o dueño",d:"Pide trabajos, aprueba estimados, confirma fechas y paga facturas."},
@@ -266,26 +266,26 @@ const FLOWS=[
    msgs:[{k:"noti",to:"Técnico · Marcos Ayala",sub:"Puedes continuar",body:"WO-1050 ya tiene acceso. Retoma el trabajo."}]}
  ]},
 
-{id:"devolucion",n:"4 · Devolución y touch-up",obj:"WO-1041",sub:"Sunset Apartments U2 · Full paint · Marcos Ayala",start:["Completed","v"],
- intro:"Return y devolución son lo mismo: un trabajo que quedó mal. El touch-up es el arreglo.",
+{id:"devolucion",n:"4 · Return y return fix",obj:"WO-1041",sub:"Sunset Apartments U2 · Full paint · Marcos Ayala",start:["Completed","v"],
+ intro:"Un return es un trabajo que quedó mal. El return fix es el arreglo.",
  steps:[
-  {who:"Gustavo",btn:"Crear devolución",t:"Se detecta el problema",to:["Returned","r"],marks:{dev:true},
-   txt:"Gustavo supervisa y ve pintura en el marco de la puerta. Crea la devolución con fotos del antes, causa, responsable y fecha límite.",
-   why:"También se puede abrir desde la oficina con «Registrar devolución», desde supervisión con «Devolver», o desde el aviso de WO duplicada. Siempre es el mismo registro.",
+  {who:"Gustavo",btn:"Crear return",t:"Se detecta el problema",to:["Returned","r"],marks:{dev:true},
+   txt:"Gustavo supervisa y ve pintura en el marco de la puerta. Crea el return con fotos del antes, causa, responsable y fecha límite.",
+   why:"También se puede abrir desde la oficina con «Registrar return», desde supervisión con «Hacer return», o desde el aviso de WO duplicada. Siempre es el mismo registro.",
    rule:"<b>La causa decide la plata.</b> Trabajo mal hecho: no se paga ni se cobra. Cambio del cliente: se paga y se cobra. Daño de un tercero: se paga y se cobra a quien corresponda. Material defectuoso: se paga y no se cobra.",
-   msgs:[{k:"noti",to:"Claudia",sub:"Gustavo abrió una devolución",body:"Sunset U2 · marco de puerta · Alta · Marcos Ayala."},
-         {k:"noti",to:"Thalia",sub:"Devolución por reagendar",body:"Marcos debe corregir antes del jueves."}]},
-  {who:"Lydia",btn:"Crear touch-up",t:"Se crea el touch-up",to:["Returned","r"],marks:{tu:true},
-   txt:"Desde el módulo Devoluciones se crea una WO nueva solo para corregir. Se elige quién va y cuándo; si es urgente, hoy mismo.",
-   rule:"<b>Si va el mismo técnico:</b> no se le paga, rehace su trabajo. <b>Si va otro:</b> a ese se le paga y al primero se le descuenta, nunca más de lo que ganó. <b>Al cliente</b> el touch-up nunca se le factura.",
-   msgs:[{k:"noti",to:"Técnico · Marcos Ayala",sub:"Tienes un touch-up asignado",body:"Sunset U2 — marco de puerta: quedó pintura y el zócalo sin retocar."}]},
+   msgs:[{k:"noti",to:"Claudia",sub:"Gustavo abrió un return",body:"Sunset U2 · marco de puerta · Alta · Marcos Ayala."},
+         {k:"noti",to:"Thalia",sub:"Return por reagendar",body:"Marcos debe corregir antes del jueves."}]},
+  {who:"Lydia",btn:"Crear return fix",t:"Se crea el return fix",to:["Returned","r"],marks:{tu:true},
+   txt:"Desde el módulo Returns se crea una WO nueva solo para corregir. Se elige quién va y cuándo; si es urgente, hoy mismo.",
+   rule:"<b>Si va el mismo técnico:</b> no se le paga, rehace su trabajo. <b>Si va otro:</b> a ese se le paga y al primero se le descuenta, nunca más de lo que ganó. <b>Al cliente</b> el return fix nunca se le factura.",
+   msgs:[{k:"noti",to:"Técnico · Marcos Ayala",sub:"Tienes un return fix asignado",body:"Sunset U2 — marco de puerta: quedó pintura y el zócalo sin retocar."}]},
   {who:"Técnico",btn:"Terminé",t:"El técnico corrige",to:["Returned","r"],marks:{corr:true},
-   txt:"Hace la corrección y cierra el touch-up con fotos del después. La devolución pasa a «Corregida».",
-   msgs:[{k:"noti",to:"Lydia",sub:"Corrección lista para cerrar",body:"Sunset U2 · touch-up terminado por Marcos con 3 fotos."}]},
-  {who:"Gustavo",btn:"Cerrar devolución",t:"Se cierra",to:["Corrected","a"],marks:{cerr:true},
-   txt:"La cierra Gustavo desde su celular o la oficina desde Devoluciones. Queda el historial con fotos de antes y después.",
+   txt:"Hace el return fix y lo cierra con fotos del después. El return pasa a «Corregida».",
+   msgs:[{k:"noti",to:"Lydia",sub:"Return fix listo para cerrar",body:"Sunset U2 · return fix terminado por Marcos con 3 fotos."}]},
+  {who:"Gustavo",btn:"Cerrar return",t:"Se cierra",to:["Corrected","a"],marks:{cerr:true},
+   txt:"La cierra Gustavo desde su celular o la oficina desde Returns. Queda el historial con fotos de antes y después.",
    why:"Mientras está abierta, la WO no se factura. Al cerrarla se libera.",
-   msgs:[{k:"noti",to:"Erika",sub:"Devolución cerrada — ya se puede facturar",body:"Sunset U2. Corrección no pagada al técnico."}]}
+   msgs:[{k:"noti",to:"Erika",sub:"Return cerrado — ya se puede facturar",body:"Sunset U2. Return fix no pagado al técnico."}]}
  ]},
 
 {id:"validar",n:"5 · Supervisión y validación",obj:"WO-1050",sub:"Sunset Apartments B-102 · Full paint",start:["Completed","v"],
@@ -293,7 +293,7 @@ const FLOWS=[
  steps:[
   {who:"Gustavo",btn:"Aprobar supervisión",t:"Gustavo supervisa",to:["Completed","v"],marks:{sup:true},
    txt:"Revisa la unidad y las fotos. Si no pudo ir, registra «No se pudo supervisar» y el motivo.",
-   why:"La supervisión no frena el pago: es control de calidad. Si algo está mal, abre una devolución (recorrido 4).",
+   why:"La supervisión no frena el pago: es control de calidad. Si algo está mal, abre un return (recorrido 4).",
    msgs:[]},
   {who:"Erika",btn:"Revisar",t:"Erika revisa lo que no se validó solo",to:["Completed","v"],
    txt:"Solo le llegan las WO con algo raro: sin fotos, sin tarifa o con un pendiente. Aprueba el pago y la factura por separado.",
@@ -311,11 +311,11 @@ const FLOWS=[
  steps:[
   {who:"Sistema",btn:"Calcular",t:"Se juntan los trabajos pagables",to:["Por pagar","a"],
    txt:"Entra cada WO con pago aprobado y sin pendientes. Lo que quedó sin pagar de semanas anteriores se arrastra.",
-   rule:"<b>Una WO no se paga si:</b> tiene un Request pendiente, una Sub-WO sin terminar o el cliente pidió revisión. La ayuda en sitio y las devoluciones no frenan el pago.",
+   rule:"<b>Una WO no se paga si:</b> tiene un Request pendiente, una Sub-WO sin terminar o el cliente pidió revisión. La ayuda en sitio y los returns no frenan el pago.",
    msgs:[]},
   {who:"Sistema",btn:"Sumar y restar",t:"Se aplican adicionales y descuentos",to:["Por pagar","a"],
-   txt:"Se suman los adicionales aprobados. Los descuentos por devolución aparecen como «Por decidir».",
-   msgs:[{k:"alert",to:"Erika",sub:"Descuento por decidir",body:"Devolución Sunset U2: descontar $90 a Marcos Ayala."}]},
+   txt:"Se suman los adicionales aprobados. Los descuentos por return aparecen como «Por decidir».",
+   msgs:[{k:"alert",to:"Erika",sub:"Descuento por decidir",body:"Return Sunset U2: descontar $90 a Marcos Ayala."}]},
   {who:"Erika",btn:"Aplicar descuento",t:"Erika decide el descuento",to:["Por pagar","a"],
    txt:"Lo marca «Aplicado» o «No aplicado», con motivo.",
    why:"El descuento nunca se aplica solo: siempre lo decide una persona.",
@@ -361,13 +361,13 @@ const ESTADOS=[
   ["Detenido","w","Empezó pero algo externo lo frena.","Thalia, con «Detener trabajo»."],
   ["Pending","g","Esperando respuesta del cliente, con fecha límite.","Thalia, al avisar al cliente."],
   ["Completed","v","Terminada con fotos.","El técnico, con «Terminé»."],
-  ["Returned","r","Se devolvió: hay que corregir.","Gustavo o la oficina, al abrir una devolución."],
-  ["Corrected","a","La devolución se corrigió y cerró.","Gustavo o la oficina, al cerrar la devolución."],
+  ["Returned","r","Con return: hay que corregir.","Gustavo o la oficina, al abrir un return."],
+  ["Corrected","a","El return se corrigió y cerró.","Gustavo o la oficina, al cerrar el return."],
   ["Canceled","r","Cancelada antes de empezar.","La oficina. Solo se puede si está Scheduled o Confirmed."]
 ];
 
 const MARKS={wo:[["tec","Técnico asignado"],["lleg","Llegada marcada"],["fotos","Fotos"],["val","Validada"],["sup","Supervisada"],["pago","Pago aprobado"],["fac","Factura aprobada"]],
-             devolucion:[["dev","Devolución abierta"],["tu","Touch-up creado"],["corr","Corregida"],["cerr","Cerrada"]]};
+             devolucion:[["dev","Return abierto"],["tu","Return fix creado"],["corr","Corregida"],["cerr","Cerrada"]]};
 MARKS.validar=MARKS.wo; MARKS.imprevistos=[];
 
 let fi=0, si=-1, timer=null;

@@ -54,11 +54,11 @@ function excAuto(){
         monto:null, pide:"Sistema", aprueba:"Erika", estado:"Pendiente", fecha:"", resol:null}));
     });
   });
-  /* Cada devolución abierta o corregida también sale aquí, sin dueño hasta que alguien la tome.
-     No frena pago ni factura: eso ya lo controla la propia devolución (ver woBloqueada). */
+  /* Cada return abierto o corregido también sale aquí, sin dueño hasta que alguien lo tome.
+     No frena pago ni factura: eso ya lo controla el propio return (ver woBloqueada). */
   S.devoluciones.filter(dv=>dv.estado!=="Cerrada").forEach(dv=>{
-    out.push(conAsignacion({id:"AUTO-V"+dv.id, tipo:"Devolución", wo:dv.wo, dev:dv.id, auto:true,
-      motivo:`${dv.area}: ${dv.desc} — responsable ${tecN(dv.responsable)}${dv.touchup?` · touch-up WO-${dv.touchup}`:" · falta crear el touch-up"}.`,
+    out.push(conAsignacion({id:"AUTO-V"+dv.id, tipo:"Return", wo:dv.wo, dev:dv.id, auto:true,
+      motivo:`${dv.area}: ${dv.desc} — responsable ${tecN(dv.responsable)}${dv.touchup?` · return fix WO-${dv.touchup}`:" · falta crear el return fix"}.`,
       monto:null, pide:dv.quien||"Gustavo", aprueba:null, estado:"Pendiente", fecha:dv.fechaRep, resol:null}));
   });
   // La primera vez que el sistema detecta cada una queda su hora — así se ve
@@ -109,8 +109,8 @@ function slaApprovalRequest(x){
 /* Toda Request debe estar ligada a una WO. Por eso solo frena esa
    orden: las demás nóminas y facturas pueden continuar. */
 const excBloqueaTodo = () => false;
-// «Ayuda en sitio» (el técnico pide una mano) y «Devolución» (ya la controla la propia devolución) no frenan pago ni factura de la WO.
-const woBloqueada = wid => excPend().some(x=>x.wo===wid && x.tipo!=="Ayuda en sitio" && x.tipo!=="Devolución");
+// «Ayuda en sitio» (el técnico pide una mano) y «Return» (ya lo controla el propio return) no frenan pago ni factura de la WO.
+const woBloqueada = wid => excPend().some(x=>x.wo===wid && x.tipo!=="Ayuda en sitio" && x.tipo!=="Return");
 function historialApproval(x){
   const hs=x.historial||[];
   return hs.length?`<div style="font-size:9.5px;color:var(--faint);margin-top:5px">${hs.map(h=>
@@ -127,7 +127,7 @@ VIEWS.excepciones = () => {
   pend.forEach(x=>porTipo[x.tipo]=(porTipo[x.tipo]||0)+1);
   return `
   <div class="ph"><div><h2>Requests</h2>
-    <p>Solicitudes que necesitan que <b>alguien de oficina</b> decida. Cada una frena el pago y la factura de su propia WO — no de las demás. Las de «Ayuda en sitio» (técnico pidiendo una mano) y las de «Devolución» no frenan el pago ni la factura.</p></div>
+    <p>Solicitudes que necesitan que <b>alguien de oficina</b> decida. Cada una frena el pago y la factura de su propia WO — no de las demás. Las de «Ayuda en sitio» (técnico pidiendo una mano) y las de «Return» no frenan el pago ni la factura.</p></div>
     <div class="act"><button class="btn p" data-a="excNueva">+ New Request</button></div></div>
 
   ${pend.length
@@ -154,10 +154,10 @@ VIEWS.excepciones = () => {
         ${(x.assignedTo===S.usuario || x.aprueba===S.usuario) ? (x.tipo==="Cambio de monto en factura"
           ? `<button class="btn sm" data-a="excRech" data-id="${x.id}">Rechazar</button>
              <button class="btn sm p" data-a="facEditarEmitida" data-id="${x.factura}">Editar factura</button>`
-          : x.tipo==="Devolución"
+          : x.tipo==="Return"
           ? (DV(x.dev)&&DV(x.dev).touchup
-              ? `<button class="btn sm" data-a="woVer" data-id="${DV(x.dev).touchup}">Ver touch-up</button>`
-              : `<button class="btn sm p" data-a="devTouchup" data-id="${x.dev}">Crear touch-up</button>`)
+              ? `<button class="btn sm" data-a="woVer" data-id="${DV(x.dev).touchup}">Ver return fix</button>`
+              : `<button class="btn sm p" data-a="devTouchup" data-id="${x.dev}">Crear return fix</button>`)
           : x.tipo==="Ayuda en sitio"
           ? `<button class="btn sm v" data-a="excAyudaResolver" data-id="${x.id}">Resolver</button>`
           : x.tipo==="Unit data mismatch"
@@ -571,9 +571,9 @@ VIEWS.nomina = () => {
     const ds = S.descuentos.filter(x=>x.semana===S.periodo.sem && x.tipo!=="Manual");
     if(!ds.length) return "";
     return `<div class="card" style="border-color:var(--rojo)">
-      <div class="chd" style="background:var(--rojo-cl)"><h3 style="color:var(--rojo)">Descuentos por devolución</h3>
+      <div class="chd" style="background:var(--rojo-cl)"><h3 style="color:var(--rojo)">Descuentos por return</h3>
         <span class="s">${ds.length} línea(s)${ds.some(x=>x.estado==="Por decidir")?` · <b>${ds.filter(x=>x.estado==="Por decidir").length} por decidir</b>`:""} · los pendientes no se descuentan hasta que se decida</span></div>
-      <table><thead><tr><th>Técnico</th><th>Motivo</th><th>Devolución</th><th>Touch-up</th>
+      <table><thead><tr><th>Técnico</th><th>Motivo</th><th>Return</th><th>Return fix</th>
         <th>Evidencia</th><th class="num">Monto</th><th>Decisión</th></tr></thead>
       <tbody>${ds.map(x=>{ const dv=DV(x.dev);
         return `<tr class="${fl("desc:"+x.id)}"><td style="font-weight:650">${esc(tecN(x.tec))}</td>
@@ -584,7 +584,7 @@ VIEWS.nomina = () => {
           <td>${dv?`<span class="pill m">${(dv.lotesAntes||[]).reduce((t,l)=>t+l.n,0)} foto(s) del antes</span>`:"—"}</td>
           <td class="num mono" style="color:${x.estado==="Aplicado"?"var(--rojo)":"var(--faint)"}${x.estado==="No aplicado"?";text-decoration:line-through":""}">−${money(x.monto)}
             ${x.tope?`<div style="font-size:10px;color:var(--faint);font-weight:400">
-              la corrección costó ${money(x.montoReal)}<br>se limitó a lo que ganó</div>`:""}</td>
+              el return fix costó ${money(x.montoReal)}<br>se limitó a lo que ganó</div>`:""}</td>
           <td>${x.estado==="Por decidir"
               ?`<span class="pill w">Por decidir</span>
                 <div style="display:flex;gap:6px;margin-top:6px">
@@ -597,7 +597,7 @@ VIEWS.nomina = () => {
       <div class="cp" style="border-top:1px solid var(--line)"><div class="tr" style="margin:0">
         Claudia: <i>«cada unidad tiene a su técnico responsable y él tiene que corregir su trabajo»</i>.
         Si no fue él a corregir, se le paga al que fue y se le descuenta a él el mismo monto.
-        El descuento nunca aparece sin la devolución que lo origina.
+        El descuento nunca aparece sin el return que lo origina.
         Solo los «Aplicado» restan del pago; «Por decidir» y «No aplicado» no.</div></div>
     </div>`;})()}
 
@@ -605,7 +605,7 @@ VIEWS.nomina = () => {
     <div><div style="font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.05em">Total a pagar — ${periodoTexto(S.periodo)}</div>
       ${(()=>{ /* El neto se calcula POR TECNICO y nunca baja de cero: a nadie
              se le puede cobrar de vuelta, y el total no puede salir negativo.
-             Los descuentos por devolución se llevan por semana — fuera del
+             Los descuentos por return se llevan por semana — fuera del
              período «Semana» se muestra el bruto, sin netear. */
         const bruto=ws.reduce((a,w)=>a+montoNomWO(w),0)+extrasPeriodo.reduce((a,x)=>a+(x.monto||0),0)
           +prevAll.reduce((a,w)=>a+montoNomWO(w),0)+extrasPrev.reduce((a,x)=>a+(x.monto||0),0);
@@ -943,7 +943,7 @@ VIEWS.facturacion = () => {
     if(subWOsPendientesDeWO(w.id).length) razones.push("tiene una Sub-WO pendiente");
     if(clienteRevisionPendienteDeWO(w.id)) razones.push("falta confirmación o corrección del cliente");
     if(woBloqueada(w.id)) razones.push("tiene una Request pendiente");
-    if(bloqueadaPorDev(w)) razones.push("tiene una devolución abierta");
+    if(bloqueadaPorDev(w)) razones.push("tiene un return abierto");
     if(!ingresoWO(w)) razones.push("no tiene tarifa o importe definido");
     return {w,razones};
   }).filter(x=>x.razones.length);
@@ -964,13 +964,13 @@ VIEWS.facturacion = () => {
   ${renderSelectorPeriodo()}
   ${S.periodo.tipo==="semana"?resumenDosSemanas(S.periodo.sem):""}
   ${frenadas.length?`<div class="note w" style="margin-bottom:14px">
-    <b>${frenadas.length} Work Order(s) no se pueden facturar: tienen una devolución abierta.</b><br>
+    <b>${frenadas.length} Work Order(s) no se pueden facturar: tienen un return abierto.</b><br>
     Se mandaron a corregir, así que no se le cobran al cliente hasta que Gustavo verifique que quedaron bien.
     <div style="margin-top:6px;font-size:11.5px">
       ${frenadas.map(w=>{ const d=devAbiertaDeWO(w.id);
         return `WO-${w.id} · ${esc(P(w.prop).nombre)} ${U(w.unidad)?esc(U(w.unidad).num):""}
                 — ${esc(d.area)}, ${diasAbierta(d)} día(s) abierta`;}).join("<br>")}</div>
-    <button class="btn sm" data-a="ir" data-m="supervision" style="margin-top:7px">Ver devoluciones</button></div>`:""}
+    <button class="btn sm" data-a="ir" data-m="supervision" style="margin-top:7px">Ver returns</button></div>`:""}
   ${frenadasExc.length?`<div class="note r" style="margin-bottom:14px">
     <b>${frenadasExc.length} Work Order(s) no se pueden facturar: tienen una Request pendiente.</b><br>
     Facturar con una tarifa sin definir, o con un adicional todavía sin decidir, es facturar mal. El resto de cada propiedad se puede facturar igual.

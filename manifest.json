@@ -1,7 +1,7 @@
 {
   "name": "Cordova Ops — Gustavo",
   "short_name": "Gustavo",
-  "description": "Celular de Gustavo (Supervisor de campo) — reportes, ruta, devoluciones.",
+  "description": "Celular de Gustavo (Supervisor de campo) — reportes, ruta, returns.",
   "start_url": "index.html?gustavo=1",
   "scope": "./",
   "display": "standalone",

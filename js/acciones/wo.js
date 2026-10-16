@@ -351,7 +351,7 @@ Object.assign(ACC, {
     if(fn) fn();
   },
   /* Erika: el return «se va a la original y desde ahí se hace». No se crea
-     una WO nueva: se abre la original y se registra la devolución con el
+     una WO nueva: se abre la original y se registra el return con el
      flujo de siempre (no se cobra al cliente; si lo rehace el mismo técnico
      no se le paga; si va otro, al original le queda el descuento por decidir). */
   woDupReturn: d => {
@@ -557,16 +557,16 @@ Object.assign(ACC, {
     render();
   },
 
-  /* «Crear devolución (Fotos + observaciones) → Enviar reporte a THALIA»
+  /* «Crear return (Fotos + observaciones) → Enviar reporte a THALIA»
      Esta era la mitad del hueco H-10: solo pedía el motivo y nunca creaba
      el registro real en S.devoluciones — así que el descuento en la nómina,
      el bloqueo de facturación y el touch-up nunca se disparaban si Gustavo
      devolvía el trabajo desde aquí (el camino de escritorio, el más a
      mano) en vez de desde su celular. Ahora pide lo mismo que el celular
-     y crea la misma devolución real — un solo resultado, dos puertas. */
+     y crea el mismo return real — un solo resultado, dos puertas. */
   devolverModal: d => {
     const w=W(+d.id);
-    modal(`<div class="mh"><h3>Devolver WO-${w.id}</h3>
+    modal(`<div class="mh"><h3>Hacer return a WO-${w.id}</h3>
       <p>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)} · ${esc(tecN(w.tec))}</p></div>
     <div class="mb">
       <div class="fld"><label>¿Qué no cumple? <span class="req">*</span></label>
@@ -584,10 +584,10 @@ Object.assign(ACC, {
       <div class="fld"><label>Foto de la observación <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label>
         ${S._dvFoto?`<img src="${S._dvFoto}" style="width:100%;height:96px;object-fit:cover;border-radius:9px;margin:0 0 6px">`:""}
         <button type="button" class="btn" style="width:100%" data-a="devFoto" data-id="${w.id}">📷 ${S._dvFoto?"Cambiar foto":"Adjuntar foto"}</button></div>
-      <div class="note w">Le llega a <b>Thalia</b> para corrección o reagendamiento, y queda contado como devolución de <b>${esc(tecN(w.tec))}</b>.</div>
+      <div class="note w">Le llega a <b>Thalia</b> para corrección o reagendamiento, y queda contado como return de <b>${esc(tecN(w.tec))}</b>.</div>
     </div>
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
-      <button class="btn" style="border-color:var(--rojo);color:var(--rojo)" data-a="devolverOK" data-id="${w.id}">Devolver el trabajo</button></div>`);
+      <button class="btn" style="border-color:var(--rojo);color:var(--rojo)" data-a="devolverOK" data-id="${w.id}">Hacer return del trabajo</button></div>`);
   },
   devFoto: d => {
     // Adjuntar la foto reabre el modal (para mostrarla), así que primero
@@ -600,27 +600,27 @@ Object.assign(ACC, {
       ACC.devCausaRef();
     });
   },
-  /* PRODUCCIÓN: la devolución no cambia el estado de la WO; solo suma w.devuelta.
-     En la versión real la WO pasa a Returned aquí y a Corrected al cerrar la devolución. */
+  /* PRODUCCIÓN: el return no cambia el estado de la WO; solo suma w.devuelta.
+     En la versión real la WO pasa a Returned aquí y a Corrected al cerrar el return. */
   devolverOK: d => {
     const w=W(+d.id), m=val("dvM"), area=val("dvA"), causa=val("dvC");
     if(!m){ marcaFalta(["dvM"]); toast("Falta el motivo","Sin decir qué está mal, el técnico no sabe qué corregir.","r"); return; }
     w.devuelta=(w.devuelta||0)+1; w.motivoDev=m;
-    w.revisionCalidad={estado:"Devolución creada",fecha:HOY_SUP,hora:hora(),quien:S.usuario,motivo:m};
+    w.revisionCalidad={estado:"Return creado",fecha:HOY_SUP,hora:hora(),quien:S.usuario,motivo:m};
     (w.evidFotos=w.evidFotos||[]).push(fotoNueva(S._dvFoto||null, S.usuario));
     w.evid=w.evidFotos.length; S._dvFoto=null; flash("wo:"+w.id);
-    w.hist.push([hora(),`Devuelta por supervisión: ${m}`,S.usuario]);
+    w.hist.push([hora(),`Return por supervisión: ${m}`,S.usuario]);
     // El registro real — el mismo que crea gDevOK desde el celular — para que
     // el descuento, el bloqueo de facturación y el touch-up sí se disparen.
     const dv = {id:"DV"+Date.now(), prop:w.prop, unidad:w.unidad, wo:w.id, area,
       desc:m, causa, responsable:w.tec, prioridad:val("dvP")||"Alta",
       fechaRep:HOY_SUP, fechaLimite:val("dvL")||"2026-08-14", estado:"Abierta",
       lotesAntes:[{amb:area,n:1}], lotesDespues:[], verifica:null, quien:S.usuario,
-      hist:[[hora(),"Devolución creada desde revisión de supervisión",S.usuario]]};
+      hist:[[hora(),"Return creado desde revisión de supervisión",S.usuario]]};
     S.devoluciones.push(dv); flash("dv:"+dv.id);
     cm();
-    toast("Corrección creada",`WO-${w.id} conserva su cierre original. La devolución queda disponible para crear y asignar una corrección a cualquier técnico.`,"w");
-    noti("Trabajo devuelto",`${P(w.prop).nombre} · ${U(w.unidad).num}: ${m}`);
+    toast("Return fix creado",`WO-${w.id} conserva su cierre original. El return queda disponible para crear y asignar un return fix a cualquier técnico.`,"w");
+    noti("Trabajo con return",`${P(w.prop).nombre} · ${U(w.unidad).num}: ${m}`);
     render();
   },
 
@@ -685,7 +685,7 @@ Object.assign(ACC, {
     const dev=S.wos.filter(w=>w.devuelta).length;
     const apro=S.wos.filter(w=>w.supervisada).length;
     toast("✓ Reporte diario enviado a Claudia",
-      `${vis.filter(v=>v.tipo==="Supervisión").length} visita(s), ${apro} aprobados, ${dev} devuelto(s), `
+      `${vis.filter(v=>v.tipo==="Supervisión").length} visita(s), ${apro} aprobados, ${dev} con return, `
       + `${vis.filter(v=>v.tipo==="Inspección"&&v.estado==="Cerrada").length} inspección(es). `
       + `Con fotos, observaciones y materiales requeridos.`,"v");
     render();
@@ -753,7 +753,7 @@ Object.assign(ACC, {
       + (w.avanceNota?`<br>${esc(w.avanceNota)}`:""), "v");
     render(); },
 
-  /* Registrar una devolución sin pasar por Gustavo (la pide la propiedad, llega por correo o la reporta él). Quién la hizo se toma de la última WO de la unidad. */
+  /* Registrar un return sin pasar por Gustavo (la pide la propiedad, llega por correo o la reporta él). Quién la hizo se toma de la última WO de la unidad. */
   devRegistrar: d => {
     const keep=k=>(d&&d.keep&&document.getElementById(k)?document.getElementById(k).value:"");
     const base=d&&d.wo?W(+d.wo):null;   // si viene de la ficha de una WO, ya se sabe propiedad, unidad y técnico
@@ -764,7 +764,7 @@ Object.assign(ACC, {
     const cambioU=!(d&&d.keep)||S._rgU!==uid;   // al cambiar de unidad se vuelve a proponer quién hizo la última WO
     S._rgU=uid;
     const quien=(!cambioU&&keep("rgT"))||(base&&base.unidad===uid&&base.tec?base.tec:(ult?ult.tec:""));
-    modal(`<div class="mh"><h3>Registrar devolución</h3><p>La solicitud queda abierta hasta que se corrija y se verifique.</p></div>
+    modal(`<div class="mh"><h3>Registrar return</h3><p>La solicitud queda abierta hasta que se corrija y se verifique.</p></div>
     <div class="mb"><div class="fg c2">
       <div class="fld"><label>Propiedad <span class="req">*</span></label><select id="rgP" data-a="devRegCambio">${props.map(p=>`<option value="${esc(p.id)}" ${p.id===pid?"selected":""}>${esc(p.nombre)}</option>`).join("")}</select></div>
       <div class="fld"><label>Unidad <span class="req">*</span></label><select id="rgU" data-a="devRegCambio">${unis.length?unis.map(u=>`<option value="${esc(u.id)}" ${u.id===uid?"selected":""}>${esc(u.num)}</option>`).join(""):'<option value="">— sin unidades —</option>'}</select></div>
@@ -791,9 +791,9 @@ Object.assign(ACC, {
     const dv={id:"DV"+Date.now(), prop:pid, unidad:uid, wo:woDe, area, desc:m, causa, responsable:tec,
       prioridad:val("rgR")||"Alta", fechaRep:HOY_SUP, fechaLimite:val("rgL")||HOY_SUP, estado:"Abierta",
       lotesAntes:[], lotesDespues:[], verifica:null, quien:S.usuario, origen:val("rgO"), urgente:!!(document.getElementById("rgUrg")&&document.getElementById("rgUrg").checked),
-      hist:[[hora(),`Devolución registrada por ${S.usuario} (pedida por: ${val("rgO")})`,S.usuario]]};
+      hist:[[hora(),`Return registrado por ${S.usuario} (pedida por: ${val("rgO")})`,S.usuario]]};
     S.devoluciones.push(dv); S._audDev=P(pid).nombre+" · "+(U(uid)?U(uid).num:"")+" — "+area; flash("dv:"+dv.id);
-    cm(); toast("Devolución registrada",`<b>${esc(P(pid).nombre)} ${U(uid)?esc(U(uid).num):""}</b> · ${esc(area)}. Ahora puedes crear el touch-up y ver quién está cerca.`,"w"); render(); },
+    cm(); toast("Return registrado",`<b>${esc(P(pid).nombre)} ${U(uid)?esc(U(uid).num):""}</b> · ${esc(area)}. Ahora puedes crear el return fix y ver quién está cerca.`,"w"); render(); },
 
   /* ── TOUCH-UP ───────────────────────────────────────
      Claudia: "cada unidad tiene a su tecnico responsable y el tiene que
@@ -802,10 +802,10 @@ Object.assign(ACC, {
      mal el trabajo". Eso es exactamente lo que hace esto. */
   devTouchup: d => {
     const dv = DV(d.id);
-    if(touchupDe(dv.id)){ toast("Ya tiene touch-up","Esta devoluci\u00f3n ya gener\u00f3 su Work Order de correcci\u00f3n.","w"); return; }
+    if(touchupDe(dv.id)){ toast("Ya tiene return fix","Este return ya gener\u00f3 su Work Order de return fix.","w"); return; }
     const orig = W(dv.wo);
     S._tuFecha = dv.urgente ? HOY_SUP : fechaMover(HOY_SUP,1);   // urgente: hoy; si no, el día siguiente
-    modal(`<div class="mh"><h3>Crear touch-up de correcci\u00f3n</h3>
+    modal(`<div class="mh"><h3>Crear return fix</h3>
         <p>${esc(P(dv.prop).nombre)} · ${U(dv.unidad)?esc(U(dv.unidad).num):""} — ${esc(dv.area)}</p></div>
       <div class="mb">
         <div class="note w" style="margin:0 0 12px"><b>Lo que hay que corregir:</b> ${esc(dv.desc)}</div>
@@ -828,7 +828,7 @@ Object.assign(ACC, {
                  <input id="tuS" value="${esc(orig?orig.serv:"")}">
                  </div>
                <div class="note w">No hay tarifa cargada para <b>${esc(cat)}</b> en
-                 <b>${esc(U(dv.unidad)?U(dv.unidad).rooms:"")}</b>. El touch-up se crea igual, pero
+                 <b>${esc(U(dv.unidad)?U(dv.unidad).rooms:"")}</b>. El return fix se crea igual, pero
                  <b>queda como excepci\u00f3n</b> hasta que se defina la tarifa — si no, el descuento
                  al t\u00e9cnico se perder\u00eda sin que nadie se entere.</div>`;})()}
         <div class="fld"><label>Fecha</label><input id="tuF" type="date" value="${esc(S._tuFecha||HOY_SUP)}" data-a="tuFecha" data-id="${dv.id}"></div>
@@ -837,10 +837,10 @@ Object.assign(ACC, {
         <div class="note"><b>C\u00f3mo queda la plata seg\u00fan a qui\u00e9n asignes:</b><br>
           · Si va <b>${esc(tecN(dv.responsable))}</b> — rehace su trabajo, <b>no se le paga</b> y no se descuenta nada.<br>
           · Si va <b>otro</b> — se le paga a ese, y <b>se le descuenta a ${esc(tecN(dv.responsable))}</b> el mismo monto.<br>
-          En los dos casos, <b>al cliente no se le cobra</b>: la correcci\u00f3n es responsabilidad de la empresa.</div>
+          En los dos casos, <b>al cliente no se le cobra</b>: el return fix es responsabilidad de la empresa.</div>
       </div>
       <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
-        <button class="btn p" data-a="devTouchupOK" data-id="${dv.id}">Crear touch-up</button></div>`);
+        <button class="btn p" data-a="devTouchupOK" data-id="${dv.id}">Crear return fix</button></div>`);
   },
 
   /* Cambiar la fecha recalcula quién está disponible y cerca ese día. */
@@ -859,22 +859,22 @@ Object.assign(ACC, {
       /* marcas propias del touch-up */
       touchup:true, facturable:false, devOrigen:dv.id, woOrigen:dv.wo,
       tecOriginal:dv.responsable, avance:0,
-      hist:[[hora(), "Touch-up creado desde la devoluci\u00f3n — no facturable", S.usuario],
+      hist:[[hora(), "Return fix creado desde el return — no facturable", S.usuario],
             [hora(), "Asignado a "+tecN(tec), S.usuario]]};
     S.wos.push(w);
     dv.touchup = w.id;
-    dv.hist.push([hora(), "Se cre\u00f3 el touch-up WO-"+w.id+" para "+tecN(tec), S.usuario]);
+    dv.hist.push([hora(), "Se cre\u00f3 el return fix WO-"+w.id+" para "+tecN(tec), S.usuario]);
     aplicarDescuento(dv, w);
     flash(["wo:"+w.id, "dv:"+dv.id]);
     cm();
     const propio = tec===dv.responsable;
-    toast("Touch-up creado",
+    toast("Return fix creado",
       `<b>WO-${w.id}</b> · ${esc(P(w.prop).nombre)} ${U(w.unidad)?esc(U(w.unidad).num):""}.<br><br>`
       + (propio
         ? `Lo corrige <b>${esc(tecN(tec))}</b>, que es el responsable: <b>no se le paga</b> — est\u00e1 rehaciendo su trabajo.`
         : `Lo corrige <b>${esc(tecN(tec))}</b> y <b>s\u00ed se le paga</b>. Ese mismo monto se le <b>descuenta a ${esc(tecN(dv.responsable))}</b>, que fue quien lo hizo mal.`)
       + `<br><br>Al cliente <b>no se le cobra</b>.`, "v");
-    noti("Tienes un touch-up asignado",
+    noti("Tienes un return fix asignado",
       `${P(w.prop).nombre} ${U(w.unidad)?U(w.unidad).num:""} — ${dv.area}: ${dv.desc}`);
     render();
   },
@@ -912,7 +912,7 @@ Object.assign(ACC, {
       const dv = DV(w.devOrigen);
       quitarDescuento(dv);
       aplicarDescuento(dv, w);
-      dv.hist.push([hora(), "Touch-up reasignado a "+tecN(nuevo), S.usuario]);
+      dv.hist.push([hora(), "Return fix reasignado a "+tecN(nuevo), S.usuario]);
     }
     flash("wo:"+w.id);
     cm();
@@ -957,10 +957,10 @@ Object.assign(ACC, {
       .forEach(a=>{ a.estadoTrabajo="Canceled"; });
     const exc = (S.excepciones||[]).filter(x=>x.wo===w.id && x.estado==="Pendiente");
     exc.forEach(x=>{ x.estado="Rechazada"; x.resol={...cierre, nota:"WO cancelada"}; });
-    /* Un touch-up cancelado deja la devolución sin corrección y retira el descuento que se había generado. */
+    /* Un touch-up cancelado deja el return sin corrección y retira el descuento que se había generado. */
     if(w.touchup){
       const dv = DV(w.devOrigen);
-      if(dv){ quitarDescuento(dv); dv.touchup=null; dv.hist.push([hora(), `Touch-up WO-${w.id} cancelado: ${motivo}`, S.usuario]); }
+      if(dv){ quitarDescuento(dv); dv.touchup=null; dv.hist.push([hora(), `Return fix WO-${w.id} cancelado: ${motivo}`, S.usuario]); }
     }
     if(w.tec) noti("Cancelaron un trabajo", `${P(w.prop).nombre} ${U(w.unidad)?U(w.unidad).num:""} — WO-${w.id}. Motivo: ${motivo.toLowerCase()}.`);
 
@@ -968,7 +968,7 @@ Object.assign(ACC, {
     flash("wo:"+w.id); cm();
     toast("WO cancelada",`WO-${w.id} queda en historial con el motivo: <b>${esc(motivo)}</b>. No se agregará a nómina ni facturación.`
       + (lim.length?`<br><br>También se cerró: ${lim.join(", ")}.`:"")
-      + (w.touchup?`<br><br>La devolución quedó sin corrección: se puede crear otro touch-up.`:"")
+      + (w.touchup?`<br><br>El return quedó sin return fix: se puede crear otro return fix.`:"")
       + (w.tec?`<br><br>Se le avisó a <b>${esc(tecN(w.tec))}</b>.`:""),"w"); render();
   },
   /* Desde el detalle web de una WO: abrir esa orden en el celular del técnico

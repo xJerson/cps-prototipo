@@ -131,7 +131,7 @@ Object.assign(ACC, {
           <td colspan="2">Pago adicional aprobado · WO-${x.wo}<div style="font-size:10.5px;color:var(--ambar)">${esc(x.motivo.slice(0,70))}</div></td>
           <td class="num mono">${money(x.monto)}</td></tr>`).join("")}
         ${descs.map(x=>`<tr style="background:var(--rojo-cl)"><td class="mono">—</td>
-          <td colspan="2">${x.tipo==="Manual"?`Descuento · ${esc(x.concepto)}${x.wo?` · WO-${esc(x.wo)}`:""}`:`Descuento por devolución · WO-${x.wo}`}<div style="font-size:10.5px;color:var(--rojo)">${esc((x.tipo==="Manual"?x.desc:x.motivo||"").slice(0,90))}</div></td>
+          <td colspan="2">${x.tipo==="Manual"?`Descuento · ${esc(x.concepto)}${x.wo?` · WO-${esc(x.wo)}`:""}`:`Descuento por return · WO-${x.wo}`}<div style="font-size:10.5px;color:var(--rojo)">${esc((x.tipo==="Manual"?x.desc:x.motivo||"").slice(0,90))}</div></td>
           <td class="num mono">−${money(x.monto)}</td></tr>`).join("")}
         <tr style="background:var(--surface-2);font-weight:750"><td colspan="3">Total ${esc(perTxt)}</td>
           <td class="num mono" style="font-size:15px">${money(neto)}</td></tr></tbody></table>

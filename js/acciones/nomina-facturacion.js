@@ -374,7 +374,7 @@ Object.assign(ACC, {
   facFiltro: () => { const f=filtroFac();
     f.q=leerF("fcQ",f.q); f.prop=leerF("fcProp",f.prop); f.estado=leerF("fcEst",f.estado); f.desde=leerF("fcDesde",f.desde); f.hasta=leerF("fcHasta",f.hasta); render(); },
   facFiltroLimpiar: () => { Object.assign(filtroFac(),{q:"",prop:"",estado:"",desde:"",hasta:""}); render(); },
-  /* Descuento por devolución: quien paga decide si se aplica o no. */
+  /* Descuento por return: quien paga decide si se aplica o no. */
   descAplicar: d => {
     const x = by(S.descuentos,d.id);
     if(!x || x.estado!=="Por decidir") return;

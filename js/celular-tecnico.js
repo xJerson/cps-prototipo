@@ -67,7 +67,7 @@ function renderFon(){
         <div style="font-size:10.5px;opacity:.85">${ws.length} trabajo(s) terminado(s)</div></div>
       <div class="dc"><div class="dl" style="margin:0 0 2px">Trabajos</div>
         ${ws.map(w=>fila(`${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}`,
-            `${esc(w.fecha.slice(5))} · ${esc(w.serv)}${w.touchup&&egresoWO(w)===0?" · corrección, no se paga":""}${w.pagadaTec?" · ya pagado":""}${!w.pagadaTec&&pagadoTecWO(w)>0?` · Pagado parcial ${money(pagadoTecWO(w))} de ${money(egresoWO(w))}`:""}`,
+            `${esc(w.fecha.slice(5))} · ${esc(w.serv)}${w.touchup&&egresoWO(w)===0?" · return fix, no se paga":""}${w.pagadaTec?" · ya pagado":""}${!w.pagadaTec&&pagadoTecWO(w)>0?` · Pagado parcial ${money(pagadoTecWO(w))} de ${money(egresoWO(w))}`:""}`,
             egresoWO(w)!==null?money(montoNomWO(w)):"Por definir", egresoWO(w)===null?"var(--ambar)":"")).join("")
           ||`<div class="ds" style="padding:8px 0">Todavía no tienes trabajos terminados esta semana.</div>`}</div>
       ${previas.length?`<div class="dc"><div class="dl" style="margin:0 0 2px">Pendientes anteriores</div>
@@ -554,7 +554,7 @@ const itemVacio = () => ({cat:activos("categorias")[0], trabajo:"", ubic:activos
    pago de la corrección al técnico y adicional cobrable al cliente. */
 const CAUSAS_DEV = {
   "Trabajo mal ejecutado por el técnico":
-    {paga:false, cobra:false, ex:"La corrección <b>no se le paga</b> al técnico y no se le cobra al cliente."},
+    {paga:false, cobra:false, ex:"El return fix <b>no se le paga</b> al técnico y no se le cobra al cliente."},
   "Cambio de criterio del dueño o del cliente":
     {paga:true,  cobra:true,  ex:"<b>Sí se le paga</b> al técnico y <b>sí se puede cobrar</b> como adicional."},
   "Daño de un tercero después de terminado":
@@ -571,7 +571,7 @@ const ENTRADAS_DIA = {
   llegada:     {n:"Llegada a propiedad",  c:"#1f4e79", auto:true},
   supervision: {n:"Supervisión de unidad", c:"#1e5c3a", auto:true},
   estimado:    {n:"Inspección para estimado", c:"#5b3a8a", auto:true},
-  devolucion:  {n:"Devolución",           c:"#9b2226", auto:true},
+  devolucion:  {n:"Return",           c:"#9b2226", auto:true},
   compra:      {n:"Compra o recibo",      c:"#b45309", auto:false},
   entrega:     {n:"Entrega de material",  c:"#0d9488", auto:false},
   coord:       {n:"Coordinación",         c:"#4b5563", auto:false},
@@ -580,7 +580,7 @@ const ENTRADAS_DIA = {
   pendiente:   {n:"Pendiente",            c:"#8a5a00", auto:false}
 };
 
-/* ── Helpers de devoluciones ── */
+/* ── Helpers de returns ── */
 const devAbiertas  = () => S.devoluciones.filter(d=>d.estado!=="Cerrada");
 const devDe        = uid => S.devoluciones.filter(d=>d.unidad===uid);
 const DV           = id => S.devoluciones.find(d=>d.id===id);
@@ -634,8 +634,8 @@ function unidadesListas(){
 const pendDia = () => { const r=diarioHoy(); return r ? r.entradas.filter(e=>e.tipo==="pendiente") : []; };
 
 /* ── Touch-up, correcciones y descuentos ──────────────────────────
-   La devolución crea una corrección separada. No reabre ni frena la WO
-   original si Erika ya validó su expediente; el touch-up nunca se factura. */
+   El return crea una corrección separada. No reabre ni frena la WO
+   original si Erika ya validó su expediente; la corrección nunca se factura. */
 const devAbiertaDeWO = wid => S.devoluciones.find(d=>d.wo===wid && d.estado!=="Cerrada");
 const bloqueadaPorDev = w => !!devAbiertaDeWO(w.id);
 const esFacturable    = w => w.facturable!==false && !w.touchup;
@@ -669,9 +669,9 @@ function aplicarDescuento(dv, w){
   /* Sin tarifa no hay monto, y un descuento perdido en silencio es peor que
      no descontar: se levanta excepcion para que alguien la resuelva. */
   if(monto===null){
-    if(!S.excepciones.some(x=>x.tipo==="Touch-up sin tarifa" && x.wo===w.id)){
-      S.excepciones.push({id:"X"+Date.now(), tipo:"Touch-up sin tarifa", wo:w.id,
-        motivo:"El touch-up WO-"+w.id+" no tiene tarifa para "+(U(w.unidad)?U(w.unidad).rooms:"esa unidad")
+    if(!S.excepciones.some(x=>x.tipo==="Return fix sin tarifa" && x.wo===w.id)){
+      S.excepciones.push({id:"X"+Date.now(), tipo:"Return fix sin tarifa", wo:w.id,
+        motivo:"El return fix WO-"+w.id+" no tiene tarifa para "+(U(w.unidad)?U(w.unidad).rooms:"esa unidad")
                +", as\u00ed que no se puede calcular el descuento a "+tecN(dv.responsable)+".",
         monto:null, pide:"Sistema", aprueba:"Claudia", estado:"Pendiente",
         fecha:HOY_SUP, resol:null});
@@ -690,7 +690,7 @@ function aplicarDescuento(dv, w){
 
   const d = {id:"DS"+Date.now()+Math.floor(Math.random()*99), tec:dv.responsable,
     wo:w.id, dev:dv.id, monto:montoFinal, montoReal:monto, tope, semana:w.semana, fecha:HOY_SUP, estado:"Por decidir",
-    motivo:"Correcci\u00f3n de "+dv.area+" en "+(U(dv.unidad)?U(dv.unidad).num:"la unidad")+" — lo corrigi\u00f3 "+tecN(w.tec)
+    motivo:"Return fix de "+dv.area+" en "+(U(dv.unidad)?U(dv.unidad).num:"la unidad")+" — lo corrigi\u00f3 "+tecN(w.tec)
            +(tope?" (limitado a lo que gan\u00f3 por WO-"+dv.wo+")":"")};
   S.descuentos.push(d);
   return d;
@@ -830,7 +830,7 @@ function gustavoScreenHTML(view){
          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
            ${panelCell(IC_RUTA, `${vis}/${ag.length}`, "Visitas programadas para hoy", "#1f4e79", "fView", 'data-v="ruta"')}
            ${panelCell(IC_PROCESO, enProceso().length, "Servicios en proceso", "#0d9488", "fView", 'data-v="proceso"')}
-           ${panelCell(IC_DEVS, dvPend.length, "Devoluciones abiertas", dvPend.length?"#9b2226":"#8a97a4", "fView", 'data-v="devs"')}
+           ${panelCell(IC_DEVS, dvPend.length, "Returns abiertos", dvPend.length?"#9b2226":"#8a97a4", "fView", 'data-v="devs"')}
            ${panelCell(IC_DIA, pendDia().length, "Actividades pendientes del reporte diario", "#8a5a00", "fView", 'data-v="dia"')}
            ${panelCell(IC_SUPERVISAR, porSupervisar().length, "Unidades pendientes de supervisión", "#1e5c3a")}
            ${panelCell(IC_INSPECCION, inspPend().length, "Inspecciones para estimados", "#5b3a8a")}
@@ -885,7 +885,7 @@ function gustavoScreenHTML(view){
           + dvPend.map(d=>`<div class="dc" style="border-left:3px solid ${devVencida(d)?"var(--rojo)":"var(--ambar)"};cursor:pointer"
                data-a="gDevVer" data-id="${d.id}">
               <div style="display:flex;justify-content:space-between;gap:6px;align-items:center">
-                <div class="dh" style="font-size:12px">Verificar correcci\u00f3n</div>
+                <div class="dh" style="font-size:12px">Verificar return fix</div>
                 <span class="dtag" style="background:${devVencida(d)?"var(--rojo)":"var(--ambar)"};color:#fff;flex:none">${diasAbierta(d)} d\u00eda(s)</span></div>
               <div class="ds" style="margin-top:3px">${esc(P(d.prop).nombre)} ${U(d.unidad)?esc(U(d.unidad).num):""} · ${esc(d.area)}</div>
             </div>`).join("")
@@ -1020,7 +1020,7 @@ function gustavoScreenHTML(view){
 
     h = `<div class="dl" style="margin-top:5px">Abiertas (${ab.length})</div>`
       + (ab.length? ab.map(tarj).join("")
-         : `<div class="dc" style="border-style:dashed"><div class="ds" style="text-align:center">Ninguna devoluci\u00f3n abierta.</div></div>`)
+         : `<div class="dc" style="border-style:dashed"><div class="ds" style="text-align:center">Ningún return abierto.</div></div>`)
       + (ce.length?`<div class="dl" style="margin-top:10px">Cerradas (${ce.length})</div>`+ce.map(tarj).join(""):"");
   }
 
@@ -1031,7 +1031,7 @@ function gustavoScreenHTML(view){
     const c = causaDe(d.causa), dias = diasAbierta(d), venc = devVencida(d);
     const nA = (d.lotesAntes||[]).reduce((t,l)=>t+l.n,0);
     const nD = (d.lotesDespues||[]).reduce((t,l)=>t+l.n,0);
-    h = `<button class="db g" style="margin:5px 0 9px" data-a="fView" data-v="devs">‹ Todas las devoluciones</button>
+    h = `<button class="db g" style="margin:5px 0 9px" data-a="fView" data-v="devs">‹ Todos los returns</button>
       <div class="dc" style="border-color:${d.estado==="Cerrada"?"var(--verde)":venc?"var(--rojo)":"var(--ambar)"}">
         <div style="display:flex;justify-content:space-between;gap:6px;align-items:center">
           <div class="dh">${esc(P(d.prop).nombre)} · ${U(d.unidad)?esc(U(d.unidad).num):"—"}</div>
@@ -1077,7 +1077,7 @@ function gustavoScreenHTML(view){
           Verificar y tomar fotos del despu\u00e9s</button>`
        : d.estado==="Corregida"?`<div class="dc" style="background:var(--verde-cl);border-color:transparent">
           <div class="ds" style="color:var(--verde)">Ya tiene fotos del despu\u00e9s. Ci\u00e9rrala para que deje de contar.</div></div>
-          <button class="db p" style="margin-top:8px;background:var(--verde)" data-a="gDevCerrar" data-id="${d.id}">Cerrar devoluci\u00f3n</button>`
+          <button class="db p" style="margin-top:8px;background:var(--verde)" data-a="gDevCerrar" data-id="${d.id}">Cerrar return</button>`
        : `<div class="dc" style="background:var(--verde-cl);border-color:transparent">
           <div class="ds" style="color:var(--verde)">Cerrada. Queda el historial completo con las fotos de antes y despu\u00e9s.</div></div>`}
 

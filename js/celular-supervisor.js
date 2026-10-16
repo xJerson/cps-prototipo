@@ -1,7 +1,7 @@
 "use strict";
 VIEWS.gustavoweb = () => {
   const t = ["panel","ruta","reportar","dia","devs"].includes(S.gvTab) ? S.gvTab : "panel";
-  const TABS = [["panel","Hoy"],["ruta","Mi ruta"],["reportar","Reportar"],["dia","Mi día"],["devs","Devoluciones"]];
+  const TABS = [["panel","Hoy"],["ruta","Mi ruta"],["reportar","Reportar"],["dia","Mi día"],["devs","Returns"]];
   return `
   <div class="ph"><div><h2>Vista de Gustavo</h2>
     <p>Lo mismo que ve en su celular (Supervisor de campo) — como página web, de referencia para cuando se construya la app real.</p></div></div>
@@ -33,7 +33,7 @@ function renderFonSup(){
      ic:'<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>'},
     {v:"reportar",n:"Reportar", b:0,
      ic:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>'},
-    {v:"devs",  n:"Devoluciones", b:nDev, bc:"var(--rojo)",
+    {v:"devs",  n:"Returns", b:nDev, bc:"var(--rojo)",
      ic:'<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/>'}
   ].map(b=>`<button class="${S.phView===b.v||(b.v==="devs"&&S.phView==="dev")?"on":""}" data-a="fView" data-v="${b.v}">
     ${b.b?`<span style="position:absolute;top:1px;right:5px;min-width:14px;height:14px;padding:0 3px;background:${b.bc};color:#fff;border-radius:99px;font-size:8.5px;font-weight:800;display:flex;align-items:center;justify-content:center">${b.b}</span>`:""}
@@ -95,7 +95,7 @@ function hojaSup(g){
       <select id="gET" data-a="gRepEst">${EST_TRABAJO.map(t=>`<option ${t===g.estadoTrabajo?"selected":""}>${esc(t)}</option>`).join("")}</select>
       ${g.estadoTrabajo==="Requiere correcci\u00f3n"
         ? `<div class="dc" style="margin:6px 0 0;background:var(--rojo-cl);border-color:transparent">
-            <div class="ds" style="color:var(--rojo)">Al enviar el informe se te va a abrir la <b>devoluci\u00f3n</b>,
+            <div class="ds" style="color:var(--rojo)">Al enviar el informe se te va a abrir el <b>return</b>,
             para que quede abierta y con fecha l\u00edmite hasta que la verifiques.</div></div>`
         : g.estadoTrabajo==="No se pudo ingresar"
         ? `<div class="dc" style="margin:6px 0 0;background:var(--ambar-cl);border-color:transparent">
@@ -230,7 +230,7 @@ function hojaSup(g){
 
 /* ── Hoja: una entrada del reporte diario ──
    Solo se abre para los tipos que el sistema NO puede saber. Las llegadas,
-   los informes y las devoluciones se anotan solas. */
+   los informes y los returns se anotan solas. */
 function hojaDia(g){
   const t = ENTRADAS_DIA[g.tipo] || {n:g.tipo, c:"#8a97a4"};
   const us = S.unidades.filter(u=>u.prop===g.prop);
@@ -267,7 +267,7 @@ function hojaDia(g){
   </div></div>`;
 }
 
-/* ── Hoja: devolución ──
+/* ── Hoja: return ──
    Dos modos. Al crearla lo que importa es la CAUSA, porque de ahi sale si se
    le paga al tecnico y si se le cobra al cliente. Al verificarla lo que
    importa son las fotos del despues: sin eso no se puede cerrar. */
@@ -277,14 +277,14 @@ function hojaDev(g){
     const total = g.lotes.reduce((t,l)=>t+l.n,0);
     return `<div class="fscrim" data-a="gDevNo"><div class="fsheet" data-stop>
       <div class="grab"></div>
-      <h4 style="color:var(--verde)">Verificar la correcci\u00f3n</h4>
+      <h4 style="color:var(--verde)">Verificar el return fix</h4>
       <div class="sub">${esc(P(d.prop).nombre)} · ${U(d.unidad)?esc(U(d.unidad).num):""} — ${esc(d.area)}</div>
 
       <div class="dc" style="margin:9px 0 0;background:var(--ambar-cl);border-color:transparent">
         <div class="ds"><b>Lo que estaba mal:</b> ${esc(d.desc)}</div></div>
 
       <label style="margin-top:11px">Fotos del despu\u00e9s${total?` · ${total} tomada(s)`:""}</label>
-      <div class="sub" style="margin:-3px 0 7px">Sin fotos del despu\u00e9s la devoluci\u00f3n no se puede cerrar.</div>
+      <div class="sub" style="margin:-3px 0 7px">Sin fotos del despu\u00e9s el return no se puede cerrar.</div>
       <div class="gchips">${activos("ubicaciones").map(u=>
         `<button class="gchip ${g.amb===u?"on":""}" data-a="gDevAmb" data-u="${esc(u)}">${esc(u)}</button>`).join("")}</div>
       <button class="db p gcam" data-a="gDevFoto">Tomar foto${g.amb?" · "+esc(g.amb):""}</button>
@@ -309,7 +309,7 @@ function hojaDev(g){
   const total = g.lotes.reduce((t,l)=>t+l.n,0);
   return `<div class="fscrim" data-a="gDevNo"><div class="fsheet" data-stop>
     <div class="grab"></div>
-    <h4 style="color:var(--rojo)">Crear devoluci\u00f3n</h4>
+    <h4 style="color:var(--rojo)">Crear return</h4>
     <div class="sub">Queda abierta hasta que t\u00fa verifiques con fotos que se corrigi\u00f3, aunque pasen d\u00edas.</div>
 
     <label>Propiedad</label>
@@ -363,7 +363,7 @@ function hojaDev(g){
           <button class="adx" style="height:23px;width:23px;font-size:14px;margin-left:5px" data-a="gDevQuita" data-i="${i}">−</button></span></div>`).join("")}
       </div>`:""}
 
-    <button class="db p" style="margin-top:11px;background:var(--rojo)" data-a="gDevOK">Crear devoluci\u00f3n</button>
+    <button class="db p" style="margin-top:11px;background:var(--rojo)" data-a="gDevOK">Crear return</button>
     <button class="db g" data-a="gDevNo">Cancelar</button>
   </div></div>`;
 }

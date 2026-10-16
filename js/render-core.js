@@ -267,10 +267,10 @@ const AYUDA_VISTA = {
     tips:["Semana es la vista de siempre: técnico por fila, día por columna.","Día muestra en una lista exactamente lo agendado ese día puntual.","Rango de fechas y Mes agrupan por fecha lo agendado en ese período — por ejemplo, del 1 al 30 de septiembre.","Las que todavía no tienen técnico salen arriba, en la fila «Sin asignar» (vista Semana) — tocalas para asignar.","Hacé clic en cualquier orden para abrir su detalle."]},
   despacho:{t:"Disponibilidad del equipo", d:"Un solo objetivo: antes de prometerle una fecha a un cliente, ver si el equipo tiene lugar ese día. La regla de la que sale todo: 2 trabajos por técnico y por día.",
     tips:["<b>Cupo del equipo</b> de un día = técnicos disponibles ese día × 2. Un técnico con permiso aprobado no cuenta.","<b>Trabajos del día</b> = todas las Work Orders con esa fecha. Si pasan el cupo, la fila se pone roja: hay que mover alguna a otro día.","La barra muestra cuánto del cupo ya está en uso (con técnico) y cuánto queda libre.","<b>Cerrar el día</b>: cuando ya no se juntan más trabajos y se empiezan a repartir a los técnicos.","«+ Registrar permiso» marca a un técnico como no disponible unos días — Gustavo lo aprueba, y esos días le baja el cupo al equipo."]},
-  supervision:{t:"Supervisión", d:"Panel de oficina para la supervisión de Gustavo: lo que manda desde el campo, la ruta que se le arma, qué revisar, las devoluciones y lo que quedó acordado con cada propiedad.",
-    tips:["«De campo»: lo que Gustavo mandó desde el celular, esperando que decidas qué hacer con eso.","«Ruta del día»: las propiedades que le armaste para hoy.","«Por revisar»: Work Orders terminadas por el técnico, esperando que Gustavo apruebe o devuelva.","«Devoluciones»: lo que se mandó a corregir por calidad, con su motivo y estado.","«Reporte diario»: el resumen del día de Gustavo, se arma solo.","«Ver su celular» abre el simulador — ahí es donde se prueban todas estas acciones de verdad."]},
-  devoluciones:{t:"Devoluciones", d:"Los trabajos que hay que corregir. Aquí se registra la solicitud (venga de Gustavo, de la propiedad o de un correo), se ve quién puede ir y quién está más cerca, y se asigna la corrección.",
-    tips:["«Registrar devolución»: elige la propiedad y la unidad, quién hizo el trabajo y qué está mal.","«Crear touch-up»: muestra a cada técnico con su carga del día y su zona, para mandar a quien esté cerca.","La causa decide la plata: si el trabajo estaba mal hecho, al que lo hizo se le descuenta."]},
+  supervision:{t:"Supervisión", d:"Panel de oficina para la supervisión de Gustavo: lo que manda desde el campo, la ruta que se le arma, qué revisar, los returns y lo que quedó acordado con cada propiedad.",
+    tips:["«De campo»: lo que Gustavo mandó desde el celular, esperando que decidas qué hacer con eso.","«Ruta del día»: las propiedades que le armaste para hoy.","«Por revisar»: Work Orders terminadas por el técnico, esperando que Gustavo apruebe o haga return.","«Returns»: lo que se mandó a corregir por calidad, con su motivo y estado.","«Reporte diario»: el resumen del día de Gustavo, se arma solo.","«Ver su celular» abre el simulador — ahí es donde se prueban todas estas acciones de verdad."]},
+  devoluciones:{t:"Returns", d:"Los trabajos que hay que corregir. Aquí se registra la solicitud (venga de Gustavo, de la propiedad o de un correo), se ve quién puede ir y quién está más cerca, y se asigna el return fix.",
+    tips:["«Registrar return»: elige la propiedad y la unidad, quién hizo el trabajo y qué está mal.","«Crear return fix»: muestra a cada técnico con su carga del día y su zona, para mandar a quien esté cerca.","La causa decide la plata: si el trabajo estaba mal hecho, al que lo hizo se le descuenta."]},
   reportes:{t:"Reportes", d:"Los números del trabajo cruzados como quieras: por semana, por zona, por servicio.",
     tips:["Tocá un número de la tabla para ver qué órdenes hay detrás."]},
   buscar:{t:"Buscar", d:"Filtra las Work Orders y mira cobro, pago y utilidad de cada una. Sirve para saber cuánto se pagó antes por un mismo trabajo.",
@@ -348,7 +348,7 @@ const AYUDA_VISTA = {
    apagaba entera al abrir el celular — acá adentro es donde más perdida
    queda una persona que nunca lo usó. */
 const AYUDA_FON_SUP = {
-  panel:{t:"Hoy", d:"La pantalla de inicio del celular de Gustavo: un resumen de su día — cuántas paradas tiene, cuántas ya visitó, devoluciones y materiales pendientes.",
+  panel:{t:"Hoy", d:"La pantalla de inicio del celular de Gustavo: un resumen de su día — cuántas paradas tiene, cuántas ya visitó, returns y materiales pendientes.",
     tips:["Cada número lleva a su propia pantalla — tocalo para ver el detalle.","Es solo un resumen: las acciones reales están en «Mi ruta» y «Reportar».",
       "«Unidades pendientes de supervisión»: trabajos que el técnico ya terminó y Gustavo todavía tiene que revisar. No son trabajos que el técnico no pudo completar."]},
   ruta:{t:"Mi ruta", d:"Las propiedades que le tocan hoy, ya ordenadas por zona. Esta ruta la arma Claudia — Gustavo no elige a dónde va, solo marca cómo le va yendo.",
@@ -357,7 +357,7 @@ const AYUDA_FON_SUP = {
     tips:["Los 4 tipos: inspección para un estimado, estado previo (cómo estaba antes de empezar), revisión de un trabajo del técnico, o falta de material.","Cada uno pide fotos agrupadas por ambiente — no se puede enviar sin al menos una.","Apenas toca enviar, el reporte le llega a Claudia al instante: aparece en la pantalla web «Supervisión», pestaña «De campo»."]},
   dia:{t:"Mi día", d:"Un solo reporte por jornada. Se abre solo con la primera actividad y se va llenando; nada se escribe a mano salvo lo que nadie más puede saber.",
     tips:["Una vez que lo cierra, no se puede editar — si falta algo, se agrega como nota aparte.","Esto es lo mismo que ve Claudia en la web, en «Supervisión → Reporte diario»."]},
-  devs:{t:"Devoluciones", d:"Los trabajos que Gustavo mandó a corregir por calidad. Acá verifica si la corrección que hizo el técnico ya quedó bien.",
+  devs:{t:"Returns", d:"Los trabajos que Gustavo mandó a corregir por calidad. Acá verifica si el return fix que hizo el técnico ya quedó bien.",
     tips:["Hace falta una foto del después para poder cerrarla.","Hasta que no se cierra, esa Work Order no se puede facturar."]}
 };
 
