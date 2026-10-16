@@ -954,13 +954,13 @@ function modalDupWO(dup, edicion){
   if(!edicion) return modal(`<div class="mh"><h3>Ya existe una WO igual</h3></div>
   <div class="mb">
     <div class="note w">WO-${dup.id} ya es <b>${esc(dup.serv)}</b> para esta unidad (${esc(dup.fecha||"sin fecha")} · ${esc(dup.estado)})${dup.ubic?` en «${esc(dup.ubic)}»`:""}.</div>
-    ${woHecha(dup)?`<div class="note" style="margin-top:10px"><b>Hacer return</b> abre WO-${dup.id} para corregirla desde ahí: no se le cobra al cliente y se aplican las reglas de devolución al técnico.</div>`:""}
+    ${woHecha(dup)?`<div class="note" style="margin-top:10px">Si el cliente reclama este trabajo, no crees otra WO: <b>registra la devolución en WO-${dup.id}</b>. Así no se le cobra al cliente ni se le paga dos veces al técnico.</div>`:""}
     <div class="fld" style="margin-top:12px"><label>Motivo <span class="req">*</span></label>
       <textarea id="dpMot" placeholder="${woHecha(dup)?"Qué hay que corregir, o por qué se necesita otra":"Por qué se necesita otra igual"}"></textarea></div>
   </div>
   <div class="mf">
     <button class="btn" data-a="woVerDesdeModal" data-id="${dup.id}">Abrir WO-${dup.id}</button>
-    ${woHecha(dup)?`<button class="btn" data-a="woDupReturn" data-id="${dup.id}">Hacer return</button>`:""}
+    ${woHecha(dup)?`<button class="btn" data-a="woDupReturn" data-id="${dup.id}">Ir a WO-${dup.id} y registrar devolución</button>`:""}
     <button class="btn p" data-a="woDupNueva" data-id="${dup.id}">Crear nueva</button>
   </div>`);
   modal(`<div class="mh"><h3>Ya existe una Work Order igual</h3></div>
