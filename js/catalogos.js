@@ -49,6 +49,13 @@ const CAT = {
   especialidades:["Housekeeper","Carpeter","Tecnico","Resurface","Supervisor","Make Ready"],
   folder:["Completo","Antes","Despues","Findings"],                                    // Catalogo!W
   // Catalogo!S tal cual (10) + el único que su Dashboard mide y no existe
+  /* PRODUCCIÓN: en el prototipo ningún código asigna Pending, Rescheduled, Returned,
+     Corrected, Inspeccion ni Esperando aprobación (solo existen en datos de ejemplo).
+     En la versión real: registrar una devolución pasa la WO a Returned y cerrarla a
+     Corrected; reagendar a Rescheduled; un adicional por aprobar a Esperando aprobación.
+     Invoiced y Paid no son estados aquí: son marcas (facturada, pagadaTec, cobrada).
+     Asignar técnico no cambia el estado; Confirmed = el cliente confirmó la fecha
+     (la descripción en vistas/catalogos-crud.js dice otra cosa y hay que corregirla). */
   estados:[
     {n:"Scheduled",   p:"g", nuevo:false},
     {n:"Confirmed",   p:"a", nuevo:false},   // el CLIENTE confirmó la fecha (Schedule.Client confirmation)

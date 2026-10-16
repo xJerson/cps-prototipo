@@ -362,6 +362,8 @@ Object.assign(ACC, {
     ACC.devolverModal({id:orig.id});
     const m=document.getElementById("dvM"); if(m && motivo) m.value=motivo;
   },
+  /* PRODUCCIÓN: la WO creada como duplicada nace facturable y su motivo solo queda
+     en la ficha. En la versión real debe llegarle a Erika para revisar antes de facturar. */
   woDupNueva: d => {
     const m = val("dpMot");
     if(!m){ S.audOmitir=true; marcaFalta(["dpMot"]); toast("Falta el motivo","Escribe por qué se crea otra igual.","r"); return; }
@@ -598,6 +600,8 @@ Object.assign(ACC, {
       ACC.devCausaRef();
     });
   },
+  /* PRODUCCIÓN: la devolución no cambia el estado de la WO; solo suma w.devuelta.
+     En la versión real la WO pasa a Returned aquí y a Corrected al cerrar la devolución. */
   devolverOK: d => {
     const w=W(+d.id), m=val("dvM"), area=val("dvA"), causa=val("dvC");
     if(!m){ marcaFalta(["dvM"]); toast("Falta el motivo","Sin decir qué está mal, el técnico no sabe qué corregir.","r"); return; }
@@ -777,6 +781,8 @@ Object.assign(ACC, {
       ${ult?`<div class="hint">Última WO de la unidad: WO-${ult.id} (${esc(ult.serv)}) de ${esc(tecN(ult.tec))}.</div>`:`<div class="hint">Esta unidad no tiene WO con técnico: elige quién hizo el trabajo.</div>`}</div>
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="devRegistrarOK">Registrar</button></div>`); },
   devRegCambio: () => { ACC.devRegistrar({keep:true}); },
+  /* PRODUCCIÓN: igual que devolverOK, debe pasar la WO original a Returned
+     (hoy ni siquiera suma w.devuelta, así que no cuenta en el indicador de calidad). */
   devRegistrarOK: () => {
     const pid=val("rgP"), uid=val("rgU"), m=val("rgM").trim(), area=val("rgA"), causa=val("rgC"), tec=val("rgT");
     if(!uid||!m||!tec){ S.audOmitir=true; marcaFalta([!uid?"rgU":"",!m?"rgM":"",!tec?"rgT":""].filter(Boolean)); toast("Falta información","Elige la unidad, quién hizo el trabajo y escribe qué está mal.","r"); return; }

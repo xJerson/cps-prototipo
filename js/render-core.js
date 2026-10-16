@@ -16,7 +16,11 @@ function render(){
     return `<button class="nav ${S.mod===m.id?"on":""}" data-a="ir" data-m="${m.id}">
       <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${m.ic}</svg>
       <span class="lb">${m.n}</span>${c?`<span class="n">${c}</span>`:""}</button>`;
-  }).join("");
+  }).join("")
+  /* Manual interactivo de la operación: página aparte (guia.html), visible para todos los usuarios. */
+  + `<div class="slbl">Ayuda</div><a class="nav" href="guia.html" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <span class="lb">Manual de operaciones</span></a>`;
   $("#main").innerHTML = (VIEWS[S.mod]||(()=>"<div class='empty'>En construcción</div>"))();
   // Traer al centro lo que se acaba de tocar, y apagar la marca sola
   if(S.flash){

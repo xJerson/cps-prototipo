@@ -897,6 +897,8 @@ function modalLineaFactura(clave){
 }
 /* Filtros de facturas: Facturación y Cobranza comparten S.filtroFac. El texto se aplica con «Buscar» o Enter. */
 const filtroFac = () => S.filtroFac||(S.filtroFac={q:"",prop:"",estado:"",desde:"",hasta:""});
+/* PRODUCCIÓN: «Emitida» no la asigna ningún código (solo datos de ejemplo) y «Vencida»
+   se calcula por fecha (facVencida). Definir si Emitida existe o se elimina. */
 const FAC_ESTADOS = ["Borrador","Emitida","Enviada","Vencida","Pagada"];
 function facFiltradas(){
   const f=filtroFac(), q=normBusca(f.q).split(/\s+/).filter(Boolean);

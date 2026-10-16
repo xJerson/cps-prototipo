@@ -548,6 +548,10 @@ const itemVacio = () => ({cat:activos("categorias")[0], trabajo:"", ubic:activos
 
 /* La causa de la devolucion decide la plata. Sin esto, cada devolucion se
    discute a mano el viernes cuando se arma la nomina. */
+/* PRODUCCIÓN: paga y cobra hoy solo se muestran en pantallas y avisos; ningún cálculo
+   de nómina ni de factura los usa. Lo que mueve la plata es quién hace el touch-up
+   (aplicarDescuento). En la versión real la causa debe aplicarse en el servidor:
+   pago de la corrección al técnico y adicional cobrable al cliente. */
 const CAUSAS_DEV = {
   "Trabajo mal ejecutado por el técnico":
     {paga:false, cobra:false, ex:"La corrección <b>no se le paga</b> al técnico y no se le cobra al cliente."},
