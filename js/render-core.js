@@ -16,11 +16,11 @@ function render(){
     return `<button class="nav ${S.mod===m.id?"on":""}" data-a="ir" data-m="${m.id}">
       <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${m.ic}</svg>
       <span class="lb">${m.n}</span>${c?`<span class="n">${c}</span>`:""}</button>`;
-  }).join("")
-  /* Manual interactivo de la operación: página aparte (guia.html), visible para todos los usuarios. */
+  }).join("");
+  /* Manual interactivo de la operación (guia.html): oculto del menú hasta revisarlo.
   + `<div class="slbl">Ayuda</div><a class="nav" href="guia.html" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">
       <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
-      <span class="lb">Manual de operaciones</span></a>`;
+      <span class="lb">Manual de operaciones</span></a>`; */
   /* Mapa del prototipo (mapa.html): oculto del menú hasta revisarlo.
   + `<a class="nav" href="mapa.html" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">
       <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14"/><path d="M15 6v14"/></svg>
