@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mapa del prototipo CPS</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
+<style>
+/* Review map of everything the prototype does today. One lane per person, one view per phase.
+   Each operation can be marked OK / Corregir / Reforzar with a note; marks stay on this device
+   and can be sent by WhatsApp. */
+:root{
+  --bg:#f2f5f4; --card:#ffffff; --ink:#192828; --soft:#566868; --faint:#8a9a99; --line:#d6dedd; --lane:#eef2f1;
+  --accent:#0f6b66; --accent-cl:#dcefed;
+  --red:#a8322d; --red-cl:#f8e3e1; --blue:#2a5a9e; --blue-cl:#e1ebf8; --green:#2e7a43; --green-cl:#e0f1e5;
+  --amber:#8a5a00; --amber-cl:#f8ecd2; --violet:#5b3a8a; --violet-cl:#ece4f6; --gray-cl:#e7ebea;
+  --f-disp:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#111919; --card:#1a2424; --ink:#e6eeec; --soft:#a1b2b0; --faint:#71817f; --line:#2e3c3c; --lane:#162020;
+  --accent:#4fbcb3; --accent-cl:#173634;
+  --red:#ef8a83; --red-cl:#3a1f1d; --blue:#8db4ef; --blue-cl:#1c2a40; --green:#7fd398; --green-cl:#18311f;
+  --amber:#e5b65b; --amber-cl:#352a12; --violet:#c3a5ef; --violet-cl:#2b2240; --gray-cl:#243030; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111919; --card:#1a2424; --ink:#e6eeec; --soft:#a1b2b0; --faint:#71817f; --line:#2e3c3c; --lane:#162020;
+  --accent:#4fbcb3; --accent-cl:#173634;
+  --red:#ef8a83; --red-cl:#3a1f1d; --blue:#8db4ef; --blue-cl:#1c2a40; --green:#7fd398; --green-cl:#18311f;
+  --amber:#e5b65b; --amber-cl:#352a12; --violet:#c3a5ef; --violet-cl:#2b2240; --gray-cl:#243030; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45;-webkit-text-size-adjust:100%}
+h1,h2,h3{font-family:var(--f-disp);margin:0;letter-spacing:-.01em;text-wrap:balance}
+button,textarea{font:inherit;color:inherit}
+button:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.pad{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
+
+header{padding-top:max(14px,env(safe-area-inset-top));padding-bottom:10px;display:flex;flex-direction:column;gap:10px;max-width:1400px;margin:0 auto}
+.brand{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.brand h1{font-size:clamp(22px,4.5vw,30px);font-weight:800}
+.brand .r{display:flex;gap:8px;align-items:center}
+.brand a{font-size:14px;color:var(--accent);font-weight:700;text-decoration:none}
+.notes-btn{border:0;background:var(--accent);color:var(--bg);border-radius:99px;padding:7px 14px;font-weight:700;cursor:pointer}
+.lead{margin:0;color:var(--soft);max-width:75ch;font-size:15px}
+.chips{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;border:1.5px solid var(--line);background:var(--card);border-radius:99px;padding:6px 12px;font-size:14px;cursor:pointer;white-space:nowrap}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--bg);font-weight:700}
+.chip small{opacity:.75;margin-left:4px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12.5px;color:var(--soft)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dotk{width:10px;height:10px;border-radius:50%}
+
+.wrap{max-width:1400px;margin:0 auto;padding-bottom:max(120px,calc(env(safe-area-inset-bottom) + 110px))}
+
+/* overview */
+.ov{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+.ph{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;text-align:left;cursor:pointer;display:flex;flex-direction:column;gap:8px;position:relative;transition:transform .15s,box-shadow .15s}
+.ph:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.08)}
+.ph .n{font-family:var(--f-disp);font-weight:800;font-size:13px;color:var(--accent);letter-spacing:.04em;text-transform:uppercase}
+.ph h2{font-size:20px;font-weight:800}
+.ph p{margin:0;color:var(--soft);font-size:14px}
+.ph .avs{display:flex;gap:4px;flex-wrap:wrap}
+.bar-r{height:8px;border-radius:9px;background:var(--gray-cl);overflow:hidden;display:flex}
+.bar-r i{display:block;height:100%}
+.ph .st{font-size:12.5px;color:var(--soft)}
+.ph .to{font-size:12.5px;color:var(--faint)}
+
+/* phase map */
+.map{display:flex;border:1px solid var(--line);border-radius:16px;background:var(--card);overflow:hidden}
+.lanes{flex:0 0 auto;width:84px;border-right:1px solid var(--line);background:var(--card);z-index:2}
+.lanes .hd{height:14px}
+.lname{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-top:1px solid var(--line);font-size:12.5px;text-align:center;padding:0 4px}
+.av{width:30px;height:30px;border-radius:50%;display:inline-grid;place-items:center;font-weight:700;font-size:11.5px;color:#fff;flex:0 0 auto}
+.av.s{width:24px;height:24px;font-size:10px}
+.lname small{color:var(--faint);font-size:11px;line-height:1.1}
+.scroller{flex:1;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scroll-behavior:smooth}
+.canvas{position:relative}
+.lane-bg{position:absolute;left:0;right:0;border-top:1px solid var(--line)}
+.lane-bg.alt{background:var(--lane)}
+svg.edges{position:absolute;inset:0;pointer-events:none;overflow:visible}
+.edge{fill:none;stroke:var(--faint);stroke-width:1.6;opacity:.75}
+.edge.on{stroke:var(--accent);stroke-width:2.6;opacity:1}
+.node{position:absolute;width:var(--nw);height:var(--nh);border:1.6px solid var(--line);border-radius:12px;background:var(--card);padding:6px 8px 6px 10px;font-size:12.5px;line-height:1.22;cursor:pointer;text-align:left;display:flex;flex-direction:column;gap:3px;overflow:hidden;transition:transform .15s,box-shadow .15s}
+.node:hover{transform:translateY(-2px);box-shadow:0 6px 16px rgba(0,0,0,.10)}
+.node .id{font-size:10.5px;color:var(--faint);font-weight:700;display:flex;justify-content:space-between;gap:4px}
+.node .t{font-weight:700;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.node .meta{display:flex;gap:4px;align-items:center;margin-top:auto;min-width:0}
+.node.sys{border-style:dotted;background:var(--gray-cl)}
+.node.cur{border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-cl)}
+.node.rv-ok{border-color:var(--green)} .node.rv-cor{border-color:var(--red)} .node.rv-ref{border-color:var(--amber)}
+.rv{font-size:10.5px;font-weight:700;border-radius:99px;padding:0 6px}
+.rv.ok{background:var(--green-cl);color:var(--green)} .rv.cor{background:var(--red-cl);color:var(--red)} .rv.ref{background:var(--amber-cl);color:var(--amber)}
+.pill{display:inline-block;border-radius:99px;padding:1px 7px;font-size:11px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;background:var(--violet-cl);color:var(--violet)}
+.ic{font-size:11.5px;flex:0 0 auto}
+.hint{margin:8px 0 0;font-size:13px;color:var(--faint)}
+
+/* bottom bar */
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--card);border-top:1px solid var(--line);padding-top:10px;padding-bottom:max(10px,env(safe-area-inset-bottom))}
+.bar-in{max-width:1400px;margin:0 auto;display:flex;align-items:center;gap:10px}
+.bar .btn{border:1.5px solid var(--line);background:var(--card);border-radius:12px;padding:9px 14px;cursor:pointer;font-weight:700;min-width:44px}
+.bar .btn.p{background:var(--accent);border-color:var(--accent);color:var(--bg)}
+.bar .btn:disabled{opacity:.4;cursor:default}
+.bar .pos{flex:1;min-width:0;font-size:13.5px;color:var(--soft);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* sheet */
+.sheet{position:fixed;z-index:40;background:var(--card);border:1px solid var(--line);box-shadow:0 -10px 40px rgba(0,0,0,.18);display:flex;flex-direction:column;gap:12px;padding:16px;overflow:auto;transition:transform .3s ease}
+@media (max-width:820px){.sheet{left:0;right:0;bottom:0;max-height:78vh;border-radius:18px 18px 0 0;transform:translateY(105%);padding-bottom:max(16px,env(safe-area-inset-bottom))}.sheet.open{transform:none}}
+@media (min-width:821px){.sheet{top:16px;right:16px;bottom:16px;width:400px;border-radius:18px;transform:translateX(440px)}.sheet.open{transform:none}}
+.sh-h{display:flex;align-items:flex-start;gap:10px}
+.sh-h h2{font-size:20px;font-weight:800;flex:1}
+.sh-h .k{font-size:12px;color:var(--faint);font-weight:700;display:block;font-family:var(--f-body)}
+.x{border:0;background:var(--gray-cl);border-radius:50%;width:34px;height:34px;cursor:pointer;flex:0 0 auto}
+.who{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--soft);flex-wrap:wrap}
+.sheet p{margin:0}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:14px}
+.kv dt{color:var(--faint);font-weight:700}
+.kv dd{margin:0}
+.rule{background:var(--amber-cl);border-radius:12px;padding:10px 12px;font-size:14px}
+.go{display:flex;gap:6px;flex-wrap:wrap}
+.go button{border:1.5px solid var(--line);background:var(--card);border-radius:99px;padding:5px 11px;font-size:13px;cursor:pointer;text-align:left}
+.review{border:1.5px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--bg)}
+.review h3{font-size:15px}
+.rbtns{display:flex;gap:6px;flex-wrap:wrap}
+.rbtns button{flex:1;min-width:92px;border:1.5px solid var(--line);background:var(--card);border-radius:10px;padding:8px;cursor:pointer;font-weight:700;font-size:14px}
+.rbtns button[aria-pressed="true"].ok{background:var(--green);border-color:var(--green);color:var(--bg)}
+.rbtns button[aria-pressed="true"].cor{background:var(--red);border-color:var(--red);color:var(--bg)}
+.rbtns button[aria-pressed="true"].ref{background:var(--amber);border-color:var(--amber);color:var(--bg)}
+.review textarea{width:100%;min-height:70px;border:1.5px solid var(--line);border-radius:10px;padding:8px;background:var(--card);resize:vertical}
+.saved{font-size:12.5px;color:var(--faint);min-height:1em}
+.sum{display:flex;flex-direction:column;gap:6px}
+.sum .it{border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:14px;cursor:pointer;text-align:left;background:var(--card)}
+.sum .it small{display:block;color:var(--soft)}
+.act{display:flex;gap:8px;flex-wrap:wrap}
+.act button,.act a{border:0;background:var(--accent);color:var(--bg);border-radius:10px;padding:9px 14px;font-weight:700;cursor:pointer;text-decoration:none;font-size:14px}
+.act .sec{background:var(--gray-cl);color:var(--ink)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}.scroller{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="pad">
+  <div class="brand"><h1>Mapa del prototipo CPS</h1>
+    <div class="r"><a href="guia.html">Guía paso a paso</a><button class="notes-btn" id="notesBtn">Mis notas</button></div></div>
+  <p class="lead">Aquí está <b>todo lo que hace hoy el prototipo</b>, botón por botón. Cada fila es una persona y las flechas muestran qué sigue. Toca una caja para ver el detalle y márcala: <b>Está bien</b>, <b>Corregir</b> o <b>Reforzar</b>. Al terminar, toca «Mis notas» y envíalas por WhatsApp.</p>
+  <div class="chips" id="chips" role="toolbar" aria-label="Fases"></div>
+  <div class="legend">
+    <span><i class="dotk" style="background:var(--green)"></i>Está bien</span>
+    <span><i class="dotk" style="background:var(--red)"></i>Corregir</span>
+    <span><i class="dotk" style="background:var(--amber)"></i>Reforzar</span>
+    <span>✉ correo · 🔔 aviso · ⚠ alerta · caja punteada = lo hace el sistema solo</span>
+  </div>
+</header>
+
+<div class="wrap pad" id="main"></div>
+
+<div class="bar pad"><div class="bar-in">
+  <button class="btn" id="prev" aria-label="Anterior">‹</button>
+  <div class="pos" id="pos" aria-live="polite"></div>
+  <button class="btn p" id="next">Empezar ›</button>
+</div></div>
+
+<aside class="sheet" id="sheet" aria-hidden="true"></aside>
+
+<script>
+"use strict";
+const LANES={
+  cli:{n:"Cliente",s:"Propiedad",c:"#6b7a79",i:"CL"},
+  lyd:{n:"Lydia",s:"Comercial",c:"#b5562b",i:"LC"},
+  cla:{n:"Claudia",s:"Admin / Estimados",c:"#2a5a9e",i:"CV"},
+  tha:{n:"Thalia",s:"Programación",c:"#7a3f9a",i:"TM"},
+  tec:{n:"Técnico",s:"Celular",c:"#2e7a43",i:"TC"},
+  gus:{n:"Gustavo",s:"Supervisión",c:"#a8322d",i:"GA"},
+  eri:{n:"Erika",s:"Administración",c:"#0f6b66",i:"EM"},
+  sis:{n:"Sistema",s:"Automático",c:"#566868",i:"⚙"}
+};
+const LANE_ORDER=["cli","lyd","cla","tha","tec","gus","eri","sis"];
+const PHASES={
+  1:{n:"Venta",d:"Clientes, propiedades, solicitudes y estimados.",to:"Sigue en 2 · Programación"},
+  2:{n:"Programación",d:"Crear WO, fecha, técnico, agenda, permisos y avisos al cliente.",to:"Sigue en 3 · Trabajo en sitio"},
+  3:{n:"Trabajo en sitio",d:"Todo lo que hace el técnico desde su celular, y detener o reanudar.",to:"Sigue en 4 · Supervisión y 6 · Validación"},
+  4:{n:"Supervisión",d:"La ruta de Gustavo, sus informes, inspecciones y revisiones.",to:"Sigue en 5 · Returns o 6 · Validación"},
+  5:{n:"Returns y return fix",d:"Cuando un trabajo quedó mal: abrirlo, corregirlo y cerrarlo.",to:"Sigue en 7 · Nómina (descuentos)"},
+  6:{n:"Validación",d:"Revisar la WO terminada y aprobar pago y factura.",to:"Sigue en 7 · Nómina y 8 · Facturación"},
+  7:{n:"Nómina",d:"Pagos a técnicos, descuentos y comprobantes.",to:""},
+  8:{n:"Facturación y cobranza",d:"Armar, enviar y cobrar facturas.",to:""},
+  9:{n:"Requests y herramientas",d:"Requests, alertas, tarifario, inventario, finanzas, reportes y catálogos.",to:"Se usan en todas las fases"}
+};
+/* id | carril | también | dónde | botón | qué hace | estado | avisos | regla | sigue en */
+const RAW=`
+1.01|cla|Lydia|Management|+ Nuevo › Guardar|Registra la empresa administradora y la liga a una propiedad. Al editar se usa «Guardar corrección».|||Nombre y propiedad obligatorios. Un teléfono repetido no deja guardar.|1.02
+1.02|cla|Lydia|Management|Documentos «0/2» › Guardar|Marca el Vendor Packet y el W-9 como recibidos y adjunta el PDF.||||
+1.03|cla|Lydia, Thalia|Propiedades|+ Nueva propiedad › Guardar|Alta o edición de la propiedad: datos, días de crédito e info para el técnico.|Nueva › Prospect|Queda en Bitácora lo que cambió.|Nombre y dirección obligatorios.|1.05,1.06,1.09,1.10,1.11,1.14
+1.04|cla|Lydia, Thalia|Ficha de propiedad|Dar de baja / Reactivar|Activa o desactiva la propiedad. No se borra.|Activa › Inactiva||Inactiva deja de aparecer para WO nuevas.|
+1.05|cla|Lydia, Thalia|Ficha › Contactos|+ Contacto › Guardar|Alta o edición de contactos de la propiedad.|||Nombre y correo obligatorios.|1.10
+1.06|cla|Lydia, Thalia|Ficha › Unidades|+ Unidad › Guardar|Alta o edición de unidades: edificio, número, bedrooms, ocupación.|||Número obligatorio; bedrooms si es residencial.|
+1.07|cla|Lydia, Thalia|Ficha › Comunicación|+ Agregar|Anota una llamada o un correo con la propiedad.|||Nota obligatoria.|
+1.08|cla|Lydia, Thalia|Ficha de propiedad|Agregar pintura / crédito|Registra pinturas usadas, crédito en dinero y cortesías de servicio. Se usan al facturar.|||Pintura: superficie y color. Crédito: monto y motivo.|8.03
+1.09|cla|Lydia, Thalia|Ficha › Alta guiada|Partir de la general|Copia las tarifas generales como lista de precios propia de la propiedad.|||Necesita el tarifario general cargado.|
+1.10|cla|Lydia|Expediente / Estimados|Registrar COI › Guardar|Guarda las pólizas del seguro y su historial de renovaciones.||⚠ Alerta «COI sin registrar» si falta.|Cada póliza con vencimiento. Vigente solo si todas lo están.|1.14
+1.11|cla|Lydia, Thalia|Ficha › Expediente|Pedir inspección en sitio|Crea una visita de inspección pendiente.|› Inspección pendiente|Mensaje en pantalla.||4.12
+1.15|lyd|Claudia|Solicitudes|+ Nueva solicitud › Guardar|Registra el pedido del cliente con plazo de 24 horas para contestar.|› Esperando inspección / Lista para estimado|🔔 Aviso a Claudia si la registra otra persona.|Propiedad, contacto, correo y alcance obligatorios.|1.16,1.17,1.18
+1.12|lyd|Claudia|Solicitudes › Visitas comerciales|+ Registrar visita › Guardar|Anota con quién habló y el resultado: crea Solicitud Comercial, pasa directo a Thalia o queda en seguimiento.|› Requiere estimado / Servicio directo / En seguimiento|🔔 Aviso a Claudia si requiere estimado.|Seguimiento pide fecha. Servicio directo pide Expediente completo.|1.13,1.15
+1.13|lyd|Claudia|Visitas comerciales|Reintentar / Completar Expediente|Vuelve a intentar pasar a Thalia cuando el Expediente ya está completo.|||Expediente completo.|2.01
+1.16|cla|Lydia|Solicitudes|Asignar inspección a Gustavo|Marca la inspección como asignada y para el reloj de 24 horas.||Mensaje en pantalla.|Se destraba cuando Gustavo manda el informe de esa propiedad.|4.09,1.18
+1.17|cla|Lydia|Solicitudes|Descartar|Descarta la solicitud.|› Descartada|||
+1.18|cla|Lydia|Solicitudes|Crear estimado|Abre el estimado con la propiedad y el contacto ya puestos.|||Si pedía inspección, debe existir el informe de Gustavo.|1.20
+1.19|cla|Lydia|Estimados|+ Nuevo estimado|Estimado directo (cliente existente o prospecto), sin solicitud ni plazo de 24 horas.||||1.20
+1.20|cla|Lydia|Editor de estimado|+ Agregar línea|Arma las líneas con precio, cantidad y descuento, desde el tarifario o como concepto libre.|||Precio ≥ 0, cantidad > 0, descuento hasta 100%.|1.21,1.22
+1.21|cla|Lydia, Erika|Editor de estimado|Al tarifario|Pasa el precio de la línea a la lista de precios de la propiedad.|||Precio mayor a 0.|
+1.22|cla|Lydia|Editor de estimado|Save draft / Send|Guarda el estimado. Los dos botones hacen lo mismo: todavía no se envía.|› Borrador|Mensaje en pantalla.|Prospecto: nombre y correo. Cliente: propiedad.|1.23
+1.23|cla|Lydia|Estimados|Enviar|Manda el correo con el Invoice del estimado adjunto, que se puede editar.|Borrador › Enviado|✉ Correo a los contactos de la propiedad.|Sin contactos con correo no deja enviar.|1.24,1.25
+1.24|cli|Claudia o Lydia lo registran|Estimados|Aprobar › Correo / Mensaje / Llamada|Se registra a mano que el cliente aprobó y por qué medio.|Enviado › Aprobado · Prospect › Active|Si falta el COI abre el registro de pólizas.|Medio obligatorio.|1.27,1.28
+1.25|cli|Claudia o Lydia lo registran|Estimados|Rechazar|Se registra que el cliente no aprobó y por qué medio.|Enviado › Rechazado||Medio obligatorio.|1.26
+1.26|cla|Lydia|Estimados|Modificar propuesta y reenviar|Reabre el estimado para ajustarlo y volver a enviarlo.|Rechazado › Borrador|||1.23
+1.27|cla|Lydia|Estimados|Convertir en cliente|Un prospecto que aprobó se da de alta como propiedad y se le cuelga el estimado.|Prospect › Active||Solo prospectos aprobados.|1.28
+1.14|cla|Lydia, Thalia|Ficha › Expediente|Transferir a programación (desde la propiedad)|Crea una solicitud pendiente para Thalia.|› Solicitud pendiente|Mensaje en pantalla.|Expediente de 10 puntos completo, con COI vigente y estimado aprobado.|2.01
+1.28|cla|Lydia|Estimados|Transferir a programación|Crea la solicitud para Thalia con las líneas aprobadas y su precio.|Aprobado › Transferido|Mensaje en pantalla.|No puede ser prospecto. Expediente completo.|2.01
+2.01|tha|Claudia, Lydia|Work Orders › Solicitudes de Comercial|Programar|Si viene de un estimado, crea una WO por línea con su precio. Si no, abre la WO para llenarla.|› WO Scheduled sin técnico|Mensaje en pantalla.|Las WO que vienen del estimado nacen con una fecha de ejemplo.|2.06,2.08
+2.02|tha|Claudia, Lydia|Work Orders|+ Nueva Work Order › Guardar|Crea una WO a mano; puede crear la unidad si no existe.|› Scheduled|Queda en Bitácora.|Propiedad, unidad, servicio, fecha y cantidad obligatorios. Sin tarifa nace un Request.|2.03,2.06,2.08
+2.03|tha|Claudia, Lydia|Aviso «Ya existe una Work Order igual»|Ir a WO y registrar return / Crear nueva|Frena si ya hay una WO de la misma unidad y servicio abierta o terminada hace 60 días o menos.||Queda anotado en el historial de las dos WO.|«Crear nueva» pide motivo.|5.01
+2.04|tha|Claudia, Lydia|Ficha de la WO|Editar datos › Guardar corrección|Corrige datos de la WO y de la unidad.||🔔 Aviso al técnico si ya está asignado.|No se puede si está cancelada, facturada o pagada.|
+2.05|tha|Claudia, Lydia|Ficha de la WO|Agregar foto de referencia|Sube fotos de preparación para el técnico.||||
+2.06|tha|Claudia|Ficha de la WO|Definir fecha con cliente / Reagendar|Guarda la fecha acordada, por qué medio y con quién. Con «Quedó en confirmarme después» no cambia el estado.|Scheduled › Confirmed|🔔 Aviso al técnico si cambia la fecha. 🔔 Aviso a Thalia si la movió otra persona.|Si ya tenía fecha pide «¿Qué pasó?». El técnico debe tener cupo y no tener permiso ese día.|2.08,2.18
+2.07|tha|Claudia|Asignar WO|Fecha del trabajo|Cambia la fecha al momento de asignar.|Confirmed › Scheduled si ya no coincide|Pide volver a confirmar.|No deja si el técnico tiene permiso ese día.|2.06
+2.08|tha|Claudia|Lista de WO / Ficha|Asignar técnico|Asigna el técnico. El sistema muestra zona, especialidad y horario de cada uno.|El estado no cambia|🔔 Aviso al técnico «Nueva Work Order».|No deja si el técnico tiene permiso o ya tiene 2 WO ese día.|2.11,3.01
+2.09|tha|Claudia|Ficha de la WO|Reasignar técnico|Pasa la WO a otro técnico. Si es return fix, recalcula el descuento.||🔔 Aviso «Te reasignaron un trabajo».|No si está cancelada, facturada o pagada.|
+2.10|tha|Claudia|Ficha de la WO|Cancelar WO|Cancela y limpia lo pendiente: recordatorios, adicionales y Requests.|Scheduled/Confirmed › Canceled|🔔 Aviso al técnico.|Solo antes de empezar y sin facturar ni pagar. Motivo obligatorio.|
+2.11|tha|Claudia, Erika|Work Orders › Confirmar agenda de mañana|Fecha a confirmar / Hora de cierre|Elige el día a confirmar (fin de semana pasa al lunes) y guarda la hora de cierre.||||2.12
+2.12|sis|Thalia, Claudia o Erika tocan el botón|Confirmar agenda de mañana|Enviar confirmaciones|Manda un correo por propiedad con las WO de ese día que ya tienen técnico.|La WO no cambia|✉ Correo a los contactos de cada propiedad.|Solo lunes a viernes. Una vez por WO y fecha.|2.13,3.01
+2.13|tha|Claudia, Erika|Confirmar agenda / Ficha de la WO|Enviar agenda › Correo, WhatsApp, Mensaje o Llamada|Envía la agenda de una WO o anota que se avisó por otro medio.||✉ Correo (los otros medios solo se anotan).||
+2.14|tha|Claudia|Disponibilidad|Cerrar el día / Reabrir|Marca el día como cerrado y avisa si hay sobrecupo o WO sin técnico.||Mensaje en pantalla.||
+2.15|tha|Claudia|Disponibilidad|+ Registrar permiso|Registra un permiso de un técnico.|› Pendiente|||2.16
+2.16|tha|Claudia|Disponibilidad|Aprobar permiso|Aprueba el permiso: el técnico deja de aparecer para asignar ese día.|Pendiente › Aprobado|🔔 Aviso a Thalia si choca con WO ya asignadas.||2.09
+2.17|tha|Claudia|Disponibilidad|Recordar a los que faltan|Recuerda a los técnicos que no enviaron su disponibilidad de la semana.||🔔 Aviso al celular.||3.17
+2.18|tha|Claudia, Erika|Work Orders › Recordatorios|Mover / Enviar / ¿Va en camino?|Recordatorios 1 día, 1 hora y 15 minutos antes del trabajo.|Programado › Enviado|🔔 Aviso al técnico. ✉ Correo al cliente si la unidad está ocupada.||
+2.19|tha|Claudia, Erika|Ficha / Pendientes|Avisar cliente|Avisa al cliente en inglés (correo o SMS) qué se necesita y hasta cuándo responder.|› Comunicación abierta|✉ Correo o SMS al cliente. ⚠ Alerta si vence la fecha de respuesta.|Solo para WO detenidas o pendientes.|3.20
+2.20|tha|Claudia|Ficha › Sub-Work Orders|+ Nueva Sub-Work Order|Crea una Sub-WO. Si tiene precio queda esperando aprobación.|› Pending approval / aprobada|🔔 Aviso al técnico si ya está aprobada.|El permiso del técnico bloquea.|9.01,2.21
+2.21|tha|Claudia|Ficha › Sub-Work Orders|Gestionar Sub-WO|Cambia técnico, fecha o estado de la Sub-WO.||🔔 Aviso al técnico.|Completar pide evidencia.|3.14
+2.22|tha|Claudia|Ficha de la WO|Ref / Evid / Hallazgo › Agregar foto|Sube fotos de referencia, evidencia o hallazgos desde la oficina.||||
+2.23|tha|Claudia, Gustavo|Ficha › Materials|+ Agregar material|Registra material sacado del inventario o puesto por el cliente, con recibo.|||No deja sacar más de lo que hay.|
+2.24|tha|Todos|Ficha de la WO|Ver en el celular de …|Abre la WO como la ve el técnico.||||3.01
+2.25|tha|Todos|Agenda|Semana / Día|Calendario de solo lectura, por técnico, con una fila «Sin asignar».||||
+3.01|tec||Celular › WO|Ya llegué|Marca la llegada y calcula si llegó a tiempo (10 minutos de tolerancia).|Scheduled/Confirmed › In progress|Mensaje a la oficina.|No deja si esta WO espera a que termine otra.|3.02,3.03
+3.02|tec||Celular › WO|Sí, coincide — empezar|Confirma que la unidad es como está cargada.|||Obligatorio antes de trabajar.|3.04
+3.03|tec||Celular › WO|No coincide — avisar a oficina|Reporta que los datos de la unidad no coinciden y sigue trabajando.|› Request «Unit data mismatch»|🔔 Aviso a Thalia.|El número de pisos debe ser distinto al del sistema.|9.05
+3.04|tec||Celular › WO|Foto del antes|Guarda cómo estaba la unidad.|||No cuenta para cerrar.|3.05
+3.05|tec||Celular › WO|Foto de cómo quedó|Sube la evidencia del trabajo terminado.|||Obligatoria para terminar.|3.11
+3.06|tec||Celular › WO|Materiales|Registra lo que usó del inventario.||||
+3.07|tec||Celular › WO|Compra de materiales|Registra lo que compró en tienda, con el ticket.|||El total debe cuadrar con el ticket.|9.09
+3.08|tec||Celular › WO|Necesito aprobación|Pide aprobar trabajo extra que no estaba en la WO.|Adicional pendiente · la WO sigue In progress|🔔 Aviso a Thalia.|Descripción obligatoria.|9.01
+3.09|tec||Celular › WO|Necesito ayuda|Pide ayuda en sitio.|› Request «Ayuda en sitio»|🔔 Aviso a Thalia y Gustavo.|No frena el pago ni la factura.|9.04
+3.10|tec||Celular › WO|Qué hiciste|Escribe lo que hizo.||||
+3.11|tec||Celular › WO|Terminé|Cierra el trabajo y calcula las horas.|In progress › Completed · si es return fix, el return pasa a Corregida|🔔 Aviso a Lydia si es return fix. 🔔 Aviso a técnicos con WO que esperaban esta.|Sin foto del después no deja cerrar.|6.01,4.14
+3.12|tec||Celular › «No marcaste tu llegada»|Registrar y cerrar|Declara a qué hora llegó (sin verificar) y cierra.|› Request «Llegada declarada»|🔔 Request para Thalia.||6.01
+3.13|tec||Celular › WO|Ya está, enviar|Responde lo que la oficina le pidió: foto o dato.||🔔 Aviso a quien lo pidió.||6.03
+3.14|tec||Celular › Sub-WO|Empezar Sub-WO|Trabaja una Sub-WO asignada y sube su evidencia.|Assigned › In progress|||3.15
+3.15|tec||Celular › Sub-WO|Terminar Sub-WO|Dice cuántas terminó; lo que falta queda para reasignar.|› Completed|🔔 Aviso a Erika.|Pide evidencia.|6.01
+3.16|tec||Celular › Agenda|Pedir permiso o vacaciones|Solicita un permiso.|› Pendiente||Motivo obligatorio.|2.16
+3.17|tec||Celular › Agenda|Mi disponibilidad de la semana|Envía en qué horarios puede trabajar.||🔔 Aviso a Thalia si choca con WO asignadas.||
+3.18|tec||Celular › Mi pago|Mi pago (solo ver)|Ve sus trabajos, extras aprobados y descuentos aplicados.|||Nunca ve precios al cliente ni descuentos por decidir.|
+3.19|tha|Claudia|Ficha de la WO|Detener trabajo|Frena un trabajo que ya empezó, con motivo.|In progress › Detenido|🔔 Aviso a Thalia.|Motivo obligatorio.|2.19,3.20
+3.20|tha|Claudia|Ficha de la WO|Reanudar trabajo|Vuelve a poner la WO en marcha.|Detenido › In progress|||
+3.21|tha|Claudia, Gustavo|Ficha de la WO|Registrar avance|Anota el porcentaje de avance y los problemas.||||
+4.03|tha|Claudia|Supervisión › Calendario de Gustavo|Solicitar visita de Gustavo|Pide una visita de estimado o de supervisión.|› Por agendar||Fecha tentativa obligatoria.|4.04
+4.04|cla||Calendario de Gustavo|Agendar|Convierte la solicitud en una parada de su ruta.|Por agendar › Agendada|🔔 Aviso a Gustavo si es hoy.|Solo Claudia.|4.06
+4.01|cla||Supervisión › Ruta del día|+ Agregar parada|Agrega una parada a la ruta de Gustavo.|› Parada pendiente|🔔 Aviso a Gustavo si es hoy.|No repite propiedad el mismo día.|4.06
+4.02|cla||Ruta del día|Quitar parada|Quita una parada que no se visitó.||||
+4.05|cla||Calendario de Gustavo|Mover parada|Cambia el día de una parada.|||Solo Claudia.|
+4.06|gus||Celular › Mi ruta|Voy en camino|Avisa que va en camino.|› En camino|🔔 Aviso a Claudia.||4.07
+4.07|gus||Celular › Mi ruta|Llegué|Marca la llegada; se anota sola en su reporte del día.|› Visitada|🔔 Aviso a Claudia.||4.09,4.13,4.14
+4.08|gus||Celular › Mi ruta|No pude completarla|Registra que fue pero no pudo hacerla.|› No completada|🔔 Aviso a Claudia.|Motivo obligatorio.|
+4.09|gus||Celular › Reportar|Enviar informe a Claudia|Inspección, informe de supervisión o estado previo, con fotos por ambiente. Si anota trabajo adicional, nace una Solicitud Comercial sola.|› Informe nuevo|🔔 Aviso a Thalia si va con copia. 🔔 Aviso a Claudia si hay trabajo adicional.|Fotos obligatorias salvo «No se pudo ingresar».|4.17,1.18,5.02
+4.10|gus||Celular › Reportar|Guardar borrador|Guarda el informe a medias para seguir después.||||4.09
+4.11|gus||Celular › Mi día|Finalizar y enviar reporte del día|Reporte del día que se llena solo con llegadas, informes y returns; se le agregan compras, entregas y problemas.|En progreso › Completado|🔔 Aviso a Claudia al finalizar.|No se envía vacío.|
+4.12|gus|Thalia, Claudia|Supervisión › Inspecciones|Registrar en sitio › Cerrar inspección|Cierra la inspección con ambientes y medidas.|› Cerrada|Mensaje en pantalla.|Al menos un ambiente.|1.18
+4.13|gus|Claudia|Supervisión › Ruta del día|Registrar visita|Anota lo acordado con mantenimiento y si falta material.|› Cerrada|Si falta material nace un Request para Erika.|«Lo acordado» obligatorio.|9.04
+4.14|gus|Thalia, Claudia|Supervisión › Por revisar|Aprobar supervisión|Registra que el trabajo quedó bien.|La WO sigue Completed · marcada supervisada||Pide evidencia.|6.03
+4.15|gus|Thalia, Claudia|Supervisión › Por revisar|No se pudo supervisar|Deja constancia de que no se pudo revisar.|||No frena nómina ni factura.|
+4.16|gus|Thalia, Claudia|Supervisión › Por revisar|Hacer return|Abre un return del trabajo, con foto.|Return Abierta · la WO sigue Completed|🔔 Aviso al técnico.|Motivo obligatorio.|5.04
+4.17|cla|Gustavo|Supervisión › De campo|Archivar / Crear WO / Crear estimado|Decide qué hacer con cada informe de campo: archivar, registrar compra, crear WO o estimado.|› Archivado / Procesado||«Crear estimado» trae las líneas del informe.|2.02,1.20
+4.18|gus|Thalia, Claudia|Supervisión › Resumen del día|Enviar reporte diario|Muestra el resumen del día.||Mensaje en pantalla.||
+4.19|gus||Celular › Hoy|Gasolina / vehículo|Registra un gasto del vehículo con foto.|||Monto y foto obligatorios.|9.10
+4.20|gus|Claudia|Supervisión|Ver su celular|Abre la vista del celular de Gustavo desde la web.||||
+5.01|eri|Lydia, Claudia|Returns / Ficha de la WO|Registrar return|La oficina registra un return: quién lo pidió, quién hizo el trabajo, causa y prioridad.|› Return Abierta · la WO no cambia|Mensaje en pantalla.|Unidad, descripción y técnico obligatorios.|5.04
+5.02|gus||Celular › Returns|Crear return|Gustavo crea el return en campo con fotos del antes y prioridad.|› Return Abierta|🔔 Aviso a Claudia y a Thalia.|Descripción, foto y unidad obligatorias.|5.04
+5.04|lyd|Claudia, Erika|Returns / Requests|Crear return fix|Crea la WO de corrección, que no se factura. Si va otro técnico, se le paga a él y se descuenta al que lo hizo mal.|› WO return fix Scheduled|🔔 Aviso al técnico «Tienes un return fix asignado». Descuento «Por decidir» en Nómina.|Un solo return fix por return. Si va el mismo técnico, corrige sin pago.|3.11,5.03,7.05
+5.05|tha|Claudia|Ficha de la WO|Reasignar técnico del return fix|Cambia quién corrige y recalcula el descuento.||||
+5.03|gus||Celular › Return|Marcar como corregida|Gustavo verifica la corrección con fotos del después.|Abierta › Corregida||Al menos una foto del después.|5.06,5.07
+5.06|lyd|Claudia, Erika|Returns|Cerrar return|La oficina cierra un return corregido.|Corregida › Cerrada|🔔 Aviso a Erika si lo cierra otra persona.|Solo si está Corregida.|
+5.07|gus||Celular › Return|Cerrar return|Gustavo cierra el return desde el celular.|Corregida › Cerrada|🔔 Aviso a Claudia y Erika.||
+6.01|sis||Automático|Validación automática|Si la WO tiene foto, tarifa y nada pendiente, se valida sola (pago y factura aprobados).|› Validada||Sin Sub-WO pendiente ni respuesta del cliente pendiente.|7.01,8.01
+6.03|eri|Claudia|Nómina › WO sin validar|Revisar y validar|Abre todo el expediente: materiales, Sub-WO, fotos y dinero.|||Si falta foto, tarifa, Sub-WO o respuesta del cliente, no deja aprobar.|6.02,6.04,6.05,6.06,6.07
+6.02|eri|Claudia|Revisar y validar|Solicitar info al técnico|Pide al técnico la foto o el dato que falta.||🔔 Aviso al técnico.|Solo si falta evidencia o tarifa.|3.13
+6.04|eri|Claudia|Revisar y validar|Aprobar pago / Aprobar factura|Aprueba por separado el pago al técnico y la factura al cliente.|› Pago aprobado / Factura aprobada||Si cambia montos, pide motivo.|7.01,8.01
+6.05|eri|Claudia|Revisar y validar|Guardar sin validar|Guarda cambios de cobro o pago sin validar todavía.|||Motivo si cambian montos.|
+6.06|eri|Claudia|Revisar y validar|+ Agregar ajuste|Agrega cobro extra, pago extra o descuentos.|||Concepto y monto obligatorios.|
+6.07|eri|Claudia|Revisar y validar|Ajustar materiales|Corrige materiales; actualiza inventario y utilidad.|Quita las aprobaciones||No deja sacar más de lo que hay.|6.04
+6.08|eri|Claudia|Nómina|Editar revisión|Devuelve la WO a revisión.|Validada › Sin validar||Solo si no se pagó ni se facturó.|6.03
+6.09|eri|Claudia|Ficha de la WO|Enviar expediente al cliente|Manda al cliente las fotos y el resumen del trabajo para que confirme.|› Enviado · quita la validación|✉ Correo al cliente.|Necesita al menos una foto final.|6.10
+6.10|cli|Erika o Claudia lo registran|Ficha de la WO|Registrar aprobación / corrección del cliente|Se anota lo que respondió el cliente.|› Confirmado / Corrección solicitada|🔔 Aviso a Erika si pide corrección.|Medio y nota obligatorios.|6.01
+7.05|eri|Claudia|Nómina › Descuentos por return|Aplicar descuento|Aplica el descuento del return al técnico responsable.|Por decidir › Aplicado||Nunca deja el pago en negativo.|7.01
+7.06|eri|Claudia|Nómina › Descuentos por return|No aplicar|No aplica el descuento y guarda por qué.|Por decidir › No aplicado||Motivo obligatorio.|
+7.04|eri|Claudia|Nómina|Descuento manual|Descuento manual al técnico en la semana.|› Aplicado|El técnico lo ve en Mi pago.|Monto y concepto obligatorios.|7.01
+7.03|eri|Claudia|Nómina|Pago parcial|Paga una parte de una WO.|||Menos que el saldo.|7.01
+7.01|eri|Claudia|Nómina|Marcar pagado|Paga al técnico las WO listas, con cheque o foto opcional.|› Pagada al técnico||Solo WO con pago aprobado y sin Request, Sub-WO ni respuesta del cliente pendientes.|7.07,7.08,3.18
+7.02|eri|Claudia|Nómina|Marcar pagados a todos|Lo mismo para todos los técnicos a la vez.|||Si no hay nada para pagar, no deja.|
+7.07|eri|Claudia|Nómina › Historial|Adjuntar comprobante / Buscar|Adjunta el comprobante después y busca pagos anteriores.||||
+7.08|eri|Claudia|Nómina|Ver comprobante|Resumen del pago del período, sin precios al cliente.||||
+8.01|eri|Claudia|Facturación|Preparar factura|Abre el borrador con las WO listas para facturar.|||Solo WO terminadas, con factura aprobada, sin Request ni Sub-WO pendientes, no retenidas y con tarifa.|8.03
+8.02|eri|Claudia|Facturación|+ Factura manual|Abre una factura sin WO.|||Propiedad obligatoria.|8.03
+8.05|eri|Claudia|Facturación|Retener / Liberar|Saca una WO de la factura por ahora; la nómina no cambia.|||Motivo obligatorio.|8.01
+8.03|eri|Claudia|Borrador de factura|Armar líneas, extras y créditos|Elige líneas, divide en varias facturas, agrega líneas manuales, extras y créditos.|||El crédito no puede pasar el saldo.|8.04
+8.04|eri|Claudia|Borrador de factura|Guardar factura|Crea una o varias facturas en borrador.|› Borrador · WO facturada||Al menos una línea.|8.06
+8.06|eri|Claudia|Facturación|Enviar al cliente|Envía la factura; vence hoy + los días de crédito de la propiedad.|Borrador › Enviada|✉ Correo al cliente con la factura.||8.07,8.15
+8.07|eri|Claudia|Facturación|Solicitar cambio de monto / Editar|Erika pide el cambio y Claudia edita la factura ya enviada.|› Request para Claudia|🔔 Aviso a Claudia.|Solo Claudia edita facturas enviadas.|
+8.15|sis||Cobranza|Factura vencida|Si pasa la fecha sin pago, la factura aparece como vencida en Cobranza.|Enviada › Vencida|⚠ Alerta «Factura vencida».||8.08,8.14
+8.08|eri|Claudia|Cobranza|Gestionar cobranza|Abre el seguimiento de una factura.||||8.09,8.11,8.12,8.13
+8.09|eri|Claudia|Cobranza|Enviar reminder|Registra el recordatorio de pago.||✉ Correo al cliente.|Solo si está vencida.|8.10
+8.10|eri|Claudia|Cobranza|Enviar correo overdue|Registra el correo de factura vencida.||✉ Correo al cliente.|Solo si está vencida.|8.11
+8.11|eri|Claudia|Cobranza|Registrar llamada|Anota el resultado de la llamada y la próxima fecha de seguimiento.||||8.12
+8.13|eri|Claudia|Cobranza|Cambiar vencimiento|Cambia la fecha de vencimiento.|||Fecha y motivo obligatorios.|
+8.14|eri|Claudia|Cobranza › Vencidas por cliente|Recordatorio agrupado|Un solo correo con todas las facturas vencidas del cliente.||✉ Correo al cliente.||
+8.12|cli|Erika o Claudia lo registran|Cobranza|Registrar pago|Se registra el pago del cliente, total o parcial.|Enviada › Pagada · WO cobrada||Monto mayor a 0 y no mayor a lo pendiente.|
+9.02|eri|Todos con Requests|Requests|+ New Request|Crea un Request a mano sobre una WO.|› Pendiente||WO y motivo obligatorios.|9.03
+9.03|eri|Todos con Requests|Requests|Assign to me / Assign|Elige quién se encarga del Request.|› En curso|🔔 Aviso a quien se asigna.||9.04,9.05,9.06,9.07
+9.04|eri|Quien lo tenga asignado|Requests|Aprobar / Rechazar / Resolver|Resuelve el Request según su tipo.|Pendiente › Aprobada / Rechazada / Resuelta|🔔 Aviso al técnico si era ayuda.|Un Request pendiente frena pago y factura de su WO, salvo ayuda en sitio y return.|
+9.01|tha|Quien sea el aprobador|Requests / Sub-Work Orders|Aprobar adicional / Todavía no sé / Rechazar|Decide un adicional o Sub-WO. Con precio genera pago extra al técnico y se puede cobrar al cliente.|Adicional pendiente › Aprobado / Rechazado|🔔 Aviso al técnico: hazlo o no lo hagas.|Sin precio nace el Request «Definir precio».|9.07
+9.05|tha|Quien lo tenga asignado|Requests|Apply correction|Corrige los datos de la unidad que reportó el técnico.||||
+9.06|cla|Quien lo tenga asignado|Requests|Definir tarifa|Crea la tarifa que faltaba.||🔔 Aviso a Claudia si el cliente preguntó el precio.|Si el cliente preguntó el precio, la define Claudia.|
+9.07|eri|Quien lo tenga asignado|Requests|Definir precio|Pone precio a un adicional aprobado sin precio.|||Precio ≥ 0.|
+9.08|sis|Todos|Alertas|Alertas|Avisos calculados solos: WO sin técnico, llegada tarde, respuesta vencida, COI, stock bajo, factura vencida, permisos y plazos de 24 horas.||⚠ Alertas en pantalla.||
+9.14|eri|Claudia|Tarifario|+ Nueva tarifa / Editar|Crea o edita precios e impuestos.|||Nombre y precio obligatorios.|9.15
+9.15|eri|Claudia|Tarifario|Enviar lista de precios|Envía al cliente los precios marcados de una propiedad.||✉ Correo al cliente.|Al menos un precio marcado y correo válido.|
+9.09|eri|Claudia, Gustavo; Contador solo ve|Inventario|Salidas, compras y costos|Maneja stock, activos y costos de tickets.||⚠ Alerta «Stock bajo».|No deja sacar más de lo que hay.|
+9.10|eri|Claudia; Contador solo ve|Finanzas|Gastos fijos y compartidos|Registra gastos y los reparte entre WO; se puede descargar.|||El reparto debe cuadrar con el total.|
+9.11|eri|Todos con Reportes|Reportes|Reportes|Tablas por zona, técnico o propiedad, con detalle al tocar un número.||||
+9.12|eri|Claudia|Buscar|Buscar / CSV|Busca WO con cobro, pago y utilidad, y las exporta.||||
+9.13|eri|Claudia|Bitácora|Bitácora|Muestra quién hizo qué y cuándo. Se llena sola.||||
+9.16|tha|Claudia|Catálogos|Catálogos|Maneja listas y servicios: agregar, renombrar, dar de baja. Nada se borra.|||No repite valores.|
+9.17|tha|Gustavo, Claudia|Técnicos|+ Nuevo técnico / Editar / Baja|Alta, edición y baja de técnicos; asistencia del día e historial.|||Nombre, apellido y especialidad obligatorios.|
+`;
+
+const OPS={}, ORDER=[];
+RAW.trim().split("\n").forEach(line=>{
+  const [id,lane,also,where,btn,txt,est,av,rule,next]=line.split("|");
+  OPS[id]={id,ph:+id.split(".")[0],lane,also,where,btn,txt,est,av,rule,next:(next||"").split(",").map(s=>s.trim()).filter(Boolean)};
+  ORDER.push(id);
+});
+const phaseOps=p=>ORDER.filter(id=>OPS[id].ph===p);
+
+/* ---------- review store (this device) ---------- */
+const KEY="cps-mapa-revision";
+let REV={};
+try{ REV=JSON.parse(localStorage.getItem(KEY)||"{}")||{}; }catch(e){ REV={}; }
+function saveRev(){ try{ localStorage.setItem(KEY,JSON.stringify(REV)); }catch(e){} }
+const RVL={ok:"Está bien",cor:"Corregir",ref:"Reforzar"};
+
+/* ---------- state ---------- */
+let phase=0, idx=-1;
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const icons=s=>(s.match(/[✉🔔⚠]/gu)||[]).filter((v,i,a)=>a.indexOf(v)===i).join("");
+
+/* ---------- layout ---------- */
+let CW,NW,NH=84,RH=96;
+function sizes(){ const sm=innerWidth<700; CW=sm?140:160; NW=sm?128:146; }
+function layout(p){
+  const ids=phaseOps(p), occ={}, place={};
+  let prev=0;
+  ids.forEach(id=>{
+    const preds=ids.filter(o=>place[o]&&OPS[o].next.includes(id));
+    let c=preds.length?Math.max(...preds.map(o=>place[o].c+1)):prev;
+    for(;;c++){ let r=0; while(r<2&&occ[OPS[id].lane+":"+c+":"+r]) r++; if(r<2){ occ[OPS[id].lane+":"+c+":"+r]=1; place[id]={c,r}; break; } }
+    prev=place[id].c;
+  });
+  const lanes=LANE_ORDER.filter(l=>ids.some(id=>OPS[id].lane===l));
+  const rows={}; lanes.forEach(l=>rows[l]=1+(ids.some(id=>OPS[id].lane===l&&place[id].r===1)?1:0));
+  const top={}; let y=14; lanes.forEach(l=>{ top[l]=y; y+=rows[l]*RH+8; });
+  const cols=Math.max(...ids.map(id=>place[id].c))+1;
+  return {ids,place,lanes,rows,top,H:y,W:cols*CW+24};
+}
+let L=null;
+function npos(id){ const p=L.place[id]; return {x:12+p.c*CW+(CW-NW)/2, y:L.top[OPS[id].lane]+4+p.r*RH+(RH-NH)/2}; }
+
+function geom(a,b){
+  const A=npos(a),B=npos(b), pa=L.place[a], pb=L.place[b];
+  let s,t,c1,c2;
+  if(pb.c>pa.c){ s=[A.x+NW,A.y+NH/2]; t=[B.x,B.y+NH/2]; const dx=Math.max(24,(t[0]-s[0])/2); c1=[s[0]+dx,s[1]]; c2=[t[0]-dx,t[1]]; }
+  else if(pb.c===pa.c){ const dn=B.y>A.y; s=[A.x+NW/2,dn?A.y+NH:A.y]; t=[B.x+NW/2,dn?B.y:B.y+NH]; const dy=(t[1]-s[1])/2; c1=[s[0]+18,s[1]+dy]; c2=[t[0]+18,t[1]-dy]; }
+  else { s=[A.x,A.y+NH/2]; t=[B.x+NW,B.y+NH/2]; c1=[s[0]-60,s[1]+40]; c2=[t[0]+60,t[1]+40]; }
+  if(OPS[a].lane===OPS[b].lane&&pa.r===pb.r&&pb.c-pa.c>1){ s=[A.x+NW/2,A.y]; t=[B.x+NW/2,B.y]; c1=[s[0],s[1]-40]; c2=[t[0],t[1]-40]; }
+  return `M${s[0]},${s[1]} C${c1[0]},${c1[1]} ${c2[0]},${c2[1]} ${t[0]},${t[1]}`;
+}
+
+/* ---------- render ---------- */
+function chips(){
+  $("#chips").innerHTML=`<button class="chip" data-p="0" aria-pressed="${phase===0}">Vista general</button>`+
+    Object.entries(PHASES).map(([k,v])=>{ const ids=phaseOps(+k), done=ids.filter(id=>REV[id]&&REV[id].s).length;
+      return `<button class="chip" data-p="${k}" aria-pressed="${phase===+k}">${k} · ${esc(v.n)}<small>${done}/${ids.length}</small></button>`; }).join("");
+}
+function overview(){
+  const h=Object.entries(PHASES).map(([k,v])=>{
+    const ids=phaseOps(+k), cnt={ok:0,cor:0,ref:0}; ids.forEach(id=>{ const r=REV[id]; if(r&&r.s) cnt[r.s]++; });
+    const who=[...new Set(ids.map(id=>OPS[id].lane))].sort((a,b)=>LANE_ORDER.indexOf(a)-LANE_ORDER.indexOf(b));
+    const pct=x=>(x/ids.length*100)+"%";
+    return `<button class="ph" data-p="${k}"><span class="n">Fase ${k} · ${ids.length} operaciones</span><h2>${esc(v.n)}</h2><p>${esc(v.d)}</p>
+      <span class="avs">${who.map(l=>`<span class="av s" style="background:${LANES[l].c}" title="${esc(LANES[l].n)}">${LANES[l].i}</span>`).join("")}</span>
+      <span class="bar-r" aria-hidden="true"><i style="width:${pct(cnt.ok)};background:var(--green)"></i><i style="width:${pct(cnt.cor)};background:var(--red)"></i><i style="width:${pct(cnt.ref)};background:var(--amber)"></i></span>
+      <span class="st">Revisadas ${cnt.ok+cnt.cor+cnt.ref} de ${ids.length}${cnt.cor?` · ${cnt.cor} por corregir`:""}${cnt.ref?` · ${cnt.ref} por reforzar`:""}</span>
+      ${v.to?`<span class="to">${esc(v.to)} ›</span>`:""}</button>`; }).join("");
+  $("#main").innerHTML=`<div class="ov">${h}</div>`;
+}
+function phaseMap(){
+  sizes(); L=layout(phase);
+  const r=document.documentElement.style; r.setProperty("--nw",NW+"px"); r.setProperty("--nh",NH+"px");
+  const lanesH=`<div class="hd"></div>`+L.lanes.map(l=>`<div class="lname" style="height:${L.rows[l]*RH+8}px"><span class="av" style="background:${LANES[l].c}">${LANES[l].i}</span>${esc(LANES[l].n)}<small>${esc(LANES[l].s)}</small></div>`).join("");
+  let h=L.lanes.map((l,i)=>`<div class="lane-bg${i%2?" alt":""}" style="top:${L.top[l]-4}px;height:${L.rows[l]*RH+8}px"></div>`).join("");
+  h+=`<svg class="edges" width="${L.W}" height="${L.H}"><defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--faint)"/></marker><marker id="ahOn" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--accent)"/></marker></defs>`;
+  L.ids.forEach(a=>OPS[a].next.forEach(b=>{ if(L.place[b]) h+=`<path class="edge" data-from="${a}" data-to="${b}" d="${geom(a,b)}" marker-end="url(#ah)"/>`; }));
+  h+=`</svg>`;
+  h+=L.ids.map(id=>{ const o=OPS[id], p=npos(id), rv=REV[id]&&REV[id].s;
+    return `<button class="node${o.lane==="sis"?" sys":""}${rv?" rv-"+rv:""}" data-n="${id}" style="left:${p.x}px;top:${p.y}px;border-left:5px solid ${LANES[o.lane].c}">
+      <span class="id"><span>${id}</span>${rv?`<span class="rv ${rv}">${RVL[rv]}</span>`:""}</span>
+      <span class="t">${esc(o.btn)}</span>
+      <span class="meta">${o.est?`<span class="pill">${esc(o.est.split("·")[0].replace(/^.*›\s*/,""))}</span>`:""}<span class="ic">${icons(o.av)}</span></span></button>`; }).join("");
+  $("#main").innerHTML=`<div class="map"><div class="lanes">${lanesH}</div><div class="scroller" id="scroller"><div class="canvas" style="width:${L.W}px;height:${L.H}px">${h}</div></div></div>
+    <p class="hint">Desliza el mapa hacia los lados. ${esc(PHASES[phase].to||"")}</p>`;
+}
+function render(){
+  chips();
+  if(phase===0) overview(); else phaseMap();
+  const list=phase?phaseOps(phase):[];
+  $("#prev").disabled=!phase||idx<=0;
+  $("#next").disabled=!phase;
+  $("#next").textContent=!phase?"Elige una fase":idx<0?"Empezar ›":idx>=list.length-1?"Siguiente fase ›":"Siguiente ›";
+  $("#pos").textContent=!phase?`${ORDER.length} operaciones en 9 fases`:idx<0?`Fase ${phase} · ${PHASES[phase].n} · ${list.length} operaciones`:`Fase ${phase} · ${idx+1} de ${list.length} · ${OPS[list[idx]].btn}`;
+  highlight();
+}
+function highlight(){
+  if(!phase) return;
+  const cur=idx>=0?phaseOps(phase)[idx]:null;
+  document.querySelectorAll(".node").forEach(el=>el.classList.toggle("cur",el.dataset.n===cur));
+  document.querySelectorAll(".edge").forEach(e=>{ const on=cur&&(e.dataset.from===cur||e.dataset.to===cur); e.classList.toggle("on",!!on); e.setAttribute("marker-end",on?"url(#ahOn)":"url(#ah)"); });
+}
+function focusNode(id){
+  const sc=$("#scroller"); if(!sc||!L||!L.place[id]) return;
+  const p=npos(id); sc.scrollLeft=Math.max(0,p.x-sc.clientWidth/2+NW/2);
+  const el=document.querySelector(`[data-n="${id}"]`); if(!el) return;
+  const r=el.getBoundingClientRect();
+  if(r.top<60||r.bottom>innerHeight*0.25+60) scrollTo({top:Math.max(0,scrollY+r.top-90),behavior:matchMedia("(prefers-reduced-motion:reduce)").matches?"auto":"smooth"});
+}
+
+/* ---------- sheet ---------- */
+function openOp(id){
+  const o=OPS[id], ln=LANES[o.lane], rv=REV[id]||{};
+  const inn=ORDER.filter(x=>OPS[x].next.includes(id));
+  const goBtn=x=>`<button data-go="${x}">${x} · ${esc(OPS[x].btn)}${OPS[x].ph!==o.ph?` <small>(fase ${OPS[x].ph})</small>`:""}</button>`;
+  $("#sheet").innerHTML=`
+   <div class="sh-h"><h2><span class="k">${id} · Fase ${o.ph} · ${esc(PHASES[o.ph].n)}</span>${esc(o.btn)}</h2><button class="x" data-close aria-label="Cerrar">✕</button></div>
+   <div class="who"><span class="av" style="background:${ln.c}">${ln.i}</span><b>${esc(ln.n)}</b>${o.also?` · también: ${esc(o.also)}`:""}</div>
+   <p>${esc(o.txt)}</p>
+   <dl class="kv"><dt>Dónde</dt><dd>${esc(o.where)}</dd>
+     ${o.est?`<dt>Estado</dt><dd>${esc(o.est)}</dd>`:""}
+     ${o.av?`<dt>Avisos</dt><dd>${esc(o.av)}</dd>`:""}</dl>
+   ${o.rule?`<div class="rule"><b>Regla:</b> ${esc(o.rule)}</div>`:""}
+   ${inn.length?`<div><b style="font-size:13px;color:var(--faint)">VIENE DE</b><div class="go">${inn.map(goBtn).join("")}</div></div>`:""}
+   ${o.next.length?`<div><b style="font-size:13px;color:var(--faint)">SIGUE EN</b><div class="go">${o.next.map(goBtn).join("")}</div></div>`:""}
+   <div class="review"><h3>¿Cómo está esto?</h3>
+     <div class="rbtns" role="group" aria-label="Revisión">${Object.entries(RVL).map(([k,v])=>`<button class="${k}" data-rv="${k}" aria-pressed="${rv.s===k}">${v}</button>`).join("")}</div>
+     <textarea id="note" placeholder="Qué hay que corregir o reforzar (opcional)">${esc(rv.n||"")}</textarea>
+     <div class="saved" id="saved">${rv.s||rv.n?"Guardado en este celular.":""}</div></div>`;
+  const sh=$("#sheet"); sh.dataset.op=id; sh.classList.add("open"); sh.setAttribute("aria-hidden","false"); sh.scrollTop=0;
+  focusNode(id);
+}
+function closeSheet(){ const sh=$("#sheet"); sh.classList.remove("open"); sh.setAttribute("aria-hidden","true"); delete sh.dataset.op; }
+
+function notesText(){
+  const g={cor:[],ref:[],ok:[],com:[]};
+  ORDER.forEach(id=>{ const r=REV[id]; if(r&&(r.s||(r.n&&r.n.trim()))) (g[r.s]||g.com).push(id); });
+  const line=id=>`• ${id} ${OPS[id].btn} (${PHASES[OPS[id].ph].n})${REV[id].n?`: ${REV[id].n}`:""}`;
+  let t="Revisión del prototipo CPS\n";
+  if(g.cor.length) t+=`\n🛠 CORREGIR (${g.cor.length})\n`+g.cor.map(line).join("\n")+"\n";
+  if(g.ref.length) t+=`\n➕ REFORZAR (${g.ref.length})\n`+g.ref.map(line).join("\n")+"\n";
+  if(g.com.length) t+=`\n💬 COMENTARIOS (${g.com.length})\n`+g.com.map(line).join("\n")+"\n";
+  if(g.ok.length){ const wn=g.ok.filter(id=>REV[id].n), sn=g.ok.length-wn.length;
+    t+=`\n✅ ESTÁ BIEN (${g.ok.length})\n`+wn.map(line).join("\n")+(wn.length&&sn?"\n":"")+(sn?`${sn} sin comentario`:"")+"\n"; }
+  return {t,g};
+}
+function openNotes(){
+  const {t,g}=notesText(), n=g.cor.length+g.ref.length+g.ok.length+g.com.length;
+  const it=id=>`<button class="it" data-go="${id}"><b>${id} · ${esc(OPS[id].btn)}</b><small>${esc(REV[id].n||"Sin comentario")}</small></button>`;
+  $("#sheet").innerHTML=`
+   <div class="sh-h"><h2><span class="k">Revisadas ${n} de ${ORDER.length}</span>Mis notas</h2><button class="x" data-close aria-label="Cerrar">✕</button></div>
+   ${n?`<div class="act"><a href="https://wa.me/?text=${encodeURIComponent(t)}" target="_blank" rel="noopener">Enviar por WhatsApp</a><button class="sec" data-copy>Copiar</button></div><div class="saved" id="saved"></div>`:`<p>Todavía no marcaste nada. Toca una caja del mapa y elige «Está bien», «Corregir» o «Reforzar».</p>`}
+   ${g.cor.length?`<h3>Corregir (${g.cor.length})</h3><div class="sum">${g.cor.map(it).join("")}</div>`:""}
+   ${g.ref.length?`<h3>Reforzar (${g.ref.length})</h3><div class="sum">${g.ref.map(it).join("")}</div>`:""}
+   ${g.com.length?`<h3>Comentarios (${g.com.length})</h3><div class="sum">${g.com.map(it).join("")}</div>`:""}
+   ${g.ok.length?`<h3>Está bien (${g.ok.length})</h3><div class="sum">${g.ok.map(it).join("")}</div>`:""}
+   ${n?`<div class="act"><button class="sec" data-clear>Borrar todas mis marcas</button></div>`:""}`;
+  const sh=$("#sheet"); delete sh.dataset.op; sh.classList.add("open"); sh.setAttribute("aria-hidden","false"); sh.scrollTop=0;
+}
+
+/* ---------- events ---------- */
+function goPhase(p){ phase=p; idx=-1; closeSheet(); render(); scrollTo({top:0}); }
+function goOp(id){ const o=OPS[id]; if(o.ph!==phase){ phase=o.ph; render(); } idx=phaseOps(phase).indexOf(id); render(); openOp(id); }
+function step(d){
+  const list=phaseOps(phase);
+  if(d>0&&idx>=list.length-1){ goPhase(phase<9?phase+1:0); return; }
+  idx=Math.max(0,Math.min(list.length-1,idx+d)); render(); openOp(list[idx]);
+}
+document.addEventListener("click",e=>{
+  const p=e.target.closest("[data-p]"); if(p){ goPhase(+p.dataset.p); return; }
+  const n=e.target.closest("[data-n]"); if(n){ goOp(n.dataset.n); return; }
+  const g=e.target.closest("[data-go]"); if(g){ goOp(g.dataset.go); return; }
+  const r=e.target.closest("[data-rv]"); if(r){ const id=$("#sheet").dataset.op; if(!id) return;
+    const cur=REV[id]||{}; cur.s=cur.s===r.dataset.rv?"":r.dataset.rv; REV[id]=cur; saveRev();
+    document.querySelectorAll("[data-rv]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.rv===cur.s));
+    $("#saved").textContent="Guardado en este celular."; chips(); if(phase) { const keep=idx; phaseMap(); idx=keep; highlight(); } return; }
+  if(e.target.closest("[data-close]")){ closeSheet(); return; }
+  if(e.target.closest("[data-copy]")){ const {t}=notesText(); (navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>{$("#saved").textContent="Copiado. Pégalo en WhatsApp o en un correo.";},()=>{$("#saved").textContent="No se pudo copiar; usa «Enviar por WhatsApp».";}); return; }
+  if(e.target.closest("[data-clear]")){ REV={}; saveRev(); closeSheet(); render(); return; }
+});
+document.addEventListener("input",e=>{ if(e.target.id!=="note") return; const id=$("#sheet").dataset.op; if(!id) return;
+  const cur=REV[id]||{}; cur.n=e.target.value; REV[id]=cur; saveRev(); $("#saved").textContent="Guardado en este celular."; });
+document.addEventListener("focusout",e=>{ if(e.target.id==="note"&&phase){ chips(); } });
+$("#notesBtn").onclick=openNotes;
+$("#next").onclick=()=>step(1); $("#prev").onclick=()=>step(-1);
+addEventListener("keydown",e=>{ if(e.target.tagName==="TEXTAREA") return; if(e.key==="Escape") closeSheet(); if(phase&&e.key==="ArrowRight") step(1); if(phase&&e.key==="ArrowLeft") step(-1); });
+let rt; addEventListener("resize",()=>{ clearTimeout(rt); rt=setTimeout(()=>{ if(!phase) return; const w=CW; sizes(); if(w!==CW){ phaseMap(); highlight(); } },150); });
+render();
+</script>
+</body>
+</html>
