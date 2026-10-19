@@ -43,6 +43,9 @@ const soloLectura = () => S.usuario==="Contador";
 const usuariosQueResuelven = () => Object.keys(ROLES).filter(u=>u!=="Contador");
 /* Quién avisa a clientes por WO pendientes y envía recordatorios: programación y administración. */
 const puedeAvisarPend = () => ["Thalia","Claudia","Erika"].includes(S.usuario);
+/* Aprobar o rechazar un adicional desde la WO: programación y administración. Hoy todos ayudan (pedido de Erika);
+   el responsable de fondo sigue siendo programación. */
+const puedeDecidirAdicional = () => puedeAvisarPend();
 /* Avisos al cliente por una WO pendiente que siguen sin respuesta y cuya fecha de «Responder antes del» llegó o ya pasó. */
 const respuestasVencidas = () => (S.comunicacionesWO||[]).filter(c=>c.estado!=="Closed" && c.limite && c.limite<=HOY_SUP);
 /* Pago al técnico y factura al cliente se aprueban por separado (w.aprobPago / w.aprobFactura).

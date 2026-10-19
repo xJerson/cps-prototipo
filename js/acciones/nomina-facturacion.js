@@ -139,7 +139,7 @@ Object.assign(ACC, {
   /* Desde la tarjeta Sub-Work Orders de la WO: decidir un solo concepto, con sus fotos a la vista. */
   adicAprobar: d => { const s=solTodas().find(z=>z.sol===d.sol); if(s) modalMedio(s.sol, d.lid); },
   adicRechazar: d => { const s=solTodas().find(z=>z.sol===d.sol); if(!s) return;
-    if(s.aprobador && s.aprobador!==S.usuario){ toast("Aprobación delegada",`Esta solicitud debe decidirla <b>${esc(s.aprobador)}</b>.`,"w"); return; }
+    if(!puedeDecidirAdicional() && s.aprobador && s.aprobador!==S.usuario){ toast("Aprobación delegada",`Esta solicitud debe decidirla <b>${esc(s.aprobador)}</b>.`,"w"); return; }
     rechazarAdicional(s, s.lineas.filter(l=>l.estado==="Pendiente" && l.id===+d.lid)); },
   excAprob: d => {
     const x = by(S.excepciones,d.id);
@@ -166,7 +166,7 @@ Object.assign(ACC, {
     render(); },
   medioOK: d => {
     const s = solTodas().find(z=>z.sol===d.sol), w = s&&W(s.wo);
-    if(!s || (s.aprobador && s.aprobador!==S.usuario)){ toast("Aprobación delegada",`Esta solicitud debe aprobarla <b>${esc(s&&s.aprobador||"Thalia")}</b>. Si está fuera de su alcance, asígnala a Gustavo u otra persona antes de decidir.`,"w"); return; }
+    if(!s || (!puedeDecidirAdicional() && s.aprobador && s.aprobador!==S.usuario)){ toast("Aprobación delegada",`Esta solicitud debe aprobarla <b>${esc(s&&s.aprobador||"Thalia")}</b>. Si está fuera de su alcance, asígnala a Gustavo u otra persona antes de decidir.`,"w"); return; }
     const pend = s.lineas.filter(l=>l.estado==="Pendiente" && (!S._medioLid || l.id===S._medioLid));
     S._medioLid = null;
     document.querySelectorAll(".adprecio").forEach(e=>{ const l=pend.find(x=>x.id===+e.dataset.lid); if(l){ const p=parseFloat(e.value); if(Number.isFinite(p)&&p>=0){ l.precio=p; l.precioOrigen="manual-aprobado"; } } });
@@ -221,7 +221,7 @@ Object.assign(ACC, {
     flash("wo:"+w.id);
     const nom = a => a.map(l=>l.concepto).join(", ");
     if(ok.length) w.hist.push([hora(), `Adicional aprobado por ${d.medio.toLowerCase()} · ${nom(ok)}`, S.usuario]);
-    if(ok.length){ (s.lineas||[]).forEach(l=>{ if(l.estado!=="Pendiente") l.aprobador=s.aprobador; }); }
+    if(ok.length){ (s.lineas||[]).forEach(l=>{ if(l.estado!=="Pendiente") l.aprobador=S.usuario; }); }
     if(no.length) w.hist.push([hora(), `Adicional NO aprobado · ${nom(no)}`, S.usuario]);
     if(pagoTec>0) w.hist.push([hora(), `Nómina: ${money(pagoTec)} de pago adicional asignado según cada Sub-Work Order`, S.usuario]);
     cm();

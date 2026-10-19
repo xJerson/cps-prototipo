@@ -352,7 +352,7 @@ function fichaWO(id){
               /* Mismo Request que sale en la bandeja: aquí están las fotos, así que cada concepto se decide desde esta WO. */
               if(a.estado!=="Pendiente") return "";
               const x=excTodas().find(y=>y.id==="AUTO-A"+s.sol); if(!x) return "";
-              return (x.assignedTo===S.usuario||x.aprueba===S.usuario)
+              return (puedeDecidirAdicional()||x.assignedTo===S.usuario||x.aprueba===S.usuario)
                 ? `<button class="btn sm" data-a="adicRechazar" data-sol="${esc(s.sol)}" data-lid="${a.id}">Rechazar</button> <button class="btn sm v" data-a="adicAprobar" data-sol="${esc(s.sol)}" data-lid="${a.id}">Aprobar</button>`
                 : `<span style="font-size:11px;color:var(--faint)">Aprueba ${esc(x.assignedTo||x.aprueba)}</span>`; })()}</td></tr>
             ${(a.specs&&Object.keys(a.specs).length)||a.tec||a.fecha||a.estadoTrabajo||a.facturable||(a.aprob&&a.aprob.foto)?`<tr><td colspan="${puedeVerDinero?9:7}" style="padding-top:0;padding-bottom:9px">
