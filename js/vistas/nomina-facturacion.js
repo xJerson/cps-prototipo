@@ -287,7 +287,9 @@ function modalMedio(sol, lid){
   S._medioLid = lid ? +lid : null;   // decidir un solo concepto desde la tarjeta de la WO; sin esto se decide toda la solicitud
   const pend = s.lineas.filter(l=>l.estado==="Pendiente" && (!S._medioLid || l.id===S._medioLid));
   const tot = pend.reduce((t,l)=>t+(l.precio||0)*(l.cant||1),0);
-  const ver = puedeVerUtilidad();   // el precio solo lo ven Erika y Claudia; quien aprueba sin ese permiso decide igual, sin ver montos
+  /* Pedido de Erika: el precio de los adicionales no se ve al aprobar, ni siquiera ella ni Claudia; se ve al final, en la nómina.
+     Sin precio aquí, el que falta lo define Erika o Claudia en la Request «Definir precio del adicional». */
+  const ver = false;
   modal(`<div class="mh"><h3>¿Cómo aprobó el cliente?</h3>
     <p>WO-${w.id} · ${esc(p.nombre)} ${esc(U(w.unidad).num)} · ${esc(s.desc.length>70?s.desc.slice(0,70)+"…":s.desc)}</p></div>
   <div class="mb">
@@ -297,7 +299,7 @@ function modalMedio(sol, lid){
       <label>¿Qué le autorizas?</label>
       <div class="hint">Destilda lo que el cliente no aprobó. Al técnico le llega el detalle: qué sí hace y qué no.
         Lo aprobado con precio le queda pendiente de pago al técnico solo; tildá «Cobrar al cliente» aparte, por cada concepto, si además hay que facturárselo — a veces se hace de cortesía.
-        El precio es opcional: si Thalia ya aprobó pero el cliente no dijo cuánto, déjalo en blanco — queda una Request para que Erika o Claudia lo definan antes de que entre a nómina y factura.</div>
+        El precio no se ve aquí: si el adicional no trae precio, queda una Request para que Erika o Claudia lo definan antes de que entre a nómina y factura.</div>
       <table style="margin-top:6px"><tbody>
       <tr><td></td><td></td>${ver?`<td class="num">Precio</td>`:""}<td style="text-align:center">Cobrar<br>al cliente</td></tr>
       ${pend.map(l=>`<tr>
