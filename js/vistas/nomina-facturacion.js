@@ -153,6 +153,7 @@ VIEWS.excepciones = () => {
         <button class="btn sm" data-a="excAsignarModal" data-id="${x.id}">Assign</button>
         ${x.cambio?`<button class="btn sm" data-a="facCambioVer" data-id="${x.id}">Ver cambio</button>`:""}
         ${x.cambioPrecio?`<button class="btn sm" data-a="precioCambioVer" data-id="${x.id}">Ver cambio</button>`:""}
+        ${x.regreso?`<button class="btn sm" data-a="facRegresoVer" data-id="${x.id}">Ver</button>`:""}
         ${(x.assignedTo===S.usuario || x.aprueba===S.usuario) ? (x.tipo==="Cambio de precio fijado"
           ? (puedeAprobarCambioMonto()?`<button class="btn sm" data-a="precioCambioRechazar" data-id="${x.id}">Rechazar</button>
                <button class="btn sm v" data-a="precioCambioAprobar" data-id="${x.id}">Aprobar</button>`:"")
@@ -162,6 +163,9 @@ VIEWS.excepciones = () => {
                <button class="btn sm v" data-a="facCambioAprobar" data-id="${x.id}">Aprobar</button>`:"")
             : `<button class="btn sm" data-a="excRech" data-id="${x.id}">Rechazar</button>
              <button class="btn sm p" data-a="facEditarEmitida" data-id="${x.factura}">Editar factura</button>`)
+          : x.tipo==="Regresar factura a Borrador"
+          ? (puedeAprobarCambioMonto()?`<button class="btn sm" data-a="facRegresoRechazar" data-id="${x.id}">Rechazar</button>
+               <button class="btn sm v" data-a="facRegresoAprobar" data-id="${x.id}">Aprobar</button>`:"")
           : x.tipo==="Return"
           ? (DV(x.dev)&&DV(x.dev).touchup
               ? `<button class="btn sm" data-a="woVer" data-id="${DV(x.dev).touchup}">Ver return fix</button>`
@@ -185,41 +189,64 @@ VIEWS.excepciones = () => {
     ${res.map(x=>`<tr class="${fl("exc:"+x.id)}"><td>${esc(x.tipo)}</td><td class="mono">${x.wo?"WO-"+x.wo:"—"}</td>
       <td>${x.creada?esc(x.creada.quien):esc(x.pide)}</td>
       <td class="mono" style="color:var(--faint)">${x.creada?esc(x.creada.hora):"—"}</td>
-      <td><span class="pill ${x.estado==="Aprobada"||x.estado==="Resuelta"?"v":"r"}">${x.estado}</span>${x.resol&&x.resol.nota?`<div style="font-size:10.5px;margin-top:3px">${esc(x.resol.nota)}</div>`:""}${x.cambio?`<div style="margin-top:3px"><button class="btn sm" data-a="facCambioVer" data-id="${x.id}">Ver cambio</button></div>`:""}${x.cambioPrecio?`<div style="margin-top:3px"><button class="btn sm" data-a="precioCambioVer" data-id="${x.id}">Ver cambio</button></div>`:""}${historialApproval(x)}</td>
+      <td><span class="pill ${x.estado==="Aprobada"||x.estado==="Resuelta"?"v":"r"}">${x.estado}</span>${x.resol&&x.resol.nota?`<div style="font-size:10.5px;margin-top:3px">${esc(x.resol.nota)}</div>`:""}${x.cambio?`<div style="margin-top:3px"><button class="btn sm" data-a="facCambioVer" data-id="${x.id}">Ver cambio</button></div>`:""}${x.cambioPrecio?`<div style="margin-top:3px"><button class="btn sm" data-a="precioCambioVer" data-id="${x.id}">Ver cambio</button></div>`:""}${x.regreso?`<div style="margin-top:3px"><button class="btn sm" data-a="facRegresoVer" data-id="${x.id}">Ver</button></div>`:""}${historialApproval(x)}</td>
       <td>${x.resol?esc(x.resol.quien):"—"}</td><td class="mono">${x.resol?esc(x.resol.hora):"—"}</td></tr>`).join("")}
     </tbody></table></div>`:""}
 
   <div class="tr">Cada Request guarda quién la pidió y desde cuándo espera; al resolverse, también quién decidió y cuándo. Es lo que hoy se decide por WhatsApp y nadie puede reconstruir después.</div>`;
 };
 
-/* Antes / Después de un cambio de monto preparado: una fila por línea, y la diferencia del total. */
+/* Antes / Después de un cambio de monto preparado: una fila por línea, y la diferencia del total.
+   Si el cambio toca varias facturas (se movió una línea a otra factura) hay un bloque Antes/Después por factura. */
 function modalCambioMonto(x){
-  const c=x.cambio, f=by(S.facturas,x.factura);
-  const claves=cs=>{ const n={}; return cs.map(k=>{ const b0=[k.tipo,k.wo||"",k.subwo||"",(k.wo||k.subwo)?"":(k.clave||"")+"|"+(k.nombre||"")].join("|");   /* las líneas de WO/Sub-WO se emparejan por su WO: las facturas viejas no traen clave ni nombre */ n[b0]=(n[b0]||0)+1; return {key:b0+"#"+n[b0],c:k}; }); };
-  const A=claves(c.antes.conceptos), D=claves(c.despues.conceptos);
-  const mA=new Map(A.map(o=>[o.key,o.c])), mD=new Map(D.map(o=>[o.key,o.c]));
-  const keys=[...new Set([...A.map(o=>o.key),...D.map(o=>o.key)])];
+  const c=x.cambio, cs=cambiosDe(x), multi=cs.length>1, f0=by(S.facturas,cs.length?cs[0].factura:x.factura);
+  const claves=cs0=>{ const n={}; return cs0.map(k=>{ const b0=[k.tipo,k.wo||"",k.subwo||"",(k.wo||k.subwo)?"":(k.clave||"")+"|"+(k.nombre||"")].join("|");   /* las líneas de WO/Sub-WO se emparejan por su WO: las facturas viejas no traen clave ni nombre */ n[b0]=(n[b0]||0)+1; return {key:b0+"#"+n[b0],c:k}; }); };
   const sinQty=k=>["Extra","AjusteTotal","Credito"].includes(k.tipo);
   const celdas=k=>k?`<td class="num mono">${sinQty(k)||k.cantidad==null?"—":esc(+k.cantidad)}</td><td class="num mono">${sinQty(k)||(k.precio==null&&!(+k.cantidad>0))?"—":money(k.precio!=null?k.precio:(k.importe||0)/k.cantidad)}</td><td class="num mono">${money(k.importe||0)}${+k.desc>0?`<div style="font-size:10px;color:var(--faint)">desc. ${esc(textoDescLinea(k))}</div>`:""}</td>`
     :`<td class="num mono" style="color:var(--faint)">—</td><td class="num mono" style="color:var(--faint)">—</td><td class="num mono" style="color:var(--faint)">—</td>`;
   const igual=(a,d)=>a&&d&&["cantidad","precio","importe","desc","descTipo","valor","op","descripcion"].every(q=>String(a[q]==null?"":a[q])===String(d[q]==null?"":d[q]));
-  const filas=keys.map(key=>{ const a=mA.get(key), d=mD.get(key), k=d||a;
-    const tag=!a?`<span class="pill v">Se agrega</span>`:!d?`<span class="pill r">Se quita</span>`:igual(a,d)?"":`<span class="pill a">Cambia</span>`;
-    return `<tr style="${!tag?"opacity:.7":""}"><td>${esc(etiquetaConcepto(k))} · ${esc(k.nombre||"—")} ${tag}</td>${celdas(a)}${celdas(d)}</tr>`; }).join("");
-  const dif=r2(c.despues.total-c.antes.total);
-  const pend=x.estado==="Pendiente";
-  modal(`<div class="mh"><h3>Cambio de monto${f?" — "+esc(f.num):""}</h3><p>${f?esc(P(f.prop).nombre)+" · ":""}lo preparó ${esc(x.pide)}${x.creada?" · "+esc(x.creada.fecha||"")+" "+esc(x.creada.hora||""):""}</p></div>
-  <div class="mb">
-    <div class="note" style="margin-bottom:12px"><b>Motivo:</b> ${esc(c.motivo)}</div>
+  const bloque=k=>{
+    const f=by(S.facturas,k.factura);
+    const A=claves(k.antes.conceptos), D=claves(k.despues.conceptos);
+    const mA=new Map(A.map(o=>[o.key,o.c])), mD=new Map(D.map(o=>[o.key,o.c]));
+    const keys=[...new Set([...A.map(o=>o.key),...D.map(o=>o.key)])];
+    const filas=keys.map(key=>{ const a=mA.get(key), d=mD.get(key), z=d||a;
+      const tag=!a?`<span class="pill v">Se agrega</span>`:!d?`<span class="pill r">Se quita</span>`:igual(a,d)?"":`<span class="pill a">Cambia</span>`;
+      return `<tr style="${!tag?"opacity:.7":""}"><td>${esc(etiquetaConcepto(z))} · ${esc(z.nombre||z.descripcion||"—")} ${tag}</td>${celdas(a)}${celdas(d)}</tr>`; }).join("");
+    const dif=r2(k.despues.total-k.antes.total);
+    return `${multi?`<div style="font-weight:750;margin:14px 0 4px">${esc(f?f.num:"Factura")} <span class="mono" style="font-weight:600;color:var(--soft)">${money(k.antes.total)} → ${money(k.despues.total)}</span></div>${k.nota?`<div class="hint" style="margin-bottom:6px">${esc(k.nota)}</div>`:""}`:""}
     <table style="font-size:11.5px"><thead><tr><th></th><th colspan="3" style="text-align:center">Antes</th><th colspan="3" style="text-align:center">Después</th></tr>
       <tr><th>Línea</th><th class="num">Cant.</th><th class="num">Precio</th><th class="num">Subtotal</th><th class="num">Cant.</th><th class="num">Precio</th><th class="num">Subtotal</th></tr></thead>
       <tbody>${filas}
-      <tr style="background:var(--surface-2);font-weight:750"><td>Total</td><td colspan="3" class="num mono">${money(c.antes.total)}</td><td colspan="3" class="num mono">${money(c.despues.total)}</td></tr></tbody></table>
-    <div class="note ${dif>0?"w":"v"}" style="margin-top:12px"><b>Diferencia:</b> <span class="mono">${money(c.antes.total)} → ${money(c.despues.total)}</span> (${Math.abs(dif)<0.005?"sin diferencia":sgnMoney(dif)})</div>
+      <tr style="background:var(--surface-2);font-weight:750"><td>Total</td><td colspan="3" class="num mono">${money(k.antes.total)}</td><td colspan="3" class="num mono">${money(k.despues.total)}</td></tr></tbody></table>
+    <div class="note ${dif>0?"w":"v"}" style="margin-top:12px"><b>Diferencia:</b> <span class="mono">${money(k.antes.total)} → ${money(k.despues.total)}</span> (${Math.abs(dif)<0.005?"sin diferencia":sgnMoney(dif)})</div>`;
+  };
+  const pend=x.estado==="Pendiente";
+  modal(`<div class="mh"><h3>Cambio de monto${multi?" — "+cs.length+" facturas":f0?" — "+esc(f0.num):""}</h3><p>${f0?esc(P(f0.prop).nombre)+" · ":""}lo preparó ${esc(x.pide)}${x.creada?" · "+esc(x.creada.fecha||"")+" "+esc(x.creada.hora||""):""}</p></div>
+  <div class="mb">
+    <div class="note" style="margin-bottom:12px"><b>Motivo:</b> ${esc(c.motivo)}</div>
+    ${cs.map(bloque).join("")}
     ${pend?"":`<div class="hint">${esc(x.estado)} por ${esc(x.resol?x.resol.quien:"—")}${x.resol&&x.resol.nota?" · "+esc(x.resol.nota):""}</div>`}
   </div>
   <div class="mf"><button class="btn" data-a="cm">Cerrar</button>
     ${pend&&puedeAprobarCambioMonto()?`<button class="btn" data-a="facCambioRechazar" data-id="${x.id}">Rechazar</button><button class="btn p" data-a="facCambioAprobar" data-id="${x.id}">Aprobar</button>`:""}</div>`,true);
+}
+/* Solicitud de regresar una factura emitida a Borrador: la factura, su total, el motivo y quién la pidió. */
+function modalRegreso(x){
+  const g=x.regreso, f=by(S.facturas,x.factura), pend=x.estado==="Pendiente";
+  modal(`<div class="mh"><h3>Regresar a Borrador${f?" — "+esc(f.num):""}</h3><p>${f?esc(P(f.prop).nombre)+" · ":""}lo pidió ${esc(x.pide)}${x.creada?" · "+esc(x.creada.fecha||"")+" "+esc(x.creada.hora||""):""}</p></div>
+  <div class="mb">
+    <div class="note" style="margin-bottom:12px"><b>Motivo:</b> ${esc(g.motivo)}</div>
+    <table style="font-size:11.5px"><tbody>
+      <tr><td>Factura</td><td class="mono">${esc(f?f.num:g.num)}</td></tr>
+      <tr><td>Total</td><td class="mono">${money(f?f.total:g.total)}</td></tr>
+      <tr><td>Estado ahora</td><td>${esc(f?facEstadoTexto(f):g.estado)}</td></tr>
+      <tr><td>Quién la pidió</td><td>${esc(x.pide)}</td></tr></tbody></table>
+    <div class="hint" style="margin-top:10px">Si se aprueba, la factura vuelve a Borrador con sus mismas líneas y deja de contar como enviada. Para mandarla de nuevo se usa «Enviar al cliente» y se calcula otro vencimiento.</div>
+    ${pend?"":`<div class="hint">${esc(x.estado)} por ${esc(x.resol?x.resol.quien:"—")}${x.resol&&x.resol.nota?" · "+esc(x.resol.nota):""}</div>`}
+  </div>
+  <div class="mf"><button class="btn" data-a="cm">Cerrar</button>
+    ${pend&&puedeAprobarCambioMonto()?`<button class="btn" data-a="facRegresoRechazar" data-id="${x.id}">Rechazar</button><button class="btn p" data-a="facRegresoAprobar" data-id="${x.id}">Aprobar</button>`:""}</div>`,true);
 }
 /* Pedir cambio de un precio que fijó el aprobador: precio nuevo + motivo, los dos obligatorios. */
 function modalCambioPrecio(t){
@@ -804,6 +831,11 @@ function resumenBorrador(b){
     x.total=r2(x.pre+(a?a.delta:0));});
   return {grupos,disp,maxCred,cred,credG:gc?gc.g:1,total:r2(grupos.reduce((n,x)=>n+x.total,0))};
 }
+/* Mover una línea a otra factura (solo al cambiar una factura ya emitida): l.destino = id de la otra factura ("" = se queda aquí). */
+const lineasMovidas = b => (b.lineas||[]).filter(l=>l.seleccionada && l.destino);
+const sinMovidas = b => ({...b, lineas:(b.lineas||[]).map(l=>l.seleccionada&&l.destino?{...l,seleccionada:false}:l)});
+/* Facturas a las que se puede mandar una línea: de la misma propiedad, emitidas o enviadas y sin pagar */
+const facDestinosMover = b => S.facturas.filter(o=>o.id!==b.id && o.prop===b.prop && ["Emitida","Enviada"].includes(o.estado) && facMontoEditable(o));
 const TIPOS_ESPECIALES = ["Credito","Extra","AjusteTotal"];   // conceptos que no son líneas del borrador
 function abrirBorradorFactura(prop, facturaId){
   const existente=facturaId&&by(S.facturas,facturaId);
@@ -811,7 +843,7 @@ function abrirBorradorFactura(prop, facturaId){
   // Borradores viejos pueden no traer precio unitario: se deduce del importe
   /* Una línea ya facturada puede venir sin clave (facturas viejas o de ejemplo): se arma la misma que usa el editor para que se pueda editar. */
   const claveDe=(c,i)=>c.clave||(c.tipo==="WO"&&c.wo?"wo:"+c.wo:c.tipo==="Sub-WO"&&c.subwo?"sub:"+c.subwo:"ln:"+i);
-  const actuales=cs.filter(c=>!TIPOS_ESPECIALES.includes(c.tipo)).map((c,i)=>({...c,clave:claveDe(c,i),nombre:c.nombre||(c.tipo==="WO"&&W(c.wo)?W(c.wo).serv:c.descripcion)||"Servicio",seleccionada:true,grupo:1,
+  const actuales=cs.filter(c=>!TIPOS_ESPECIALES.includes(c.tipo)).map((c,i)=>({...c,...(existente&&existente.estado!=="Borrador"?{propia:true}:{}),clave:claveDe(c,i),nombre:c.nombre||(c.tipo==="WO"&&W(c.wo)?W(c.wo).serv:c.descripcion)||"Servicio",seleccionada:true,grupo:1,
     precio:c.precio!=null?c.precio:(c.importe||0)/(c.cantidad||1)}));
   const credPrev=cs.filter(c=>c.tipo==="Credito").reduce((n,c)=>n-(c.importe||0),0);
   const extras=cs.filter(c=>c.tipo==="Extra").map(c=>({id:idExtra(),grupo:1,concepto:c.nombre||"",op:c.op||"NA",valor:+c.valor||0,
@@ -852,7 +884,8 @@ function opcionesTipoLote(lineas){
 function modalBorradorFactura(){
   const b=S.facturaBorrador, p=P(b.prop);
   const cam=!!b.cambio, solo=cam&&!puedeAprobarCambioMonto();   // solo: prepara el cambio, no lo aplica
-  const lineas=b.lineas||[], r=resumenBorrador(b), limite=parseFloat(b.limite);
+  const lineas=b.lineas||[], r=resumenBorrador(sinMovidas(b)), limite=parseFloat(b.limite);
+  const dests=cam?facDestinosMover(b):[], movidas=lineasMovidas(b);
   const nG=Math.min(6,Math.max(0,...lineas.map(l=>+l.grupo||1))+1);   // 1..(mayor usado + 1), tope 6
   const lote={desde:"",hasta:"",mes:"",tipo:"",factura:1,...(b.lote||{})};
   const tiposLote=opcionesTipoLote(lineas);
@@ -923,11 +956,14 @@ function modalBorradorFactura(){
       <button class="btn" data-a="facAsignarLote">Seleccionar y asignar lote</button>`:""}
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
       ${r.grupos.map(g=>`<span class="pill ${excede(g)?"w":"v"}">Factura ${g.g} · ${money(g.total)} · ${g.lineas.length} ${g.lineas.length===1?"línea":"líneas"}${excede(g)?" · supera el límite":""}</span>`).join("")}
+      ${[...new Set(movidas.map(l=>l.destino))].map(id=>{ const o=by(S.facturas,id), ls=movidas.filter(l=>l.destino===id); return o?`<span class="pill a">→ ${esc(o.num)} · +${money(r2(ls.reduce((n,l)=>n+importeLinea(l),0)))} · ${ls.length} ${ls.length===1?"línea":"líneas"}</span>`:""; }).join("")}
       ${paraDespues?`<span class="pill g">${paraDespues} para después</span>`:""}</div>
-    ${lineas.length?`<table style="font-size:11.5px"><thead><tr><th></th><th>Factura</th><th>Origen</th><th>Nombre</th><th class="num">Precio</th><th class="num">Cant.</th><th class="num">Desc.</th><th class="num">Importe</th><th></th></tr></thead><tbody>
+    ${dests.length?`<div class="hint" style="margin:-4px 0 10px">«Destino» manda una línea a otra factura de esta propiedad (emitida o enviada, sin pagar): se quita de esta y se agrega a la otra.</div>`:""}
+    ${lineas.length?`<table style="font-size:11.5px"><thead><tr><th></th><th>Factura</th>${dests.length?"<th>Destino</th>":""}<th>Origen</th><th>Nombre</th><th class="num">Precio</th><th class="num">Cant.</th><th class="num">Desc.</th><th class="num">Importe</th><th></th></tr></thead><tbody>
       ${lineas.map(l=>{const id=idLineaBorrador(l.clave), g=+l.grupo||1; return `<tr style="${l.seleccionada?"":"opacity:.55"}">
         <td><input id="${id}_sel" data-a="facBorradorCambiar" type="checkbox" ${l.seleccionada?"checked":""}></td>
-        <td><select id="${id}_grp" data-a="facBorradorCambiar" ${l.seleccionada&&!solo?"":"disabled"}>${Array.from({length:Math.max(nG,g)},(_,i)=>i+1).map(n=>`<option value="${n}" ${n===g?"selected":""}>${n}</option>`).join("")}</select></td>
+        <td><select id="${id}_grp" data-a="facBorradorCambiar" ${l.seleccionada&&!solo&&!l.destino?"":"disabled"}>${Array.from({length:Math.max(nG,g)},(_,i)=>i+1).map(n=>`<option value="${n}" ${n===g?"selected":""}>${n}</option>`).join("")}</select></td>
+        ${dests.length?`<td>${l.propia&&l.seleccionada?`<select id="${id}_dst" data-a="facBorradorCambiar"><option value="">Esta factura</option>${dests.map(o=>`<option value="${esc(o.id)}" ${o.id===l.destino?"selected":""}>${esc(o.num)} · ${money(o.total)}</option>`).join("")}</select>`:""}</td>`:""}
         <td class="mono">${l.tipo==="Manual"?`Manual${l.cat&&l.cat!=="Extras"?" · "+esc(l.cat):""}`:etiquetaConcepto(l)}<div style="color:var(--faint)">${esc(l.fecha||"—")}${l.tipo==="Manual"&&l.unidad&&l.unidad!=="—"?" · "+esc(l.unidad):""}</div></td>
         <td>${esc(l.nombre||"—")}${l.descripcion?`<div style="color:var(--faint)">${esc(l.descripcion)}</div>`:""}</td>
         <td class="num mono">${money(+l.precio||0)}</td>
@@ -939,7 +975,7 @@ function modalBorradorFactura(){
     <button class="btn sm" data-a="facBorradorAgregarLinea">+ Agregar línea manual</button>
     ${extrasHTML}
     ${ajHTML}
-  </div><div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="${solo?"facCambioEnviar":"facBorradorGuardar"}" ${r.grupos.length?"":"disabled"}>${solo?"Enviar para aprobación":"Guardar"}</button></div>`,true);
+  </div><div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="${solo?"facCambioEnviar":"facBorradorGuardar"}" ${r.grupos.length||movidas.length?"":"disabled"}>${solo?"Enviar para aprobación":"Guardar"}</button></div>`,true);
 }
 /* Items que se pueden elegir en una línea manual: tarifas de la propiedad (y generales) + servicios del catálogo */
 function itemsFactura(prop){
@@ -1128,6 +1164,7 @@ VIEWS.facturacion = () => {
         ${facMontoEditable(f)&&!soloLectura()?(puedeEditarMontoFactura()
           ? `<button class="btn sm" data-a="facEditarEmitida" data-id="${f.id}">Editar factura</button>`
           : `<button class="btn sm" data-a="facCambiarMonto" data-id="${f.id}">Cambiar monto</button>`):""}
+        ${facMontoEditable(f)&&!soloLectura()?`<button class="btn sm" data-a="facRegresarAbrir" data-id="${f.id}">Regresar a Borrador</button>`:""}
         ${f.pdf?`<div style="font-size:10px;color:var(--faint);margin-top:3px">📎 ${esc(f.pdf)} · guardado ${esc(f.pdfHora||"")}</div>`:""}
       </td></tr>`).join("")||`<tr><td colspan="8" class="empty">Sin resultados</td></tr>`}
     </tbody></table></div>`;})():""}`;
@@ -1296,7 +1333,7 @@ const facYaEnviada = f => f.estado==="Enviada" || !!f.envio || facVencida(f);
 /* Cambió de monto después de enviarse: es una marca (f.modificada), no un estado nuevo, para no tocar la lógica de «Vencida». */
 const facPillModificada = f => f.modificada ? ` <span class="pill a" title="El monto cambió después de enviarla al cliente">Modificada, falta reenviar</span>` : "";
 const SEG_LABEL = {cambio:"Cambio de monto", vence:"Cambio de vencimiento", datos:"Cambio de datos de la factura", reminder:"Reminder enviado", overdue:"Correo overdue enviado",
-  agrupado:"Recordatorio agrupado enviado", llamada:"Llamada de cobranza", pago:"Pago registrado", cierre:"Invoice y Work Orders cerrados", reenvio:"Reenviada tras modificación"};
+  agrupado:"Recordatorio agrupado enviado", llamada:"Llamada de cobranza", pago:"Pago registrado", cierre:"Invoice y Work Orders cerrados", reenvio:"Reenviada tras modificación", regreso:"Regresada a Borrador"};
 /* Vencidas agrupadas por cliente (dueño de las propiedades): un solo correo con todas sus facturas vencidas. */
 const clienteFac = f => P(f.prop).cliente || "—";
 const vencidasPorCliente = () => {
