@@ -296,10 +296,12 @@ Object.assign(ACC, {
     if(!c.ws.length){ toast("🚫 Nada para pagar","No hay Work Orders listas para pagar.","r"); return; }
     S._recibo=null;
     modal(`<div class="mh"><h3>Marcar pagado</h3><p>${esc(tecN(d.tec))} · ${esc(periodoTexto(S.periodo))} · ${money(c.tot)}</p></div>
-    <div class="mb"><div class="fld"><label>Cheque #</label><input id="pgCh" placeholder="Opcional" autocomplete="off"></div>${campoRecibo("Comprobante")}</div>
+    <div class="mb"><div class="fld"><label>Cheque # <span class="req">*</span></label><input id="pgCh" autocomplete="off"></div>${campoRecibo("Comprobante — opcional")}</div>
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="pagarTecOK" data-tec="${d.tec}">Pagar</button></div>`);
   },
-  pagarTecOK: d => { const foto=S._recibo, cheque=val("pgCh"); cm(); pagarNomina(d.tec,{cheque,foto}); },
+  pagarTecOK: d => { const foto=S._recibo, cheque=val("pgCh").trim();
+    if(!cheque){ S.audOmitir=true; marcaFalta(["pgCh"]); toast("Falta el número de cheque","El número de cheque es obligatorio; la foto del comprobante es opcional.","r"); return; }
+    cm(); pagarNomina(d.tec,{cheque,foto}); },
   pagarSemana: () => pagarNomina(null),
   /* Pago parcial por WO (p. ej. externos en proyectos grandes): crea su propio registro y baja el saldo. */
   parcialModal: d => {
