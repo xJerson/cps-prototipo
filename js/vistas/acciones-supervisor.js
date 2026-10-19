@@ -17,7 +17,7 @@ VIEWS.supervision = () => {
 };
 
 
-/* Pantalla propia de Devoluciones (la gestiona Lydia como área de calidad): registrar la solicitud y asignar la corrección. */
+/* Pantalla propia de Devoluciones (la gestiona Thalia: recibe el return y programa la corrección): registrar la solicitud y asignar la corrección. */
 VIEWS.devoluciones = () => `
   <div class="ph"><div><h2>Returns</h2>
     <p>Trabajos que hay que corregir, vengan de Gustavo, de la propiedad o de un correo.</p></div>

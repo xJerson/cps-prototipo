@@ -251,7 +251,7 @@ const RAW=`
 3.08|tec||Celular › WO|Necesito aprobación|Pide aprobar trabajo extra que no estaba en la WO.|Adicional pendiente · la WO sigue In progress|🔔 Aviso a Thalia.|Descripción obligatoria.|9.01
 3.09|tec||Celular › WO|Necesito ayuda|Pide ayuda en sitio.|› Request «Ayuda en sitio»|🔔 Aviso a Thalia y Gustavo.|No frena el pago ni la factura.|9.04
 3.10|tec||Celular › WO|Qué hiciste|Escribe lo que hizo.||||
-3.11|tec||Celular › WO|Terminé|Cierra el trabajo y calcula las horas.|In progress › Completed · si es return fix, el return pasa a Corregida|🔔 Aviso a Lydia si es return fix. 🔔 Aviso a técnicos con WO que esperaban esta.|Sin foto del después no deja cerrar.|6.01,4.14
+3.11|tec||Celular › WO|Terminé|Cierra el trabajo y calcula las horas.|In progress › Completed · si es return fix, el return pasa a Corregida|🔔 Aviso a Thalia si es return fix. 🔔 Aviso a técnicos con WO que esperaban esta.|Sin foto del después no deja cerrar.|6.01,4.14
 3.12|tec||Celular › «No marcaste tu llegada»|Registrar y cerrar|Declara a qué hora llegó (sin verificar) y cierra.|› Request «Llegada declarada»|🔔 Request para Thalia.||6.01
 3.13|tec||Celular › WO|Ya está, enviar|Responde lo que la oficina le pidió: foto o dato.||🔔 Aviso a quien lo pidió.||6.03
 3.14|tec||Celular › Sub-WO|Empezar Sub-WO|Trabaja una Sub-WO asignada y sube su evidencia.|Assigned › In progress|||3.15
@@ -282,12 +282,12 @@ const RAW=`
 4.18|gus|Thalia, Claudia|Supervisión › Resumen del día|Enviar reporte diario|Muestra el resumen del día.||Mensaje en pantalla.||
 4.19|gus||Celular › Hoy|Gasolina / vehículo|Registra un gasto del vehículo con foto.|||Monto y foto obligatorios.|9.10
 4.20|gus|Claudia|Supervisión|Ver su celular|Abre la vista del celular de Gustavo desde la web.||||
-5.01|eri|Lydia, Claudia|Returns / Ficha de la WO|Registrar return|La oficina registra un return: quién lo pidió, quién hizo el trabajo, causa y prioridad.|› Return Abierta · la WO no cambia|Mensaje en pantalla.|Unidad, descripción y técnico obligatorios.|5.04
+5.01|eri|Thalia, Claudia|Returns / Ficha de la WO|Registrar return|La oficina registra un return: quién lo pidió, quién hizo el trabajo, causa y prioridad.|› Return Abierta · la WO no cambia|Mensaje en pantalla.|Unidad, descripción y técnico obligatorios.|5.04
 5.02|gus||Celular › Returns|Crear return|Gustavo crea el return en campo con fotos del antes y prioridad.|› Return Abierta|🔔 Aviso a Claudia y a Thalia.|Descripción, foto y unidad obligatorias.|5.04
-5.04|lyd|Claudia, Erika|Returns / Requests|Crear return fix|Crea la WO de corrección, que no se factura. Si va otro técnico, se le paga a él y se descuenta al que lo hizo mal.|› WO return fix Scheduled|🔔 Aviso al técnico «Tienes un return fix asignado». Descuento «Por decidir» en Nómina.|Un solo return fix por return. Si va el mismo técnico, corrige sin pago.|3.11,5.03,7.05
+5.04|tha|Claudia, Erika|Returns / Requests|Crear return fix|Crea la WO de corrección, que no se factura. Si va otro técnico, se le paga a él y se descuenta al que lo hizo mal.|› WO return fix Scheduled|🔔 Aviso al técnico «Tienes un return fix asignado». Descuento «Por decidir» en Nómina.|Un solo return fix por return. Si va el mismo técnico, corrige sin pago.|3.11,5.03,7.05
 5.05|tha|Claudia|Ficha de la WO|Reasignar técnico del return fix|Cambia quién corrige y recalcula el descuento.||||
 5.03|gus||Celular › Return|Marcar como corregida|Gustavo verifica la corrección con fotos del después.|Abierta › Corregida||Al menos una foto del después.|5.06,5.07
-5.06|lyd|Claudia, Erika|Returns|Cerrar return|La oficina cierra un return corregido.|Corregida › Cerrada|🔔 Aviso a Erika si lo cierra otra persona.|Solo si está Corregida.|
+5.06|tha|Claudia, Erika|Returns|Cerrar return|La oficina cierra un return corregido.|Corregida › Cerrada|🔔 Aviso a Erika si lo cierra otra persona.|Solo si está Corregida.|
 5.07|gus||Celular › Return|Cerrar return|Gustavo cierra el return desde el celular.|Corregida › Cerrada|🔔 Aviso a Claudia y Erika.||
 6.01|sis||Automático|Validación automática|Si la WO tiene foto, tarifa y nada pendiente, se valida sola (pago y factura aprobados).|› Validada||Sin Sub-WO pendiente ni respuesta del cliente pendiente.|7.01,8.01
 6.03|eri|Claudia|Nómina › WO sin validar|Revisar y validar|Abre todo el expediente: materiales, Sub-WO, fotos y dinero.|||Si falta foto, tarifa, Sub-WO o respuesta del cliente, no deja aprobar.|6.02,6.04,6.05,6.06,6.07

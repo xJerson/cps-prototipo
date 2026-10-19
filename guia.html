@@ -151,9 +151,9 @@ main{max-width:1100px;margin:0 auto;padding-top:16px;padding-bottom:max(110px,ca
 <script>
 /* ═══ People ═══ */
 const PEOPLE={
-  Lydia:{c:"#7a4fb0",r:"Comercial",d:"Visita clientes, crea solicitudes y estimados, y lleva Returns como área de calidad."},
+  Lydia:{c:"#7a4fb0",r:"Comercial",d:"Visita clientes, crea solicitudes y estimados."},
   Claudia:{c:"#b0563a",r:"Administración y estimados",d:"Arma los estimados, aprueba excepciones, arma la ruta de Gustavo y valida trabajos."},
-  Thalia:{c:"#2a6fb0",r:"Programación",d:"Coordina fechas con el cliente, asigna técnicos y avisa al cliente cuando una unidad queda pendiente."},
+  Thalia:{c:"#2a6fb0",r:"Programación",d:"Coordina fechas con el cliente, asigna técnicos, avisa al cliente cuando una unidad queda pendiente y programa la corrección de los returns."},
   Gustavo:{c:"#2e7a43",r:"Supervisor en campo",d:"Inspecciona para estimados, supervisa trabajos y abre returns desde su celular."},
   Erika:{c:"#0f6b66",r:"Administración",d:"Valida trabajos, paga nómina, factura y cobra."},
   Técnico:{c:"#8a5a00",r:"Celular del técnico",d:"Marca llegada, toma fotos, registra materiales y cierra el trabajo."},
@@ -275,13 +275,13 @@ const FLOWS=[
    rule:"<b>La causa decide la plata.</b> Trabajo mal hecho: no se paga ni se cobra. Cambio del cliente: se paga y se cobra. Daño de un tercero: se paga y se cobra a quien corresponda. Material defectuoso: se paga y no se cobra.",
    msgs:[{k:"noti",to:"Claudia",sub:"Gustavo abrió un return",body:"Sunset U2 · marco de puerta · Alta · Marcos Ayala."},
          {k:"noti",to:"Thalia",sub:"Return por reagendar",body:"Marcos debe corregir antes del jueves."}]},
-  {who:"Lydia",btn:"Crear return fix",t:"Se crea el return fix",to:["Returned","r"],marks:{tu:true},
+  {who:"Thalia",btn:"Crear return fix",t:"Se crea el return fix",to:["Returned","r"],marks:{tu:true},
    txt:"Desde el módulo Returns se crea una WO nueva solo para corregir. Se elige quién va y cuándo; si es urgente, hoy mismo.",
    rule:"<b>Si va el mismo técnico:</b> no se le paga, rehace su trabajo. <b>Si va otro:</b> a ese se le paga y al primero se le descuenta, nunca más de lo que ganó. <b>Al cliente</b> el return fix nunca se le factura.",
    msgs:[{k:"noti",to:"Técnico · Marcos Ayala",sub:"Tienes un return fix asignado",body:"Sunset U2 — marco de puerta: quedó pintura y el zócalo sin retocar."}]},
   {who:"Técnico",btn:"Terminé",t:"El técnico corrige",to:["Returned","r"],marks:{corr:true},
    txt:"Hace el return fix y lo cierra con fotos del después. El return pasa a «Corregida».",
-   msgs:[{k:"noti",to:"Lydia",sub:"Return fix listo para cerrar",body:"Sunset U2 · return fix terminado por Marcos con 3 fotos."}]},
+   msgs:[{k:"noti",to:"Thalia",sub:"Return fix listo para cerrar",body:"Sunset U2 · return fix terminado por Marcos con 3 fotos."}]},
   {who:"Gustavo",btn:"Cerrar return",t:"Se cierra",to:["Corrected","a"],marks:{cerr:true},
    txt:"La cierra Gustavo desde su celular o la oficina desde Returns. Queda el historial con fotos de antes y después.",
    why:"Mientras está abierta, la WO no se factura. Al cerrarla se libera.",

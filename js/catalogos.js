@@ -97,8 +97,8 @@ const servTodos = t => CAT.servicios.filter(s=>s.tipo===t);
 /* ══════════ ROLES — quién ve qué (UC del módulo que le toca) ══════════ */
 const ROLES = {
   "Claudia":{i:"CV",r:"Administración / Estimados",m:"*"},
-  "Lydia":  {i:"LC",r:"Comercial",     m:["tablero","clientes","solicitudes","estimados","propiedades","wo","calendario","devoluciones","excepciones","reportes","alertas"]},
-  "Thalia": {i:"TM",r:"Programación",  m:["tablero","wo","calendario","despacho","supervision","propiedades","tecnicos","catalogos","excepciones","reportes","alertas"]},
+  "Lydia":  {i:"LC",r:"Comercial",     m:["tablero","clientes","solicitudes","estimados","propiedades","wo","calendario","excepciones","reportes","alertas"]},
+  "Thalia": {i:"TM",r:"Programación",  m:["tablero","wo","calendario","despacho","devoluciones","supervision","propiedades","tecnicos","catalogos","excepciones","reportes","alertas"]},
   "Gustavo":{i:"GA",r:"Supervisión",   m:["tablero","wo","calendario","supervision","gustavoweb","inventario","tecnicos","excepciones","reportes","alertas"]},
   "Erika":  {i:"EM",r:"Administración",m:["tablero","wo","devoluciones","nomina","facturacion","cobranza","tarifario","inventario","finanzas","excepciones","reportes","buscar","alertas","bitacora"]}
   ,"Contador":{i:"CT",r:"Contabilidad · solo lectura",m:["tablero","finanzas","inventario","reportes"]}

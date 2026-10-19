@@ -348,7 +348,7 @@ Object.assign(ACC, {
     if(dvC && dvC.estado!=="Cerrada"){
       dvC.estado="Corregida"; dvC.lotesDespues=[{amb:dvC.area,n:Math.max(1,w.evid||1)}];
       dvC.hist.push([hora(),`Return fix terminado en WO-${w.id} · ${w.evid} evidencia(s)`,T(w.tec).nombre]);
-      avisar("Lydia","Un return fix está listo para cerrar",`${P(dvC.prop).nombre} ${U(dvC.unidad)?U(dvC.unidad).num:""} · ${dvC.area} — WO-${w.id} terminada por ${tecN(w.tec)}.`,"v");
+      avisar("Thalia","Un return fix está listo para cerrar",`${P(dvC.prop).nombre} ${U(dvC.unidad)?U(dvC.unidad).num:""} · ${dvC.area} — WO-${w.id} terminada por ${tecN(w.tec)}.`,"v");
     }
     // WO enlazadas: al terminar esta, la que iba después queda libre y su técnico se entera
     S.wos.filter(x=>x.dependeDe===w.id && x.estado!=="Canceled").forEach(x=>{
