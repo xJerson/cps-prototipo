@@ -444,6 +444,8 @@ Object.assign(ACC, {
         return {...l, precio:precioNetoLinea(e,l), autorizado:l.serv+(l.descripcion?": "+l.descripcion:"")}; })};
     S.solicitudes.push(nsol); flash("sol:"+nsol.id);
     e.estado="Transferido";
+    /* Programación no se enteraba: la solicitud solo aparecía arriba en Work Orders. Ahora llega con aviso y cuenta en el Tablero. */
+    avisar("Thalia","Estimado listo para programar",`${e.num} · ${P(e.prop).nombre} — ${nsol.lineas.length} línea(s) aprobada(s). Está arriba en Work Orders, en «Solicitudes que llegaron de Comercial».`,"a");
     toast("✓ Transferido a programación",`<b>${esc(e.num)}</b> le llegó a Thalia con las líneas ya aprobadas — no hay que volver a escribir nada.`,"v");
     render();
   },

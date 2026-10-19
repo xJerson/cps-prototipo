@@ -55,6 +55,8 @@ function vPendientes(){
      d:"Unidades pendientes cuya fecha límite de respuesta llegó o ya pasó", k:"w"},
     {n:"Pagos por verificar", c:puedeVerUtilidad()?S.facturas.filter(porRevisarHoy).length:0, m:"cobranza",
      d:"Llegó la fecha para verificar la recepción del pago", k:"a"},
+    {n:"Solicitudes por programar", c:puedeAvisarPend()?S.solicitudes.filter(x=>x.estado==="Pendiente").length:0, m:"wo",
+     d:"Estimados y visitas que Comercial ya pasó y todavía no tienen WO", k:"a"},
     {n:"Estimados esperando al cliente", c:S.estimados.filter(e=>e.estado==="Enviado").length, m:"estimados",
      d:"Enviados y sin respuesta", k:"g"},
     {n:"Permisos por aprobar",     c:S.disponibilidad.filter(d=>d.estado==="Pendiente").length, m:"despacho",
