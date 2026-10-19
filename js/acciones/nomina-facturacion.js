@@ -291,6 +291,20 @@ Object.assign(ACC, {
   },
 
   /* Marcar pagado: primero el cheque y su foto (opcionales); la nómina se registra en pagarTecOK. */
+  nomAprobar: d => {
+    if(!puedeAprobarNomina()||S.periodo.tipo!=="semana") return;
+    (S.nomAprob=S.nomAprob||{})[d.tec+"|"+S.periodo.sem]={por:S.usuario,hora:hora(),fecha:HOY_SUP,conf:"Pendiente",obs:""};
+    S._audNom=tecN(d.tec)+" · "+periodoTexto(S.periodo);
+    noti("Tu pago de la semana está listo","Revísalo en «Mi pago» y responde Conforme o envía una observación.");
+    toast("✓ Nómina aprobada",`${esc(tecN(d.tec))} ya la ve en su celular. El pago no depende de su respuesta.`,"v"); render(); },
+  nomConforme: d => { const a=nomAprob(d.tec,d.sem); if(!a) return;
+    a.conf="Conforme"; a.obs=""; a.confHora=hora(); S._audNom=tecN(d.tec)+" · semana "+d.sem;
+    toast("✓ Conforme","Quedó registrada tu conformidad con el pago de la semana.","v"); render(); },
+  nomObs: d => { const a=nomAprob(d.tec,d.sem); if(!a) return;
+    const t=val("nomObsT"); if(!t){ S.audOmitir=true; marcaFalta(["nomObsT"]); toast("Falta la observación","Escribe qué está mal o qué falta en tu pago.","r"); return; }
+    a.conf="Observada"; a.obs=t; a.confHora=hora(); S._audNom=tecN(d.tec)+" · semana "+d.sem;
+    avisar("Erika","Observación del técnico en su pago",`${tecN(d.tec)} · semana ${d.sem}: ${t}`,"w");
+    toast("Observación enviada","Administración la recibe y te contesta.","v"); render(); },
   pagarTec: d => {
     const c=nominaCalc(d.tec);
     if(!c.ws.length){ toast("🚫 Nada para pagar","No hay Work Orders listas para pagar.","r"); return; }

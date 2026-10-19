@@ -547,8 +547,12 @@ VIEWS.nomina = () => {
         <span class="mono" style="font-size:16px;font-weight:750">${money(egr)}</span>
         ${semP?`<button class="btn sm" data-a="descManualModal" data-tec="${tid}">Descuento</button>`:""}
         <button class="btn sm" data-a="comprobante" data-tec="${tid}">Ver comprobante</button>
+        ${semP?(()=>{ const ap=nomAprob(tid,S.periodo.sem);
+          return ap ? `<span class="pill ${ap.conf==="Conforme"?"v":ap.conf==="Observada"?"a":"g"}" title="Aprobada por ${esc(ap.por)} · ${esc(ap.hora)}">Aprobada · Conformidad: ${esc(ap.conf)}</span>`
+            : todo.length ? (puedeAprobarNomina() ? `<button class="btn sm" data-a="nomAprobar" data-tec="${tid}">Aprobar</button>` : `<span class="pill g">Sin aprobar</span>`) : ""; })():""}
         ${pagTec?`<button class="btn sm v" data-a="pagarTec" data-tec="${tid}">Marcar pagado (${pagTec})</button>`
           :todo.length&&!pendTec?`<span class="pill v">✓ Pagado</span>`:""}</span></div>
+      ${semP&&nomAprob(tid,S.periodo.sem)&&nomAprob(tid,S.periodo.sem).obs?`<div class="note w" style="margin:8px 12px"><b>Observación del técnico:</b> ${esc(nomAprob(tid,S.periodo.sem).obs)}</div>`:""}
       <table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Servicio</th><th>Rooms</th><th>Floors</th><th>Pagado</th><th>Aprobado</th><th class="num">Ingreso</th><th class="num">Egreso</th><th class="num">Material</th>${puedeVerUtilidad()?`<th class="num">Utilidad</th>`:""}</tr></thead>
       <tbody>${arr.map(w=>filaNom(w,false)).join("")}
       ${prev.length?`<tr style="background:var(--ambar-cl)"><td colspan="${puedeVerUtilidad()?11:10}" style="font-weight:700;color:var(--ambar)">Pendientes anteriores · sin pagar de semanas pasadas</td></tr>${prev.map(w=>filaNom(w,true)).join("")}`:""}

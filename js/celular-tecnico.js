@@ -65,6 +65,12 @@ function renderFon(){
         <div style="font-size:10.5px;opacity:.85">Total a recibir esta semana</div>
         <div class="mono" style="font-size:24px;font-weight:800">${money(total)}</div>
         <div style="font-size:10.5px;opacity:.85">${ws.length} trabajo(s) terminado(s)</div></div>
+      ${(()=>{ const ap=nomAprob(t.id,sem); if(!ap) return "";
+        return `<div class="dc"><div class="dl" style="margin:0 0 4px">Conformidad con tu pago</div>
+          <div class="ds" style="margin-bottom:7px">Tu pago de esta semana ya fue aprobado. ${ap.conf==="Pendiente"?"Si está bien, toca Conforme. Si algo está mal o falta, escribe una observación.":ap.conf==="Conforme"?"Quedó registrada tu conformidad.":"Tu observación quedó enviada a Administración."}</div>
+          <div style="display:flex;gap:6px;margin-bottom:7px"><button class="db p" data-a="nomConforme" data-tec="${t.id}" data-sem="${sem}" style="flex:1;${ap.conf==="Conforme"?"opacity:.55":""}">Conforme</button></div>
+          <textarea id="nomObsT" rows="2" placeholder="Observación (qué está mal o qué falta)" style="width:100%;padding:7px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:12px">${esc(ap.obs||"")}</textarea>
+          <button class="db" data-a="nomObs" data-tec="${t.id}" data-sem="${sem}" style="width:100%;margin-top:6px">Enviar observación</button></div>`; })()}
       <div class="dc"><div class="dl" style="margin:0 0 2px">Trabajos</div>
         ${ws.map(w=>fila(`${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}`,
             `${esc(w.fecha.slice(5))} · ${esc(w.serv)}${w.touchup&&egresoWO(w)===0?" · return fix, no se paga":""}${w.pagadaTec?" · ya pagado":""}${!w.pagadaTec&&pagadoTecWO(w)>0?` · Pagado parcial ${money(pagadoTecWO(w))} de ${money(egresoWO(w))}`:""}`,
