@@ -49,6 +49,10 @@ const puedeDecidirAdicional = () => puedeAvisarPend();
 /* Nómina de cada técnico por semana: la aprueba el aprobador (Claudia) antes de que el técnico responda Conforme u Observación.
    No frena el pago (pedido de Erika). S.nomAprob["T1|33"] = {por, hora, conf:"Pendiente"|"Conforme"|"Observada", obs}. */
 const puedeAprobarNomina = () => S.usuario==="Claudia";
+/* Cambiar el monto de una factura ya emitida: administración lo PREPARA con un motivo y el aprobador lo aprueba o lo rechaza
+   (así se evitan los cambios por WhatsApp). El aprobador también puede editar directo. Único lugar donde se nombra a la persona. */
+const APROBADOR_CAMBIO_MONTO = "Claudia";
+const puedeAprobarCambioMonto = () => S.usuario===APROBADOR_CAMBIO_MONTO;
 const nomAprob = (tec,sem) => (S.nomAprob||{})[tec+"|"+sem] || null;
 /* Quien contesta la observación del técnico: administración (los mismos que ven el dinero). Estados de conformidad:
    Pendiente → Observada (el técnico escribe) → Respondida (administración contesta) → Conforme. El pago no depende de ninguno. */
