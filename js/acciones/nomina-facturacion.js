@@ -298,13 +298,18 @@ Object.assign(ACC, {
     noti("Tu pago de la semana está listo","Revísalo en «Mi pago» y responde Conforme o envía una observación.");
     toast("✓ Nómina aprobada",`${esc(tecN(d.tec))} ya la ve en su celular. El pago no depende de su respuesta.`,"v"); render(); },
   nomConforme: d => { const a=nomAprob(d.tec,d.sem); if(!a) return;
-    a.conf="Conforme"; a.obs=""; a.confHora=hora(); S._audNom=tecN(d.tec)+" · semana "+d.sem;
+    a.conf="Conforme"; a.confHora=hora(); S._audNom=tecN(d.tec)+" · semana "+d.sem;
     toast("✓ Conforme","Quedó registrada tu conformidad con el pago de la semana.","v"); render(); },
   nomObs: d => { const a=nomAprob(d.tec,d.sem); if(!a) return;
     const t=val("nomObsT"); if(!t){ S.audOmitir=true; marcaFalta(["nomObsT"]); toast("Falta la observación","Escribe qué está mal o qué falta en tu pago.","r"); return; }
-    a.conf="Observada"; a.obs=t; a.confHora=hora(); S._audNom=tecN(d.tec)+" · semana "+d.sem;
+    a.conf="Observada"; a.obs=t; a.confHora=hora(); (a.hilo=a.hilo||[]).push({de:"Técnico",t,hora:hora()}); S._audNom=tecN(d.tec)+" · semana "+d.sem;
     avisar("Erika","Observación del técnico en su pago",`${tecN(d.tec)} · semana ${d.sem}: ${t}`,"w");
     toast("Observación enviada","Administración la recibe y te contesta.","v"); render(); },
+  nomResponder: d => { const a=nomAprob(d.tec,S.periodo.sem); if(!a||a.conf!=="Observada"||!puedeResponderNomina()) return;
+    const t=val("nomResp"+d.tec); if(!t){ S.audOmitir=true; marcaFalta(["nomResp"+d.tec]); toast("Falta la respuesta","Escribe qué se corrigió o por qué está bien.","r"); return; }
+    a.conf="Respondida"; (a.hilo=a.hilo||[]).push({de:"Administración",t,hora:hora()}); S._audNom=tecN(d.tec)+" · semana "+S.periodo.sem;
+    noti("Respondieron tu observación",t);
+    toast("Respuesta enviada",`${esc(tecN(d.tec))} la ve en su celular y puede dar su conformidad.`,"v"); render(); },
   pagarTec: d => {
     const c=nominaCalc(d.tec);
     if(!c.ws.length){ toast("🚫 Nada para pagar","No hay Work Orders listas para pagar.","r"); return; }

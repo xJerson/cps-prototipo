@@ -50,6 +50,10 @@ const puedeDecidirAdicional = () => puedeAvisarPend();
    No frena el pago (pedido de Erika). S.nomAprob["T1|33"] = {por, hora, conf:"Pendiente"|"Conforme"|"Observada", obs}. */
 const puedeAprobarNomina = () => S.usuario==="Claudia";
 const nomAprob = (tec,sem) => (S.nomAprob||{})[tec+"|"+sem] || null;
+/* Quien contesta la observación del técnico: administración (los mismos que ven el dinero). Estados de conformidad:
+   Pendiente → Observada (el técnico escribe) → Respondida (administración contesta) → Conforme. El pago no depende de ninguno. */
+const puedeResponderNomina = () => puedeVerUtilidad();
+const hiloNomHTML = a => (a.hilo||[]).map(m=>`<div style="font-size:12px;margin:3px 0"><b>${esc(m.de)}</b> · ${esc(m.hora)}: ${esc(m.t)}</div>`).join("");
 /* Avisos al cliente por una WO pendiente que siguen sin respuesta y cuya fecha de «Responder antes del» llegó o ya pasó. */
 const respuestasVencidas = () => (S.comunicacionesWO||[]).filter(c=>c.estado!=="Closed" && c.limite && c.limite<=HOY_SUP);
 /* Pago al técnico y factura al cliente se aprueban por separado (w.aprobPago / w.aprobFactura).
