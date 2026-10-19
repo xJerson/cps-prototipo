@@ -51,7 +51,7 @@ function vPendientes(){
      d:"No se pueden facturar hasta que Gustavo las revise", k:"a"},
     {n:"Listas para facturar",     c:S.wos.filter(w=>w.estado==="Completed"&&w.supervisada&&!w.facturada).length, m:"facturacion",
      d:"Trabajo hecho que todavía no se cobra", k:"a"},
-    {n:"Respuestas del cliente vencidas o para hoy", c:puedeAvisarPend()?respuestasVencidas().length:0, m:"wo",
+    {n:"Respuestas del cliente vencidas o para hoy", c:S.usuario==="Thalia"?respuestasVencidas().length:0 /* el aviso es solo para Thalia (pedido de Erika) */, m:"wo",
      d:"Unidades pendientes cuya fecha límite de respuesta llegó o ya pasó", k:"w"},
     {n:"Pagos por verificar", c:puedeVerUtilidad()?S.facturas.filter(porRevisarHoy).length:0, m:"cobranza",
      d:"Llegó la fecha para verificar la recepción del pago", k:"a"},
