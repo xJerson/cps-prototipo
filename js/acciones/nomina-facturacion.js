@@ -169,7 +169,7 @@ Object.assign(ACC, {
     if(!s || (!puedeDecidirAdicional() && s.aprobador && s.aprobador!==S.usuario)){ toast("Aprobación delegada",`Esta solicitud debe aprobarla <b>${esc(s&&s.aprobador||"Thalia")}</b>. Si está fuera de su alcance, asígnala a Gustavo u otra persona antes de decidir.`,"w"); return; }
     const pend = s.lineas.filter(l=>l.estado==="Pendiente" && (!S._medioLid || l.id===S._medioLid));
     S._medioLid = null;
-    document.querySelectorAll(".adprecio").forEach(e=>{ const l=pend.find(x=>x.id===+e.dataset.lid); if(l){ const p=parseFloat(e.value); if(Number.isFinite(p)&&p>=0){ l.precio=p; l.precioOrigen="manual-aprobado"; } } });
+    document.querySelectorAll(".adprecio").forEach(e=>{ const l=pend.find(x=>x.id===+e.dataset.lid); if(l){ const p=parseFloat(e.value); if(Number.isFinite(p)&&p>=0){ l.precio=p; l.precioOrigen="manual-aprobado"; if(puedeAprobarCambioMonto()) l.precioFijado=sellarPrecio(); } } });
     // Aprobar y ponerle precio son decisiones distintas (Claudia): el precio
     // es opcional acá — si queda sin él, se resuelve después como Approval
     // Request "Definir precio del adicional" (ver excAuto / precioDefGuardar).
@@ -257,7 +257,7 @@ Object.assign(ACC, {
     const precio = parseFloat(val("dpP"));
     if(!(precio>=0)){ toast("Precio inválido","Tiene que ser 0 o más.","r"); return; }
     const chkCobra = document.getElementById("dpCobra"), cobrar = !!(chkCobra&&chkCobra.checked);
-    l.precio = precio; l.precioOrigen="manual-resuelto"; delete l.precioPend;
+    l.precio = precio; l.precioOrigen="manual-resuelto"; l.precioFijado=sellarPrecio(); delete l.precioPend;
     (l.hist=l.hist||[]).push([hora(), `Precio definido por ${S.usuario}`, S.usuario]);
     const r = aplicarPagoFacturaAdicional(l, w, s, cobrar);
     cm(); flash("wo:"+w.id);
@@ -527,6 +527,16 @@ function modalValidar(w){
       ${aprobPagoOK(w)&&aprobFacturaOK(w)?"":`<button class="btn ${falta.length?"":"v"}" data-a="validarOK" data-id="${w.id}" ${falta.length?"disabled":""}>Validar</button>`}</div>`,true);
 }
 
+/* Campo «Cobro» de Validar: si el precio lo fijó el aprobador, el resto lo ve de solo lectura y pide el cambio por Request. */
+function campoCobroVal(w,dr,cobro,num){
+  const pf=precioFijadoWO(w);
+  if(!(cobro!==null && precioBloqueado(pf)))
+    return `<div class="fld"><label>Cobro</label><input id="vaCobro" class="mono" value="${esc(dr.cobro!==undefined?dr.cobro:num(cobro))}" placeholder="0.00">${cobro!==null?`<div class="hint">${esc(precioEtqWO(w))}</div>`:""}</div>`;
+  const pend=S.excepciones.some(x=>x.tipo==="Cambio de precio fijado"&&x.estado==="Pendiente"&&x.cambioPrecio&&x.cambioPrecio.clave==="wo:"+w.id);
+  return `<div class="fld"><label>Cobro</label><div class="mono" style="padding:6px 0">${money(cobro)}</div>
+    <div class="hint">${esc(precioOrigenTxt(pf))}</div>
+    ${pend?`<span class="pill a">Cambio de precio pendiente</span>`:`<button class="btn sm" data-a="precioPedirCambio" data-wo="${w.id}">Pedir cambio de precio</button>`}</div>`;
+}
 /* Bloque «Dinero» del modal de validar: solo lo ve quien puede ver utilidad. */
 function bloqueDineroVal(w,dr){
   const cobro=ingresoBaseWO(w), pago=egresoBaseWO(w), mat=materialWO(w), comp=asignadoGastoWO(w.id);
@@ -536,7 +546,7 @@ function bloqueDineroVal(w,dr){
   const num=v=>v==null?"":String(Math.round(v*100)/100);
   return `<div class="card" style="margin-top:14px"><div class="chd"><h3>Dinero</h3></div><div class="cp">
     <div class="fg c2">
-      <div class="fld"><label>Cobro</label><input id="vaCobro" class="mono" value="${esc(dr.cobro!==undefined?dr.cobro:num(cobro))}" placeholder="0.00"></div>
+      ${campoCobroVal(w,dr,cobro,num)}
       <div class="fld"><label>Pago técnico</label><input id="vaPago" class="mono" value="${esc(dr.pago!==undefined?dr.pago:num(pago))}" placeholder="0.00"></div></div>
     <div class="fld"><label>Motivo</label><input id="vaMot" value="${esc(dr.mot||"")}" placeholder="Obligatorio si cambias Cobro o Pago"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:12px"><span style="color:var(--soft)">Materiales</span><span><span class="mono">${money(mat)}</span> <button class="btn sm" data-a="valMatModal" data-id="${w.id}">Ajustar</button></span></div>
@@ -563,7 +573,7 @@ function leerValDraft(w){
 /* Aplica Cobro/Pago técnico editados sobre w.precio / w.pago (por unidad, como
    los lee ingresoWO/egresoWO). Sin Motivo no cambia nada. */
 function aplicarEdicionVal(w){
-  if(!puedeVerUtilidad() || !document.getElementById("vaCobro")) return true;
+  if(!puedeVerUtilidad() || !document.getElementById("vaPago")) return true;   // el Cobro puede no estar en pantalla: es de solo lectura si lo fijó el aprobador
   const cant=w.cant||1, mot=val("vaMot"), cambios=[];
   const rev=(id,actual,campo,etq)=>{
     const t=val(id); if(t==="") return true;
@@ -576,6 +586,7 @@ function aplicarEdicionVal(w){
   if(cambios.length && !mot){ S.audOmitir=true; marcaFalta(["vaMot"]); toast("Falta el motivo","Escribe por qué cambias el cobro o el pago.","r"); return false; }
   cambios.forEach(c=>{
     w[c.campo]=c.despues/cant;
+    if(c.campo==="precio" && puedeAprobarCambioMonto()) w.precioFijado=sellarPrecio();   // lo corrigió el aprobador: queda como precio suyo
     w.hist.push([hora(),`${c.etq} ${c.antes===null?"sin definir":money(c.antes)} → ${money(c.despues)} · ${mot}`,S.usuario]);
   });
   return true;
@@ -734,6 +745,23 @@ function registrarCambioEmitida(f,totalAntes,o){
       registrarHistorialApproval(x,"Resolved",`Factura modificada: ${money(totalAntes)} → ${money(f.total)}`); }
   });
 }
+/* Aplica un precio por unidad nuevo a la WO o al adicional (Sub-WO), lo deja fijado por quien lo aplica y pone al día
+   los borradores de factura que ya traían la línea (su total se mueve solo por la diferencia de esa línea). */
+function aplicarPrecioFijado(c, unit){
+  const w=W(c.wo); if(!w) return false;
+  if(c.tipo==="sub"){
+    const a=by(S.adicionales,c.subwo); if(!a) return false;
+    a.precio=unit; a.precioFijado=sellarPrecio();
+    if(a.montoFactura!=null){ const nuevo=unit*(a.cant||1); w.extraFacturable=(w.extraFacturable||0)+(nuevo-a.montoFactura); a.montoFactura=nuevo; }
+    (a.hist=a.hist||[]).push([hora(),`Precio fijado en ${money(unit)} por ${S.usuario}`,S.usuario]);
+  } else { w.precio=unit; w.precioFijado=sellarPrecio(); }
+  w.hist.push([hora(),`Precio de ${c.nombre||"la WO"} fijado en ${money(c.escala==="total"?unit*(c.cant||1):unit)} por ${S.usuario}`,S.usuario]);
+  S.facturas.filter(f=>f.estado==="Borrador").forEach(f=>(f.conceptos||[]).forEach(k=>{
+    if(k.clave!==c.clave) return;
+    const antesImp=+k.importe||0; k.precio=unit; k.importe=importeLinea(k); f.total=r2((+f.total||0)+k.importe-antesImp); }));
+  if(S.facturaBorrador) (S.facturaBorrador.lineas||[]).forEach(l=>{ if(l.clave===c.clave){ l.precio=unit; l.importe=importeLinea(l); } });
+  return true;
+}
 function abrirCambioMonto(d){
   const f=by(S.facturas,d.id);
   if(!f||!facMontoEditable(f)){ toast("No se puede cambiar","La factura ya se pagó o sigue en borrador.","r"); return; }
@@ -798,7 +826,8 @@ Object.assign(ACC, {
     modalLineaFactura(l.clave); },
   facLineaGuardar: d => {
     const b=S.facturaBorrador, l=b&&(b.lineas||[]).find(x=>x.clave===d.k); if(!l) return;
-    const nombre=val("fleNom"), precio=parseFloat(val("fleP")), cant=parseFloat(val("fleC")), desc=parseFloat(val("fleD")||"0"), tipo=val("fleT")==="%"?"%":"$";
+    const bloqP=precioBloqueado(precioFijadoLinea(l));   // precio fijado por el aprobador: no se toca desde aquí
+    const nombre=val("fleNom"), precio=bloqP?(+l.precio||0):parseFloat(val("fleP")), cant=parseFloat(val("fleC")), desc=parseFloat(val("fleD")||"0"), tipo=val("fleT")==="%"?"%":"$";
     const mal=[!nombre&&"fleNom", !Number.isFinite(precio)&&"fleP", !(cant>=0)&&"fleC", !(desc>=0&&(tipo==="$"||desc<=100))&&"fleD"].filter(Boolean);
     if(mal.length){ S.audOmitir=true; marcaFalta(mal); toast("Revisa la línea","Nombre, precio, cantidad y descuento válidos (el % no pasa de 100).","r"); return; }
     Object.assign(l,{nombre,descripcion:val("fleDes"),precio,cantidad:cant,desc,descTipo:tipo});
@@ -961,6 +990,86 @@ Object.assign(ACC, {
     S._audCambio=`${f?f.num:"Factura"} · ${mot}`;
     flash("exc:"+x.id); cm();
     toast("Cambio rechazado",`${f?`<b>${esc(f.num)}</b> sigue igual. `:""}Se le avisó a ${esc(x.pide)}.`,"w"); render();
+  },
+  /* ── Cambio de precio fijado ──
+     Un precio que fijó el aprobador (precioFijado, ver helpers.js) no lo cambia nadie más directo: se pide con un Request
+     «Cambio de precio fijado» que lleva antes, después y motivo. Al aprobarlo se aplica a la WO o al adicional y el precio
+     queda fijado por quien aprobó. */
+  precioPedirCambio: d => {
+    let t;
+    if(d.k){ const b=S.facturaBorrador, l=b&&(b.lineas||[]).find(x=>x.clave===d.k); if(!l||!l.wo) return;
+      t={tipo:l.tipo==="Sub-WO"?"sub":"wo", wo:l.wo, subwo:l.subwo||null, clave:l.clave, nombre:l.nombre||"", cant:+l.cantidad||1, escala:"unidad", antes:+l.precio||0, desde:"factura", pf:precioFijadoLinea(l)}; }
+    else { const w=W(+d.wo); if(!w) return; leerValDraft(w);
+      const tot=ingresoBaseWO(w); if(tot===null) return;
+      t={tipo:"wo", wo:w.id, subwo:null, clave:"wo:"+w.id, nombre:w.serv, cant:w.cant||1, escala:"total", antes:tot, desde:"validar", pf:precioFijadoWO(w)}; }
+    if(S.excepciones.some(x=>x.tipo==="Cambio de precio fijado"&&x.estado==="Pendiente"&&x.cambioPrecio&&x.cambioPrecio.clave===t.clave)){
+      S.audOmitir=true; toast("Ya hay un cambio esperando","Este precio ya tiene un cambio pendiente de aprobación.","w"); return; }
+    S._pcTarget=t; modalCambioPrecio(t);
+  },
+  precioPedirVolver: () => { const t=S._pcTarget; S._pcTarget=null;
+    if(t&&t.desde==="factura"&&S.facturaBorrador) modalLineaFactura(t.clave);
+    else if(t&&W(t.wo)) modalValidar(W(t.wo));
+    else cm(); },
+  precioCambioEnviar: () => {
+    const t=S._pcTarget; if(!t) return;
+    const nuevo=parseFloat(val("pcP")), mot=val("pcM");
+    if(marcaFalta(["pcP","pcM"])){ S.audOmitir=true; toast("Faltan datos","Escribe el nuevo precio y el motivo.","r"); return; }
+    if(!(nuevo>=0)){ S.audOmitir=true; marcaFalta(["pcP"]); toast("Precio inválido","Tiene que ser 0 o más.","r"); return; }
+    if(Math.abs(nuevo-t.antes)<0.005){ S.audOmitir=true; toast("Sin cambios","Es el mismo precio.","w"); return; }
+    const w=W(t.wo); if(!w) return;
+    const cp={tipo:t.tipo, wo:t.wo, subwo:t.subwo, clave:t.clave, nombre:t.nombre, cant:t.cant, escala:t.escala, antes:r2(t.antes), despues:r2(nuevo), motivo:mot,
+      fijadoPor:t.pf?t.pf.por:null};
+    const x={id:"X"+Date.now(), tipo:"Cambio de precio fijado", wo:t.wo, subwo:t.subwo||undefined,
+      motivo:`WO-${t.wo} · ${t.nombre}: ${money(cp.antes)} → ${money(cp.despues)} — Motivo: ${mot}`, monto:null, pide:S.usuario, aprueba:APROBADOR_CAMBIO_MONTO,
+      estado:"Pendiente", assignedTo:null, assignedBy:null, assignedAt:null, workStatus:"Unassigned",
+      fecha:HOY_SUP, creada:{quien:S.usuario,hora:hora(),minuto:S.reloj,fecha:HOY_SUP},
+      historial:[{evento:"Created",quien:S.usuario,hora:hora(),fecha:HOY_SUP}], resol:null, cambioPrecio:cp};
+    S.excepciones.push(x);
+    w.hist.push([hora(),`Pidió cambiar el precio fijado: ${money(cp.antes)} → ${money(cp.despues)} · ${mot}`,S.usuario]);
+    avisar(APROBADOR_CAMBIO_MONTO,"Cambio de precio fijado",`WO-${t.wo} · ${t.nombre}: ${money(cp.antes)} → ${money(cp.despues)}. Lo pidió ${S.usuario}: ${mot}`,"w");
+    S._audPrecio=`WO-${t.wo} · ${t.nombre} · ${money(cp.antes)} → ${money(cp.despues)}`;
+    flash("exc:"+x.id); S._pcTarget=null;
+    toast("Pedido enviado",`Le llegó a <b>${esc(APROBADOR_CAMBIO_MONTO)}</b> con el antes y el después. El precio no cambia hasta que lo apruebe.`,"v");
+    if(t.desde==="factura"&&S.facturaBorrador) modalLineaFactura(t.clave);
+    else modalValidar(w);
+    render();
+  },
+  precioCambioVer: d => { const x=by(S.excepciones,d.id); if(x&&x.cambioPrecio) modalVerCambioPrecio(x); },
+  precioCambioAprobar: d => {
+    const x=by(S.excepciones,d.id); if(!x||!x.cambioPrecio||x.estado!=="Pendiente") return;
+    if(!puedeAprobarCambioMonto()){ S.audOmitir=true; toast("Solo "+APROBADOR_CAMBIO_MONTO,"Este cambio lo aprueba "+APROBADOR_CAMBIO_MONTO+".","w"); return; }
+    const c=x.cambioPrecio, w=W(c.wo);
+    if(!w){ S.audOmitir=true; toast("No se puede aplicar","La WO ya no existe. Rechaza este pedido.","r"); return; }
+    const emitida=S.facturas.find(f=>f.estado!=="Borrador"&&(f.conceptos||[]).some(k=>k.clave===c.clave||(k.wo===c.wo&&(k.subwo||null)===(c.subwo||null)&&k.tipo===(c.tipo==="sub"?"Sub-WO":"WO"))));
+    if(emitida){ S.audOmitir=true; toast("Ya está en una factura emitida",`Está en <b>${esc(emitida.num)}</b>: ahí el monto se cambia con «Cambiar monto». Rechaza este pedido.`,"r"); return; }
+    if(!aplicarPrecioFijado(c, c.escala==="total"?c.despues/(c.cant||1):c.despues)){ S.audOmitir=true; toast("No se puede aplicar","No se encontró el concepto. Rechaza este pedido.","r"); return; }
+    x.estado="Aprobada"; x.resol={quien:S.usuario,hora:hora(),nota:`Precio: ${money(c.antes)} → ${money(c.despues)}`};
+    registrarHistorialApproval(x,"Approved",`Precio: ${money(c.antes)} → ${money(c.despues)}`);
+    avisar(x.pide,"Cambio de precio aprobado",`WO-${c.wo} · ${c.nombre}: ${money(c.antes)} → ${money(c.despues)}.`,"v");
+    S._audPrecio=`WO-${c.wo} · ${c.nombre} · ${money(c.antes)} → ${money(c.despues)}`;
+    flash("exc:"+x.id); cm();
+    toast("✓ Cambio aprobado",`WO-${c.wo} · ${esc(c.nombre)}: ${money(c.antes)} → ${money(c.despues)}. Queda fijado por ${esc(S.usuario)}.`,"v"); render();
+  },
+  precioCambioRechazar: d => {
+    const x=by(S.excepciones,d.id); if(!x||!x.cambioPrecio||x.estado!=="Pendiente") return;
+    modal(`<div class="mh"><h3>Rechazar cambio de precio</h3><p>${esc(x.motivo)}</p></div>
+    <div class="mb"><div class="fld"><label>Motivo del rechazo <span class="req">*</span></label><textarea id="pcRech" rows="3"></textarea></div>
+      <div class="hint">El precio queda como está. Se le avisa a ${esc(x.pide)}.</div></div>
+    <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="precioCambioRechazarOK" data-id="${x.id}">Rechazar</button></div>`);
+  },
+  precioCambioRechazarOK: d => {
+    const x=by(S.excepciones,d.id); if(!x||!x.cambioPrecio||x.estado!=="Pendiente") return;
+    if(!puedeAprobarCambioMonto()){ S.audOmitir=true; toast("Solo "+APROBADOR_CAMBIO_MONTO,"Este cambio lo decide "+APROBADOR_CAMBIO_MONTO+".","w"); return; }
+    const mot=val("pcRech").trim();
+    if(!mot){ S.audOmitir=true; marcaFalta(["pcRech"]); toast("Falta el motivo","Escribe por qué se rechaza el cambio.","r"); return; }
+    const c=x.cambioPrecio, w=W(c.wo);
+    x.estado="Rechazada"; x.resol={quien:S.usuario,hora:hora(),nota:mot};
+    registrarHistorialApproval(x,"Rejected",mot);
+    if(w) w.hist.push([hora(),`Cambio de precio rechazado (${money(c.antes)} → ${money(c.despues)}) · ${mot}`,S.usuario]);
+    avisar(x.pide,"Cambio de precio rechazado",`WO-${c.wo} · ${c.nombre}: ${mot}`,"w");
+    S._audPrecio=`WO-${c.wo} · ${c.nombre} · ${mot}`;
+    flash("exc:"+x.id); cm();
+    toast("Cambio rechazado",`El precio de WO-${c.wo} sigue igual. Se le avisó a ${esc(x.pide)}.`,"w"); render();
   },
   /* Abre el editor de una factura ya emitida: el aprobador aplica directo; los demás preparan el cambio (ver facCambioEnviar). */
   facEditarEmitida: d => abrirCambioMonto(d),
@@ -1145,18 +1254,39 @@ Object.assign(ACC, {
   cobGestionar: d => modalCobranza(d.id),
   /* Cambiar el vencimiento de una factura ya enviada: exige motivo y queda en el seguimiento. */
   facVenceCambiar: d => { const f=by(S.facturas,d.id);
+    if(!f||!facCambiaVence(f)||!puedeCambiarDatosFactura()){ S.audOmitir=true; toast("No se puede cambiar","La factura ya se pagó, sigue en borrador o no tienes permiso.","r"); return; }
     modal(`<div class="mh"><h3>Vencimiento — ${esc(f.num)}</h3><p>Hoy vence ${esc(f.vence)}.</p></div>
     <div class="mb"><div class="fld"><label>Nueva fecha <span class="req">*</span></label><input id="fvFecha" type="date" min="${esc(f.emision)}" value="${esc(f.vence)}"></div>
       <div class="fld"><label>Motivo <span class="req">*</span></label><input id="fvMot" placeholder="Ej. el cliente pidió más plazo"></div></div>
     <div class="mf"><button class="btn" data-a="cobGestionar" data-id="${f.id}">Cancelar</button><button class="btn p" data-a="facVenceGuardar" data-id="${f.id}">Guardar</button></div>`,true); },
   facVenceGuardar: d => { const f=by(S.facturas,d.id), v=val("fvFecha"), mot=val("fvMot").trim();
+    if(!f||!facCambiaVence(f)||!puedeCambiarDatosFactura()){ S.audOmitir=true; toast("No se puede cambiar","La factura ya se pagó, sigue en borrador o no tienes permiso.","r"); return; }
     if(marcaFalta(["fvFecha","fvMot"])){ toast("Faltan datos","Fecha y motivo son obligatorios.","r"); return; }
     if(v<f.emision){ document.getElementById("fvFecha").parentElement.classList.add("bad"); toast("Fecha inválida",`No puede ser antes de la emisión (${esc(f.emision)}).`,"r"); return; }
     if(v===f.vence){ toast("Sin cambios","Es la misma fecha de vencimiento.",""); return; }
     f.seguimiento=f.seguimiento||[];
-    f.seguimiento.push({tipo:"vence",fecha:HOY_SUP,hora:hora(),quien:S.usuario,nota:`${f.vence} → ${v} · ${mot}`});
+    f.seguimiento.push({tipo:"datos",fecha:HOY_SUP,hora:hora(),quien:S.usuario,nota:`Vencimiento: ${f.vence} → ${v} · ${mot}`});
+    S._audDatos=`${f.num} · vencimiento ${f.vence} → ${v}`;
     f.vence=v; f.venceManual=true; flash("fac:"+f.id);
     toast("✓ Vencimiento cambiado",`<b>${esc(f.num)}</b> vence ${esc(v)}.`,"v");
+    render(); modalCobranza(f.id); },
+  /* Correo de envío de una factura ya emitida: lo cambia administración o el aprobador, sin Request. Queda quién y cuándo.
+     Cambiar el correo NO marca la factura como «Modificada, falta reenviar»: eso es solo para los montos. */
+  facCorreoCambiar: d => { const f=by(S.facturas,d.id);
+    if(!f||!facCambiaDatos(f)||!puedeCambiarDatosFactura()){ S.audOmitir=true; toast("No se puede cambiar","La factura ya se pagó, sigue en borrador o no tienes permiso.","r"); return; }
+    modal(`<div class="mh"><h3>Correo de envío — ${esc(f.num)}</h3><p>Hoy: ${esc(facCorreoTxt(f))}.</p></div>
+    <div class="mb"><div class="fld"><label>Nuevo correo <span class="req">*</span></label><input id="fcMail" type="email" value="${esc(f.mail||"")}" placeholder="nombre@empresa.com"></div>
+      <div class="hint">Solo cambia a dónde se envía esta factura. Queda anotado quién lo cambió y cuándo.</div></div>
+    <div class="mf"><button class="btn" data-a="cobGestionar" data-id="${f.id}">Cancelar</button><button class="btn p" data-a="facCorreoGuardar" data-id="${f.id}">Guardar</button></div>`,true); },
+  facCorreoGuardar: d => { const f=by(S.facturas,d.id), nuevo=val("fcMail");
+    if(!f||!facCambiaDatos(f)||!puedeCambiarDatosFactura()){ S.audOmitir=true; toast("No se puede cambiar","La factura ya se pagó, sigue en borrador o no tienes permiso.","r"); return; }
+    if(!/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]+$/.test(nuevo)){ S.audOmitir=true; marcaFalta(["fcMail"]); toast("Correo inválido","Escribe un solo correo válido, por ejemplo nombre@empresa.com.","r"); return; }
+    const antes=facCorreoTxt(f);
+    if(nuevo.toLowerCase()===String(f.mail||"").toLowerCase()){ S.audOmitir=true; toast("Sin cambios","Es el mismo correo.",""); return; }
+    (f.seguimiento=f.seguimiento||[]).push({tipo:"datos",fecha:HOY_SUP,hora:hora(),quien:S.usuario,nota:`Correo: ${antes} → ${nuevo}`});
+    S._audDatos=`${f.num} · correo ${antes} → ${nuevo}`;
+    f.mail=nuevo; flash("fac:"+f.id);
+    toast("✓ Correo cambiado",`<b>${esc(f.num)}</b> se envía a ${esc(nuevo)}.`,"v");
     render(); modalCobranza(f.id); },
   /* Escalera de cobranza del flujograma: Reminder → Correo Overdue → Llamada.
      Es una guía, no un candado: mientras la factura siga vencida, cada paso se puede repetir las veces que haga falta. */

@@ -176,6 +176,13 @@ const AUD = {
   cobAgrupadoEnviar:{a:"Envió un recordatorio agrupado", m:"Cobranza"},
   cobLlamadaGuardar:{a:"Registró una llamada de cobranza", m:"Cobranza"},
   facVenceGuardar:{a:"Cambió el vencimiento de una factura", m:"Cobranza"},
+  facCorreoGuardar:{a:"Cambió el correo de envío de una factura", m:"Cobranza"},
+  /* PRODUCCIÓN: el aprobador de precios debe ser una función configurable (no una persona fija); el origen del precio
+     (definido por quién y cuándo) serían columnas en las tablas de tarifas y de líneas. Un precio «definido» solo lo cambia
+     el aprobador: los demás piden el cambio con un Request que lleva antes, después y motivo. */
+  precioCambioEnviar:{a:"Pidió cambiar un precio fijado por el aprobador (queda para aprobación)", m:"Excepciones"},
+  precioCambioAprobar:{a:"Aprobó un cambio de precio fijado (el precio se actualizó)", m:"Excepciones"},
+  precioCambioRechazarOK:{a:"Rechazó un cambio de precio fijado", m:"Excepciones"},
   pagarSemana:{a:"Aprobó la nómina", m:"Nómina"},
   pagarTecOK:{a:"Marcó como pagado a un técnico", m:"Nómina"},
   nomAprobar:{a:"Aprobó la nómina de un técnico", m:"Nómina"},
@@ -211,6 +218,11 @@ const AUD_POST = {
   facCambioEnviar:     () => S._audCambio || "",
   facCambioAprobar:    () => S._audCambio || "",
   facCambioRechazarOK: () => S._audCambio || "",
+  facVenceGuardar:     () => S._audDatos || "",
+  facCorreoGuardar:    () => S._audDatos || "",
+  precioCambioEnviar:  () => S._audPrecio || "",
+  precioCambioAprobar: () => S._audPrecio || "",
+  precioCambioRechazarOK: () => S._audPrecio || "",
   creditoGuardar: () => { const c=(S.creditosProp||[]).slice(-1)[0]; return c ? P(c.prop).nombre : ""; },
   devRegistrarOK: () => S._audDev || "",
   devCerrar: () => S._audDev || "",

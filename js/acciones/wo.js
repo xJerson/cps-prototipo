@@ -1023,7 +1023,8 @@ Object.assign(ACC, {
     const ntr={id:"TR"+Date.now(), prop: val("tN")==="prop"? w.prop : null,
       cat:w.cat, serv:w.serv, variante:u.rooms,
       pisos: val("tPi")? parseInt(val("tPi")) : null,
-      precio:parseFloat(val("tP")), pago:parseFloat(val("tG"))};
+      precio:parseFloat(val("tP")), pago:parseFloat(val("tG")),
+      precioFijado:sellarPrecio()};   // quién definió esta tarifa (ver sellarPrecio en helpers.js)
     S.tarifas.push(ntr); flash("tar:"+ntr.id);
     cm();
     toast("✓ Tarifa creada",`${esc(w.serv)} · ${esc(u.rooms)} ya tiene precio. Las Work Orders que decían «NA» se recalcularon solas.`,"v");

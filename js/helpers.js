@@ -53,6 +53,34 @@ const puedeAprobarNomina = () => S.usuario==="Claudia";
    (así se evitan los cambios por WhatsApp). El aprobador también puede editar directo. Único lugar donde se nombra a la persona. */
 const APROBADOR_CAMBIO_MONTO = "Claudia";
 const puedeAprobarCambioMonto = () => S.usuario===APROBADOR_CAMBIO_MONTO;
+/* Origen del precio. UNA sola forma en todos lados (fila del tarifario, línea de adicional y WO):
+     precioFijado = {origen:"definido", por:<usuario>, fecha:"AAAA-MM-DD", hora:"h:mm"}
+   Sin precioFijado el precio viene del tarifario (origen «tarifario»). El precioOrigen de los adicionales
+   ("catalogo"|"manual"|"manual-aprobado"|"manual-resuelto") sigue igual y no lo reemplaza.
+   Un precio «definido» (lo fijó el aprobador en «Definir tarifa», «Definir precio del adicional», al aprobar un adicional con precio,
+   o al corregir el cobro en Validar) lo cambia solo el aprobador; los demás piden el cambio con un Request «Cambio de precio fijado».
+   PRODUCCIÓN: quién aprueba debe ser una función configurable (no una persona fija) y el origen del precio serían columnas
+   (precio_origen, precio_fijado_por, precio_fijado_en) en las tablas de tarifas y de líneas/WO. */
+const sellarPrecio = () => ({origen:"definido", por:S.usuario, fecha:HOY_SUP, hora:hora()});
+const precioFijadoWO = w => { if(w.precio!=null) return w.precioFijado||null; const t=tarifaWO(w); return (t&&t.precioFijado)||null; };
+/* Solo se bloquea el precio que fijó el aprobador (pedido de Erika); el que fija administración sigue editable por administración. */
+const precioBloqueado = pf => !!pf && pf.origen==="definido" && pf.por===APROBADOR_CAMBIO_MONTO && !puedeAprobarCambioMonto();
+const precioOrigenTxt = pf => pf && pf.origen==="definido" ? `Fijado por ${pf.por} el ${pf.fecha}${pf.hora?" "+pf.hora:""}` : "Tarifario";
+const precioEtqWO = w => (w.precio!=null && !w.precioFijado) ? "Precio manual" : precioOrigenTxt(precioFijadoWO(w));
+/* Precio fijado de una línea del borrador de factura: las líneas de WO y de Sub-WO lo heredan de su origen; las manuales no tienen. */
+function precioFijadoLinea(l){
+  if(l.tipo==="WO"&&l.wo){ const w=W(l.wo); return w?precioFijadoWO(w):null; }
+  if(l.tipo==="Sub-WO"&&l.subwo){ const a=by(S.adicionales,l.subwo); return (a&&a.precioFijado)||null; }
+  return null;
+}
+function precioEtqLinea(l){
+  if(l.tipo==="WO"&&l.wo){ const w=W(l.wo); return w?precioEtqWO(w):""; }
+  if(l.tipo==="Sub-WO"&&l.subwo){ const a=by(S.adicionales,l.subwo); if(!a) return "";
+    return a.precioFijado ? precioOrigenTxt(a.precioFijado) : (/^manual/.test(a.precioOrigen||"") ? "Precio manual" : "Tarifario"); }
+  return "";
+}
+/* Datos generales de una factura ya emitida (vencimiento y correo de envío): los cambia administración o el aprobador, sin Request. */
+const puedeCambiarDatosFactura = () => puedeVerUtilidad() || puedeAprobarCambioMonto();
 const nomAprob = (tec,sem) => (S.nomAprob||{})[tec+"|"+sem] || null;
 /* Quien contesta la observación del técnico: administración (los mismos que ven el dinero). Estados de conformidad:
    Pendiente → Observada (el técnico escribe) → Respondida (administración contesta) → Conforme. El pago no depende de ninguno. */

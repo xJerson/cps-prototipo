@@ -110,7 +110,7 @@ function slaApprovalRequest(x){
    orden: las demás nóminas y facturas pueden continuar. */
 const excBloqueaTodo = () => false;
 // «Ayuda en sitio» (el técnico pide una mano) y «Return» (ya lo controla el propio return) no frenan pago ni factura de la WO.
-const woBloqueada = wid => excPend().some(x=>x.wo===wid && x.tipo!=="Ayuda en sitio" && x.tipo!=="Return");
+const woBloqueada = wid => excPend().some(x=>x.wo===wid && x.tipo!=="Ayuda en sitio" && x.tipo!=="Return" && x.tipo!=="Cambio de precio fijado");
 function historialApproval(x){
   const hs=x.historial||[];
   return hs.length?`<div style="font-size:9.5px;color:var(--faint);margin-top:5px">${hs.map(h=>
@@ -152,7 +152,11 @@ VIEWS.excepciones = () => {
         ${x.assignedTo===S.usuario?"":`<button class="btn sm" data-a="excAsignarYo" data-id="${x.id}">Assign to me</button>`}
         <button class="btn sm" data-a="excAsignarModal" data-id="${x.id}">Assign</button>
         ${x.cambio?`<button class="btn sm" data-a="facCambioVer" data-id="${x.id}">Ver cambio</button>`:""}
-        ${(x.assignedTo===S.usuario || x.aprueba===S.usuario) ? (x.tipo==="Cambio de monto en factura"
+        ${x.cambioPrecio?`<button class="btn sm" data-a="precioCambioVer" data-id="${x.id}">Ver cambio</button>`:""}
+        ${(x.assignedTo===S.usuario || x.aprueba===S.usuario) ? (x.tipo==="Cambio de precio fijado"
+          ? (puedeAprobarCambioMonto()?`<button class="btn sm" data-a="precioCambioRechazar" data-id="${x.id}">Rechazar</button>
+               <button class="btn sm v" data-a="precioCambioAprobar" data-id="${x.id}">Aprobar</button>`:"")
+          : x.tipo==="Cambio de monto en factura"
           ? (x.cambio
             ? (puedeAprobarCambioMonto()?`<button class="btn sm" data-a="facCambioRechazar" data-id="${x.id}">Rechazar</button>
                <button class="btn sm v" data-a="facCambioAprobar" data-id="${x.id}">Aprobar</button>`:"")
@@ -181,7 +185,7 @@ VIEWS.excepciones = () => {
     ${res.map(x=>`<tr class="${fl("exc:"+x.id)}"><td>${esc(x.tipo)}</td><td class="mono">${x.wo?"WO-"+x.wo:"—"}</td>
       <td>${x.creada?esc(x.creada.quien):esc(x.pide)}</td>
       <td class="mono" style="color:var(--faint)">${x.creada?esc(x.creada.hora):"—"}</td>
-      <td><span class="pill ${x.estado==="Aprobada"||x.estado==="Resuelta"?"v":"r"}">${x.estado}</span>${x.resol&&x.resol.nota?`<div style="font-size:10.5px;margin-top:3px">${esc(x.resol.nota)}</div>`:""}${x.cambio?`<div style="margin-top:3px"><button class="btn sm" data-a="facCambioVer" data-id="${x.id}">Ver cambio</button></div>`:""}${historialApproval(x)}</td>
+      <td><span class="pill ${x.estado==="Aprobada"||x.estado==="Resuelta"?"v":"r"}">${x.estado}</span>${x.resol&&x.resol.nota?`<div style="font-size:10.5px;margin-top:3px">${esc(x.resol.nota)}</div>`:""}${x.cambio?`<div style="margin-top:3px"><button class="btn sm" data-a="facCambioVer" data-id="${x.id}">Ver cambio</button></div>`:""}${x.cambioPrecio?`<div style="margin-top:3px"><button class="btn sm" data-a="precioCambioVer" data-id="${x.id}">Ver cambio</button></div>`:""}${historialApproval(x)}</td>
       <td>${x.resol?esc(x.resol.quien):"—"}</td><td class="mono">${x.resol?esc(x.resol.hora):"—"}</td></tr>`).join("")}
     </tbody></table></div>`:""}
 
@@ -216,6 +220,32 @@ function modalCambioMonto(x){
   </div>
   <div class="mf"><button class="btn" data-a="cm">Cerrar</button>
     ${pend&&puedeAprobarCambioMonto()?`<button class="btn" data-a="facCambioRechazar" data-id="${x.id}">Rechazar</button><button class="btn p" data-a="facCambioAprobar" data-id="${x.id}">Aprobar</button>`:""}</div>`,true);
+}
+/* Pedir cambio de un precio que fijó el aprobador: precio nuevo + motivo, los dos obligatorios. */
+function modalCambioPrecio(t){
+  const suf=t.escala==="total"?" (cobro de la WO)":" (por unidad)";
+  modal(`<div class="mh"><h3>Pedir cambio de precio</h3><p>WO-${t.wo} · ${esc(t.nombre||"—")}</p></div>
+  <div class="mb">
+    <div class="note" style="margin-bottom:12px"><b>${esc(precioOrigenTxt(t.pf))}.</b> No se cambia directo: el pedido le llega a <b>${esc(APROBADOR_CAMBIO_MONTO)}</b>, que ve cómo estaba y cómo quedaría, y lo aprueba o lo rechaza.</div>
+    <div class="fg c2"><div class="fld"><label>Precio actual${suf}</label><div class="mono" style="padding:6px 0">${money(t.antes)}</div></div>
+      <div class="fld"><label>Nuevo precio${suf} <span class="req">*</span></label><input id="pcP" type="number" min="0" step="0.01" class="mono" placeholder="0.00"></div></div>
+    <div class="fld"><label>Motivo <span class="req">*</span></label><textarea id="pcM" rows="2" placeholder="Por qué cambia el precio"></textarea></div>
+  </div>
+  <div class="mf"><button class="btn" data-a="precioPedirVolver">Cancelar</button><button class="btn p" data-a="precioCambioEnviar">Enviar para aprobación</button></div>`);
+}
+/* Antes / Después de un cambio de precio pedido (compacto, como el de monto). */
+function modalVerCambioPrecio(x){
+  const c=x.cambioPrecio, pend=x.estado==="Pendiente", suf=c.escala==="total"?"cobro de la WO":"por unidad", dif=r2(c.despues-c.antes);
+  modal(`<div class="mh"><h3>Cambio de precio fijado — WO-${c.wo}</h3><p>${esc(c.nombre||"—")} · lo pidió ${esc(x.pide)}${x.creada?" · "+esc(x.creada.fecha||"")+" "+esc(x.creada.hora||""):""}</p></div>
+  <div class="mb">
+    <div class="note" style="margin-bottom:12px"><b>Motivo:</b> ${esc(c.motivo)}</div>
+    <table style="font-size:11.5px"><thead><tr><th>Precio (${suf})</th><th class="num">Antes</th><th class="num">Después</th></tr></thead>
+      <tbody><tr><td>${esc(c.nombre||"—")}${c.fijadoPor?`<div style="font-size:10px;color:var(--faint)">fijado por ${esc(c.fijadoPor)}</div>`:""}</td><td class="num mono">${money(c.antes)}</td><td class="num mono">${money(c.despues)}</td></tr></tbody></table>
+    <div class="note ${dif>0?"w":"v"}" style="margin-top:12px"><b>Diferencia:</b> <span class="mono">${money(c.antes)} → ${money(c.despues)}</span> (${sgnMoney(dif)})</div>
+    ${pend?"":`<div class="hint">${esc(x.estado)} por ${esc(x.resol?x.resol.quien:"—")}${x.resol&&x.resol.nota?" · "+esc(x.resol.nota):""}</div>`}
+  </div>
+  <div class="mf"><button class="btn" data-a="cm">Cerrar</button>
+    ${pend&&puedeAprobarCambioMonto()?`<button class="btn" data-a="precioCambioRechazar" data-id="${x.id}">Rechazar</button><button class="btn p" data-a="precioCambioAprobar" data-id="${x.id}">Aprobar</button>`:""}</div>`);
 }
 function modalExc(){
   modal(`<div class="mh"><h3>New Request</h3><p>Algo que se sale de la regla y necesita que otra persona lo apruebe.</p></div>
@@ -928,6 +958,8 @@ function modalLineaFactura(clave){
   const modo=b._fleModo, itemSel=man?(b._fleItem||(esItem?l.nombre:"")):"";
   const uni=man&&l.unidad&&l.unidad!=="\u2014"?unis.find(u=>u.num===l.unidad):null;
   const it=items.find(i=>i.nombre===itemSel);
+  const pfL=precioFijadoLinea(l), bloqL=precioBloqueado(pfL), etqL=precioEtqLinea(l);   // precio fijado por el aprobador: de solo lectura para los demás
+  const pendL=bloqL&&S.excepciones.some(x=>x.tipo==="Cambio de precio fijado"&&x.estado==="Pendiente"&&x.cambioPrecio&&x.cambioPrecio.clave===l.clave);
   modal(`<div class="mh"><h3>Editar línea</h3><p>${man?"Manual adjustment":etiquetaConcepto(l)}</p></div>
   <div class="mb">
     ${man?`<div class="fld"><label>Cómo se arma</label><div style="display:flex;gap:6px">
@@ -940,8 +972,11 @@ function modalLineaFactura(clave){
       <div class="fld"><label>Unidad <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><select id="fleUni" data-a="facLineaUni" data-k="${esc(l.clave)}"><option value="">— sin unidad —</option>${unis.map(u=>`<option ${u.num===l.unidad?"selected":""}>${esc(u.num)}</option>`).join("")}</select></div></div>
     <div class="fld"><label>Fecha del trabajo</label><input id="fleF" type="date" value="${esc(l.fecha||"")}"></div>`:""}
     <div class="fld"><label>Descripción</label><input id="fleDes" value="${esc(l.descripcion||"")}"></div>
-    <div class="fg c2"><div class="fld"><label>Precio</label><input id="fleP" type="number" step="0.01" value="${esc(man&&!(+l.precio)?"":+l.precio||0)}" placeholder="0.00">
-        ${man&&puedeVerIngreso()?sugerenciasHTML("fleP",b.prop,it?it.cat:"",itemSel||servCanon(l.nombre),uni?uni.rooms:"",true):""}</div>
+    <div class="fg c2"><div class="fld"><label>Precio</label>${bloqL
+        ? `<div class="mono" style="padding:6px 0">${money(+l.precio||0)}</div><div class="hint">${esc(precioOrigenTxt(pfL))}</div>
+           ${pendL?`<span class="pill a">Cambio de precio pendiente</span>`:`<button type="button" class="btn sm" data-a="precioPedirCambio" data-k="${esc(l.clave)}">Pedir cambio de precio</button>`}`
+        : `<input id="fleP" type="number" step="0.01" value="${esc(man&&!(+l.precio)?"":+l.precio||0)}" placeholder="0.00">${etqL?`<div class="hint">${esc(etqL)}</div>`:""}`}
+        ${!bloqL&&man&&puedeVerIngreso()?sugerenciasHTML("fleP",b.prop,it?it.cat:"",itemSel||servCanon(l.nombre),uni?uni.rooms:"",true):""}</div>
       <div class="fld"><label>Cantidad</label><input id="fleC" type="number" min="0" step="0.01" value="${esc(+l.cantidad||0)}"></div></div>
     <div class="fg c2"><div class="fld"><label>Descuento</label><input id="fleD" type="number" min="0" step="0.01" value="${esc(+l.desc||"")}" placeholder="0"></div>
       <div class="fld"><label>Tipo</label><select id="fleT"><option value="$" ${l.descTipo==="%"?"":"selected"}>$ monto</option><option value="%" ${l.descTipo==="%"?"selected":""}>% del subtotal</option></select></div></div>
@@ -1220,7 +1255,7 @@ function modalFactura(fid, enviando){
       ${f.modificada?`<div class="note w"><b>Reenvío.</b> Esta factura cambió de monto después de enviarse; sale de nuevo con el total de ${money(f.total)}. El vencimiento se conserva.</div>`
         :`<div class="hint">Vence a ${diasCreditoProp(f.prop)} días de hoy, según el crédito de la propiedad. Puedes cambiar la fecha.</div>`}
       <div class="note">Va con el PDF, fotos antes/después y aprobaciones registradas. Si el cliente reclama una línea, cada una conserva su evidencia.</div>`
-     :`${f.modificada?`<div class="note w" style="margin-top:12px"><b>Modificada, falta reenviar.</b> El monto cambió después de enviarla. Usa «Enviar al cliente» para reenviarla.</div>`:""}<div class="note" style="margin-top:12px"><b>Enviada el ${esc(f.envio||f.emision)}</b> a ${esc(c.mail||"—")}. Vence ${esc(facVenceTxt(f))}. ${facCambiaVence(f)?`<button class="btn sm" data-a="facVenceCambiar" data-id="${f.id}">Cambiar</button>`:""}</div>`}
+     :`${f.modificada?`<div class="note w" style="margin-top:12px"><b>Modificada, falta reenviar.</b> El monto cambió después de enviarla. Usa «Enviar al cliente» para reenviarla.</div>`:""}<div class="note" style="margin-top:12px"><b>Enviada el ${esc(f.envio||f.emision)}</b> a ${esc(f.mail||c.mail||"—")}${puedeCambiarDatosFactura()&&facCambiaDatos(f)?` <button class="btn sm" data-a="facCorreoCambiar" data-id="${f.id}">Cambiar correo</button>`:""}. Vence ${esc(facVenceTxt(f))}. ${facCambiaVence(f)&&puedeCambiarDatosFactura()?`<button class="btn sm" data-a="facVenceCambiar" data-id="${f.id}">Cambiar</button>`:""}</div>`}
   </div>
   <div class="mf"><button class="btn" data-a="cm">Cerrar</button>
     ${enviando?`<button class="btn p" data-a="facEnviarOK" data-id="${fid}">Enviar factura</button>`:""}</div>`,true);
@@ -1251,13 +1286,16 @@ const facVenceTxt = f => f.vence || (f.estado==="Borrador"?"Al enviar":"—");
 const facMontoEditable = f => !["Borrador","Pagada"].includes(f.estado);
 const puedeEditarMontoFactura = () => puedeAprobarCambioMonto();
 const facCambiaVence = f => !["Pagada","Borrador"].includes(f.estado) && f.vence;
+/* Datos generales (vencimiento y correo de envío) se cambian en una factura emitida o enviada y sin pagar, sin Request: queda quién y cuándo. */
+const facCambiaDatos = f => !["Pagada","Borrador"].includes(f.estado);
+const facCorreoTxt = f => f.mail || CLI(P(f.prop).cliente).mail || "sin correo";
 const facVencida = f => !["Pagada","Borrador"].includes(f.estado) && !!f.vence && f.vence < HOY_SUP;
 const facEstadoTexto = f => f.estado==="Pagada" ? "Pagada" : facVencida(f) ? "Vencida" : f.estado;
 /* Una factura que ya salió al cliente (o que ya venció, que solo pasa después de enviarse). */
 const facYaEnviada = f => f.estado==="Enviada" || !!f.envio || facVencida(f);
 /* Cambió de monto después de enviarse: es una marca (f.modificada), no un estado nuevo, para no tocar la lógica de «Vencida». */
 const facPillModificada = f => f.modificada ? ` <span class="pill a" title="El monto cambió después de enviarla al cliente">Modificada, falta reenviar</span>` : "";
-const SEG_LABEL = {cambio:"Cambio de monto", vence:"Cambio de vencimiento", reminder:"Reminder enviado", overdue:"Correo overdue enviado",
+const SEG_LABEL = {cambio:"Cambio de monto", vence:"Cambio de vencimiento", datos:"Cambio de datos de la factura", reminder:"Reminder enviado", overdue:"Correo overdue enviado",
   agrupado:"Recordatorio agrupado enviado", llamada:"Llamada de cobranza", pago:"Pago registrado", cierre:"Invoice y Work Orders cerrados", reenvio:"Reenviada tras modificación"};
 /* Vencidas agrupadas por cliente (dueño de las propiedades): un solo correo con todas sus facturas vencidas. */
 const clienteFac = f => P(f.prop).cliente || "—";
@@ -1316,8 +1354,9 @@ function modalCobranza(fid){
   const venc=facVencida(f);
   const tieneReminder=seg.some(s=>s.tipo==="reminder"||s.tipo==="agrupado");   // el agrupado cuenta como reminder
   const tieneOverdue =seg.some(s=>s.tipo==="overdue");
-  modal(`<div class="mh"><h3>Cobranza — ${esc(f.num)}</h3><p>${esc(p.nombre)} · ${money(f.total)} · vence ${esc(facVenceTxt(f))} ${facCambiaVence(f)?`<button class="btn sm" data-a="facVenceCambiar" data-id="${f.id}">Cambiar</button>`:""}</p></div>
+  modal(`<div class="mh"><h3>Cobranza — ${esc(f.num)}</h3><p>${esc(p.nombre)} · ${money(f.total)} · vence ${esc(facVenceTxt(f))} ${facCambiaVence(f)&&puedeCambiarDatosFactura()?`<button class="btn sm" data-a="facVenceCambiar" data-id="${f.id}">Cambiar</button>`:""}</p></div>
   <div class="mb">
+    <div style="font-size:12px;color:var(--soft);margin-bottom:12px">Correo de envío: <b>${esc(facCorreoTxt(f))}</b> ${facCambiaDatos(f)&&puedeCambiarDatosFactura()?`<button class="btn sm" data-a="facCorreoCambiar" data-id="${f.id}">Cambiar correo</button>`:""}</div>
     ${f.modificada?`<div class="note w" style="margin-bottom:14px"><b>Modificada, falta reenviar.</b> El monto cambió después de enviarla; usa «Enviar al cliente» en Facturación para reenviarla.</div>`:""}
     ${f.estado==="Pagada"?`<div class="note v" style="margin-bottom:14px"><b>Pagada.</b> Invoice y Work Orders quedaron cerrados.</div>`
       :venc?`<div class="note r" style="margin-bottom:14px"><b>Vencida.</b> Pasó su fecha de vencimiento (${esc(f.vence)}) sin pago registrado.</div>`
