@@ -53,6 +53,8 @@ function vPendientes(){
      d:"Trabajo hecho que todavía no se cobra", k:"a"},
     {n:"Respuestas del cliente vencidas o para hoy", c:puedeAvisarPend()?respuestasVencidas().length:0, m:"wo",
      d:"Unidades pendientes cuya fecha límite de respuesta llegó o ya pasó", k:"w"},
+    {n:"Pagos por verificar", c:puedeVerUtilidad()?S.facturas.filter(porRevisarHoy).length:0, m:"cobranza",
+     d:"Llegó la fecha para verificar la recepción del pago", k:"a"},
     {n:"Estimados esperando al cliente", c:S.estimados.filter(e=>e.estado==="Enviado").length, m:"estimados",
      d:"Enviados y sin respuesta", k:"g"},
     {n:"Permisos por aprobar",     c:S.disponibilidad.filter(d=>d.estado==="Pendiente").length, m:"despacho",

@@ -1308,9 +1308,9 @@ function modalCobLlamada(fid){
     <div class="fld"><label>Comentarios del cliente <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— obligatorio si el resultado es «Otro»</span></label><textarea id="clNota" rows="2"></textarea></div>
     <div class="fld"><label>Referencia de pago <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label>
       <input id="clRef" placeholder="Ej. cheque, ACH o número de confirmación"></div>
-    <div class="fld" style="margin-bottom:0"><label>Próximo seguimiento <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— define la oficina</span></label>
+    <div class="fld" style="margin-bottom:0"><label>Verificar recepción de pago el <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— o volver a llamar</span></label>
       <input type="date" id="clRev" value="${sumarDias(HOY_SUP,3)}"></div>
-    <div class="hint" style="margin-top:8px">La fecha de seguimiento es informativa y no modifica el vencimiento. La fecha de pago se registra solo cuando el pago se recibe, en Registrar pago.</div>
+    <div class="hint" style="margin-top:8px">Ese día te llega un aviso en el sistema y por correo para verificar en el banco la recepción del pago. Esta fecha no cambia el vencimiento: el pago se registra solo cuando se recibe, en Registrar pago.</div>
   </div>
   <div class="mf"><button class="btn" data-a="cobGestionar" data-id="${fid}">Cancelar</button>
     <button class="btn p" data-a="cobLlamadaGuardar" data-id="${fid}">Guardar</button></div>`);

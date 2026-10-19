@@ -1063,7 +1063,7 @@ Object.assign(ACC, {
     f.seguimiento=f.seguimiento||[];
     f.seguimiento.push({tipo:"llamada",fecha:HOY_SUP,hora:hora(),quien:S.usuario,resultado:res,nota,ref:ref||null,revisar:rev||null});
     flash("fac:"+f.id);
-    toast("✓ Llamada registrada",`Respuesta de ${esc(P(f.prop).nombre)} guardada.`,"v");
+    toast("✓ Llamada registrada",`Respuesta de ${esc(P(f.prop).nombre)} guardada.${rev?` El ${esc(rev)} te llega el aviso para verificar la recepción del pago.`:""}`,"v");
     modalCobranza(f.id);
   },
   movEntrada: () => modal(`<div class="mh"><h3>Registrar compra de material</h3><p>El stock se recalcula solo — nunca se edita a mano.</p></div>

@@ -487,6 +487,12 @@ function alertas(){
   S.productos.filter(p=>stock(p.id)<p.min).forEach(p=>A.push({t:"Stock bajo",d:`${p.nombre}: ${stock(p.id)} ${p.um} (mínimo ${p.min})`,q:"Gustavo",n:"w"}));
   S.disponibilidad.filter(d=>d.estado==="Pendiente").forEach(d=>A.push({t:"Permiso por aprobar",d:`${tecN(d.tec)} · ${d.motivo} ${d.desde} al ${d.hasta}`,q:"Gustavo",n:"a"}));
   S.facturas.filter(facVencida).forEach(f=>A.push({t:"Factura vencida",d:`${f.num} · ${P(f.prop).nombre}`,q:"Erika",n:"r"}));
+  /* Llegó la fecha que la oficina puso al registrar la llamada de cobranza (p. ej. «ya lo mandamos a pago»):
+     hay que revisar en el banco si llegó el pago o volver a llamar.
+     PRODUCCIÓN: ese día también se envía un correo a Erika con este mismo aviso (Cron Trigger + Resend). */
+  S.facturas.filter(porRevisarHoy).forEach(f=>{ const u=ultLlamada(f), atras=u.revisar<HOY_SUP;
+    A.push({t:`${u.resultado==="Pago en proceso"?"Verificar recepción de pago":"Seguimiento de cobranza"} — ${f.num}`,
+      d:`${P(f.prop).nombre} · ${money(f.total)} — cliente: «${u.resultado}»${atras?`, tocaba el ${u.revisar}`:", hoy"}`,q:"Erika",n:atras?"r":"a"}); });
   /* Sin esto, un prospecto que "sigue en seguimiento" después de la visita
      comercial se perdía apenas pasaba la fecha en que había que retomarlo —
      nadie se enteraba, se reactivaba solo cuando alguien se acordaba. */
