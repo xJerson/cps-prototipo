@@ -109,6 +109,8 @@ const AUD = {
   tarifaGuardar:{a:"Definió una tarifa faltante", m:"Tarifario"},
   tarifaAvisarClaudia:{a:"Avisó a Claudia para definir una tarifa", m:"Excepciones"},
   tarGuardar:{a:"Creó una tarifa", m:"Tarifario"},
+  pagoTecGuardar:{a:"Agregó un pago diferenciado por técnico", m:"Tarifario"},
+  pagoTecQuitar:{a:"Quitó un pago diferenciado por técnico", m:"Tarifario"},
   catSave:{a:"Agregó un valor de catálogo", m:"Catálogos"},
   catDel:{a:"Quitó un valor de catálogo", m:"Catálogos"},
   catAlta:{a:"Reactivó un valor de catálogo", m:"Catálogos"},
@@ -173,6 +175,7 @@ const AUD = {
   creditoServGuardar:{a:"Agregó un crédito de servicio a una propiedad", m:"Propiedades"},
   facAjusteAplicar:{a:"Ajustó el total de una factura del borrador (de → a · motivo)", m:"Facturación"},
   facAjusteQuitar:{a:"Quitó el ajuste de total de una factura del borrador", m:"Facturación"},
+  notaCreditoOK:{a:"Emitió una nota de crédito por un return", m:"Facturación"},
   cobrar:{a:"Registró un pago", m:"Cobranza"},
   cobRecordatorio:{a:"Envió un reminder de cobranza", m:"Cobranza"},
   cobOverdue:{a:"Envió un correo overdue", m:"Cobranza"},
@@ -237,8 +240,10 @@ const AUD_POST = {
   creditoServGuardar: () => { const c=(S.creditosServ||[]).slice(-1)[0]; return c ? P(c.prop).nombre+" · "+c.serv+" × "+c.cant : ""; },
   facAjusteAplicar: () => S._audAj || "",
   facAjusteQuitar:  () => S._audAj || "",
+  notaCreditoOK:    () => S._audNotaCredito || "",
   woDupNueva:  () => S.wos.length ? "WO-"+S.wos[S.wos.length-1].id : "",
   tarGuardar:  () => { const t=S.tarifas[S.tarifas.length-1]; return t? (t.nombre||t.serv+" · "+t.variante) : ""; },
+  pagoTecGuardar: () => { const x=(S.pagosTecnico||[])[S.pagosTecnico.length-1]; return x? tecN(x.tec)+" · "+x.serv+" · "+money(x.pago) : ""; },
   catSave:     () => "",
   movGuardar:  () => { const m=S.movs[S.movs.length-1]; return m? by(S.productos,m.prod).nombre : ""; },
   pagarSemana: () => periodoTexto(S.periodo),
@@ -290,6 +295,32 @@ Object.keys(ACC).forEach(k=>{
     }
     return r;
   };
+});
+
+/* ── TEMA ── Sistema (sigue al navegador) → Claro → Oscuro → Sistema.
+   No es un dato de negocio: se agrega después del forEach de arriba para
+   que no quede auditado en Bitácora. */
+const ICS_TEMA = {
+  sistema:'<path d="M12 3v1M12 20v1M4.2 4.2l.7.7M19.1 19.1l.7.7M3 12h1M20 12h1M4.2 19.8l.7-.7M19.1 4.9l.7-.7"/><circle cx="12" cy="12" r="4"/>',
+  light:'<circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M1 12h2M21 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/>',
+  dark:'<path d="M21 12.8A9 9 0 1 1 11.2 3 7 7 0 0 0 21 12.8z"/>'
+};
+const NOM_TEMA = {sistema:"Sistema", light:"Claro", dark:"Oscuro"};
+function temaActual(){ try{ return localStorage.getItem("cps_tema")||"sistema"; }catch(e){ return "sistema"; } }
+function temaAplicar(t){
+  if(t==="sistema") delete document.documentElement.dataset.theme;
+  else document.documentElement.dataset.theme = t;
+  const b=$("#temaBtn"); if(!b) return;
+  b.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${ICS_TEMA[t]}</svg>`;
+  b.title = "Tema: "+NOM_TEMA[t]+" — clic para cambiar";
+}
+temaAplicar(temaActual());
+Object.assign(ACC, {
+  temaToggle: () => {
+    const orden=["sistema","light","dark"], sig=orden[(orden.indexOf(temaActual())+1)%orden.length];
+    try{ localStorage.setItem("cps_tema", sig); }catch(e){}
+    temaAplicar(sig);
+  }
 });
 
 VIEWS.bitacora = () => {

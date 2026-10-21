@@ -238,7 +238,7 @@ Object.assign(ACC, {
     const un = d.unidad || (S.unidades.filter(u=>u.prop===pr)[0]||{}).id || null;
     const wo = S.wos.filter(w=>w.unidad===un && w.estado!=="Canceled").slice(-1)[0];
     S.gDev = {modo:"crear", prop:pr, unidad:un, wo:wo?wo.id:null,
-              area:activos("ubicaciones")[0], desc:d.desc||"",
+              areas:[], desc:d.desc||"",
               causa:Object.keys(CAUSAS_DEV)[0],
               responsable:(wo&&wo.tec)||S.tecnicos.filter(t=>t.id!==GUSTAVO)[0].id,
               prioridad:"Alta", fechaLimite:"2026-08-14",
@@ -256,36 +256,40 @@ Object.assign(ACC, {
   gDevPrio:  d => { leerDev(); S.gDev.prioridad=d.p; render(); },
   gDevAmb:   d => { leerDev(); S.gDev.amb=d.u; render(); },
   gDevFoto:  () => { leerDev(); const g=S.gDev;
-    const l=g.lotes.find(x=>x.amb===g.amb); if(l) l.n++; else g.lotes.push({amb:g.amb,n:1});
-    S.reloj+=1; render(); },
+    capturarFoto(url=>{
+      const l=g.lotes.find(x=>x.amb===g.amb); const f=fotoNueva(url, GUSTAVO);
+      if(l) l.fotosArr.push(f); else g.lotes.push({amb:g.amb, fotosArr:[f]});
+      S.reloj+=1; render();
+    }); },
   gDevQuita: d => { leerDev(); S.gDev.lotes.splice(+d.i,1); render(); },
 
   gDevOK: () => {
     leerDev(); const g=S.gDev;
     if(!g.desc || !g.desc.trim()){ toast("Falta la descripci\u00f3n","Escribe qu\u00e9 est\u00e1 mal.","r"); return; }
     if(!g.lotes.length){ toast("Sin fotos","Un return sin foto de lo que est\u00e1 mal no se puede sostener.","r"); return; }
+    if(!(g.areas&&g.areas.length)){ toast("Falta el \u00e1rea","Elige al menos un \u00e1rea a corregir.","r"); return; }
     if(!g.unidad){ toast("Falta la unidad","Esta propiedad no tiene unidades registradas.","r"); return; }
     const c = causaDe(g.causa);
-    const d = {id:"DV"+Date.now(), prop:g.prop, unidad:g.unidad, wo:g.wo, area:g.area,
+    const d = {id:"DV"+Date.now(), prop:g.prop, unidad:g.unidad, wo:g.wo, areas:g.areas,
       desc:g.desc.trim(), causa:g.causa, responsable:g.responsable, prioridad:g.prioridad,
-      fechaRep:HOY_SUP, fechaLimite:g.fechaLimite||"2026-08-14", estado:"Abierta",
+      fechaRep:HOY_SUP, fechaLimite:g.fechaLimite||"2026-08-14", horaLimite:g.horaLimite||"17:00", estado:"Abierta",
       lotesAntes:g.lotes.slice(), lotesDespues:[], verifica:null, quien:GUSTAVO,
       urgente:!!g.urgente,
       hist:[[hora(),"Return creado en campo",tecN(GUSTAVO)]]};
     S.devoluciones.push(d);
     anotarDia("devolucion",
-      `${esc(P(d.prop).nombre)} ${U(d.unidad)?esc(U(d.unidad).num):""} — ${esc(d.area)}: ${d.desc.slice(0,60)}`,
-      d.id, {prop:d.prop, unidad:d.unidad, fotos:d.lotesAntes.reduce((t,l)=>t+l.n,0)});
+      `${esc(P(d.prop).nombre)} ${U(d.unidad)?esc(U(d.unidad).num):""} — ${esc(devAreasTxt(d))}: ${d.desc.slice(0,60)}`,
+      d.id, {prop:d.prop, unidad:d.unidad, fotos:d.lotesAntes.reduce((t,l)=>t+(l.fotosArr||[]).length,0)});
     S.gDev=null; S.phDev=d.id; S.phView="dev"; S.reloj+=6;
     flash("dv:"+d.id);
     toast("Return abierto",
-      `<b>${esc(tecN(d.responsable))}</b> tiene que corregir <b>${esc(d.area)}</b> antes del <b>${esc(d.fechaLimite)}</b>.<br><br>`
+      `<b>${esc(tecN(d.responsable))}</b> tiene que corregir <b>${esc(devAreasTxt(d))}</b> antes del <b>${esc(d.fechaLimite)} ${esc(d.horaLimite)}</b>.<br><br>`
       + `Causa: ${esc(d.causa)} — ${c.ex}<br><br>`
       + `Sigue contando abierta hasta que t\u00fa la verifiques con fotos.`,"w");
     avisar("Claudia","Gustavo abri\u00f3 un return",
-      `${esc(P(d.prop).nombre)} ${U(d.unidad)?esc(U(d.unidad).num):""} · ${esc(d.area)} · ${esc(d.prioridad)} · ${esc(tecN(d.responsable))}.`,"w");
+      `${esc(P(d.prop).nombre)} ${U(d.unidad)?esc(U(d.unidad).num):""} · ${esc(devAreasTxt(d))} · ${esc(d.prioridad)} · ${esc(tecN(d.responsable))}.`,"w");
     avisar("Thalia","Return por reagendar",
-      `${esc(P(d.prop).nombre)} ${U(d.unidad)?esc(U(d.unidad).num):""} — ${esc(tecN(d.responsable))} debe corregir ${esc(d.area)} antes del ${esc(d.fechaLimite)}.`,"w");
+      `${esc(P(d.prop).nombre)} ${U(d.unidad)?esc(U(d.unidad).num):""} — ${esc(tecN(d.responsable))} debe corregir ${esc(devAreasTxt(d))} antes del ${esc(d.fechaLimite)} ${esc(d.horaLimite)}.`,"w");
     render();
   },
 
@@ -302,11 +306,11 @@ Object.assign(ACC, {
     d.notaVerif = g.nota||"";
     d.hist.push([hora(),"Verificada en campo — fotos del despu\u00e9s cargadas",tecN(GUSTAVO)]);
     anotarDia("devolucion",
-      `Verificado el return fix en ${esc(P(d.prop).nombre)} ${U(d.unidad)?esc(U(d.unidad).num):""} — ${esc(d.area)}`,
-      d.id, {prop:d.prop, unidad:d.unidad, fotos:g.lotes.reduce((t,l)=>t+l.n,0)});
+      `Verificado el return fix en ${esc(P(d.prop).nombre)} ${U(d.unidad)?esc(U(d.unidad).num):""} — ${esc(devAreasTxt(d))}`,
+      d.id, {prop:d.prop, unidad:d.unidad, fotos:g.lotes.reduce((t,l)=>t+(l.fotosArr||[]).length,0)});
     S.gDev=null; flash("dv:"+d.id);
     toast("✓ Corregida",
-      `${g.lotes.reduce((t,l)=>t+l.n,0)} foto(s) del despu\u00e9s. Ya puedes cerrarla para que deje de contar.`,"v");
+      `${g.lotes.reduce((t,l)=>t+(l.fotosArr||[]).length,0)} foto(s) del despu\u00e9s. Ya puedes cerrarla para que deje de contar.`,"v");
     render();
   },
   /* Cierre desde la oficina: cualquiera con el módulo Returns, con la evidencia que mandó el técnico en la WO de return fix. */
@@ -314,7 +318,7 @@ Object.assign(ACC, {
     const dv=DV(d.id); if(!dv||dv.estado!=="Corregida"||!puede("devoluciones")) return;
     dv.estado="Cerrada"; dv.fechaCierre=HOY_SUP; dv.cerro={quien:S.usuario,fecha:HOY_SUP,hora:hora()};
     dv.hist.push([hora(),"Cerrada por la oficina",S.usuario]);
-    S._audDev=P(dv.prop).nombre+" · "+(U(dv.unidad)?U(dv.unidad).num:"")+" — "+dv.area;
+    S._audDev=P(dv.prop).nombre+" · "+(U(dv.unidad)?U(dv.unidad).num:"")+" — "+devAreasTxt(dv);
     const c=causaDe(dv.causa); flash("dv:"+dv.id);
     toast("Return cerrado",`Quedó el historial completo. Por la causa registrada, el return fix <b>${c.paga?"sí":"no"}</b> se le paga a ${esc(tecN(dv.responsable))}.`,"v");
     if(S.usuario!=="Erika") avisar("Erika","Return cerrado — ya se puede facturar",`${esc(P(dv.prop).nombre)} ${U(dv.unidad)?esc(U(dv.unidad).num):""}. Return fix ${c.paga?"pagado":"no pagado"} al técnico.`,"v");
@@ -331,11 +335,11 @@ Object.assign(ACC, {
     const c = causaDe(dv.causa);
     flash("dv:"+dv.id);
     toast("Return cerrado",
-      `Qued\u00f3 el historial completo: ${dv.lotesAntes.reduce((t,l)=>t+l.n,0)} foto(s) de antes y `
-      + `${dv.lotesDespues.reduce((t,l)=>t+l.n,0)} del despu\u00e9s.<br><br>`
+      `Qued\u00f3 el historial completo: ${dv.lotesAntes.reduce((t,l)=>t+(l.fotosArr||[]).length,0)} foto(s) de antes y `
+      + `${dv.lotesDespues.reduce((t,l)=>t+(l.fotosArr||[]).length,0)} del despu\u00e9s.<br><br>`
       + `Por la causa registrada, el return fix <b>${c.paga?"s\u00ed":"no"}</b> se le paga a ${esc(tecN(dv.responsable))}.`,"v");
     avisar("Claudia","Return cerrado",
-      `${esc(P(dv.prop).nombre)} ${U(dv.unidad)?esc(U(dv.unidad).num):""} · ${esc(dv.area)} — verificada por Gustavo.`,"v");
+      `${esc(P(dv.prop).nombre)} ${U(dv.unidad)?esc(U(dv.unidad).num):""} · ${esc(devAreasTxt(dv))} — verificada por Gustavo.`,"v");
     avisar("Erika","Return cerrado — ya se puede facturar",
       `${esc(P(dv.prop).nombre)} ${U(dv.unidad)?esc(U(dv.unidad).num):""}. Return fix ${c.paga?"pagado":"no pagado"} al t\u00e9cnico.`,"v");
     render();

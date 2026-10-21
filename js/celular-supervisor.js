@@ -274,11 +274,11 @@ function hojaDia(g){
 function hojaDev(g){
   if(g.modo==="verif"){
     const d = DV(g.id);
-    const total = g.lotes.reduce((t,l)=>t+l.n,0);
+    const total = g.lotes.reduce((t,l)=>t+(l.fotosArr||[]).length,0);
     return `<div class="fscrim" data-a="gDevNo"><div class="fsheet" data-stop>
       <div class="grab"></div>
       <h4 style="color:var(--verde)">Verificar el return fix</h4>
-      <div class="sub">${esc(P(d.prop).nombre)} · ${U(d.unidad)?esc(U(d.unidad).num):""} — ${esc(d.area)}</div>
+      <div class="sub">${esc(P(d.prop).nombre)} · ${U(d.unidad)?esc(U(d.unidad).num):""} — ${esc(devAreasTxt(d))}</div>
 
       <div class="dc" style="margin:9px 0 0;background:var(--ambar-cl);border-color:transparent">
         <div class="ds"><b>Lo que estaba mal:</b> ${esc(d.desc)}</div></div>
@@ -291,8 +291,9 @@ function hojaDev(g){
 
       ${g.lotes.length?`<div class="glotes">${g.lotes.map((l,i)=>`
         <div class="glote"><span><b>${esc(l.amb)}</b></span>
-          <span><b>${l.n}</b> foto(s)
-            <button class="adx" style="height:23px;width:23px;font-size:14px;margin-left:5px" data-a="gDevQuita" data-i="${i}">−</button></span></div>`).join("")}
+          <span><b>${(l.fotosArr||[]).length}</b> foto(s)
+            <button class="adx" style="height:23px;width:23px;font-size:14px;margin-left:5px" data-a="gDevQuita" data-i="${i}">−</button></span></div>
+        ${(l.fotosArr||[]).length?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">${l.fotosArr.map(f=>`<a href="${f.url}" target="_blank"><img src="${f.url}" style="width:44px;height:44px;object-fit:cover;border-radius:5px;border:1px solid var(--line)"></a>`).join("")}</div>`:""}`).join("")}
         </div>`:""}
 
       <label>¿Qued\u00f3 bien?</label>
@@ -306,7 +307,7 @@ function hojaDev(g){
   /* modo crear */
   const us = S.unidades.filter(u=>u.prop===g.prop);
   const c = causaDe(g.causa);
-  const total = g.lotes.reduce((t,l)=>t+l.n,0);
+  const total = g.lotes.reduce((t,l)=>t+(l.fotosArr||[]).length,0);
   return `<div class="fscrim" data-a="gDevNo"><div class="fsheet" data-stop>
     <div class="grab"></div>
     <h4 style="color:var(--rojo)">Crear return</h4>
@@ -324,9 +325,8 @@ function hojaDev(g){
     ${(()=>{ const ult=S.wos.filter(w=>w.unidad===g.unidad&&w.estado!=="Canceled"&&!w.touchup).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""))[0];
       return ult?`<div class="dc" style="margin:6px 0 0"><div class="ds">Último trabajo de esta unidad: <b>WO-${ult.id}</b> · ${esc(ult.serv)} · ${ult.tec?esc(tecN(ult.tec)):"sin técnico"} · ${esc(ult.fecha||"")}</div></div>`:`<div class="dc" style="margin:6px 0 0"><div class="ds">Esta unidad todavía no tiene trabajos registrados.</div></div>`; })()}
 
-    <label>Área que debe corregirse</label>
-    <select id="dvA">${activos("ubicaciones").map(u=>
-      `<option ${u===g.area?"selected":""}>${esc(u)}</option>`).join("")}</select>
+    <label>Áreas que deben corregirse</label>
+    <div style="display:flex;flex-wrap:wrap">${checkboxesUbicacion("dvA", g.areas||[])}</div>
 
     <label>Qu\u00e9 est\u00e1 mal</label>
     <textarea id="dvD" placeholder="Qued\u00f3 pintura en el marco y el z\u00f3calo sin retocar">${esc(g.desc||"")}</textarea>
@@ -352,6 +352,8 @@ function hojaDev(g){
 
     <label>Fecha l\u00edmite para corregir</label>
     <input id="dvF" value="${esc(g.fechaLimite||"")}" placeholder="2026-08-14">
+    <label>Hora límite</label>
+    <input id="dvFH" value="${esc(g.horaLimite||"17:00")}" placeholder="17:00">
 
     <label style="margin-top:9px">Fotos de lo que est\u00e1 mal${total?` · ${total}`:""}</label>
     <div class="gchips">${activos("ubicaciones").map(u=>
@@ -359,8 +361,9 @@ function hojaDev(g){
     <button class="db p gcam" data-a="gDevFoto">Tomar foto${g.amb?" · "+esc(g.amb):""}</button>
     ${g.lotes.length?`<div class="glotes">${g.lotes.map((l,i)=>`
       <div class="glote"><span><b>${esc(l.amb)}</b></span>
-        <span><b>${l.n}</b> foto(s)
-          <button class="adx" style="height:23px;width:23px;font-size:14px;margin-left:5px" data-a="gDevQuita" data-i="${i}">−</button></span></div>`).join("")}
+        <span><b>${(l.fotosArr||[]).length}</b> foto(s)
+          <button class="adx" style="height:23px;width:23px;font-size:14px;margin-left:5px" data-a="gDevQuita" data-i="${i}">−</button></span></div>
+      ${(l.fotosArr||[]).length?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">${l.fotosArr.map(f=>`<a href="${f.url}" target="_blank"><img src="${f.url}" style="width:44px;height:44px;object-fit:cover;border-radius:5px;border:1px solid var(--line)"></a>`).join("")}</div>`:""}`).join("")}
       </div>`:""}
 
     <button class="db p" style="margin-top:11px;background:var(--rojo)" data-a="gDevOK">Crear return</button>
@@ -538,13 +541,20 @@ function hojaCel(sh){
     <button class="db g" data-a="fSheetNo">Cancelar</button>
   </div></div>`;
 
-  if(sh.t==="corrobNo"){ const w=W(sh.wo), u=U(w.unidad); return `<div class="fscrim" data-a="fSheetNo"><div class="fsheet" data-stop>
+  /* Generalizado a los 5 campos que ya muestra la tarjeta de corroborar
+     (antes solo pedía Floors). Bedrooms/Bathrooms se omiten si la unidad no
+     los tiene cargados (Studio/Oficina) — no hay nada que corregir ahí. */
+  if(sh.t==="corrobNo"){ const w=W(sh.wo), u=U(w.unidad), ocup=u.ocupacion||"Occupied"; return `<div class="fscrim" data-a="fSheetNo"><div class="fsheet" data-stop>
     <div class="grab"></div>
     <h4>Corregir datos de la unidad</h4>
-    <div class="sub">Esto crea una Request para oficina. Tú reportas lo que ves; oficina revisa y decide si actualiza el dato.</div>
-    <label>Campo</label><input value="Floors" disabled>
-    <label>Dato actual</label><input value="${esc(String(u.pisos))} floor(s)" disabled>
+    <div class="sub">Esto crea una Request para oficina. Reportá solo lo que veas distinto — lo que dejes igual no se toca.</div>
+    <label>Unit number observado</label><input id="cnNum" value="${esc(u.num)}">
+    ${u.bedrooms!=null?`<label>Bedrooms observados</label><input id="cnBed" type="number" min="0" value="${esc(String(u.bedrooms))}">`:""}
+    ${u.bathrooms!=null?`<label>Bathrooms observados</label><input id="cnBath" type="number" min="0" value="${esc(String(u.bathrooms))}">`:""}
     <label>Floors observados</label><input id="cnPisos" type="number" min="1" value="${esc(String(u.pisos))}">
+    <label>Occupancy observada</label><select id="cnOcup">
+      <option ${ocup!=="Vacant"?"selected":""}>Occupied</option>
+      <option ${ocup==="Vacant"?"selected":""}>Vacant</option></select>
     <label>Nota</label><textarea id="cnTxt" placeholder="Ej: son 2 pisos; la escalera llega al segundo nivel"></textarea>
     <button class="db p" style="margin-top:11px" data-a="woCorroboraNoOK" data-id="${sh.wo}">Enviar para revisión y empezar</button>
     <button class="db g" data-a="fSheetNo">Cancelar</button>

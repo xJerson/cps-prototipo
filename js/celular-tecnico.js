@@ -387,13 +387,14 @@ function leerDia(){
 function leerDev(){
   const g=S.gDev; if(!g) return;
   const v = id => { const e=document.getElementById(id); return e? e.value : null; };
-  const p=v("dvP"), u=v("dvU"), a=v("dvA"), d=v("dvD"), r=v("dvR"), f=v("dvF"), nv=v("dvV");
+  const p=v("dvP"), u=v("dvU"), d=v("dvD"), r=v("dvR"), f=v("dvF"), fh=v("dvFH"), nv=v("dvV");
   if(p!==null) g.prop=p;
   if(u!==null && u!=="") g.unidad=u;
-  if(a!==null) g.area=a;
+  g.areas = leerCheckUbicacion("dvA");
   if(d!==null) g.desc=d;
   if(r!==null) g.responsable=r;
   if(f!==null) g.fechaLimite=f;
+  if(fh!==null) g.horaLimite=fh;
   if(nv!==null) g.nota=nv;
 }
 
@@ -591,11 +592,23 @@ const ENTRADAS_DIA = {
 const devAbiertas  = () => S.devoluciones.filter(d=>d.estado!=="Cerrada");
 const devDe        = uid => S.devoluciones.filter(d=>d.unidad===uid);
 const DV           = id => S.devoluciones.find(d=>d.id===id);
+/* Texto de las areas de un return: soporta el array nuevo (areas) y, por si quedo algo viejo sin migrar, el campo singular (area). */
+const devAreasTxt = d => (d.areas&&d.areas.length?d.areas:(d.area?[d.area]:[])).join(", ");
+/* Checkboxes reutilizables para elegir varias ubicaciones a la vez (un return puede tener mas de un area a corregir). */
+const checkboxesUbicacion = (idPrefix, seleccionadas) => activos("ubicaciones").map((u,i)=>
+  `<label style="display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:7px;padding:5px 9px;font-size:12px;margin:0 5px 5px 0;cursor:pointer">
+    <input type="checkbox" id="${idPrefix}${i}" value="${esc(u)}" ${(seleccionadas||[]).includes(u)?"checked":""}> ${esc(u)}</label>`).join("");
+const leerCheckUbicacion = idPrefix => activos("ubicaciones").filter((u,i)=>{ const e=document.getElementById(idPrefix+i); return e&&e.checked; });
 function diasAbierta(d){
   const ms = new Date(HOY_SUP) - new Date(d.fechaRep);
   return Math.max(0, Math.round(ms/86400000));
 }
-const devVencida = d => d.estado!=="Cerrada" && d.fechaLimite < HOY_SUP;
+const devVencida = d => {
+  if(d.estado==="Cerrada") return false;
+  if(d.fechaLimite < HOY_SUP) return true;
+  if(d.fechaLimite > HOY_SUP) return false;
+  return horaAMin(d.horaLimite||"17:00") <= S.reloj;
+};
 const devDeTec   = t => S.devoluciones.filter(d=>d.responsable===t);
 
 /* ── Contadores del panel de Gustavo ── */
@@ -697,7 +710,7 @@ function aplicarDescuento(dv, w){
 
   const d = {id:"DS"+Date.now()+Math.floor(Math.random()*99), tec:dv.responsable,
     wo:w.id, dev:dv.id, monto:montoFinal, montoReal:monto, tope, semana:w.semana, fecha:HOY_SUP, estado:"Por decidir",
-    motivo:"Return fix de "+dv.area+" en "+(U(dv.unidad)?U(dv.unidad).num:"la unidad")+" — lo corrigi\u00f3 "+tecN(w.tec)
+    motivo:"Return fix de "+devAreasTxt(dv)+" en "+(U(dv.unidad)?U(dv.unidad).num:"la unidad")+" — lo corrigió "+tecN(w.tec)
            +(tope?" (limitado a lo que gan\u00f3 por WO-"+dv.wo+")":"")};
   S.descuentos.push(d);
   return d;
@@ -894,7 +907,7 @@ function gustavoScreenHTML(view){
               <div style="display:flex;justify-content:space-between;gap:6px;align-items:center">
                 <div class="dh" style="font-size:12px">Verificar return fix</div>
                 <span class="dtag" style="background:${devVencida(d)?"var(--rojo)":"var(--ambar)"};color:#fff;flex:none">${diasAbierta(d)} d\u00eda(s)</span></div>
-              <div class="ds" style="margin-top:3px">${esc(P(d.prop).nombre)} ${U(d.unidad)?esc(U(d.unidad).num):""} · ${esc(d.area)}</div>
+              <div class="ds" style="margin-top:3px">${esc(P(d.prop).nombre)} ${U(d.unidad)?esc(U(d.unidad).num):""} · ${esc(devAreasTxt(d))}</div>
             </div>`).join("")
         : "");
   }
@@ -1015,12 +1028,12 @@ function gustavoScreenHTML(view){
         <div style="display:flex;justify-content:space-between;gap:6px;align-items:center">
           <div class="dh" style="font-size:12px">${esc(P(d.prop).nombre)} · ${U(d.unidad)?esc(U(d.unidad).num):"—"}</div>
           <span class="dtag" style="background:${col};color:#fff;flex:none">${esc(d.estado)}</span></div>
-        <div class="ds" style="margin-top:3px"><b>${esc(d.area)}</b> — ${esc(d.desc.slice(0,68))}${d.desc.length>68?"…":""}</div>
+        <div class="ds" style="margin-top:3px"><b>${esc(devAreasTxt(d))}</b> — ${esc(d.desc.slice(0,68))}${d.desc.length>68?"…":""}</div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">
           <span class="dtag" style="background:${d.prioridad==="Alta"?"#9b222222;color:#9b2226":"#f0f2f4;color:#5b6875"}">${esc(d.prioridad)}</span>
           <span class="dtag" style="background:#f0f2f4;color:#5b6875">${esc(tecN(d.responsable))}</span>
           ${d.estado!=="Cerrada"?`<span class="dtag" style="background:${venc?"#9b222222;color:#9b2226":"#f0f2f4;color:#5b6875"}">${dias} d\u00eda(s) abierta</span>`:""}
-          ${venc?`<span class="dtag" style="background:#9b2226;color:#fff">venci\u00f3 ${esc(d.fechaLimite)}</span>`:""}
+          ${venc?`<span class="dtag" style="background:#9b2226;color:#fff">venció ${esc(d.fechaLimite)} ${esc(d.horaLimite||"")}</span>`:""}
         </div>
         <div class="ds" style="margin-top:5px;font-size:10.5px">${c.paga?"se le paga":"<b>no se le paga</b>"} · ${c.cobra?"se puede cobrar":"no se cobra"}</div>
       </div>`;};
@@ -1036,14 +1049,14 @@ function gustavoScreenHTML(view){
     const d = DV(S.phDev);
     if(!d){ return ""; }
     const c = causaDe(d.causa), dias = diasAbierta(d), venc = devVencida(d);
-    const nA = (d.lotesAntes||[]).reduce((t,l)=>t+l.n,0);
-    const nD = (d.lotesDespues||[]).reduce((t,l)=>t+l.n,0);
+    const nA = (d.lotesAntes||[]).reduce((t,l)=>t+(l.fotosArr||[]).length,0);
+    const nD = (d.lotesDespues||[]).reduce((t,l)=>t+(l.fotosArr||[]).length,0);
     h = `<button class="db g" style="margin:5px 0 9px" data-a="fView" data-v="devs">‹ Todos los returns</button>
       <div class="dc" style="border-color:${d.estado==="Cerrada"?"var(--verde)":venc?"var(--rojo)":"var(--ambar)"}">
         <div style="display:flex;justify-content:space-between;gap:6px;align-items:center">
           <div class="dh">${esc(P(d.prop).nombre)} · ${U(d.unidad)?esc(U(d.unidad).num):"—"}</div>
           <span class="dtag" style="background:${d.estado==="Cerrada"?"var(--verde)":"var(--ambar)"};color:#fff;flex:none">${esc(d.estado)}</span></div>
-        <div class="ds" style="margin-top:4px">Área: <b>${esc(d.area)}</b>${d.wo?` · WO-${d.wo}`:""}</div>
+        <div class="ds" style="margin-top:4px">Área: <b>${esc(devAreasTxt(d))}</b>${d.wo?` · WO-${d.wo}`:""}</div>
         <div class="ds" style="margin-top:5px;color:var(--tinta)">${esc(d.desc)}</div>
       </div>
 
@@ -1056,7 +1069,7 @@ function gustavoScreenHTML(view){
       <div class="dc"><div class="dl" style="margin:0 0 5px">Seguimiento</div>
         <div class="ds">Responsable de corregir: <b>${esc(tecN(d.responsable))}</b></div>
         <div class="ds">Prioridad: <b>${esc(d.prioridad)}</b></div>
-        <div class="ds">Reportada: ${esc(d.fechaRep)} · l\u00edmite ${d.fechaLimite}</div>
+        <div class="ds">Reportada: ${esc(d.fechaRep)} · límite ${d.fechaLimite}${d.horaLimite?" "+esc(d.horaLimite):""}</div>
         ${d.estado!=="Cerrada"?`<div class="ds" style="color:${venc?"var(--rojo)":"var(--ambar)"}">
           <b>${dias} d\u00eda(s) abierta</b>${venc?" — pas\u00f3 la fecha l\u00edmite":""}</div>`:""}
         ${d.verifica?`<div class="ds" style="color:var(--verde);margin-top:3px">✓ Verificada por ${esc(tecN(d.verifica))}</div>`:""}
@@ -1065,7 +1078,9 @@ function gustavoScreenHTML(view){
       <div class="dl" style="margin-top:10px">Fotos</div>
       <div class="dc">
         <div class="ds"><b>Antes:</b> ${nA} foto(s)${(d.lotesAntes||[]).length?" · "+d.lotesAntes.map(l=>esc(l.amb)).join(", "):""}</div>
-        <div class="ds" style="margin-top:4px"><b>Despu\u00e9s:</b> ${nD?`${nD} foto(s)`:"<span style='color:var(--ambar)'>todav\u00eda ninguna</span>"}</div>
+        ${nA?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:5px">${(d.lotesAntes||[]).flatMap(l=>(l.fotosArr||[])).map(f=>`<a href="${f.url}" target="_blank"><img src="${f.url}" style="width:54px;height:40px;object-fit:cover;border-radius:6px"></a>`).join("")}</div>`:""}
+        ${nD?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:5px">${(d.lotesDespues||[]).flatMap(l=>(l.fotosArr||[])).map(f=>`<a href="${f.url}" target="_blank"><img src="${f.url}" style="width:54px;height:40px;object-fit:cover;border-radius:6px"></a>`).join("")}</div>`:""}
+        <div class="ds" style="margin-top:4px"><b>Después:</b> ${nD?`${nD} foto(s)`:"<span style='color:var(--ambar)'>todavía ninguna</span>"}</div>
       </div>
 
       ${(()=>{ const tu=touchupDe(d.id); if(!tu) return "";

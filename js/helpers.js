@@ -5,6 +5,9 @@ const esc = s => String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&l
 const by = (arr,id) => arr.find(x=>x.id===id);
 const P = id => by(S.propiedades,id) || {nombre:"—",zona:"",door:""};
 const U = id => by(S.unidades,id) || {num:"—",rooms:"",building:"",unidadNum:""};
+/* Antes de asignar o reasignar: Erika pidió ver tanto las notas internas de la WO
+   como las de la propiedad (hoy el técnico recién las ve en el celular al llegar). */
+const hayNotasAsig = w => !!(String(w.notasOficina||"").trim() || String(P(w.prop).notas||"").trim());
 /* Arma el identificador que se muestra: "B-102" si hay building, o solo el
    número si no. Es lo único que las pantallas leen (u.num); building y
    unidadNum son la fuente que se normaliza al buscar y al migrar del Excel. */
@@ -21,6 +24,10 @@ function roomsDesde(tipo, bedrooms){
   if(n<=0) return "Studio";
   return `${n} bedroom`;
 }
+/* Campos que el técnico puede corroborar y, si no coinciden, reportar para que
+   oficina los revise (ver woCorroboraNoOK / modalCorregirUnidad). Una sola
+   etiqueta compartida entre el celular y la pantalla de revisión. */
+const ETQ_CAMPO_UNIDAD = {pisos:"Floors", bedrooms:"Bedrooms", bathrooms:"Bathrooms", num:"Unit number", ocupacion:"Occupancy"};
 const T = id => by(S.tecnicos,id);
 const CLI = id => by(S.clientes,id) || {nombre:"—"};
 const ESTCOL = {Prospect:"w",Onboarding:"m",Active:"v","On Hold":"w",Inactive:"r"};
@@ -53,6 +60,10 @@ const puedeAprobarNomina = () => S.usuario==="Claudia";
    (así se evitan los cambios por WhatsApp). El aprobador también puede editar directo. Único lugar donde se nombra a la persona. */
 const APROBADOR_CAMBIO_MONTO = "Claudia";
 const puedeAprobarCambioMonto = () => S.usuario===APROBADOR_CAMBIO_MONTO;
+/* Nota de crédito por un return sobre una WO ya facturada: la factura original nunca se toca,
+   se emite una nueva en negativo, vinculada. Exclusivo de Operations — hoy Thalia, que ya lleva Returns. */
+const OPERATIONS_MASTER = "Thalia";
+const puedeEmitirNotaCredito = () => S.usuario===OPERATIONS_MASTER;
 /* Origen del precio. UNA sola forma en todos lados (fila del tarifario, línea de adicional y WO):
      precioFijado = {origen:"definido", por:<usuario>, fecha:"AAAA-MM-DD", hora:"h:mm"}
    Sin precioFijado el precio viene del tarifario (origen «tarifario»). El precioOrigen de los adicionales
@@ -279,6 +290,26 @@ function sugerenciasHTML(inputId, prop, cat, serv, rooms, clic){
     }).join("")}</div>`;
 }
 function tarifaWO(w){ const u=U(w.unidad); return tarifa(w.prop,w.cat,w.serv,u.rooms,u.pisos); }
+/* Override OPCIONAL del pago a UN técnico específico (ej. un especialista cobra
+   más por el mismo servicio) — mismo esquema de fallback que tarifa(): propiedad
+   exacta primero, después general; piso exacto primero, después cualquiera.
+   null si no hay override para este técnico: egresoWO() sigue usando tarifaWO(). */
+function pagoTecnicoWO(w){
+  if(!w.tec) return null;
+  const u=U(w.unidad);
+  const busca = (p, pi) => {
+    const m = (S.pagosTecnico||[]).filter(x =>
+      x.tec===w.tec && x.prop===p && x.cat===w.cat && x.serv===w.serv &&
+      (pi===null ? (x.pisos==null) : x.pisos===pi));
+    return m.find(x=>x.variante===u.rooms) || m.find(x=>!x.variante);
+  };
+  let x;
+  if((x=busca(w.prop, u.pisos))) return x;
+  if((x=busca(w.prop, null)))    return x;
+  if((x=busca(null, u.pisos)))   return x;
+  if((x=busca(null, null)))      return x;
+  return null;
+}
 /* Su tarifario tiene Precio Unitario y Cantidad: el importe es el producto de los dos.
    Si la WO ya trae su propio precio/pago (nacio de un estimado ya aprobado, con el
    precio del Item que el cliente vio y aceptó), ese manda — no se vuelve a resolver
@@ -317,6 +348,7 @@ function egresoWO(w){
   const aj=ajustesValTotal(w,"pago");
   if(w.touchup && w.tec && w.tec===w.tecOriginal) return aj;
   if(w.pago!=null) return w.pago*(w.cant||1)+aj;
+  const pt=pagoTecnicoWO(w); if(pt) return pt.pago*(w.cant||1)+aj;
   const t=tarifaWO(w); return t? t.pago*(w.cant||1)+aj : null;
 }
 /* Pago base sin ajustes: lo que se edita en «Pago técnico» al validar. */

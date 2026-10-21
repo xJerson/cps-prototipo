@@ -120,20 +120,39 @@ Object.assign(ACC, {
     toast("✓ Ayuda resuelta","Le avisamos al técnico en su celular.","v"); render();
   },
   excUnidadRevisar: d => modalCorregirUnidad(d.id),
+  /* Generalizado: aplica cada campo que el técnico reportó distinto
+     (datos.cambios), uno por uno, validando según su tipo. */
   excUnidadAplicar: d => {
-    const x=by(S.excepciones,d.id), datos=x&&x.datosUnidad, pisos=parseInt(val("corrPisos"));
-    if(!x||!datos) return;
-    if(!pisos || pisos<1){ toast("Falta el dato","Indica los pisos aprobados.","r"); return; }
+    const x=by(S.excepciones,d.id), datos=x&&x.datosUnidad;
+    if(!x||!datos||!datos.cambios||!datos.cambios.length) return;
     const u=U(datos.unidad), w=W(x.wo); if(!u||!w) return;
-    const anterior=u.pisos;
-    u.pisos=pisos;
-    (u.cambios||=([])).push({campo:"pisos",anterior,nuevo:pisos,quien:S.usuario,hora:hora(),wo:w.id,origen:"Request"});
-    x.estado="Aprobada"; x.accion=`Updated unit floors: ${anterior} → ${pisos}`;
+    const aplicados=[];
+    for(const c of datos.cambios){
+      const iid="corr_"+c.campo;
+      if(c.campo==="num"){
+        const v=val(iid).trim();
+        if(!v){ toast("Falta el dato","Indica el unit number aprobado.","r"); return; }
+        aplicados.push({campo:c.campo, anterior:u.num, nuevo:v});
+      } else if(c.campo==="ocupacion"){
+        const v=val(iid);
+        aplicados.push({campo:c.campo, anterior:u.ocupacion||"Occupied", nuevo:v});
+      } else {
+        const v=parseInt(val(iid));
+        if(!(v>=(c.campo==="pisos"?1:0))){ toast("Falta el dato",`Indica ${ETQ_CAMPO_UNIDAD[c.campo].toLowerCase()} aprobados.`,"r"); return; }
+        aplicados.push({campo:c.campo, anterior:u[c.campo], nuevo:v});
+      }
+    }
+    aplicados.forEach(c=>{
+      u[c.campo]=c.nuevo;
+      (u.cambios||=([])).push({campo:c.campo,anterior:c.anterior,nuevo:c.nuevo,quien:S.usuario,hora:hora(),wo:w.id,origen:"Request"});
+    });
+    const resumen = aplicados.map(c=>`${ETQ_CAMPO_UNIDAD[c.campo]} ${c.anterior} → ${c.nuevo}`).join(" · ");
+    x.estado="Aprobada"; x.accion=`Updated unit data: ${resumen}`;
     x.resol={quien:S.usuario,hora:hora()};
     registrarHistorialApproval(x,"Approved",x.accion);
     w.hist.push([hora(),x.accion,S.usuario]);
     cm(); flash("exc:"+x.id);
-    toast("✓ Unit data updated",`Floors for ${esc(u.num)} changed from ${anterior} to ${pisos}. The audit stays on this Request.`,"v");
+    toast("✓ Unit data updated",`${esc(resumen)}. The audit stays on this Request.`,"v");
     render();
   },
   /* Desde la tarjeta Sub-Work Orders de la WO: decidir un solo concepto, con sus fotos a la vista. */
@@ -547,7 +566,8 @@ function bloqueDineroVal(w,dr){
   return `<div class="card" style="margin-top:14px"><div class="chd"><h3>Dinero</h3></div><div class="cp">
     <div class="fg c2">
       ${campoCobroVal(w,dr,cobro,num)}
-      <div class="fld"><label>Pago técnico</label><input id="vaPago" class="mono" value="${esc(dr.pago!==undefined?dr.pago:num(pago))}" placeholder="0.00"></div></div>
+      <div class="fld"><label>Pago técnico</label><input id="vaPago" class="mono" value="${esc(dr.pago!==undefined?dr.pago:num(pago))}" placeholder="0.00">
+        ${pagoTecnicoWO(w)?`<div class="hint">Pago especial para ${esc(tecN(w.tec))} · ${esc(pagoTecnicoWO(w).motivo)}</div>`:""}</div></div>
     <div class="fld"><label>Motivo</label><input id="vaMot" value="${esc(dr.mot||"")}" placeholder="Obligatorio si cambias Cobro o Pago"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:12px"><span style="color:var(--soft)">Materiales</span><span><span class="mono">${money(mat)}</span> <button class="btn sm" data-a="valMatModal" data-id="${w.id}">Ajustar</button></span></div>
     ${comp?fila("Gastos compartidos",money(comp)):""}
@@ -1295,6 +1315,41 @@ Object.assign(ACC, {
   facLiberar: d => { const w=W(+d.id); if(!w||!w.facRetenida) return;
     delete w.facRetenida; w.hist.push([hora(),"Factura liberada",S.usuario]);
     toast("Liberada",`WO-${w.id} vuelve a estar disponible para facturar.`,"v"); render(); },
+  /* Nota de crédito: exclusiva de OPERATIONS_MASTER. La factura original de la WO con el return ya
+     facturado nunca se toca (no se edita ni se borra) — se emite una factura nueva, en negativo,
+     vinculada por facturaOrigen. Pedido puntual del cliente para el caso de returns. */
+  notaCreditoModal: d => {
+    const w=W(+d.id); if(!w||!puedeEmitirNotaCredito()) return;
+    const dv=devAbiertaDeWO(w.id), f=S.facturas.find(x=>x.lineas&&x.lineas.includes(w.id));
+    if(!dv||!f) return;
+    const concepto=(f.conceptos||[]).find(c=>c.tipo==="WO"&&c.wo===w.id), tope=concepto?concepto.importe:f.total;
+    modal(`<div class="mh"><h3>Emitir nota de crédito</h3><p>WO-${w.id} · ${esc(f.num)} · ${esc(P(w.prop).nombre)}</p></div>
+    <div class="mb">
+      <div class="note w" style="margin-bottom:12px">La factura <b>${esc(f.num)}</b> no se modifica. Esto crea una factura nueva, en negativo, vinculada a ella.</div>
+      <div class="fg c2"><div class="fld"><label>Facturado por esta WO</label><div class="mono" style="padding:6px 0">${money(tope)}</div></div>
+        <div class="fld"><label>Monto a acreditar <span class="req">*</span></label><input id="ncMonto" type="number" min="0.01" max="${tope}" step="0.01" placeholder="0.00"></div></div>
+      <div class="fld"><label>Motivo <span class="req">*</span></label><textarea id="ncMot" rows="2" placeholder="Por qué se acredita">${esc(dv.desc||"")}</textarea></div>
+    </div>
+    <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="notaCreditoOK" data-id="${w.id}">Emitir</button></div>`);
+  },
+  notaCreditoOK: d => {
+    const w=W(+d.id); if(!w||!puedeEmitirNotaCredito()) return;
+    const dv=devAbiertaDeWO(w.id), f=S.facturas.find(x=>x.lineas&&x.lineas.includes(w.id));
+    if(!dv||!f) return;
+    const concepto=(f.conceptos||[]).find(c=>c.tipo==="WO"&&c.wo===w.id), tope=concepto?concepto.importe:f.total;
+    const monto=parseFloat(val("ncMonto")), mot=val("ncMot").trim();
+    if(!(monto>0)||monto>tope+0.004){ S.audOmitir=true; marcaFalta(["ncMonto"]); toast("Monto inválido",`Tiene que ser mayor a 0 y no superar ${money(tope)}.`,"r"); return; }
+    if(!mot){ S.audOmitir=true; marcaFalta(["ncMot"]); toast("Falta el motivo","Escribe por qué se acredita.","r"); return; }
+    const id="F"+Date.now(), num="CN-"+HOY_SUP.slice(0,4)+"-"+(1000+S.facturas.length);
+    S.facturas.push({id,num,prop:w.prop,facturaOrigen:f.id,dev:dv.id,
+      conceptos:[{tipo:"Manual",cat:"Nota de crédito",nombre:`Nota de crédito — ${mot}`,cantidad:1,importe:-monto}],
+      lineas:[],total:-monto,separada:false,emision:HOY_SUP,vence:null,estado:"Nota de crédito",
+      motivo:mot,quien:S.usuario,fecha:HOY_SUP,pdf:null,seguimiento:[]});
+    w.hist.push([hora(),`Nota de crédito emitida · ${money(monto)} · vinculada a ${f.num} · ${mot}`,S.usuario]);
+    S._audNotaCredito=`${P(w.prop).nombre} · ${num} · ${money(-monto)} vinculada a ${f.num}`;
+    cm(); flash("wo:"+w.id);
+    toast("✓ Nota de crédito emitida",`${num} · ${money(-monto)} · ${esc(f.num)} sigue sin cambios.`,"v"); render();
+  },
   /* «Revisar Work Order y verificar: servicios realizados, adicionales, materiales, observaciones»
      Erika valida antes de que se pueda facturar o pagar (Proceso de Facturación y Nómina) */
   validarModal: d => { S._valDraft=null; modalValidar(W(+d.id)); },

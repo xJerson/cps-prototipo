@@ -58,7 +58,7 @@ function excAuto(){
      No frena pago ni factura: eso ya lo controla el propio return (ver woBloqueada). */
   S.devoluciones.filter(dv=>dv.estado!=="Cerrada").forEach(dv=>{
     out.push(conAsignacion({id:"AUTO-V"+dv.id, tipo:"Return", wo:dv.wo, dev:dv.id, auto:true,
-      motivo:`${dv.area}: ${dv.desc} — responsable ${tecN(dv.responsable)}${dv.touchup?` · return fix WO-${dv.touchup}`:" · falta crear el return fix"}.`,
+      motivo:`${devAreasTxt(dv)}: ${dv.desc} — responsable ${tecN(dv.responsable)}${dv.touchup?` · return fix WO-${dv.touchup}`:" · falta crear el return fix"}.`,
       monto:null, pide:dv.quien||"Gustavo", aprueba:null, estado:"Pendiente", fecha:dv.fechaRep, resol:null}));
   });
   // La primera vez que el sistema detecta cada una queda su hora — así se ve
@@ -295,15 +295,27 @@ function modalExc(){
   <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="excGuardar">Levantar</button></div>`);
 }
 
+/* Un campo por fila, generalizado desde la versión que solo pedía Floors.
+   d.cambios = [{campo, anterior, propuesto}], uno por cada dato que el
+   técnico reportó distinto (ver woCorroboraNoOK). */
 function modalCorregirUnidad(id){
   const x=by(S.excepciones,id), d=x&&x.datosUnidad, u=d&&U(d.unidad);
   if(!x||!d||!u) return;
+  const filaCampo = c => {
+    const etq=ETQ_CAMPO_UNIDAD[c.campo], iid="corr_"+c.campo;
+    const input = c.campo==="ocupacion"
+      ? `<select id="${iid}"><option ${c.propuesto!=="Vacant"?"selected":""}>Occupied</option><option ${c.propuesto==="Vacant"?"selected":""}>Vacant</option></select>`
+      : c.campo==="num"
+      ? `<input id="${iid}" value="${esc(String(c.propuesto))}">`
+      : `<input id="${iid}" type="number" min="${c.campo==="pisos"?1:0}" value="${esc(String(c.propuesto))}">`;
+    return `<div class="fg c2" style="margin-top:8px"><div class="fld"><label>Current ${esc(etq.toLowerCase())}</label><input value="${esc(String(c.anterior))}" disabled></div>
+      <div class="fld"><label>Approved ${esc(etq.toLowerCase())} <span class="req">*</span></label>${input}</div></div>`;
+  };
   modal(`<div class="mh"><h3>Review unit data correction</h3><p>WO-${x.wo} · ${esc(P(W(x.wo).prop).nombre)} · ${esc(u.num)}</p></div>
     <div class="mb">
       <div class="note w" style="margin-bottom:12px"><b>Reported by ${esc(x.pide)}:</b> ${esc(x.motivo)}<br>Confirm the observed value before changing the master unit data.</div>
-      <div class="fg c2"><div class="fld"><label>Current floors</label><input value="${esc(String(d.anterior))}" disabled></div>
-        <div class="fld"><label>Approved floors <span class="req">*</span></label><input id="corrPisos" type="number" min="1" value="${esc(String(d.propuesto))}"></div></div>
-      ${d.nota?`<div class="fld"><label>Technician note</label><div class="note" style="margin:0">${esc(d.nota)}</div></div>`:""}
+      ${d.cambios.map(filaCampo).join("")}
+      ${d.nota?`<div class="fld" style="margin-top:8px"><label>Technician note</label><div class="note" style="margin:0">${esc(d.nota)}</div></div>`:""}
     </div>
     <div class="mf"><button class="btn" data-a="cm">Cancel</button><button class="btn p" data-a="excUnidadAplicar" data-id="${x.id}">Apply correction</button></div>`);
 }
@@ -679,7 +691,7 @@ VIEWS.nomina = () => {
           <td>${dv?`${esc(P(dv.prop).nombre)} ${U(dv.unidad)?esc(U(dv.unidad).num):""}
                 <div style="font-size:10.5px;color:var(--faint)">${esc(dv.desc.slice(0,60))}</div>`:"—"}</td>
           <td class="mono">WO-${x.wo}</td>
-          <td>${dv?`<span class="pill m">${(dv.lotesAntes||[]).reduce((t,l)=>t+l.n,0)} foto(s) del antes</span>`:"—"}</td>
+          <td>${dv?`<span class="pill m">${(dv.lotesAntes||[]).reduce((t,l)=>t+(l.fotosArr||[]).length,0)} foto(s) del antes</span>`:"—"}</td>
           <td class="num mono" style="color:${x.estado==="Aplicado"?"var(--rojo)":"var(--faint)"}${x.estado==="No aplicado"?";text-decoration:line-through":""}">−${money(x.monto)}
             ${x.tope?`<div style="font-size:10px;color:var(--faint);font-weight:400">
               el return fix costó ${money(x.montoReal)}<br>se limitó a lo que ganó</div>`:""}</td>
@@ -1092,7 +1104,7 @@ VIEWS.facturacion = () => {
     <div style="margin-top:6px;font-size:11.5px">
       ${frenadas.map(w=>{ const d=devAbiertaDeWO(w.id);
         return `WO-${w.id} · ${esc(P(w.prop).nombre)} ${U(w.unidad)?esc(U(w.unidad).num):""}
-                — ${esc(d.area)}, ${diasAbierta(d)} día(s) abierta`;}).join("<br>")}</div>
+                — ${esc(devAreasTxt(d))}, ${diasAbierta(d)} día(s) abierta`;}).join("<br>")}</div>
     <button class="btn sm" data-a="ir" data-m="supervision" style="margin-top:7px">Ver returns</button></div>`:""}
   ${frenadasExc.length?`<div class="note r" style="margin-bottom:14px">
     <b>${frenadasExc.length} Work Order(s) no se pueden facturar: tienen una Request pendiente.</b><br>
@@ -1320,7 +1332,8 @@ function resumenExpedienteFactura(f){
 /* Un borrador no tiene fecha de vencimiento: nace al enviarse (emisión + días de crédito de la propiedad). */
 const facVenceTxt = f => f.vence || (f.estado==="Borrador"?"Al enviar":"—");
 /* Factura ya emitida o enviada y sin pagar: los montos solo los cambia Claudia; los demás piden el cambio con motivo. */
-const facMontoEditable = f => !["Borrador","Pagada"].includes(f.estado);
+/* Una nota de crédito es permanente igual que la factura que la originó: nunca se edita. */
+const facMontoEditable = f => !["Borrador","Pagada","Nota de crédito"].includes(f.estado);
 const puedeEditarMontoFactura = () => puedeAprobarCambioMonto();
 const facCambiaVence = f => !["Pagada","Borrador"].includes(f.estado) && f.vence;
 /* Datos generales (vencimiento y correo de envío) se cambian en una factura emitida o enviada y sin pagar, sin Request: queda quién y cuándo. */
@@ -1349,7 +1362,7 @@ const porRevisarHoy = f => { const u=ultLlamada(f); return facVencida(f) && !!u 
 const diasVencida = f => Math.round((new Date(HOY_SUP)-new Date(f.vence))/864e5);
 
 VIEWS.cobranza = () => {
-  const abiertas=S.facturas.filter(f=>!["Pagada","Borrador"].includes(f.estado));
+  const abiertas=S.facturas.filter(f=>!["Pagada","Borrador","Nota de crédito"].includes(f.estado));
   const vencidas=S.facturas.filter(facVencida), grupos=vencidasPorCliente(), filtradas=facFiltradas();
   return `
   <div class="ph"><div><h2>Cobranza</h2><p>Al pasar su vencimiento sin pago, queda «Vencida» y arranca la escalera: reminder → correo overdue → llamada.</p></div></div>
@@ -1456,6 +1469,114 @@ function modalRegistrarPago(fid){
   const f=by(S.facturas,fid), recibido=(S.pagos||[]).filter(p=>p.factura===fid).reduce((n,p)=>n+(+p.monto||0),0), pendiente=Math.max(0,(f.total||0)-recibido);
   modal(`<div class="mh"><h3>Registrar pago — ${esc(f.num)}</h3><p>Total ${money(f.total)} · recibido ${money(recibido)} · pendiente ${money(pendiente)}</p></div><div class="mb"><div class="fg c2"><div class="fld"><label>Monto recibido <span class="req">*</span></label><input id="cpMonto" type="number" min="0.01" max="${pendiente}" step="0.01" value="${pendiente}"></div><div class="fld"><label>Fecha <span class="req">*</span></label><input id="cpFecha" type="date" value="${HOY_SUP}"></div></div><div class="fg c2"><div class="fld"><label>Medio <span class="req">*</span></label><select id="cpMedio"><option>Check</option><option>ACH</option><option>Card</option><option>Cash</option><option>Other</option></select></div><div class="fld"><label>Cheque / referencia</label><input id="cpRef" placeholder="Ej. CHK-10488"></div></div><div class="fld"><label>Comprobante</label><div style="display:flex;align-items:center;gap:8px"><button type="button" class="btn sm" data-a="reciboFoto">📷 Foto</button><span id="recPrev">${miniRecibo(S._recibo)}</span></div></div><div class="fld"><label>Nota</label><input id="cpNota"></div><div class="note">Puedes registrar pagos parciales. La factura solo se cierra cuando el total recibido la cubre.</div></div><div class="mf"><button class="btn" data-a="cobGestionar" data-id="${fid}">Cancelar</button><button class="btn p" data-a="cobrarGuardar" data-id="${fid}">Guardar pago</button></div>`);
 }
+
+/* ── AUDITORÍA FINANCIERA ── */
+/* Ventana de solo lectura para Claudia con las dos cosas que ella pidió ver
+   en un solo lugar: adicionales pagados en nómina y descuentos aplicados en
+   facturas. Las dos quedan también en Bitácora (completas, con antes/después
+   y motivo — ver facAjusteAplicar/medioOK en js/bootstrap.js), pero acá se
+   muestran igual: Claudia pidió una ventana propia para esto, no que lo
+   busque filtrando un log técnico. No hay botones de aprobar o rechazar — si
+   algo está mal, se resuelve donde ya se resuelve hoy (Requests o el
+   borrador de la factura). */
+function vAuditoriaFinanciera(){
+  const extras = S.excepciones.filter(x=>x.tipo==="Pago adicional al técnico" && x.estado==="Aprobada");
+  const ajustes = [];
+  S.facturas.forEach(f=>(f.conceptos||[]).forEach(c=>{ if(c.tipo==="AjusteTotal") ajustes.push({f,c}); }));
+  const descNom = S.descuentos.filter(x=>x.estado==="Aplicado"||x.estado==="No aplicado");
+  const parciales = S.nomina.filter(n=>n.tipo==="Parcial");
+  const credProp = (S.creditosProp||[]).filter(c=>c.tipo==="Abono");
+  const credServ = (S.creditosServ||[]).filter(c=>c.tipo==="Abono");
+  const notasCredito = S.facturas.filter(f=>f.estado==="Nota de crédito");
+  return `
+  <div class="ph"><div><h2>Auditoría financiera</h2>
+    <p>Para revisar, no para aprobar: dinero que ya se movió o se descontó sin pasar por una pantalla de aprobación.</p></div></div>
+  <div class="card"><div class="chd"><h3>Adicionales pagados en nómina</h3>
+    <span class="s">se aprueban solos al aceptar la Sub-Work Order — acá quedan a la vista con monto y motivo</span></div>
+    ${extras.length?`<table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Técnico</th><th class="num">Monto</th><th>Motivo</th><th>Aprobó</th><th>Fecha</th></tr></thead>
+    <tbody>${extras.map(x=>{ const w=W(x.wo); return `<tr>
+      <td class="mono" style="font-weight:700">WO-${esc(x.wo)}</td>
+      <td>${w?esc(P(w.prop).nombre)+" · "+esc(U(w.unidad).num):"—"}</td>
+      <td>${esc(tecN(x.tec))}</td>
+      <td class="num mono">${money(x.monto||0)}</td>
+      <td>${esc(x.motivo||"—")}</td>
+      <td>${esc(x.aprueba||"—")}</td>
+      <td class="mono">${esc(x.fecha||"—")}</td></tr>`; }).join("")}
+    </tbody></table>`:`<div class="empty">Sin adicionales pagados todavía.</div>`}
+  </div>
+  <div class="card"><div class="chd"><h3>Descuentos aplicados en facturas</h3>
+    <span class="s">cambios de total aplicados al preparar o editar una factura — también quedan completos en Bitácora</span></div>
+    ${ajustes.length?`<table><thead><tr><th>Factura</th><th>Propiedad</th><th>Motivo</th><th class="num">Ajuste</th><th>Estado</th></tr></thead>
+    <tbody>${ajustes.map(({f,c})=>`<tr>
+      <td class="mono" style="font-weight:700">${esc(f.num)}</td>
+      <td>${esc(P(f.prop).nombre)}</td>
+      <td>${esc(c.motivo||"—")}</td>
+      <td class="num mono" style="color:${(c.importe||0)<0?"var(--rojo)":"var(--verde)"}">${sgnMoney(c.importe||0)}</td>
+      <td><span class="pill ${f.estado==="Pagada"?"v":"g"}">${esc(f.estado)}</span></td></tr>`).join("")}
+    </tbody></table>`:`<div class="empty">Sin descuentos aplicados todavía.</div>`}
+  </div>
+  <div class="card"><div class="chd"><h3>Descuentos en nómina</h3>
+    <span class="s">manuales o por return, ya decididos — Por decidir se ve en Nómina, no acá</span></div>
+    ${descNom.length?`<table><thead><tr><th>Técnico</th><th>WO</th><th class="num">Monto</th><th>Motivo</th><th>Estado</th><th>Decidió</th><th>Fecha</th></tr></thead>
+    <tbody>${descNom.map(x=>`<tr>
+      <td style="font-weight:650">${esc(tecN(x.tec))}</td>
+      <td class="mono">${x.wo?"WO-"+esc(x.wo):"—"}</td>
+      <td class="num mono">${money(x.monto||0)}</td>
+      <td>${esc(x.concepto||x.motivo||"—")}</td>
+      <td><span class="pill ${x.estado==="Aplicado"?"v":"g"}">${esc(x.estado)}</span></td>
+      <td>${esc(x.decidio||x.quien||"—")}</td>
+      <td class="mono">${esc(x.fechaDecision||x.fecha||"—")}</td></tr>`).join("")}
+    </tbody></table>`:`<div class="empty">Sin descuentos de nómina todavía.</div>`}
+  </div>
+  <div class="card"><div class="chd"><h3>Pagos parciales a técnicos</h3>
+    <span class="s">adelantos sobre una WO que todavía no cerró su pago completo</span></div>
+    ${parciales.length?`<table><thead><tr><th>Técnico</th><th>WO</th><th class="num">Monto</th><th>Nota</th><th>Quién</th><th>Fecha</th></tr></thead>
+    <tbody>${parciales.map(n=>`<tr>
+      <td style="font-weight:650">${esc(tecN(n.tec))}</td>
+      <td class="mono">WO-${esc((n.wos||[])[0]||"—")}</td>
+      <td class="num mono">${money(n.total||0)}</td>
+      <td>${esc(n.nota||"—")}</td>
+      <td>${esc(n.quien||"—")}</td>
+      <td class="mono">${esc(n.fecha||"—")}</td></tr>`).join("")}
+    </tbody></table>`:`<div class="empty">Sin pagos parciales todavía.</div>`}
+  </div>
+  <div class="card"><div class="chd"><h3>Créditos de propiedad otorgados</h3>
+    <span class="s">saldo a favor de una propiedad — se descuenta solo al aplicarse en una factura</span></div>
+    ${credProp.length?`<table><thead><tr><th>Propiedad</th><th class="num">Monto</th><th>Motivo</th><th>Quién</th><th>Fecha</th></tr></thead>
+    <tbody>${credProp.map(c=>`<tr>
+      <td style="font-weight:650">${esc(P(c.prop).nombre)}</td>
+      <td class="num mono">${money(c.monto||0)}</td>
+      <td>${esc(c.motivo||"—")}</td>
+      <td>${esc(c.quien||"—")}</td>
+      <td class="mono">${esc(c.fecha||"—")}</td></tr>`).join("")}
+    </tbody></table>`:`<div class="empty">Sin créditos de propiedad todavía.</div>`}
+  </div>
+  <div class="card"><div class="chd"><h3>Créditos de servicio otorgados</h3>
+    <span class="s">cortesías de un servicio puntual — N unidades del servicio, de la propiedad o de una unidad</span></div>
+    ${credServ.length?`<table><thead><tr><th>Propiedad</th><th>Servicio × Cantidad</th><th>Motivo</th><th>Quién</th><th>Fecha</th></tr></thead>
+    <tbody>${credServ.map(c=>`<tr>
+      <td style="font-weight:650">${esc(P(c.prop).nombre)}</td>
+      <td>${esc(c.serv||"—")} × ${esc(c.cant||0)}</td>
+      <td>${esc(c.motivo||"—")}</td>
+      <td>${esc(c.quien||"—")}</td>
+      <td class="mono">${esc(c.fecha||"—")}</td></tr>`).join("")}
+    </tbody></table>`:`<div class="empty">Sin créditos de servicio todavía.</div>`}
+  </div>
+  <div class="card"><div class="chd"><h3>Notas de crédito emitidas</h3>
+    <span class="s">por un return sobre una WO ya facturada — la factura original nunca se toca</span></div>
+    ${notasCredito.length?`<table><thead><tr><th>Factura</th><th>Factura original</th><th>Propiedad</th><th>Motivo</th><th class="num">Monto</th><th>Quién</th><th>Fecha</th></tr></thead>
+    <tbody>${notasCredito.map(f=>{ const orig=by(S.facturas,f.facturaOrigen); return `<tr>
+      <td class="mono" style="font-weight:700">${esc(f.num)}</td>
+      <td class="mono">${orig?esc(orig.num):"—"}</td>
+      <td>${esc(P(f.prop).nombre)}</td>
+      <td>${esc(f.motivo||"—")}</td>
+      <td class="num mono" style="color:var(--rojo)">${money(f.total||0)}</td>
+      <td>${esc(f.quien||"—")}</td>
+      <td class="mono">${esc(f.fecha||"—")}</td></tr>`; }).join("")}
+    </tbody></table>`:`<div class="empty">Sin notas de crédito todavía.</div>`}
+  </div>`;
+}
+VIEWS.auditoria = vAuditoriaFinanciera;
 
 /* ── INVENTARIO ── */
 /* Activos no consumibles (se registran y editan a mano) y material reservado para una WO. */

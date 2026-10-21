@@ -82,6 +82,7 @@ Object.assign(ACC, {
     Object.assign(b,{desde:val("bqDesde"),hasta:val("bqHasta"),q:val("bqQ"),serv:val("bqServ"),tec:val("bqTec"),estado:val("bqEst"),agr:val("bqAgr")});
     b.unidad = prop!==b.prop ? "" : val("bqUni");   // otra propiedad = otras unidades
     b.prop = prop;
+    b.rango="";   // tocar cualquier filtro a mano apaga el botón de rango rápido: ya no refleja lo que está activo
     render();
   },
   /* Semana = domingo a sábado, igual que semanaDe(); «hoy» es la fecha del prototipo. */
@@ -95,6 +96,7 @@ Object.assign(ACC, {
       const ini=fechaMover(hoy,-dow-(d.r==="pasada"?7:0));
       b.desde=ini; b.hasta=fechaMover(ini,6);
     }
+    b.rango=d.r;
     render();
   },
   buscarCSV: () => {

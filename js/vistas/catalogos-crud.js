@@ -397,6 +397,22 @@ VIEWS.tarifario = () => {
     <table><thead><tr><th>Propiedad</th><th>Tipo</th><th class="num">Precios</th><th>Para</th><th>Quién</th><th>Cuándo</th></tr></thead><tbody>
     ${enviadas.map(x=>`<tr class="${fl('lp:'+x.id)}"><td>${esc(P(x.prop).nombre)}</td><td>${esc(x.tipo)}</td><td class="num mono">${x.filas}</td><td>${esc(x.para.join(", "))}</td><td>${esc(x.quien)}</td><td class="mono">${esc(x.fecha.slice(5))} ${esc(x.hora)}</td></tr>`).join("")}
     </tbody></table></div>`:""}
+  <div class="card" style="margin-top:12px"><div class="chd"><h3>Pago diferenciado por técnico</h3>
+    <span class="s">override opcional — si no hay uno acá, el pago sigue saliendo de la tarifa de arriba</span></div>
+    <div class="cp">
+    ${(S.pagosTecnico||[]).length?`<table><thead><tr><th>Técnico</th><th>Propiedad</th><th>Servicio</th><th>Detail</th><th class="num">Pago</th><th>Motivo</th><th>Quién</th><th></th></tr></thead>
+    <tbody>${S.pagosTecnico.map(x=>`<tr class="${fl('pt:'+x.id)}">
+      <td style="font-weight:650">${esc(tecN(x.tec))}</td>
+      <td>${x.prop?esc(P(x.prop).nombre):'<span class="pill g">General</span>'}</td>
+      <td>${esc(x.cat)} · ${esc(x.serv)}</td>
+      <td>${esc(x.variante)||"—"}${x.pisos!=null?" · Floor "+x.pisos:""}</td>
+      <td class="num mono">${money(x.pago)}</td>
+      <td>${esc(x.motivo)}</td>
+      <td>${esc(x.quien)}</td>
+      <td style="text-align:right"><button class="btn sm" data-a="pagoTecQuitar" data-id="${x.id}">Quitar</button></td></tr>`).join("")}
+    </tbody></table>`:`<div class="empty">Sin pagos diferenciados todavía.</div>`}
+    <button class="btn" style="margin-top:10px" data-a="pagoTecNuevo">+ Nuevo pago diferenciado</button>
+    </div></div>
   <div class="note" style="margin-top:12px"><b>Cómo resuelve el precio</b> — la misma llave de su Tabla Maestra (Rooms + Pisos + Servicio), en cuatro pasos:
     primero la tarifa negociada de esa propiedad para esos pisos; si no, la de la propiedad para cualquier piso;
     si no, la general para esos pisos; si no, la general para cualquier piso. Si no hay ninguna, levanta una

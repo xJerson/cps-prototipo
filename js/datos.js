@@ -142,6 +142,13 @@ let S = {
     {id:"TR14",prop:null,cat:"Clean",serv:"Full clean",variante:"Studio",pisos:1,precio:95,pago:65},
     {id:"TR15",prop:null,cat:"Clean",serv:"Touch up clean",variante:"Studio",pisos:1,precio:55,pago:30}
   ],
+  /* Pago diferenciado por técnico: override OPCIONAL sobre la tarifa general
+     (ver pagoTecnicoWO en helpers.js). Si no hay override acá, el pago sigue
+     saliendo de `tarifas` como siempre — esto nunca reemplaza esa tabla. */
+  pagosTecnico:[
+    {id:"PT1",tec:"T2",prop:null,cat:"Resurface",serv:"Tub resurfacing",variante:"Tub only",pisos:null,pago:230,
+      motivo:"Especialista en resane de tinas — tarifa más alta por experiencia",quien:"Claudia",fecha:"2026-08-05"}
+  ],
   estimados:[
     {id:"E1",num:"EST-2026-018",cliente:"CL1",prop:"P1",fecha:"2026-08-04",estado:"Aprobado",lineas:[{unidad:"U1",cat:"Clean",serv:"Full clean",precio:132,pago:70,nivel:"Propiedad"},{unidad:"U1",cat:"Paint",serv:"Full paint",precio:600,pago:320,nivel:"Propiedad"}],aprob:{medio:"Llamada",quien:"Danielle Pratt",fecha:"2026-08-05 10:22",ip:null}},
     {id:"E2",num:"EST-2026-019",cliente:"CL3",prop:"P3",fecha:"2026-08-08",estado:"Enviado",lineas:[{unidad:"U6",cat:"Clean",serv:"Deep clean",precio:210,pago:105,nivel:"General"}],aprob:null}
@@ -375,8 +382,12 @@ let S = {
       total:220,separada:false,emision:"2026-08-09",vence:"2026-09-08",estado:"Emitida",
       pdf:"INV-2026-1041.pdf",pdfHora:"15:00",pdfQuien:"Erika",seguimiento:[]},
     {id:"F602",num:"INV-2026-1042",prop:"P2",lineas:[1057],
-      conceptos:[{tipo:"WO",wo:1057,subwo:null,unidad:"U12",descripcion:"Full clean",cantidad:1,importe:140,evidencia:1}],
-      total:140,separada:false,emision:"2026-08-09",vence:"2026-09-08",estado:"Emitida",
+      /* AjusteTotal sembrado a propósito: es el ejemplo de "descuento en el
+         invoice" que pide el cliente en Auditoría financiera — ya queda
+         completo en Bitácora (facAjusteAplicar), y además visible acá. */
+      conceptos:[{tipo:"WO",wo:1057,subwo:null,unidad:"U12",descripcion:"Full clean",cantidad:1,importe:140,evidencia:1},
+        {tipo:"AjusteTotal",final:110,motivo:"Cliente pidió descuento por atraso en el acceso",importe:-30,calc:140}],
+      total:110,separada:false,emision:"2026-08-09",vence:"2026-09-08",estado:"Emitida",
       pdf:"INV-2026-1042.pdf",pdfHora:"14:00",pdfQuien:"Erika",seguimiento:[]},
     {id:"F603",num:"INV-2026-1043",prop:"P1",lineas:[1058],
       conceptos:[{tipo:"WO",wo:1058,subwo:null,unidad:"U11",descripcion:"Full clean",cantidad:1,importe:125,evidencia:1}],
@@ -392,13 +403,35 @@ let S = {
       conceptos:[{tipo:"WO",wo:1060,subwo:null,unidad:"U9",descripcion:"Full clean",cantidad:1,importe:125,evidencia:1}],
       total:125,separada:false,emision:"2026-08-10",vence:"2026-09-09",estado:"Pagada",
       pdf:"INV-2026-1045.pdf",pdfHora:"12:30",pdfQuien:"Erika",
-      seguimiento:[{tipo:"pago",fecha:"2026-08-11",hora:"15:00",quien:"Claudia",nota:"Pago recibido y conciliado."},{tipo:"cierre",fecha:"2026-08-11",hora:"15:00",quien:"Claudia"}]}
+      seguimiento:[{tipo:"pago",fecha:"2026-08-11",hora:"15:00",quien:"Claudia",nota:"Pago recibido y conciliado."},{tipo:"cierre",fecha:"2026-08-11",hora:"15:00",quien:"Claudia"}]},
+    /* Nota de crédito sembrada por el return DV-SEED1 sobre WO-1047 (ya facturada en F601/INV-2026-1041).
+       F601 queda intacta — esta es la factura nueva, en negativo, vinculada. Ejemplo para Auditoría financiera. */
+    {id:"F-CN-SEED1",num:"CN-2026-1041",prop:"P3",facturaOrigen:"F601",dev:"DV-SEED1",
+      conceptos:[{tipo:"Manual",cat:"Nota de crédito",nombre:"Nota de crédito — El parche de drywall quedó con textura distinta a la pared, se nota el remiendo.",cantidad:1,importe:-60}],
+      lineas:[],total:-60,separada:false,emision:"2026-08-11",vence:null,estado:"Nota de crédito",
+      motivo:"El parche de drywall quedó con textura distinta a la pared, se nota el remiendo.",
+      quien:"Thalia",fecha:"2026-08-11",pdf:null,seguimiento:[]}
   ],
   creditosProp:[{id:"CR0",prop:"P1",unidad:"U1",tipo:"Abono",monto:150,motivo:"Retraso en entrega",quien:"Claudia",fecha:"2026-08-05"}],
   pinturas:[{id:"PT0",prop:"P1",superficie:"Paredes",marca:"Sherwin Williams",color:"",codigo:"ProMar 200",acabado:"Eggshell",nota:"",quien:"Claudia",fecha:"2026-08-05"},
     {id:"PT1",prop:"P1",superficie:"Cielos",marca:"",color:"Blanco",codigo:"",acabado:"Flat",nota:"",quien:"Claudia",fecha:"2026-08-05"}],
   creditosServ:[{id:"CS0",prop:"P1",unidad:null,serv:"Full clean",cant:2,tipo:"Abono",motivo:"Cortesía por retraso",quien:"Claudia",fecha:"2026-08-05"}],
-  pagos:[{id:"PG1",factura:"F601",monto:120,medio:"Check",referencia:"CHK-10488",fecha:"2026-08-11",evidencia:true,quien:"Claudia",nota:"Partial payment received"}], nomina:[], bitacora:[], audSeq:0, avisos:[], campana:false,
+  pagos:[{id:"PG1",factura:"F601",monto:120,medio:"Check",referencia:"CHK-10488",fecha:"2026-08-11",evidencia:true,quien:"Claudia",nota:"Partial payment received"}],
+  /* Sembrados para la tabla "Pagos parciales a técnicos" de Auditoría financiera. */
+  nomina:[
+    {id:"NM-SEED1", semana:33, periodo:{tipo:"semana",sem:33}, tec:"T1", wos:[1050], total:90, tipo:"Parcial", nota:"Adelanto pedido por el técnico", cheque:"", foto:null, quien:"Erika", fecha:"2026-08-11", hora:"9:50"},
+    {id:"NM-SEED2", semana:33, periodo:{tipo:"semana",sem:33}, tec:"T2", wos:[1039], total:50, tipo:"Parcial", nota:"", cheque:"CHK-10512", foto:null, quien:"Claudia", fecha:"2026-08-11", hora:"10:40"}
+  ],
+  /* Sembrada con ejemplos reales de cada módulo para poder mostrar la Bitácora
+     en una demo sin tener que generar acciones primero. */
+  bitacora:[
+    {n:6, fecha:"2026-08-11", hora:"10:30", usuario:"Erika", rol:"Administración", accion:"Ajustó el total de una factura del borrador (de → a · motivo)", modulo:"Facturación", ref:"Magnolia Court · Factura INV-2026-1042: $140.00 → $110.00 · Cliente pidió descuento por atraso en el acceso"},
+    {n:5, fecha:"2026-08-11", hora:"10:05", usuario:"Thalia", rol:"Programación", accion:"Decidió un adicional", modulo:"Excepciones", ref:"WO-1040"},
+    {n:4, fecha:"2026-08-11", hora:"9:40", usuario:"Erika", rol:"Administración", accion:"Marcó como pagado a un técnico", modulo:"Nómina", ref:"Diego Ramírez · Semana 33"},
+    {n:3, fecha:"2026-08-11", hora:"9:10", usuario:"Gustavo", rol:"Supervisión", accion:"Hizo un return a un trabajo", modulo:"Work Orders", ref:"WO-1039"},
+    {n:2, fecha:"2026-08-10", hora:"16:20", usuario:"Claudia", rol:"Administración / Estimados", accion:"Aprobó la nómina de un técnico", modulo:"Nómina", ref:"Marcos Ayala · Semana 33"},
+    {n:1, fecha:"2026-08-10", hora:"8:16", usuario:"Thalia", rol:"Programación", accion:"Creó una Work Order", modulo:"Work Orders", ref:"WO-1050"}
+  ], audSeq:6, avisos:[], campana:false,
   /* Expedientes post-work enviados al cliente: se conserva el token para
      que el enlace pueda abrirse en otra pestaña del mismo origen. */
   revisionesCliente:[], aprobadoresSol:{},
@@ -468,23 +501,33 @@ let S = {
      pero no por que paso — y de eso depende si se le paga al tecnico y
      si se le puede cobrar al cliente. */
   devoluciones:[
-    {id:"DV1", prop:"P1", unidad:"U2", wo:1041, area:"Baño",
+    {id:"DV1", prop:"P1", unidad:"U2", wo:1041, areas:["Baño"],
      desc:"Quedó pintura en el marco de la puerta y el zócalo sin retocar.",
      causa:"Trabajo mal ejecutado por el técnico", responsable:"T2",
-     prioridad:"Alta", fechaRep:"2026-08-09", fechaLimite:"2026-08-12",
-     estado:"Abierta", lotesAntes:[{amb:"Baño",n:4}], lotesDespues:[],
+     prioridad:"Alta", fechaRep:"2026-08-09", fechaLimite:"2026-08-12", horaLimite:"17:00",
+     estado:"Abierta", lotesAntes:[loteSeed("Baño",null,4,"8:50")], lotesDespues:[],
      verifica:null, quien:"T6", touchup:1061,
      hist:[["8:52","Return creado desde informe de supervisión","Gustavo Andrade"],
            ["8:56","Se creó el return fix WO-1061 para Andrés Solís","Gustavo Andrade"]]},
     /* Genera la corrección WO-1051, del propio Diego corrigiendo su propia WO-1038. */
-    {id:"DV2", prop:"P1", unidad:"U1", wo:1038, area:"Cocina",
+    {id:"DV2", prop:"P1", unidad:"U1", wo:1038, areas:["Cocina"],
      desc:"Faltó limpiar el interior del refrigerador y el microondas.",
      causa:"Trabajo mal ejecutado por el técnico", responsable:"T1",
-     prioridad:"Media", fechaRep:"2026-08-11", fechaLimite:"2026-08-14",
-     estado:"Abierta", lotesAntes:[{amb:"Cocina",n:2}], lotesDespues:[],
+     prioridad:"Media", fechaRep:"2026-08-11", fechaLimite:"2026-08-14", horaLimite:"17:00",
+     estado:"Abierta", lotesAntes:[loteSeed("Cocina",null,2,"9:08")], lotesDespues:[],
      verifica:null, quien:"T6", touchup:1051,
      hist:[["9:10","Return creado desde informe de supervisión","Gustavo Andrade"],
-           ["9:15","Se creó el return fix WO-1051 para Diego Ramírez","Gustavo Andrade"]]}
+           ["9:15","Se creó el return fix WO-1051 para Diego Ramírez","Gustavo Andrade"]]},
+    /* Sembrada a propósito sobre WO-1047, que ya está facturada (INV-2026-1041, F601) —
+       es el ejemplo de "nota de crédito" en Auditoría financiera: la factura original
+       no se toca, se emite una nueva en negativo vinculada a ella. */
+    {id:"DV-SEED1", prop:"P3", unidad:"U7", wo:1047, areas:["Drywall"],
+     desc:"El parche de drywall quedó con textura distinta a la pared, se nota el remiendo.",
+     causa:"Trabajo mal ejecutado por el técnico", responsable:"T4",
+     prioridad:"Media", fechaRep:"2026-08-11", fechaLimite:"2026-08-14", horaLimite:"17:00",
+     estado:"Abierta", lotesAntes:[loteSeed("Drywall",null,1,"9:08")], lotesDespues:[],
+     verifica:null, quien:"Gustavo",
+     hist:[["9:10","Return creado desde informe de supervisión","Gustavo Andrade"]]}
   ],
 
   /* ── REPORTE DIARIO ───────────────────────────────────────────────────
@@ -504,7 +547,17 @@ let S = {
   /* Ejemplo: Marcos hizo mal WO-1041, Andrés lo corrigió (WO-1061); Erika/Claudia decide si se descuenta. */
   descuentos:[
     {id:"DS-SEED1", tec:"T2", wo:1061, dev:"DV1", monto:60, montoReal:60, tope:false, semana:33, fecha:"2026-08-11", estado:"Por decidir",
-     motivo:"Return fix de Baño en la unidad A-211 — lo corrigió Andrés Solís"}
+     motivo:"Return fix de Baño en la unidad A-211 — lo corrigió Andrés Solís"},
+    /* Sembrados ya decididos (Aplicado / No aplicado) para la tabla "Descuentos
+       en nómina" de Auditoría financiera — DS-SEED1 de arriba sigue "Por
+       decidir" a propósito, esa pantalla es Nómina, no esta. */
+    {id:"DS-SEED2", tipo:"Manual", estado:"Aplicado", tec:"T2", semana:33, wo:1039,
+     concepto:"Material dañado por mal manejo", motivo:"Material dañado por mal manejo", desc:"",
+     monto:25, quien:"Thalia", fecha:"2026-08-11", hora:"9:30"},
+    {id:"DS-SEED3", tec:"T1", wo:1050, dev:"DV-SEED", monto:40, montoReal:40, tope:false, semana:33, fecha:"2026-08-11",
+     estado:"No aplicado", decidio:"Claudia", horaDecision:"11:15", fechaDecision:"2026-08-11",
+     motivoDecision:"Material defectuoso, no es responsabilidad del técnico",
+     motivo:"Return fix de Drywall en la unidad U10 — lo corrigió Diego Ramírez"}
   ],
   repDiario:[],
   phDev:null,      // return abierto en el celular
@@ -515,7 +568,12 @@ let S = {
   // EXCEPCIONES: todo lo que se sale de la regla y necesita que alguien más decida.
   // Una excepción atada a una WO frena solo esa WO; sin WO, frena todo (ver woBloqueada).
   excepciones:[
-    {id:"X1",tipo:"Pago adicional al técnico",wo:1039,motivo:"Marcos tuvo que hacer resane de pared antes de pintar; no está en la tarifa.",monto:75,pide:"Marcos Ayala",aprueba:"Claudia",estado:"Pendiente",fecha:"2026-08-10",creada:{quien:"Marcos Ayala",hora:"7:50"},resol:null}
+    {id:"X1",tipo:"Pago adicional al técnico",wo:1039,motivo:"Marcos tuvo que hacer resane de pared antes de pintar; no está en la tarifa.",monto:75,pide:"Marcos Ayala",aprueba:"Claudia",estado:"Pendiente",fecha:"2026-08-10",creada:{quien:"Marcos Ayala",hora:"7:50"},resol:null},
+    /* Sembrados en estado "Aprobada" a propósito — son el ejemplo de "Auditoría
+       financiera" (ver VIEWS.auditoria): se aprueban solos al aceptar la
+       Sub-Work Order, sin pasar por una pantalla de aprobación. */
+    {id:"X2",tipo:"Pago adicional al técnico",wo:1040,subwo:"SW1040A",tec:"T1",motivo:"Sub-Work Order aprobada · Sheetrock · Closet pared norte",monto:60,pide:"Oficina",aprueba:"Thalia",estado:"Aprobada",fecha:"2026-08-11",creada:{quien:"Oficina",hora:"8:55"},resol:{quien:"Thalia",hora:"9:05"}},
+    {id:"X3",tipo:"Pago adicional al técnico",wo:1043,subwo:"SW1043A",tec:"T1",motivo:"Sub-Work Order aprobada · Drywall patch · Hallway",monto:45,pide:"Diego Ramírez",aprueba:"Claudia",estado:"Aprobada",fecha:"2026-08-11",creada:{quien:"Diego Ramírez",hora:"10:20"},resol:{quien:"Claudia",hora:"10:30"}}
   ],
   excCreadas:{},   // primera vez que se vio cada excepción automática: id -> hora. Así queda "creada el/a las" sin tener que guardarlas de antemano.
   // Las solicitudes automáticas se reconstruyen al renderizar. Su propietario

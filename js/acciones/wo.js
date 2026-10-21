@@ -492,9 +492,9 @@ Object.assign(ACC, {
     render();
   },
 
-  /* Si la WO trae notas internas, primero se leen y se aceptan; sin notas no hay nada que aceptar. */
-  asigModal: d => { const w=W(+d.id); if(w && String(w.notasOficina||"").trim()) modalNotasAsig(w); else modalAsig(+d.id); },
-  asigNotasOK: d => modalAsig(+d.id),
+  /* Si la WO o la propiedad traen notas, primero se leen y se aceptan; sin notas no hay nada que aceptar. */
+  asigModal: d => { const w=W(+d.id); if(w && hayNotasAsig(w)) modalNotasAsig(w,"asignar"); else modalAsig(+d.id); },
+  asigNotasOK: d => d.destino==="reasignar" ? modalReasignar(+d.id) : modalAsig(+d.id),
   woFiltroTipo: () => { S.woFt = val("woFtSel"); render(); },
   woFiltroZona: () => { S.woFz = val("woFzSel"); render(); },
   woFiltroQuitar: () => { S.woFt=""; S.woFz=""; render(); },
@@ -573,14 +573,15 @@ Object.assign(ACC, {
         <textarea id="dvM" placeholder="Qué quedó mal y qué hay que corregir"></textarea></div>
       <div class="fg c2">
         <div class="fld"><label>¿Dónde? <span class="req">*</span></label>
-          <select id="dvA">${activos("ubicaciones").map(u=>`<option>${esc(u)}</option>`).join("")}</select></div>
+          <div style="display:flex;flex-wrap:wrap">${checkboxesUbicacion("dvA",[])}</div></div>
         <div class="fld"><label>Causa <span class="req">*</span></label>
           <select id="dvC" data-a="devCausaRef">
             ${Object.keys(CAUSAS_DEV).map(c=>`<option>${esc(c)}</option>`).join("")}</select></div></div>
       <div class="note w" id="dvExp">${causaDe(Object.keys(CAUSAS_DEV)[0]).ex}</div>
       <div class="fg c2">
         <div class="fld"><label>Prioridad</label><select id="dvP">${PRIOR_DEV.map(p=>`<option ${p==="Alta"?"selected":""}>${esc(p)}</option>`).join("")}</select></div>
-        <div class="fld"><label>Fecha límite</label><input type="date" id="dvL" value="2026-08-14"></div></div>
+        <div class="fld"><label>Fecha límite</label><input type="date" id="dvL" value="2026-08-14"></div>
+        <div class="fld"><label>Hora límite</label><input type="time" id="dvLH" value="17:00"></div></div>
       <div class="fld"><label>Foto de la observación <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label>
         ${S._dvFoto?`<img src="${S._dvFoto}" style="width:100%;height:96px;object-fit:cover;border-radius:9px;margin:0 0 6px">`:""}
         <button type="button" class="btn" style="width:100%" data-a="devFoto" data-id="${w.id}">📷 ${S._dvFoto?"Cambiar foto":"Adjuntar foto"}</button></div>
@@ -592,19 +593,20 @@ Object.assign(ACC, {
   devFoto: d => {
     // Adjuntar la foto reabre el modal (para mostrarla), así que primero
     // hay que rescatar lo que ya se tecleó — si no, se pierde al reabrir.
-    const previo = {m:val("dvM"), a:val("dvA"), c:val("dvC"), p:val("dvP"), l:val("dvL")};
+    const previo = {m:val("dvM"), a:leerCheckUbicacion("dvA"), c:val("dvC"), p:val("dvP"), l:val("dvL"), lh:val("dvLH")};
     capturarFoto(url=>{
       S._dvFoto=url; ACC.devolverModal({id:d.id});
       const set=(id,v)=>{ const e=document.getElementById(id); if(e && v) e.value=v; };
-      set("dvM",previo.m); set("dvA",previo.a); set("dvC",previo.c); set("dvP",previo.p); set("dvL",previo.l);
+      set("dvM",previo.m); (previo.a||[]).forEach(v=>{ const i=activos("ubicaciones").indexOf(v); const e=document.getElementById("dvA"+i); if(e) e.checked=true; }); set("dvC",previo.c); set("dvP",previo.p); set("dvL",previo.l); set("dvLH",previo.lh);
       ACC.devCausaRef();
     });
   },
   /* PRODUCCIÓN: el return no cambia el estado de la WO; solo suma w.devuelta.
      En la versión real la WO pasa a Returned aquí y a Corrected al cerrar el return. */
   devolverOK: d => {
-    const w=W(+d.id), m=val("dvM"), area=val("dvA"), causa=val("dvC");
+    const w=W(+d.id), m=val("dvM"), areas=leerCheckUbicacion("dvA"), causa=val("dvC"), fotoObs=S._dvFoto;
     if(!m){ marcaFalta(["dvM"]); toast("Falta el motivo","Sin decir qué está mal, el técnico no sabe qué corregir.","r"); return; }
+    if(!areas.length){ toast("Falta el área","Elige al menos un área a corregir.","r"); return; }
     w.devuelta=(w.devuelta||0)+1; w.motivoDev=m;
     w.revisionCalidad={estado:"Return creado",fecha:HOY_SUP,hora:hora(),quien:S.usuario,motivo:m};
     (w.evidFotos=w.evidFotos||[]).push(fotoNueva(S._dvFoto||null, S.usuario));
@@ -612,10 +614,10 @@ Object.assign(ACC, {
     w.hist.push([hora(),`Return por supervisión: ${m}`,S.usuario]);
     // El registro real — el mismo que crea gDevOK desde el celular — para que
     // el descuento, el bloqueo de facturación y el touch-up sí se disparen.
-    const dv = {id:"DV"+Date.now(), prop:w.prop, unidad:w.unidad, wo:w.id, area,
+    const dv = {id:"DV"+Date.now(), prop:w.prop, unidad:w.unidad, wo:w.id, areas,
       desc:m, causa, responsable:w.tec, prioridad:val("dvP")||"Alta",
-      fechaRep:HOY_SUP, fechaLimite:val("dvL")||"2026-08-14", estado:"Abierta",
-      lotesAntes:[{amb:area,n:1}], lotesDespues:[], verifica:null, quien:S.usuario,
+      fechaRep:HOY_SUP, fechaLimite:val("dvL")||"2026-08-14", horaLimite:val("dvLH")||"17:00", estado:"Abierta",
+      lotesAntes:areas.map((a,i)=>({amb:a, fotosArr: i===0 && fotoObs ? [fotoNueva(fotoObs, S.usuario)] : []})), lotesDespues:[], verifica:null, quien:S.usuario,
       hist:[[hora(),"Return creado desde revisión de supervisión",S.usuario]]};
     S.devoluciones.push(dv); flash("dv:"+dv.id);
     cm();
@@ -770,13 +772,14 @@ Object.assign(ACC, {
       <div class="fld"><label>Unidad <span class="req">*</span></label><select id="rgU" data-a="devRegCambio">${unis.length?unis.map(u=>`<option value="${esc(u.id)}" ${u.id===uid?"selected":""}>${esc(u.num)}</option>`).join(""):'<option value="">— sin unidades —</option>'}</select></div>
       <div class="fld"><label>¿Quién lo pidió? <span class="req">*</span></label><select id="rgO">${["Gustavo","La propiedad","Correo","Otro"].map(o=>`<option ${o===keep("rgO")?"selected":""}>${o}</option>`).join("")}</select></div>
       <div class="fld"><label>¿Quién hizo el trabajo? <span class="req">*</span></label><select id="rgT">${S.tecnicos.filter(t=>t.activo!==false&&t.id!==GUSTAVO).map(t=>`<option value="${t.id}" ${t.id===quien?"selected":""}>${esc(tecN(t.id))}</option>`).join("")}</select></div>
-      <div class="fld"><label>¿Dónde? <span class="req">*</span></label><select id="rgA">${activos("ubicaciones").map(u=>`<option ${u===keep("rgA")?"selected":""}>${esc(u)}</option>`).join("")}</select></div>
+      <div class="fld"><label>¿Dónde? <span class="req">*</span></label><div style="display:flex;flex-wrap:wrap">${checkboxesUbicacion("rgA", d&&d.keep?leerCheckUbicacion("rgA"):[])}</div></div>
       <div class="fld"><label>Causa <span class="req">*</span></label><select id="rgC" data-a="devRegCambio">${Object.keys(CAUSAS_DEV).map(c=>`<option ${c===keep("rgC")?"selected":""}>${esc(c)}</option>`).join("")}</select></div></div>
       <div class="fld"><label>¿Qué está mal? <span class="req">*</span></label><textarea id="rgM" placeholder="Qué quedó mal y qué hay que corregir">${esc(keep("rgM"))}</textarea></div>
       <div class="note w" id="rgEx">${causaDe(keep("rgC")||Object.keys(CAUSAS_DEV)[0]).ex}</div>
       <div class="fg c2">
         <div class="fld"><label>Prioridad</label><select id="rgR">${PRIOR_DEV.map(p=>`<option ${p===(keep("rgR")||"Alta")?"selected":""}>${esc(p)}</option>`).join("")}</select></div>
-        <div class="fld"><label>Fecha límite</label><input type="date" id="rgL" value="${esc(keep("rgL")||HOY_SUP)}"></div></div>
+        <div class="fld"><label>Fecha límite</label><input type="date" id="rgL" value="${esc(keep("rgL")||HOY_SUP)}"></div>
+        <div class="fld"><label>Hora límite</label><input type="time" id="rgLH" value="${esc(keep("rgLH")||"17:00")}"></div></div>
       <label style="display:flex;gap:8px;align-items:center;margin:4px 0 8px;font-weight:650"><input type="checkbox" id="rgUrg" ${(d&&d.keep&&document.getElementById("rgUrg")&&document.getElementById("rgUrg").checked)?"checked":""}> Entra un inquilino pronto (urgente)</label>
       ${ult?`<div class="hint">Última WO de la unidad: WO-${ult.id} (${esc(ult.serv)}) de ${esc(tecN(ult.tec))}.</div>`:`<div class="hint">Esta unidad no tiene WO con técnico: elige quién hizo el trabajo.</div>`}</div>
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="devRegistrarOK">Registrar</button></div>`); },
@@ -784,16 +787,16 @@ Object.assign(ACC, {
   /* PRODUCCIÓN: igual que devolverOK, debe pasar la WO original a Returned
      (hoy ni siquiera suma w.devuelta, así que no cuenta en el indicador de calidad). */
   devRegistrarOK: () => {
-    const pid=val("rgP"), uid=val("rgU"), m=val("rgM").trim(), area=val("rgA"), causa=val("rgC"), tec=val("rgT");
-    if(!uid||!m||!tec){ S.audOmitir=true; marcaFalta([!uid?"rgU":"",!m?"rgM":"",!tec?"rgT":""].filter(Boolean)); toast("Falta información","Elige la unidad, quién hizo el trabajo y escribe qué está mal.","r"); return; }
+    const pid=val("rgP"), uid=val("rgU"), m=val("rgM").trim(), areas=leerCheckUbicacion("rgA"), causa=val("rgC"), tec=val("rgT");
+    if(!uid||!m||!tec||!areas.length){ S.audOmitir=true; marcaFalta([!uid?"rgU":"",!m?"rgM":"",!tec?"rgT":""].filter(Boolean)); toast("Falta información",!areas.length?"Elige al menos un área a corregir.":"Elige la unidad, quién hizo el trabajo y escribe qué está mal.","r"); return; }
     const ult=S.wos.filter(w=>w.unidad===uid&&w.estado!=="Canceled"&&!w.touchup).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""))[0];
     const woDe=S._rgWO&&W(S._rgWO)&&W(S._rgWO).unidad===uid?S._rgWO:(ult?ult.id:null); S._rgWO=null;
-    const dv={id:"DV"+Date.now(), prop:pid, unidad:uid, wo:woDe, area, desc:m, causa, responsable:tec,
-      prioridad:val("rgR")||"Alta", fechaRep:HOY_SUP, fechaLimite:val("rgL")||HOY_SUP, estado:"Abierta",
+    const dv={id:"DV"+Date.now(), prop:pid, unidad:uid, wo:woDe, areas, desc:m, causa, responsable:tec,
+      prioridad:val("rgR")||"Alta", fechaRep:HOY_SUP, fechaLimite:val("rgL")||HOY_SUP, horaLimite:val("rgLH")||"17:00", estado:"Abierta",
       lotesAntes:[], lotesDespues:[], verifica:null, quien:S.usuario, origen:val("rgO"), urgente:!!(document.getElementById("rgUrg")&&document.getElementById("rgUrg").checked),
       hist:[[hora(),`Return registrado por ${S.usuario} (pedida por: ${val("rgO")})`,S.usuario]]};
-    S.devoluciones.push(dv); S._audDev=P(pid).nombre+" · "+(U(uid)?U(uid).num:"")+" — "+area; flash("dv:"+dv.id);
-    cm(); toast("Return registrado",`<b>${esc(P(pid).nombre)} ${U(uid)?esc(U(uid).num):""}</b> · ${esc(area)}. Ahora puedes crear el return fix y ver quién está cerca.`,"w"); render(); },
+    S.devoluciones.push(dv); S._audDev=P(pid).nombre+" · "+(U(uid)?U(uid).num:"")+" — "+areas.join(", "); flash("dv:"+dv.id);
+    cm(); toast("Return registrado",`<b>${esc(P(pid).nombre)} ${U(uid)?esc(U(uid).num):""}</b> · ${esc(areas.join(", "))}. Ahora puedes crear el return fix y ver quién está cerca.`,"w"); render(); },
 
   /* ── TOUCH-UP ───────────────────────────────────────
      Claudia: "cada unidad tiene a su tecnico responsable y el tiene que
@@ -806,7 +809,7 @@ Object.assign(ACC, {
     const orig = W(dv.wo);
     S._tuFecha = dv.urgente ? HOY_SUP : fechaMover(HOY_SUP,1);   // urgente: hoy; si no, el día siguiente
     modal(`<div class="mh"><h3>Crear return fix</h3>
-        <p>${esc(P(dv.prop).nombre)} · ${U(dv.unidad)?esc(U(dv.unidad).num):""} — ${esc(dv.area)}</p></div>
+        <p>${esc(P(dv.prop).nombre)} · ${U(dv.unidad)?esc(U(dv.unidad).num):""} — ${esc(devAreasTxt(dv))}</p></div>
       <div class="mb">
         <div class="note w" style="margin:0 0 12px"><b>Lo que hay que corregir:</b> ${esc(dv.desc)}</div>
         ${dv.urgente?`<div class="note r" style="margin:0 0 12px"><b>Entra un inquilino pronto.</b> Propongo la fecha de hoy.</div>`:""}
@@ -875,7 +878,7 @@ Object.assign(ACC, {
         : `Lo corrige <b>${esc(tecN(tec))}</b> y <b>s\u00ed se le paga</b>. Ese mismo monto se le <b>descuenta a ${esc(tecN(dv.responsable))}</b>, que fue quien lo hizo mal.`)
       + `<br><br>Al cliente <b>no se le cobra</b>.`, "v");
     noti("Tienes un return fix asignado",
-      `${P(w.prop).nombre} ${U(w.unidad)?U(w.unidad).num:""} — ${dv.area}: ${dv.desc}`);
+      `${P(w.prop).nombre} ${U(w.unidad)?U(w.unidad).num:""} — ${devAreasTxt(dv)}: ${dv.desc}`);
     render();
   },
 
@@ -883,7 +886,7 @@ Object.assign(ACC, {
      El descuento siempre apunta al que hizo mal el trabajo, no al que corrige.
      Mismo patrón de un clic que Asignar (asigSi/asigNo): la tarjeta ya viene
      deshabilitada si no puede, así que acá solo falta el caso "mismo técnico". */
-  woReasignar: d => modalReasignar(+d.id),
+  woReasignar: d => { const w=W(+d.id); if(w && hayNotasAsig(w)) modalNotasAsig(w,"reasignar"); else modalReasignar(+d.id); },
 
   woReasignarNo: d => {
     const w=W(+d.id), b=bloqueo(d.tec,w.fecha);
@@ -987,25 +990,39 @@ Object.assign(ACC, {
   },
   woCorroboraNo: d => { S.phSheet={t:"corrobNo", wo:+d.id}; render(); },
   woCorroboraNoOK: d => {
-    const w=W(+d.id), u=U(w.unidad), txt=val("cnTxt"), pisos=parseInt(val("cnPisos"));
+    const w=W(+d.id), u=U(w.unidad), txt=val("cnTxt");
+    const pisos=parseInt(val("cnPisos")), ocupObs=val("cnOcup"),
+      numObs=val("cnNum").trim(), bedObs=u.bedrooms!=null?parseInt(val("cnBed")):null,
+      bathObs=u.bathrooms!=null?parseInt(val("cnBath")):null;
     if(!pisos || pisos<1){ toast("Falta el dato","Indica cuántos pisos ves en la unidad.","r"); return; }
-    if(pisos===u.pisos){ toast("Sin cambio","El número de pisos observado coincide con el sistema.","w"); return; }
-    const abierta=S.excepciones.find(x=>x.estado==="Pendiente" && x.tipo==="Unit data mismatch" && x.wo===w.id
-      && x.datosUnidad && x.datosUnidad.campo==="pisos");
+    if(!numObs){ toast("Falta el dato","Indica el número de unidad que ves.","r"); return; }
+    if(u.bedrooms!=null && !(bedObs>=0)){ toast("Falta el dato","Indica cuántos bedrooms ves en la unidad.","r"); return; }
+    if(u.bathrooms!=null && !(bathObs>=0)){ toast("Falta el dato","Indica cuántos bathrooms ves en la unidad.","r"); return; }
+    const candidatos=[
+      {campo:"num", anterior:u.num, propuesto:numObs},
+      {campo:"pisos", anterior:u.pisos, propuesto:pisos},
+      {campo:"ocupacion", anterior:u.ocupacion||"Occupied", propuesto:ocupObs}
+    ];
+    if(u.bedrooms!=null) candidatos.push({campo:"bedrooms", anterior:u.bedrooms, propuesto:bedObs});
+    if(u.bathrooms!=null) candidatos.push({campo:"bathrooms", anterior:u.bathrooms, propuesto:bathObs});
+    const cambios=candidatos.filter(c=>String(c.anterior)!==String(c.propuesto));
+    if(!cambios.length){ toast("Sin cambio","Lo que reportaste coincide con el sistema.","w"); return; }
+    const resumen = cambios.map(c=>`${ETQ_CAMPO_UNIDAD[c.campo]}: ${c.anterior} → ${c.propuesto}`).join(" · ");
+    const abierta=S.excepciones.find(x=>x.estado==="Pendiente" && x.tipo==="Unit data mismatch" && x.wo===w.id);
     if(!abierta){
       const quien=T(w.tec).nombre;
       const x={id:"X"+Date.now(), tipo:"Unit data mismatch", wo:w.id,
-        motivo:`Floors: system says ${u.pisos}; technician observed ${pisos}.${txt?` ${txt}`:""}`,
+        motivo: cambios.map(c=>`${ETQ_CAMPO_UNIDAD[c.campo]}: system says ${c.anterior}; technician observed ${c.propuesto}.`).join(" ") + (txt?` ${txt}`:""),
         monto:null, pide:quien, aprueba:"Thalia", estado:"Pendiente",
         assignedTo:null, assignedBy:null, assignedAt:null, workStatus:"Unassigned",
         fecha:HOY_SUP, creada:{quien,hora:hora(),minuto:S.reloj,fecha:HOY_SUP},
-        datosUnidad:{unidad:u.id,campo:"pisos",anterior:u.pisos,propuesto:pisos,nota:txt||""},
+        datosUnidad:{unidad:u.id, cambios, nota:txt||""},
         historial:[{evento:"Created",quien,hora:hora(),fecha:HOY_SUP}], resol:null};
       S.excepciones.push(x);
       avisar("Thalia","Unit data mismatch needs review",
-        `WO-${w.id} · ${esc(P(w.prop).nombre)} ${esc(u.num)} — Floors: ${u.pisos} → ${pisos}.`,"w");
+        `WO-${w.id} · ${esc(P(w.prop).nombre)} ${esc(u.num)} — ${resumen}.`,"w");
     }
-    w.corroborado=true; w.corroboradoNota=`Floors: ${u.pisos} → ${pisos}${txt?` · ${txt}`:""}`; S.phSheet=null;
+    w.corroborado=true; w.corroboradoNota=resumen+(txt?` · ${txt}`:""); S.phSheet=null;
     w.hist.push([hora(),`Reported unit data mismatch: ${w.corroboradoNota}`,T(w.tec).nombre]);
     toast("Enviado para revisión","Podés seguir trabajando. Oficina debe revisar el cambio antes de actualizar la unidad.","v");
     render();

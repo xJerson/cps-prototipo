@@ -131,6 +131,7 @@ const MODS = [
   {g:"Administración"},
   {id:"nomina",    n:"Nómina de la semana",  ic:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>'},
   {id:"facturacion",n:"Facturación",         ic:'<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9 13h6M9 17h4"/>'},
+  {id:"auditoria", n:"Auditoría financiera",  ic:'<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>'},
   {id:"cobranza",  n:"Cobranza",             ic:'<circle cx="12" cy="12" r="9"/><path d="M12 6v6l4 2"/>'},
   {id:"inventario",n:"Inventario",           ic:'<path d="M21 16V8l-9-5-9 5v8l9 5z"/><path d="M3.3 7L12 12l8.7-5M12 22V12"/>'},
   {id:"finanzas", n:"Finanzas",             ic:'<path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/>'},

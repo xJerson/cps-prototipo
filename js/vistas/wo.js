@@ -127,7 +127,7 @@ VIEWS.wo = () => {
           <span class="pill ${estP(w.estado)}"><span class="dot"></span>${w.estado}</span>
           ${w.reagendada?`<span class="pill w" title="${esc(w.motivoReag||"Se movió de fecha")}"><span class="dot"></span>Reagendada${w.reagendada>1?" · "+w.reagendada+"x":""}</span>`:""}
           ${fechaSinConfirmar(w)?`<span class="pill w" title="Se le propuso una fecha al cliente y todavía no la confirmó"><span class="dot"></span>Sin confirmar</span>`:""}
-          ${bloqueadaPorDev(w)?`<span class="pill r" title="${esc(devAbiertaDeWO(w.id).area)}: ${esc(devAbiertaDeWO(w.id).desc)}"><span class="dot"></span>Return abierto</span>`:""}
+          ${bloqueadaPorDev(w)?`<span class="pill r" title="${esc(devAreasTxt(devAbiertaDeWO(w.id)))}: ${esc(devAbiertaDeWO(w.id).desc)}"><span class="dot"></span>Return abierto</span>`:""}
           ${woEspera(w)?`<span class="pill w" title="Empieza cuando termine WO-${woEspera(w).id}"><span class="dot"></span>Espera WO-${woEspera(w).id}</span>`:""}
           ${w.facRetenida&&!w.facturada?`<span class="pill w" title="${esc(w.facRetenida.motivo)}"><span class="dot"></span>Retenida</span>`:""}
         </div></td>
@@ -311,11 +311,12 @@ function fichaWO(id){
         ${(()=>{ const d=devAbiertaDeWO(w.id); if(!d) return "";
           const tu=touchupDe(d.id);
           return `<div class="cp" style="border-top:1px solid var(--line)"><div class="note r" style="margin:0">
-            <b>Esta Work Order tiene un return abierto</b> — ${esc(d.area)}: ${esc(d.desc)}.
+            <b>Esta Work Order tiene un return abierto</b> — ${esc(devAreasTxt(d))}: ${esc(d.desc)}.
             ${tu?`Ya tiene un return fix: <b>WO-${tu.id}</b> con ${esc(tecN(tu.tec))}.`
                 :`Todavía no se le creó un return fix.`}
             El return fix se gestiona aparte y no reabre la nómina ni la factura original.
-            <button class="btn sm" style="margin-top:6px" data-a="ir" data-m="supervision">Ver return</button></div></div>`;
+            <button class="btn sm" style="margin-top:6px" data-a="ir" data-m="supervision">Ver return</button>
+            ${w.facturada&&puedeEmitirNotaCredito()?`<button class="btn sm p" style="margin-top:6px" data-a="notaCreditoModal" data-id="${w.id}">Emitir nota de crédito</button>`:""}</div></div>`;
         })()}
         <table><tbody>
           <tr><td style="color:var(--faint);width:170px">Propiedad</td><td>${esc(p.nombre)} · ${esc(p.zona)}</td></tr>
@@ -1278,12 +1279,18 @@ function candidatoCardHTML(c, id, espReq, opts={}){
   </button>`;
 }
 
-/* Antes de asignar: las notas internas de la WO se leen y se aceptan. */
-function modalNotasAsig(w){
-  modal(`<div class="mh"><h3>Notas internas · WO-${w.id}</h3><p>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)} · ${esc(w.serv)}</p></div>
-  <div class="mb"><div class="note w" style="white-space:pre-line;margin:0 0 10px">${esc(w.notasOficina)}</div>
-    <div class="hint">Léelas antes de asignar. El técnico no ve estas notas.</div></div>
-  <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="asigNotasOK" data-id="${w.id}">Entendido, asignar</button></div>`);
+/* Antes de asignar o reasignar: las notas internas de la WO y las de la propiedad
+   se leen y se aceptan — hoy el técnico recién ve las de la propiedad al llegar,
+   pero quien asigna necesita saberlas antes (Erika). */
+function modalNotasAsig(w,destino){
+  const p=P(w.prop), notasWO=String(w.notasOficina||"").trim(), notasProp=String(p.notas||"").trim();
+  modal(`<div class="mh"><h3>Notas internas · WO-${w.id}</h3><p>${esc(p.nombre)} · ${esc(U(w.unidad).num)} · ${esc(w.serv)}</p></div>
+  <div class="mb">
+    ${notasWO?`<div class="fld"><label>Notas internas de la WO</label><div class="note w" style="white-space:pre-line;margin:0">${esc(notasWO)}</div></div>`:""}
+    ${notasProp?`<div class="fld" style="margin-top:${notasWO?"10px":"0"}"><label>Notas de la propiedad</label><div class="note w" style="white-space:pre-line;margin:0">${esc(notasProp)}</div></div>`:""}
+    <div class="hint" style="margin-top:10px">Léelas antes de ${destino==="reasignar"?"reasignar":"asignar"}. El técnico no ve estas notas.</div>
+  </div>
+  <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="asigNotasOK" data-id="${w.id}" data-destino="${esc(destino||"asignar")}">Entendido, ${destino==="reasignar"?"reasignar":"asignar"}</button></div>`);
 }
 function modalAsig(id){
   const w=W(id), p=P(w.prop);

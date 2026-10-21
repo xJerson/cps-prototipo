@@ -38,16 +38,16 @@ function vDevoluciones(){
     return `<tr class="${fl("dv:"+d.id)}">
       <td style="font-weight:650">${esc(P(d.prop).nombre)}
         <div style="font-size:10.5px;color:var(--faint)">${U(d.unidad)?esc(U(d.unidad).num):"—"}${d.wo?` · WO-${d.wo}`:""}</div></td>
-      <td>${esc(d.area)}
+      <td>${esc(devAreasTxt(d))}
         <div style="font-size:10.5px;color:var(--soft);max-width:230px">${esc(d.desc)}</div>${d.origen?`<div style="font-size:10px;color:var(--faint)">viene de: ${esc(d.origen)}</div>`:""}</td>
       <td><span class="pill ${c.paga?"g":"b"}">${esc(d.causa)}</span>
         <div style="font-size:10px;color:var(--faint);margin-top:2px">
           ${c.paga?"se le paga":"<b>no se le paga</b>"} · ${c.cobra?"cobrable":"no cobrable"}</div></td>
       <td>${esc(tecN(d.responsable))}</td>
       <td><span class="pill ${d.prioridad==="Alta"?"b":"g"}">${esc(d.prioridad)}</span>${d.urgente&&d.estado!=="Cerrada"?`<div><span class="pill r" style="margin-top:3px">Entra inquilino pronto</span></div>`:""}</td>
-      <td>${esc(d.fechaRep)}<div style="font-size:10.5px;color:${v?"var(--rojo)":"var(--faint)"}">límite ${esc(d.fechaLimite)}</div></td>
+      <td>${esc(d.fechaRep)}<div style="font-size:10.5px;color:${v?"var(--rojo)":"var(--faint)"}">límite ${esc(d.fechaLimite)} ${esc(d.horaLimite||"")}</div></td>
       <td class="num">${d.estado==="Cerrada"?"—":`<b style="color:${v?"var(--rojo)":"var(--tinta)"}">${dias}</b>`}</td>
-      <td>${(d.lotesAntes||[]).reduce((t,l)=>t+l.n,0)} / ${(d.lotesDespues||[]).reduce((t,l)=>t+l.n,0)}</td>
+      <td>${(d.lotesAntes||[]).reduce((t,l)=>t+(l.fotosArr||[]).length,0)} / ${(d.lotesDespues||[]).reduce((t,l)=>t+(l.fotosArr||[]).length,0)}</td>
       <td><span class="pill ${d.estado==="Cerrada"?"v":d.estado==="Corregida"?"a":"b"}">${esc(d.estado)}</span>
         ${d.verifica?`<div style="font-size:10px;color:var(--verde)">✓ ${esc(tecN(d.verifica))}</div>`:d.cerro?`<div style="font-size:10px;color:var(--verde)">✓ ${esc(d.cerro.quien)}</div>`:""}</td>
       <td style="text-align:right">${(()=>{ const tu=touchupDe(d.id);
@@ -257,7 +257,7 @@ function vPrevio(pid){
         <th>Reportada</th><th>Estado</th></tr></thead>
       <tbody>${dv.map(d=>`<tr>
         <td>${U(d.unidad)?esc(U(d.unidad).num):"—"}</td>
-        <td><b>${esc(d.area)}</b><div style="font-size:10.5px;color:var(--soft)">${esc(d.desc)}</div></td>
+        <td><b>${esc(devAreasTxt(d))}</b><div style="font-size:10.5px;color:var(--soft)">${esc(d.desc)}</div></td>
         <td><span class="pill ${causaDe(d.causa).paga?"g":"b"}">${esc(d.causa)}</span></td>
         <td>${esc(tecN(d.responsable))}</td>
         <td>${d.fechaRep}</td>

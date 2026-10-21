@@ -196,7 +196,7 @@ function vSeguimiento(){
 
 /* ── BUSCAR ── solo Claudia y Erika (ven cobro, pago y utilidad).
    WO por WO con filtros, o agrupado para responder «cuánto pagamos antes por este trabajo». */
-function busq(){ if(!S.busq) S.busq={desde:"",hasta:"",prop:"",unidad:"",serv:"",tec:"",estado:"",q:"",agr:""}; return S.busq; }
+function busq(){ if(!S.busq) S.busq={desde:"",hasta:"",prop:"",unidad:"",serv:"",tec:"",estado:"",q:"",agr:"",rango:""}; return S.busq; }
 const BUSQ_AGR = {
   prop:{n:"Propiedad", f:w=>P(w.prop).nombre},
   tec: {n:"Técnico",   f:w=>w.tec?tecN(w.tec):"— sin asignar —"},
@@ -243,27 +243,31 @@ VIEWS.buscar = () => {
   const opt = (v,t,sel) => `<option value="${esc(v)}" ${String(sel)===String(v)?"selected":""}>${esc(t)}</option>`;
   const fld = (l,html,w=150) => `<div class="fld" style="margin:0;min-width:${w}px"><label>${l}</label>${html}</div>`;
   const grupos = b.agr && BUSQ_AGR[b.agr] ? busqGrupos(filas,b.agr) : null;
+  const rangoBtn = (r,t) => `<button class="btn sm ${b.rango===r?"p":""}" data-a="busqRango" data-r="${r}">${t}</button>`;
+  const slbl = t => `<div class="slbl" style="padding:0 0 6px">${t}</div>`;
   return `
   <div class="ph"><div><h2>Buscar</h2>
     <p>Encuentra trabajos y mira cuánto se cobró, se pagó y quedó de utilidad.</p></div></div>
   <div class="card"><div class="cp">
-    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:12px">
+    ${slbl("Período")}
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px">
       ${fld("Desde",`<input id="bqDesde" type="date" data-a="busqCambia" value="${esc(b.desde)}">`)}
       ${fld("Hasta",`<input id="bqHasta" type="date" data-a="busqCambia" value="${esc(b.hasta)}">`)}
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="btn sm" data-a="busqRango" data-r="semana">Esta semana</button>
-        <button class="btn sm" data-a="busqRango" data-r="pasada">Semana pasada</button>
-        <button class="btn sm" data-a="busqRango" data-r="mes">Mes</button>
-        <button class="btn sm" data-a="busqRango" data-r="todo">Todo</button></div>
-      ${fld("Buscar",`<input id="bqQ" data-a="busqCambia" value="${esc(b.q)}" placeholder="WO, propiedad, unidad, servicio">`,230)}
+        ${rangoBtn("semana","Esta semana")}${rangoBtn("pasada","Semana pasada")}${rangoBtn("mes","Mes")}${rangoBtn("todo","Todo")}</div>
     </div>
-    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+    ${slbl("Filtros")}
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px">
+      ${fld("Buscar",`<input id="bqQ" data-a="busqCambia" value="${esc(b.q)}" placeholder="WO, propiedad, unidad, servicio">`,230)}
       ${fld("Propiedad",`<select id="bqProp" data-a="busqCambia"><option value="">Todas</option>${S.propiedades.map(p=>opt(p.id,p.nombre,b.prop)).join("")}</select>`)}
       ${fld("Unidad",`<select id="bqUni" data-a="busqCambia" ${b.prop?"":"disabled"}><option value="">Todas</option>${unis.map(u=>opt(u.id,u.num,b.unidad)).join("")}</select>`,110)}
       ${fld("Servicio",`<select id="bqServ" data-a="busqCambia"><option value="">Todos</option>${servs.map(s=>opt(s,s,b.serv)).join("")}</select>`)}
       ${fld("Técnico",`<select id="bqTec" data-a="busqCambia"><option value="">Todos</option>${S.tecnicos.map(t=>opt(t.id,tecN(t.id),b.tec)).join("")}</select>`)}
       ${fld("Estado",`<select id="bqEst" data-a="busqCambia"><option value="">Todos menos Canceled</option>${estados.map(e=>opt(e,e,b.estado)).join("")}</select>`,170)}
-      ${fld("Agrupar",`<select id="bqAgr" data-a="busqCambia"><option value="">Ninguno</option>${Object.entries(BUSQ_AGR).map(([k,v])=>opt(k,v.n,b.agr)).join("")}</select>`,120)}
+    </div>
+    ${slbl("Agrupar por")}
+    <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+      ${fld("Agrupar",`<select id="bqAgr" data-a="busqCambia"><option value="">Sin agrupar — una fila por WO</option>${Object.entries(BUSQ_AGR).map(([k,v])=>opt(k,v.n,b.agr)).join("")}</select>`,220)}
       <button class="btn" data-a="buscarCSV" ${filas.length?"":"disabled"} style="margin-left:auto">CSV</button>
     </div></div></div>
 

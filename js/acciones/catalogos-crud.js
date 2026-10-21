@@ -588,6 +588,45 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
     cm(); toast("✓ Item agregado",`${esc(nr.nombre)} — ${nr.prop?"solo para "+esc(P(nr.prop).nombre):"general"}.`,"v"); render();
   },
 
+  /* Pago diferenciado por técnico: mismos selects que la tarifa general (Propiedad/Tipo/Servicio/Detail/Piso),
+     pero el pago solo aplica a UN técnico — ver pagoTecnicoWO en helpers.js. */
+  pagoTecNuevo: () => {
+    const op = (a,v) => a.map(x=>`<option ${String(x)===String(v)?"selected":""}>${esc(String(x))}</option>`).join("");
+    const cat = activos("categorias")[0]||"Clean";
+    modal(`<div class="mh"><h3>Nuevo pago diferenciado</h3><p>Por encima de la tarifa general, solo para un técnico.</p></div>
+    <div class="mb">
+      <div class="fld"><label>Técnico <span class="req">*</span></label><select id="ptTec">${S.tecnicos.filter(t=>t.activo!==false).map(t=>`<option value="${t.id}">${esc(tecN(t.id))}</option>`).join("")}</select></div>
+      <div class="fld"><label>Propiedad <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— vacío = cualquier propiedad</span></label>
+        <select id="ptProp"><option value="">General</option>${S.propiedades.map(p=>`<option value="${p.id}">${esc(p.nombre)}</option>`).join("")}</select></div>
+      <div class="fg c2">
+        <div class="fld"><label>Tipo de servicio <span class="req">*</span></label><select id="ptCat" data-a="pagoTecCat">${op(activos("categorias"),cat)}</select></div>
+        <div class="fld"><label>Servicio <span class="req">*</span></label><select id="ptServ">${op(servDe(cat),"")}</select></div></div>
+      <div class="fg c2">
+        <div class="fld"><label>Detail <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— ej. «2 bedroom»</span></label>
+          <input id="ptDet" list="ptDetList"><datalist id="ptDetList">${activos("rooms").map(r=>`<option value="${esc(r)}">`).join("")}</datalist></div>
+        <div class="fld"><label>Piso <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— solo si aplica</span></label>
+          <select id="ptPiso"><option value="">— cualquier piso —</option>${activos("pisos").map(p=>`<option value="${p}">Floor ${p}</option>`).join("")}</select></div></div>
+      <div class="fld"><label>Pago a este técnico <span class="req">*</span></label><input id="ptPago" class="mono" placeholder="0.00"></div>
+      <div class="fld"><label>Motivo <span class="req">*</span></label><textarea id="ptMot" rows="2" placeholder="Por qué este técnico cobra distinto"></textarea></div>
+    </div>
+    <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="pagoTecGuardar">Guardar</button></div>`);
+  },
+  pagoTecCat: () => { document.getElementById("ptServ").innerHTML = servDe(val("ptCat")).map(s=>`<option>${esc(s)}</option>`).join(""); },
+  pagoTecGuardar: () => {
+    if(marcaFalta(["ptPago","ptMot"])){ toast("Faltan datos","Pago y motivo son obligatorios.","r"); return; }
+    const pago = parseFloat(val("ptPago"));
+    if(!(pago>=0)){ marcaFalta(["ptPago"]); toast("Pago inválido","Tiene que ser 0 o más.","r"); return; }
+    const nr = {id:"PT"+Date.now(), tec:val("ptTec"), prop:val("ptProp")||null, cat:val("ptCat"), serv:val("ptServ"),
+      variante:val("ptDet")||"", pisos:val("ptPiso")?parseInt(val("ptPiso")):null,
+      pago, motivo:val("ptMot").trim(), quien:S.usuario, fecha:HOY_SUP};
+    (S.pagosTecnico=S.pagosTecnico||[]).push(nr); flash("pt:"+nr.id);
+    cm(); toast("✓ Pago diferenciado agregado",`${esc(tecN(nr.tec))} · ${esc(nr.serv)} · ${money(nr.pago)}.`,"v"); render();
+  },
+  pagoTecQuitar: d => {
+    S.pagosTecnico = (S.pagosTecnico||[]).filter(x=>x.id!==d.id);
+    toast("Quitado","El pago vuelve a salir de la tarifa general.","w"); render();
+  },
+
   catAdd: d => modal(`<div class="mh"><h3>Agregar a ${esc(d.n)}</h3><p>Aparecerá de inmediato en todos los desplegables que usan esta lista.</p></div>
     <div class="mb"><div class="fld"><label>Valor nuevo <span class="req">*</span></label><input id="cv" autofocus></div>
     <div class="note">Ojo con las mayúsculas y los espacios: <b>«Navarre»</b> y <b>«navarre»</b> son dos valores distintos, y así es como hoy se rompen los conteos.</div></div>
