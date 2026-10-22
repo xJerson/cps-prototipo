@@ -1048,6 +1048,8 @@ Object.assign(ACC, {
       precio:parseFloat(val("tP")), pago:parseFloat(val("tG")),
       precioFijado:sellarPrecio()};   // quién definió esta tarifa (ver sellarPrecio en helpers.js)
     S.tarifas.push(ntr); flash("tar:"+ntr.id);
+    /* Las WO ya completas que solo esperaban esta tarifa se validan solas (igual que al terminar la WO). */
+    S.wos.forEach(x=>{ if(x.cat===ntr.cat && x.serv===ntr.serv && !x.validada && !x.clienteCorreccion && x.estado==="Completed" && x.evid>0 && ingresoWO(x)!==null && !subWOsPendientesDeWO(x.id).length){ x.validada=true; x.hist.push([hora(),"Validada automáticamente: ya tiene tarifa","Sistema"]); } });
     cm();
     toast("✓ Tarifa creada",`${esc(w.serv)} · ${esc(u.rooms)} ya tiene precio. Las Work Orders que decían «NA» se recalcularon solas.`,"v");
     render();

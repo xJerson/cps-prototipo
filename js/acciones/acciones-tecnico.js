@@ -67,9 +67,11 @@ Object.assign(ACC, {
     if(!Number.isFinite(hechas)||hechas<1||hechas>total){ toast("Cantidad inválida",`Indica un número entre 1 y ${total}.`,"r"); return; }
     const resto=total-hechas, tecnico=tecN(S.phTec), w=W(a.wo);
     a.cantRealizada=hechas; a.cantPendiente=resto; a.estadoTrabajo="Completed"; a.parcial=resto>0;
+    /* Si esta Sub-WO salió de partir otra, lo que a ella le falta es lo que le falta a la original: al terminarse del todo, la original ya no queda "pendiente" (frenaba la validación de la WO). */
+    for(let x=a; x.origenSplit; ){ const p=S.adicionales.find(y=>y.id===x.origenSplit); if(!p) break; p.cantPendiente=resto; x=p; }
     (a.hist=a.hist||[]).push([hora(),resto?`Avance registrado: ${hechas}/${total}; ${resto} pendiente(s)`:"Sub-WO terminada",tecnico]);
     if(resto>0){
-      const nueva={...a,id:nid("ad"),cant:resto,cantRealizada:0,cantPendiente:resto,parcial:false,tec:null,fecha:null,estadoTrabajo:"Unassigned",fotosEvidArr:[],hallazgoFoto:null,facturada:false,hist:[[hora(),`Resto reasignable creado desde Sub-WO #${a.id}`,"Sistema"]],reasignadaDe:a.id};
+      const nueva={...a,id:nid("ad"),origenSplit:a.id,cant:resto,cantRealizada:0,cantPendiente:resto,parcial:false,tec:null,fecha:null,estadoTrabajo:"Unassigned",fotosEvidArr:[],hallazgoFoto:null,facturada:false,hist:[[hora(),`Resto reasignable creado desde Sub-WO #${a.id}`,"Sistema"]],reasignadaDe:a.id};
       S.adicionales.push(nueva);
     }
     if(w){
@@ -114,9 +116,10 @@ Object.assign(ACC, {
       toast("📷 Antes guardado","No cuenta como evidencia de cierre.","v"); render();
     });
   },
+  /* Arranca VACÍA: antes traía un texto de ejemplo ("Hueco en el sheetrock…") y un toque en Enviar creaba un adicional falso. */
   fAdic: d => { S.phSheet={t:"adic", wo:+d.id,
-    desc:"Hueco en el sheetrock del bano. Hay que poner masa y pintar antes del clean.",
-    ubic:"Bano", filas:[{c:"Sheetrock",q:"1"}]}; render(); },
+    desc:"",
+    ubic:activos("ubicaciones")[0]||"", filas:[{c:activos("adicionales")[0]||"",q:"1"}]}; render(); },
   fAdicFoto: d => { leerAdic();
     capturarFoto(url=>{ S.phSheet.filas[+d.i].foto=url; render(); }); },
   fAdicMas: () => { leerAdic();

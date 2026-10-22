@@ -1232,7 +1232,7 @@ function modalProg(id){
       <div class="fld"><label>Cómo lo coordinaste <span class="req">*</span></label>
         <select id="pgM">${activos("medios").map(m=>`<option>${esc(m)}</option>`).join("")}</select></div>
       <div class="fld"><label>Con quién hablaste <span class="req">*</span></label>
-        <select id="pgC">${cs.length?cs.map(c=>`<option>${esc(c.nombre)} — ${esc(c.tipo)}</option>`).join("")
+        <select id="pgC">${cs.length?cs.map(c=>`<option value="${esc(c.nombre)}">${esc(c.nombre)} — ${esc(c.tipo)}</option>`).join("")
           :`<option>${esc(CLI(p.cliente).contacto||CLI(p.cliente).nombre)}</option>`}</select></div></div>
 
     <div class="fld"><label>Nota <span style="text-transform:none;font-weight:500;color:var(--faint)">— opcional</span></label>

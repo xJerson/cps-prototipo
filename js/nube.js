@@ -78,11 +78,14 @@ async function _nubeFetch(ruta, op){
 
 /* ── S -> filas ── */
 function _nubeFilasDe(arr, alFinal){
-  const m = {};
+  const m = {}, usadas = new Set();
   arr.forEach((r, i) => {
     let k, data;
     if(r !== null && typeof r === "object"){
-      if(!r._k) r._k = _nubeUid();
+      /* Un registro copiado de otro ({...a}) hereda su _k: dos registros con la misma llave se fusionarían en una sola fila
+         de la base y uno desaparecería al recargar. Cada registro de la lista debe tener la suya. */
+      if(!r._k || usadas.has(r._k)) r._k = _nubeUid();
+      usadas.add(r._k);
       k = r._k; data = Object.assign({}, r, { _pos: alFinal ? arr.length - 1 - i : i });
     }else{ k = "v:" + String(r); data = { _v: r, _pos: alFinal ? arr.length - 1 - i : i }; }
     m[k] = _canon(data);
