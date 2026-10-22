@@ -14,8 +14,9 @@ Object.assign(ACC, {
       s.lineas.forEach(l=>{
         const id=nid("w"); nuevas.push("wo:"+id);
         S.wos.push({id,prop:s.prop,unidad:l.unidad,cat:l.cat,serv:l.serv,ubic:"",tec:null,
-          estado:"Scheduled",semana:S.semana,fecha:"2026-08-14",horaProg:"9:00",po:"",asistencia:false,
+          estado:"Scheduled",semana:null,fecha:"",horaProg:"",po:"",asistencia:false,
           precio:l.precio,pago:l.pago||0,cant:l.cantidad||1,
+          /* Nace SIN fecha: Programación la acuerda con el cliente (Coordinar fecha) y recién ahí pasa a Confirmed. */
           /* Lo que el cliente autorizó (sin precio): es lo que ve el técnico en su celular. */
           autorizado:l.autorizado||l.serv, desdeEstimado:s.estimadoNum,
           origen:{tipo:"Estimado",id:s.estimadoId,num:s.estimadoNum},

@@ -36,7 +36,7 @@ const W = id => by(S.wos,id);
 /* Plazo de cobranza: días de crédito de la propiedad (30 si no tiene) y suma de días en UTC para que la zona horaria no mueva la fecha. */
 const diasCreditoProp = prop => { const p=P(prop); const n=p&&parseInt(p.diasCredito,10); return Number.isFinite(n)&&n>=0 ? n : 30; };
 const sumarDias = (iso,n) => { const d=new Date(iso+"T00:00:00Z"); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); };
-const money = n => "$"+(Math.round(n*100)/100).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const money = n => { const v=Math.round(n*100)/100; return (v<0?"-":"")+"$"+Math.abs(v).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}); };
 const hora = () => { const h=Math.floor(S.reloj/60),m=S.reloj%60; return h+":"+String(m).padStart(2,"0"); };
 const puede = m => { const r=ROLES[S.usuario]; return r.m==="*" || r.m.includes(m); };
 /* Los datos financieros sensibles (utilidad, costos y pagos) solo los ven

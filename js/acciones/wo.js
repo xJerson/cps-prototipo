@@ -463,7 +463,7 @@ Object.assign(ACC, {
       } else {
         toast("✓ Fecha confirmada con el cliente",
           `<b>${esc(contacto)}</b> confirmó el <b>${f}</b> por ${esc(medio.toLowerCase())}.`
-          + (cambio?`<br><br>Se movió del ${antes} al ${f}.`:"")
+          + (cambio?(antes?`<br><br>Se movió del ${antes} al ${f}.`:`<br><br>Quedó para el ${f}.`):"")
           + (w.tec?"":`<br><br>La orden queda en <b>Confirmed</b> y ya se le puede asignar técnico.`), "v");
       }
       /* Si ya tenia tecnico y la fecha se movio, hay que avisarle: hoy se
@@ -713,7 +713,8 @@ Object.assign(ACC, {
       <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
         <button class="btn p" data-a="woDetenerOK" data-id="${w.id}">Detener</button></div>`); },
   woDetenerOK: d => { const w=W(+d.id);
-    w.estadoPrevio = w.estado;
+    /* Si ya estaba detenida (otra persona la detuvo a la vez), no se pisa el estado al que hay que volver al reanudar. */
+    if(w.estado!=="Detenido") w.estadoPrevio = w.estado;
     w.estado = "Detenido";
     w.motivoDet = val("dtM") + (val("dtD")?" — "+val("dtD"):"");
     w.desdeDet = HOY_SUP;
