@@ -65,6 +65,7 @@ Object.assign(ACC, {
     const nsol={id:"SOL"+Date.now(),prop:d.id,cliente:p.cliente,quien:S.usuario,hora:hora(),
       nota:"Expediente completo · lista para agendar",estado:"Pendiente"};
     S.solicitudes.push(nsol); flash("sol:"+nsol.id);
+    avisar("Thalia","Propiedad lista para programar",`${p.nombre} — Expediente completo. Está arriba en Work Orders, en «Solicitudes que llegaron de Comercial».`,"a");
     toast("✓ Transferida a programación",`<b>${esc(p.nombre)}</b> le llegó a Thalia con todo capturado. No hace falta llamarla ni volver a escribir los datos.`,"v");
     render();
   },

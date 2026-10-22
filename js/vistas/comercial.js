@@ -136,7 +136,9 @@ const estUniTxt = l => l.unidad ? U(l.unidad).num : "sin unidad";
 const NOTA_ESTIMADO_DEFAULT = "Please note that cleaning services requiring extra materials or additional time will incur an extra charge per item or supply used.\nWe also offer trash-out services, carpet cleaning, and more.\nFor painting, we can handle sheen changes (matte, satin, semi-gloss) and color changes — not just same-color refreshes.\nAdditionally, if you need repairs, we do it all: from the smallest fixes to more complex projects!\nIf you need a customized estimate, don't hesitate to contact us — we'll get it to you within 24 hours!";
 /* Solo cuenta como "inspeccion recibida" un reporte de campo tipo "previo"
    de esa propiedad, creado el mismo dia de la solicitud o despues. */
-const solInspeccionLista = s => !!s.prop && S.reportes.some(r=>r.tipo==="previo" && r.prop===s.prop && r.fecha>=s.fecha);
+/* La inspección para estimado que entrega Gustavo es el reporte de tipo «relevamiento» (antes solo se miraba «previo»,
+   y la solicitud nunca quedaba lista aunque él ya hubiera entregado todo). */
+const solInspeccionLista = s => !!s.prop && S.reportes.some(r=>(r.tipo==="relevamiento"||r.tipo==="previo") && r.prop===s.prop && r.fecha>=s.fecha);
 /* Tipo de estimado: «Tarifario» arma los precios con el tarifario; «Proyecto especial» lleva precios especiales por proyecto
    (conceptos libres). Los estimados anteriores sin tipo se deducen de sus líneas. */
 const TIPOS_EST = ["Tarifario","Proyecto especial"];
@@ -346,6 +348,7 @@ function ramificarVisita(v){
       const nsol={id:"SOL"+Date.now(),prop:v.prop,cliente:p.cliente,quien:S.usuario,hora:hora(),
         nota:"Desde visita comercial · lista para agendar",estado:"Pendiente"};
       S.solicitudes.push(nsol); v.solicitudDirectaId = nsol.id;
+      avisar("Thalia","Servicio directo listo para programar",`${p.nombre} — llegó de una visita comercial, sin llamada. Está arriba en Work Orders, en «Solicitudes que llegaron de Comercial».`,"a");
       toast("✓ Transferida a Thalia",`<b>${esc(p.nombre)}</b> le llegó sin llamada, con todo lo que se habló en la visita.`,"v");
     }
   } else {

@@ -428,6 +428,9 @@ Object.assign(ACC, {
      terminan en la misma solicitud que Thalia programa (solProgramar). */
   estAgendar: d => {
     const e=by(S.estimados,d.id);
+    if(e.estado!=="Aprobado"){
+      S.audOmitir=true;
+      toast("🚫 El estimado todavía no está aprobado",`<b>${esc(e.num)}</b> está en «${esc(e.estado)}». Solo se transfiere a programación cuando el cliente lo aprobó.`,"r"); return; }
     if(e.prospecto){
       S.audOmitir=true;
       toast("🚫 Primero convertí al prospecto en cliente",`<b>${esc(e.num)}</b> es de un prospecto sin propiedad registrada. Tocá «Convertir en cliente» y después transferilo.`,"r"); return; }

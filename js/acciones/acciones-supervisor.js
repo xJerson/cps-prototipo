@@ -488,6 +488,13 @@ Object.assign(ACC, {
       items:(g.items||[]).filter(it=>it.trabajo && it.trabajo.trim()).map(it=>({...it})),
       estado:"Nuevo", accion:null};
     S.reportes.push(r);
+    /* Si Claudia estaba esperando esta inspección para armar un estimado, la solicitud queda lista y se le avisa. */
+    if(g.tipo==="relevamiento"){
+      S.solicitudesComerciales.filter(sc=>sc.inspeccion && sc.prop===r.prop && sc.estado==="Esperando inspección").forEach(sc=>{
+        sc.estado="Lista para estimado";
+        avisar("Claudia","Inspección entregada — ya se puede armar el estimado",`${P(sc.prop).nombre}: Gustavo entregó su reporte de campo. Tocá «Crear estimado» en Solicitudes.`,"v");
+      });
+    }
     /* El estado previo no espera decisión de nadie: se archiva en la unidad */
     if(g.tipo==="previo"){ r.estado="Archivado"; r.accion="Archivado en la unidad"; }
     /* El informe se engancha solo al reporte del día */
