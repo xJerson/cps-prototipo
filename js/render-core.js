@@ -25,7 +25,7 @@ function render(){
   + `<a class="nav" href="mapa.html" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">
       <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14"/><path d="M15 6v14"/></svg>
       <span class="lb">Mapa del prototipo</span></a>`; */
-  $("#main").innerHTML = notaVistaHTML() + (VIEWS[S.mod]||(()=>"<div class='empty'>En construcción</div>"))();
+  $("#main").innerHTML = mapaVistaHTML() + notaVistaHTML() + (VIEWS[S.mod]||(()=>"<div class='empty'>En construcción</div>"))();
   // Traer al centro lo que se acaba de tocar, y apagar la marca sola
   if(S.flash){
     const marcado = $("#main").querySelector(".flash");
@@ -339,6 +339,99 @@ function notaVistaHTML(){
   const texto = NOTA_VISTA[S.mod];
   if(!texto) return "";
   return `<div class="note v" style="margin-bottom:12px"><b>Qué hacer acá</b> — ${texto}</div>`;
+}
+
+/* ══════════ MAPA DE PASOS DE LA VISTA ══════════
+   Una franja fija arriba de cada vista (antes de la nota y de los botones): las
+   operaciones que se hacen EN ESA pantalla, en orden, y a qué vista sigue el
+   trabajo. Es un mapa, no un avance: no depende de ninguna fila, así que los
+   checks van siempre puestos.
+   Para agregarla a otra vista basta una entrada en MAPA_VISTA, con la misma
+   clave que usa VIEWS:
+     pasos: ["Paso", {t:"Paso que solo se hace a veces", opc:true}]
+     sigue: {m:"clave de la vista", t:"Nombre"}  → píldora que lleva a esa vista
+            (si el rol no la tiene, se muestra como texto)
+            {t:"Texto libre"}                     → solo texto, para cadenas largas */
+const MAPA_VISTA = {
+  solicitudes:{
+    pasos:["Registrar solicitud","Asignar inspección","Crear estimado"],
+    sigue:{m:"estimados", t:"Estimados"}
+  },
+  estimados:{
+    pasos:["Armar estimado","Enviar al cliente","Registrar respuesta",{t:"Convertir prospecto en cliente",opc:true},"Transferir a Programación"],
+    sigue:{m:"wo", t:"Work Orders"}
+  },
+  clientes:{
+    pasos:["Registrar Management","Completar su ficha",{t:"Subir documentos",opc:true}],
+    sigue:{m:"propiedades", t:"Propiedades"}
+  },
+  propiedades:{
+    pasos:["Crear propiedad","Completar el Expediente"],
+    sigue:{m:"wo", t:"Work Orders"}
+  },
+  tecnicos:{
+    pasos:["Dar de alta al técnico","Mantener sus datos al día"],
+    sigue:{m:"wo", t:"Work Orders"}
+  },
+  tarifario:{
+    pasos:["Cargar tarifa general",{t:"Pago diferenciado",opc:true},{t:"Editar o quitar",opc:true}],
+    sigue:{m:"wo", t:"Work Orders"}
+  },
+  wo:{
+    pasos:["Crear WO","Asignar técnico",{t:"Reagendar / reasignar / cancelar",opc:true},{t:"Registrar return",opc:true}],
+    sigue:{t:"Celular del técnico → Supervisión → Nómina y Facturación"}
+  },
+  calendario:{
+    pasos:["Elegir el período","Asignar lo que sale en «Sin asignar»",{t:"Registrar permiso",opc:true}],
+    sigue:{m:"wo", t:"Work Orders"}
+  },
+  despacho:{
+    pasos:["Ver el cupo del equipo",{t:"Registrar permiso",opc:true},{t:"Cerrar el día",opc:true}],
+    sigue:{m:"wo", t:"Work Orders"}
+  },
+  supervision:{
+    pasos:["Decidir lo que llega de campo","Armar la ruta del día","Aprobar o devolver lo terminado"],
+    sigue:{m:"nomina", t:"Nómina"}
+  },
+  devoluciones:{
+    pasos:["Registrar return","Crear return fix"],
+    sigue:{m:"wo", t:"Work Orders"}
+  },
+  excepciones:{
+    pasos:["Tomar la Request","Resolverla (aprobar, definir precio o tarifa)"],
+    sigue:{m:"nomina", t:"Nómina"}
+  },
+  nomina:{
+    pasos:["Revisar y validar",{t:"Descuento o pago parcial",opc:true},"Marcar pagado"],
+    sigue:{m:"facturacion", t:"Facturación"}
+  },
+  facturacion:{
+    pasos:["Generar borrador","Revisar líneas y créditos","Enviar al cliente"],
+    sigue:{m:"cobranza", t:"Cobranza"}
+  },
+  cobranza:{
+    pasos:["Seguir el reclamo","Registrar el pago"],
+    sigue:{t:"Fin del recorrido"}
+  },
+  inventario:{
+    pasos:["Registrar compra",{t:"Cargar costo del ticket",opc:true},"Registrar salida"]
+  },
+  finanzas:{
+    pasos:["Cargar el gasto",{t:"Repartirlo entre las WO",opc:true}]
+  }
+};
+function mapaVistaHTML(){
+  /* Igual que la ayuda: bajo la batería de pruebas (window.__R) no se pinta, su
+     texto entraría en document.body.innerText y rompería los chequeos. */
+  if(window.__R || S.phone || S.sub) return "";
+  const mp = MAPA_VISTA[S.mod]; if(!mp) return "";
+  const pasos = mp.pasos.map(p=>{ const o = typeof p==="object";
+    return `<span class="mp${o&&p.opc?" opc":""}"${o&&p.opc?' title="Solo cuando hace falta"':""}><i>✓</i>${esc(o?p.t:p)}</span>`; }).join(`<b class="ml"></b>`);
+  const sg = mp.sigue, link = sg && sg.m && puede(sg.m);
+  const fin = !sg ? "" : link
+    ? `<b class="ml"></b><button class="mp-sig" data-a="ir" data-m="${esc(sg.m)}" title="Ir a ${esc(sg.t)}">Sigue en ${esc(sg.t)} →</button>`
+    : `<b class="ml"></b><span class="mp-sig">${sg.m?"Sigue en ":""}${esc(sg.t)}${sg.m?" →":""}</span>`;
+  return `<div class="mapa" role="note" aria-label="Pasos de esta vista">${pasos}${fin}</div>`;
 }
 
 /* ══════════ "¿QUÉ ES ESTA PANTALLA?" ══════════
