@@ -100,12 +100,9 @@ Object.assign(ACC, {
     render();
   },
   buscarCSV: () => {
-    const q=v=>`"${String(v==null?"":v).replace(/"/g,'""')}"`;   // texto siempre entre comillas
-    const n=v=>v===null||v===undefined?"":Math.round(v*100)/100;
     const rows=busqWOs(busq()).map(busqFila);
-    const csv=["WO,Date,Property,Unit,Service,Technician,Billed,Paid,Material,Profit",
-      ...rows.map(f=>[f.w.id,f.w.fecha||"",q(P(f.w.prop).nombre),q(U(f.w.unidad).num),q(f.w.serv),q(f.w.tec?tecN(f.w.tec):""),n(f.cobro),n(f.pago),n(f.mat),n(f.uti)].join(","))].join("\n");
-    const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download="cps-search.csv"; a.click(); URL.revokeObjectURL(a.href);
+    descargarCSV("cps-search.csv",["WO","Date","Property","Unit","Service","Technician","Billed","Paid","Material","Profit"],
+      rows.map(f=>[f.w.id,f.w.fecha||"",P(f.w.prop).nombre,U(f.w.unidad).num,f.w.serv,f.w.tec?tecN(f.w.tec):"",f.cobro,f.pago,f.mat,f.uti]));
     toast("✓ Archivo preparado",`${rows.length} Work Order(s) exportadas.`,"v");
   }
 });

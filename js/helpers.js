@@ -114,6 +114,18 @@ function pillsAprob(w){
   return p(aprobPagoOK(w),"Aprobada p/ Nómina","Nómina pendiente","ya se le puede pagar al técnico (no quiere decir que ya se pagó).",w.aprobPago)+" "
     +p(aprobFacturaOK(w),"Aprobada p/ Facturación","Facturación pendiente","ya se puede facturar al cliente (no quiere decir que ya se facturó).",w.aprobFactura);
 }
+/* CSV que Excel abre en columnas, en cualquier idioma: la línea «sep=,» le dice qué separador usar (sin ella, un Excel
+   en español espera «;» y deja todo en una sola celda), el BOM hace que los acentos se lean bien y las celdas con
+   coma, comillas o saltos de línea van entre comillas. Las filas terminan en CRLF, como pide el estándar. */
+function armarCSV(cabecera, filas){
+  const c=v=>{ if(v===null||v===undefined) return ""; if(typeof v==="number") return String(Math.round(v*100)/100);
+    const t=String(v); return /[",\r\n]/.test(t) ? '"'+t.replace(/"/g,'""')+'"' : t; };
+  return "﻿"+["sep=,",cabecera.map(c).join(","),...filas.map(f=>f.map(c).join(","))].join("\r\n")+"\r\n";
+}
+function descargarCSV(nombre, cabecera, filas){
+  const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([armarCSV(cabecera,filas)],{type:"text/csv;charset=utf-8"}));
+  a.download=nombre; a.click(); URL.revokeObjectURL(a.href);
+}
 /* Responsable de un activo: id de técnico o nombre de oficina. */
 const respN = v => v ? (T(v)?tecN(v):v) : "—";
 /* Recordatorios: fecha/hora son CUÁNDO se envían. Técnico y equipo: 1 hora y 15 min antes de la hora de inicio.
