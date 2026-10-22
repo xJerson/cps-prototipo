@@ -393,20 +393,22 @@ const CPS_CLAVE_ESTADO = "cps_estado_v2";
 let _guardadoFalloAvisado = false;
 function guardarEstado(){
   try{
-    localStorage.setItem(CPS_CLAVE_ESTADO, JSON.stringify(S));
+    /* Con la nube activa, aquí solo queda lo de pantalla (rol, módulo, semana…):
+       las listas viven en Supabase y no llenan el almacenamiento del navegador. */
+    localStorage.setItem(CPS_CLAVE_ESTADO, JSON.stringify(_nubeActiva ? nubeSoloLocal() : S));
     const b=$("#guardadoBadge");
-    if(b){ b.classList.remove("flash-ok"); void b.offsetWidth; b.classList.add("flash-ok"); b.title="Guardado automáticamente · "+hora(); }
+    if(b){ b.classList.remove("flash-ok"); void b.offsetWidth; b.classList.add("flash-ok"); b.title=(_nubeActiva?"Guardado en la nube · ":"Guardado en este navegador · ")+hora(); }
   }catch(e){
     if(!_guardadoFalloAvisado){ _guardadoFalloAvisado=true;
       toast("No se pudo guardar","El almacenamiento de este navegador está lleno (puede ser por muchas fotos). Hacé una copia de lo importante antes de seguir probando.","r"); }
   }
+  nubeGuardar();
 }
 function cargarEstado(){
   try{
     const g=localStorage.getItem(CPS_CLAVE_ESTADO);
     if(!g) return false;
     const datos=JSON.parse(g);
-    Object.keys(S).forEach(k=>delete S[k]);
     Object.assign(S,datos);
     return true;
   }catch(e){ return false; }
@@ -420,4 +422,6 @@ Object.keys(ACC).forEach(k=>{
   ACC[k] = d => { const r=orig(d); guardarEstado(); return r; };
 });
 
-render();
+/* Primero se traen (o se siembran) los datos de la nube y recién ahí se dibuja;
+   si no responde, se dibuja con lo guardado en este navegador. */
+nubeIniciar().finally(()=>render());
