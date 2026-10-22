@@ -27,7 +27,7 @@ Object.assign(ACC, {
       });
       flash(nuevas);
       toast("✓ Programada",`Se crearon <b>${n} Work Orders</b> desde ${esc(s.estimadoNum)}, sin volver a escribir nada. Ya las puedes asignar.`,"v");
-      S.mod="wo"; S.sub=null; S.tab="todas"; render();
+      S.mod="wo"; S.sub=null; S.tab="abiertas"; render();
       return;
     }
     /* Este otro camino sí requiere que Thalia arme la Work Order a mano

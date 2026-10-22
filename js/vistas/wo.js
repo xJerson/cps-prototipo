@@ -1,11 +1,16 @@
 "use strict";
+/* Etapa de vida de una WO. Se calcula con sus marcas (estado, pagadaTec, facturada): no se guarda nada nuevo.
+   abiertas = por hacer · porcerrar = terminada que aún espera pago o factura · cerradas = pagada y facturada · cancel = Canceled */
+const ETAPAS_WO = ["abiertas","porcerrar","cerradas","cancel"];
+const etapaWO = w => w.estado==="Canceled" ? "cancel" : w.estado!=="Completed" ? "abiertas" : (w.pagadaTec&&w.facturada) ? "cerradas" : "porcerrar";
 VIEWS.wo = () => {
   if(S.sub) return fichaWO(S.sub);
   const puedeVerDinero = puedeVerUtilidad();
-  const f = S.tab||"todas";
+  const f = ["abiertas","porcerrar","cerradas","cancel","semana","sin","camino","curso","pend"].includes(S.tab) ? S.tab : "abiertas";
   let ws = S.wos.slice().sort((a,b)=>b.id-a.id);
   if(f==="semana") ws = ws.filter(w=>w.semana===S.semana);
-  if(f==="sin") ws = ws.filter(w=>!w.tec);
+  if(ETAPAS_WO.includes(f)) ws = ws.filter(w=>etapaWO(w)===f);
+  if(f==="sin") ws = ws.filter(w=>!w.tec && w.estado!=="Canceled");
   if(f==="curso") ws = ws.filter(w=>["In progress","Esperando aprobación"].includes(w.estado));
   if(f==="camino") ws = ws.filter(w=>w.tec && esAgendada(w.estado) && !asisDe(w.id));
   if(f==="pend") ws = ws.filter(w=>ESTADOS_PEND.includes(w.estado));
@@ -31,9 +36,10 @@ VIEWS.wo = () => {
       return (terms.length&&terms.every(term=>txt.includes(term))) || (qn && un&&uNorm(un.num).includes(qn)); }); }
 
   /* Sub-WO planificadas: cada WO las lleva desplegables; con un filtro activo, una WO sale también si alguna de sus Sub-WO coincide. */
-  const filtrando = f!=="todas" || filtroFecha.modo!=="todos" || !!S.busca || !!S.woFt || !!S.woFz;
+  const filtrando = f!=="abiertas" || filtroFecha.modo!=="todos" || !!S.busca || !!S.woFt || !!S.woFz;
   const subOk = (w,a) => {
     const fe=fechaSubWO(a)||w.fecha, sem=semanaDe(fe), tec=tecSubWO(a), et=a.estadoTrabajo;
+    if(ETAPAS_WO.includes(f) && etapaWO(w)!==f) return false;
     if(f==="semana" && sem!==S.semana) return false;
     if(f==="sin" && tec) return false;
     if(f==="curso" && et!=="In progress") return false;
@@ -90,7 +96,7 @@ VIEWS.wo = () => {
   ${cardRecordatorios()}
   ${puedeAvisarPend()?cardSeguimientoPend():""}
   <div class="tabs">
-    ${[["todas","Todas"],["semana","Semana "+S.semana],["sin","Sin técnico"],["camino","Asignadas sin llegar"],["curso","En curso"],["pend","Pendientes"]].map(([k,n])=>
+    ${[["abiertas","Open"],["sin","Unassigned"],["camino","Assigned"],["curso","In progress"],["pend","Pending"],["porcerrar","To close"],["cerradas","Closed"],["cancel","Canceled"],["semana","Week "+S.semana]].map(([k,n])=>
       `<button class="tab ${f===k?"on":""}" data-a="tab" data-t="${k}">${n}</button>`).join("")}
   </div>
   <div class="note" style="margin-bottom:12px;display:flex;align-items:center;gap:10px"><span><b>${ws.length} resultado(s)${nSubVistas?` · ${nSubVistas} Sub-WO`:""}.</b> Los filtros de texto y fecha se mantienen juntos hasta que los cambies.</span>
