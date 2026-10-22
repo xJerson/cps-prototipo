@@ -1595,7 +1595,7 @@ VIEWS.inventario = () => `
       <td style="font-weight:650">${esc(p.nombre)}</td><td>${esc(p.cat)}</td><td>${esc(p.um)}</td>
       <td class="num mono" style="font-weight:700">${p.consumible===false?"—":s}</td><td>${p.consumible===false?esc(respN(p.responsable)):esc(reservaTxt(p)||"—")}<div class="s">${esc(p.ubicacion||"")}</div></td>
       <td>${p.consumible===false?`<span class="pill ${p.estado==="Baja"?"r":p.estado==="En reparación"?"w":"a"}">${esc(p.estado||"Activo")}</span>`:(s<p.min?'<span class="pill r"><span class="dot"></span>Stock bajo</span>':'<span class="pill v">OK</span>')}</td>
-      <td class="num mono">${money(p.costo)}</td>
+      <td class="num mono">${p.cliente?"—":money(p.costo||0)}</td>
       <td style="text-align:right">${puedeEditarInv(p)?`<button class="btn sm" data-a="invEditar" data-id="${esc(p.id)}">Editar</button>`:""}</td></tr>`;}).join("")}</tbody></table></div>
   ${(()=>{ const nPend=S.movs.filter(m=>m.costoPend).length; return nPend?`
   <div class="card" style="border-color:var(--ambar)"><div class="chd"><h3>Compras sin costo</h3></div>

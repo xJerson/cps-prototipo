@@ -178,7 +178,7 @@ Object.assign(ACC, {
       const cant=parseFloat(f.cant); const p=by(S.productos,f.prod);
       if(!p || !cant || cant<=0) return;
       S.movs.push({id:"M"+Date.now()+"_"+n, prod:f.prod, tipo:"salida", cant,
-        fecha:w.fecha, wo:w.id, costo:+(p.costo*cant).toFixed(2), tienda:"", quien:tec?tec.nombre:S.usuario, evid:false});
+        fecha:w.fecha, wo:w.id, costo:+((+p.costo||0)*cant).toFixed(2), tienda:"", quien:tec?tec.nombre:S.usuario, evid:false});
       n++;
     });
     w.obsTec = (sh.obs||"").trim();

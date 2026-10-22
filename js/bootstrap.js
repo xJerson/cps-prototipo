@@ -163,7 +163,6 @@ const AUD = {
   recordatorioEnviar:{a:"Envió un recordatorio de agenda al técnico (y al cliente si la unidad está ocupada)", m:"Work Orders"},
   recordatorioMoverOK:{a:"Movió la fecha u hora de un recordatorio", m:"Work Orders"},
   recordatorioSegOK:{a:"Anotó el seguimiento al técnico de un recordatorio", m:"Work Orders"},
-  facAsignarCat:{a:"Asignó una categoría a una factura del borrador", m:"Facturación"},
   valGuardar:{a:"Guardó cobro/pago de una WO al validar", m:"Nómina"},
   valAjAgregar:{a:"Agregó un ajuste al validar una WO", m:"Nómina"},
   valAjQuitar:{a:"Quitó un ajuste al validar una WO", m:"Nómina"},

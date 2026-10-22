@@ -137,6 +137,9 @@ function ayudaContexto(){
     const s = S.solicitudesComerciales.find(x=>x.estado==="Lista para estimado" && !x.estimadoId);
     if(s) return {sel:`[data-a="solComEstimado"][data-id="${s.id}"]`,
       txt:`«${esc(P(s.prop).nombre)}» está lista. Tocá «Crear estimado».`};
+    const sp = S.solicitudesComerciales.find(x=>x.estado==="Esperando inspección" && !solInspeccionLista(x));
+    if(sp) return {sel:`[data-a="solComInspeccion"][data-id="${sp.id}"]`,
+      txt:`«${esc(sp.prop?P(sp.prop).nombre:(sp.propNombre||"Propiedad nueva"))}» necesita la inspección de Gustavo. Tocá «Asignar inspección a Gustavo»; cuando él entregue su reporte, la solicitud queda lista para armar el estimado.`};
     return null;
   }
 
@@ -152,6 +155,8 @@ function ayudaContexto(){
     if(eX) return {sel:`[data-a="estIrExpediente"][data-id="${eX.id}"]`, txt:`Al estimado ${esc(eX.num)} le falta completar el Expediente de la propiedad.`};
     const eE = S.estimados.find(e=>e.estado==="Enviado");
     if(eE) return {sel:`[data-a="estClienteOK"][data-id="${eE.id}"]`, txt:`El estimado ${esc(eE.num)} está enviado. Cuando el cliente responda, marcá «Aprobar» o «Rechazar».`};
+    const eRj = S.estimados.find(e=>e.estado==="Rechazado");
+    if(eRj) return {sel:`[data-a="estModificar"][data-id="${eRj.id}"]`, txt:`El cliente rechazó el estimado ${esc(eRj.num)}. Tocá «Modificar propuesta y reenviar» para ajustarlo y mandarlo de nuevo.`};
     return null;
   }
 
@@ -161,11 +166,12 @@ function ayudaContexto(){
     if(sol) return {sel:`[data-a="solProgramar"][data-id="${sol.id}"]`,
       txt:`«${esc(P(sol.prop).nombre)}» llegó de un estimado aprobado. Tocá «Programar» para crear las Work Orders.`};
     const w = S.wos.find(x=>!x.tec && esAgendada(x.estado));
-    if(w) return {sel:`tr[data-a="woVer"][data-id="${w.id}"]`, txt:`La WO-${w.id} todavía no tiene técnico. Entrá para asignarlo.`};
+    if(w) return {sel:`tr[data-a="woVer"][data-id="${w.id}"]`, txt:w.fecha?`La WO-${w.id} todavía no tiene técnico. Entrá para asignarlo.`:`La WO-${w.id} todavía no tiene fecha. Entrá y coordínala con el cliente antes de asignar técnico.`};
     return null;
   }
   if(S.mod==="wo" && S.sub){
     const w = W(S.sub);
+    if(w && !w.fecha && esAgendada(w.estado)) return {sel:'[data-a="progCliente"]', txt:"Esta Work Order nació de un estimado y todavía no tiene fecha. Tocá «Coordinar fecha con el cliente»; después podrás asignar técnico."};
     if(w && !w.tec && esAgendada(w.estado)) return {sel:'[data-a="asigModal"]', txt:"Esta Work Order no tiene técnico. Tocá «Asignar técnico»."};
     if(w && w.infoPedida) return {sel:'[data-a="verWoEnCel"]', txt:`Le pediste algo al técnico. Abrí su celular para que lo complete: «Ver en el celular de ${esc(T(w.tec)?T(w.tec).nombre:"el técnico")}».`};
     if(w && w.tec && esAgendada(w.estado) && !asisDe(w.id)) return {sel:'[data-a="verWoEnCel"]', txt:`Ya está asignada y con fecha. Ahora le toca al técnico: abrí su celular con «Ver en el celular de ${esc(T(w.tec)?T(w.tec).nombre:"el técnico")}» y seguí desde ahí.`};
@@ -207,9 +213,22 @@ function ayudaContexto(){
   if(S.mod==="nomina"){
     const wv = S.wos.find(w=>w.estado==="Completed" && !w.validada);
     if(wv) return {sel:`[data-a="validarModal"][data-id="${wv.id}"]`, txt:`Falta validar la WO-${wv.id}. Tocá «Revisar y validar».`};
+    if(S.periodo.tipo==="semana"){
+      const tecs = S.tecnicos.filter(t=>t.activo!==false && nominaCalc(t.id).ws.length);
+      if(puedeAprobarNomina()){
+        const t = tecs.find(x=>!nomAprob(x.id,S.periodo.sem));
+        if(t) return {sel:`[data-a="nomAprobar"][data-tec="${t.id}"]`, txt:`La nómina de ${esc(tecN(t.id))} ya está validada. Tocá «Aprobar»: el técnico la ve en su celular y puede dar su conformidad o enviar una observación.`};
+      }
+      const ob = tecs.find(x=>{ const a=nomAprob(x.id,S.periodo.sem); return a && a.conf==="Observada"; });
+      if(ob && puedeResponderNomina()) return {sel:`[data-a="nomResponder"][data-tec="${ob.id}"]`, txt:`${esc(tecN(ob.id))} envió una observación sobre su pago. Respóndele en su tarjeta.`};
+      const pg = tecs.find(x=>nomAprob(x.id,S.periodo.sem));
+      if(pg && puedeVerUtilidad()) return {sel:`[data-a="pagarTec"][data-tec="${pg.id}"]`, txt:`La nómina de ${esc(tecN(pg.id))} está aprobada. Tocá «Marcar pagado» e ingresá el número de cheque (el pago no depende de su conformidad).`};
+    }
     return null;
   }
   if(S.mod==="facturacion"){
+    const fb = S.facturas.find(f=>f.estado==="Borrador");
+    if(fb) return {sel:`[data-a="facEnviar"][data-id="${fb.id}"]`, txt:`La factura ${esc(fb.num)} está en borrador. Revisala (puedes editarla) y tocá «Enviar al cliente»; desde ahí pasa a Cobranza.`};
     const wf = S.wos.find(w=>enPeriodo(w.fecha,S.periodo) && w.estado==="Completed" && w.supervisada && aprobFacturaOK(w) && !w.facturada && puedeFacturar(w) && !woBloqueada(w.id));
     if(wf) return {sel:`[data-a="facturar"][data-prop="${wf.prop}"]`, txt:"Hay trabajo listo para facturar. Tocá «Generar factura»."};
     return null;
@@ -220,6 +239,31 @@ function ayudaContexto(){
     const ws = S.wos.find(w=>w.estado==="Completed" && !w.supervisada && w.evid);
     if(ws) return {sel:`[data-a="woVer"][data-id="${ws.id}"],[data-a="supervisar"][data-id="${ws.id}"]`,
       txt:`La WO-${ws.id} está terminada y falta revisarla.`};
+    return null;
+  }
+
+  /* J · Management: documentos pendientes */
+  if(S.mod==="clientes"){
+    const c = S.clientes.find(x=>!x.vendorPacketPdf && x.vendorPacket!=="Recibido" || !x.w9Pdf && x.w9!=="Recibido");
+    if(c) return {sel:`[data-a="cliDocsModal"][data-id="${c.id}"]`, txt:`A «${esc(c.nombre)}» le falta subir el Vendor Packet o el W-9. Tocá «Documentos», adjuntá el archivo y guardá: queda como Subido.`};
+    return null;
+  }
+
+  /* K · Cobranza: la factura vencida se gestiona; la enviada se cobra */
+  if(S.mod==="cobranza"){
+    const v = S.facturas.find(facVencida);
+    if(v) return {sel:`[data-a="cobGestionar"][data-id="${v.id}"]`, txt:`La factura ${esc(v.num)} está vencida. Tocá «Gestionar»: primero el reminder, luego el correo overdue, después registrá la llamada y, cuando pague, el pago.`};
+    const e = S.facturas.find(f=>f.estado==="Enviada");
+    if(e) return {sel:`[data-a="cobGestionar"][data-id="${e.id}"]`, txt:`La factura ${esc(e.num)} está enviada. Cuando el cliente pague, tocá «Gestionar cobranza» y registrá el pago.`};
+    return null;
+  }
+
+  /* L · Returns: abrir el return fix y, cuando lo terminan, cerrarlo */
+  if(S.mod==="devoluciones"){
+    const cr = S.devoluciones.find(d=>d.estado==="Corregida");
+    if(cr && puede("devoluciones")) return {sel:`[data-a="devCerrar"][data-id="${cr.id}"]`, txt:`El return fix de «${esc(P(cr.prop).nombre)}» ya está terminado. Revisalo y tocá «Cerrar».`};
+    const ab = devAbiertas().find(d=>!touchupDe(d.id));
+    if(ab) return {sel:`[data-a="devTouchup"][data-id="${ab.id}"]`, txt:`El return de «${esc(P(ab.prop).nombre)}» todavía no tiene return fix. Tocá «Crear return fix» y elegí quién lo corrige.`};
     return null;
   }
 
