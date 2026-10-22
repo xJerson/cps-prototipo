@@ -662,7 +662,7 @@ VIEWS.despacho = () => {
     <table>
     <thead><tr><th>Día</th>
       <th class="num">Trabajos<br>del día</th>
-      <th class="num">Cupo del<br>equipo</th>
+      <th class="num">Cupo del equipo<br><span style="font-weight:400;text-transform:none">(técnicos × ${CAP})</span></th>
       <th>Ocupación del cupo</th>
       <th class="num">Falta<br>asignar</th>
       <th>Agendamiento</th><th></th></tr></thead>
@@ -678,9 +678,9 @@ VIEWS.despacho = () => {
       const cerrado = S.diasCerrados.includes(d);
       return `<tr ${over?'style="background:var(--rojo-cl)"':""}>
         <td style="font-weight:650">${DIAS_SEM[i].slice(0,3)} ${nDia(d)}
-          <div style="font-size:10px;color:var(--faint)">${conPermiso?conPermiso+" con permiso":"equipo completo"}</div></td>
+          <div style="font-size:10px;color:var(--faint)">${conPermiso?`${libres} de ${tecs.length} técnicos · ${conPermiso} con permiso`:`${tecs.length} técnicos`}</div></td>
         <td class="num mono" style="font-weight:700">${ws.length||"—"}</td>
-        <td class="num mono">${cupo}<span style="color:var(--faint);font-weight:400"> · ${libres}×${CAP}</span></td>
+        <td class="num mono" style="font-weight:700">${cupo}</td>
         <td style="min-width:150px">
           <div style="background:var(--surface-3);border-radius:4px;height:8px;overflow:hidden">
             <div style="height:8px;width:${usoPct}%;background:${over?"var(--rojo)":usoPct>=100?"var(--ambar)":"var(--verde)"}"></div></div>
