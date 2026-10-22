@@ -382,4 +382,42 @@ if(new URLSearchParams(location.search).get("gustavo")==="1"){
   if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
 }
 
+/* ── PERSISTENCIA ── Prototipo sin backend: cada área va a probar sus propias
+   operaciones, así que el estado completo se guarda en localStorage después
+   de cada acción — nada se pierde al recargar la página o cerrar el navegador.
+   Si falla (ej. el navegador se quedó sin espacio por muchas fotos), se avisa
+   una sola vez y se sigue probando sin guardar, nunca rompe la app. */
+/* v2: se subió al vaciar los ejemplos operacionales (WO, facturas, nómina, etc.)
+   — así nadie se queda pegado al guardado viejo con los datos de ejemplo de hoy. */
+const CPS_CLAVE_ESTADO = "cps_estado_v2";
+let _guardadoFalloAvisado = false;
+function guardarEstado(){
+  try{
+    localStorage.setItem(CPS_CLAVE_ESTADO, JSON.stringify(S));
+    const b=$("#guardadoBadge");
+    if(b){ b.classList.remove("flash-ok"); void b.offsetWidth; b.classList.add("flash-ok"); b.title="Guardado automáticamente · "+hora(); }
+  }catch(e){
+    if(!_guardadoFalloAvisado){ _guardadoFalloAvisado=true;
+      toast("No se pudo guardar","El almacenamiento de este navegador está lleno (puede ser por muchas fotos). Hacé una copia de lo importante antes de seguir probando.","r"); }
+  }
+}
+function cargarEstado(){
+  try{
+    const g=localStorage.getItem(CPS_CLAVE_ESTADO);
+    if(!g) return false;
+    const datos=JSON.parse(g);
+    Object.keys(S).forEach(k=>delete S[k]);
+    Object.assign(S,datos);
+    return true;
+  }catch(e){ return false; }
+}
+cargarEstado();
+/* Envuelve TODO lo que ya está en ACC a esta altura (incluido temaToggle) —
+   cualquier acción del usuario dispara un guardado, igual que ya hace el
+   envoltorio de Bitácora más arriba. */
+Object.keys(ACC).forEach(k=>{
+  const orig=ACC[k];
+  ACC[k] = d => { const r=orig(d); guardarEstado(); return r; };
+});
+
 render();

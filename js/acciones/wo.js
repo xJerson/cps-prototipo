@@ -131,7 +131,7 @@ Object.assign(ACC, {
   /* Desde la lista general: abre la WO y deja resaltada la Sub-WO que se tocó, ahí están sus fotos y botones. */
   woVerSub: d => { S.mod="wo"; S.sub=+d.id; flash("sub:"+d.lid); render(); },
   /* Desplegar o plegar las Sub-WO de una WO en la lista general. */
-  woSubToggle: d => { const a=S.woAbiertas||(S.woAbiertas=[]), id=+d.id, i=a.indexOf(id); if(i>-1) a.splice(i,1); else a.push(id); render(); },
+  woSubToggle: d => { const a=S.woAbiertas||(S.woAbiertas=[]), id=+d.id, i=a.indexOf(id); if(i>-1){ a.splice(i,1); S.subRecienAbierta=null; } else { a.push(id); S.subRecienAbierta=id; } render(); },
   woVerDesdeModal: d => { cm(); S.mod="wo"; S.sub=+d.id; render(); },
   woNueva: () => modalWO(),
   woFotoRefAgregar: () => {

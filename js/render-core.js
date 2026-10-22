@@ -25,7 +25,7 @@ function render(){
   + `<a class="nav" href="mapa.html" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">
       <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14"/><path d="M15 6v14"/></svg>
       <span class="lb">Mapa del prototipo</span></a>`; */
-  $("#main").innerHTML = (VIEWS[S.mod]||(()=>"<div class='empty'>En construcción</div>"))();
+  $("#main").innerHTML = notaVistaHTML() + (VIEWS[S.mod]||(()=>"<div class='empty'>En construcción</div>"))();
   // Traer al centro lo que se acaba de tocar, y apagar la marca sola
   if(S.flash){
     const marcado = $("#main").querySelector(".flash");
@@ -258,6 +258,45 @@ function renderCoach(){
     </div></div>`;
 }
 
+/* ══════════ "QUÉ HACER ACÁ" ══════════
+   Nota siempre visible arriba de cada vista (no hace falta tocar nada para
+   verla) con el paso concreto a seguir — distinta de "¿Qué es esta
+   pantalla?" de abajo, que es la explicación general y queda a demanda.
+   No se muestra en el celular ni adentro de una ficha/detalle (S.sub). */
+const NOTA_VISTA = {
+  tablero:"Revisá «Lo que necesita tu atención» y resolvé primero lo más urgente.",
+  wo:"Creá la Work Order con «+ Nueva Work Order», asignale técnico y seguila hasta Completed.",
+  calendario:"Elegí Día/Semana/Rango/Mes arriba y asigná técnico a lo que sale en «Sin asignar».",
+  despacho:"Antes de prometerle una fecha a un cliente, mirá acá si el equipo tiene cupo ese día.",
+  propiedades:"Creá la propiedad con «+ Nueva propiedad» y completá su «Expediente» antes de poder agendarla.",
+  tecnicos:"Dalos de alta con «+ Nuevo técnico» y mantené sus datos al día.",
+  tarifario:"Cargá los precios generales con «+ Nueva tarifa» antes de armar Work Orders.",
+  catalogos:"Agregá o quitá acá los valores que después llenan los desplegables del sistema.",
+  clientes:"Registrá la Management con «+ Nuevo» y completá su ficha — de ahí cuelgan sus propiedades.",
+  solicitudes:"Registrá la solicitud del cliente con «+ Nueva solicitud» y contestala dentro de las 24 h.",
+  estimados:"Creá el estimado, armá sus líneas y mandalo — al aprobarse se puede transferir a programación.",
+  excepciones:"Tomalo con «Assign to me» (o asignalo) y resolvelo antes de que frene el pago o la factura de esa WO.",
+  nomina:"Validá cada WO que le falte algo y marcá pagado al técnico cuando corresponda.",
+  facturacion:"Una vez aprobada y validada, generá la factura de la propiedad y armá sus líneas.",
+  cobranza:"Seguí el reclamo de lo vencido (reminder → correo overdue → llamada) y registrá el pago.",
+  auditoria:"Es solo para revisar — si algo está mal, resolvelo en Requests o en el borrador de la factura.",
+  inventario:"Registrá entradas y salidas de material — el stock se calcula solo.",
+  finanzas:"Cargá los gastos y repartilos entre las Work Orders que correspondan.",
+  reportes:"Cruzá los números por semana, zona o servicio — tocá uno para ver qué hay detrás.",
+  buscar:"Filtrá las Work Orders y agrupá para ver promedios de cobro, pago o utilidad.",
+  supervision:"Revisá «De campo», armá la ruta del día de Gustavo y aprobá o hacé return a lo terminado.",
+  devoluciones:"Registrá el return con su causa y creá el return fix asignando a quien esté más cerca.",
+  bitacora:"Solo lectura — filtrá por persona o módulo para auditar qué pasó.",
+  alertas:"Resolvé cada alerta antes de que venza (seguro, tarifa faltante, orden sin técnico).",
+  gustavoweb:"Vista de referencia — las acciones reales se hacen desde el celular de Gustavo."
+};
+function notaVistaHTML(){
+  if(S.phone || S.sub) return "";
+  const texto = NOTA_VISTA[S.mod];
+  if(!texto) return "";
+  return `<div class="note v" style="margin-bottom:12px"><b>Qué hacer acá</b> — ${texto}</div>`;
+}
+
 /* ══════════ "¿QUÉ ES ESTA PANTALLA?" ══════════
    Un botón fijo en la esquina de cada vista. Al tocarlo, un panel explica
    para qué sirve esa pantalla y qué se puede hacer ahí (incluido «hacé clic
@@ -277,6 +316,8 @@ const AYUDA_VISTA = {
     tips:["«Registrar return»: elige la propiedad y la unidad, quién hizo el trabajo y qué está mal.","«Crear return fix»: muestra a cada técnico con su carga del día y su zona, para mandar a quien esté cerca.","La causa decide la plata: si el trabajo estaba mal hecho, al que lo hizo se le descuenta.","Al crear el return fix se genera una Work Order nueva, vinculada a la original (se ve en su detalle «return fix de WO-X»): no hay que buscarla, el sistema la liga sola."]},
   reportes:{t:"Reportes", d:"Los números del trabajo cruzados como quieras: por semana, por zona, por servicio.",
     tips:["Tocá un número de la tabla para ver qué órdenes hay detrás."]},
+  auditoria:{t:"Auditoría financiera", d:"Para revisar, no para aprobar: dinero que se movió o se descontó sin pasar por una pantalla de aprobación activa — queda a la vista con monto y motivo.",
+    tips:["No hay botones de aprobar o rechazar acá: si algo está mal, se resuelve en Requests o en el borrador de la factura, donde ya se resuelve hoy.","Los descuentos de factura ya quedan completos en Bitácora también — esta vista los junta con el resto en un solo lugar."]},
   buscar:{t:"Buscar", d:"Filtra las Work Orders y mira cobro, pago y utilidad de cada una. Sirve para saber cuánto se pagó antes por un mismo trabajo.",
     tips:["Usa Agrupar para ver promedios por propiedad, técnico, servicio o semana.","CSV descarga lo que estás viendo."]},
   clientes:{t:"Management", d:"Las empresas administradoras (property management). Se registra una vez y todas sus propiedades cuelgan de ahí.",

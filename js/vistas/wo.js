@@ -107,11 +107,15 @@ VIEWS.wo = () => {
   </div></div>
   <div class="card"><table>
     <thead><tr>${selMode?"<th></th>":""}<th>WO</th><th>Fecha</th><th>Hora</th><th>Sem</th><th>Propiedad · Unidad</th><th>Zona</th><th>Rooms</th><th>Tipo</th><th>Servicio</th><th>Técnico</th><th>Llegada</th><th>Estado</th>${puedeVerDinero?'<th class="num">Cobrado</th><th class="num">Pagado</th>':""}<th></th></tr></thead>
-    <tbody>${ws.map(w=>{
+    <tbody>${(()=>{
+    const _tbody = ws.map(w=>{
       const t=tarifaWO(w);
       const subs=subsVistas[w.id]||[], todas=subsPlanDe(w), propia=propias.has(w.id);
       /* abierta a mano, o sola cuando la WO sale únicamente por una de sus Sub-WO */
       const abierta = subs.length && ((S.woAbiertas||[]).includes(w.id) || !propia);
+      /* Solo la WO que se acaba de desplegar anima su entrada — si no, cualquier
+         render (aunque sea por otra acción sin relación) la hace parpadear de nuevo. */
+      const recienAbierta = abierta && w.id===S.subRecienAbierta;
       return `<tr class="cl${fl("wo:"+w.id)}" data-a="woVer" data-id="${w.id}"${propia?"":' style="opacity:.65"'}>
         ${selMode?`<td><input type="checkbox" data-a="pendSel" data-id="${w.id}" ${sel.includes(w.id)?"checked":""}></td>`:""}
         <td class="mono" style="font-weight:700">WO-${w.id}</td>
@@ -137,7 +141,7 @@ VIEWS.wo = () => {
         ${abierta?subs.map(a=>{
           const fe=fechaSubWO(a)||w.fecha, tec=tecSubWO(a), n=subsTodasDe(w).indexOf(a)+1;
           const est=a.estado==="Pendiente"?"Pending approval":(a.estadoTrabajo||"Unassigned");
-          return `<tr class="cl" data-a="woVerSub" data-id="${w.id}" data-lid="${a.id}" title="Abrir WO-${w.id} en esta Sub-WO" style="background:var(--surface-2)">
+          return `<tr class="cl${recienAbierta?" subwo":""}" data-a="woVerSub" data-id="${w.id}" data-lid="${a.id}" title="Abrir WO-${w.id} en esta Sub-WO" style="background:var(--surface-2)">
             ${selMode?"<td></td>":""}
             <td class="mono" style="font-weight:700;padding-left:22px">↳ WO-${w.id} · Sub ${n}</td>
             <td class="mono">${fe.slice(5)}</td><td class="mono">${esc(w.horaProg||"9:00")}</td><td class="mono">${semanaDe(fe)}</td>
@@ -151,7 +155,10 @@ VIEWS.wo = () => {
             <td><span class="pill ${est==="Pending approval"?"w":estP(est)}"><span class="dot"></span>${esc(est)}</span></td>
             ${puedeVerDinero?'<td class="num mono">—</td><td class="num mono">—</td>':""}
             <td></td></tr>`; }).join(""):""}`;
-    }).join("")||`<tr><td colspan="${(puedeVerDinero?15:13)+(selMode?1:0)}" class="empty">Nada aquí</td></tr>`}</tbody>
+    }).join("")||`<tr><td colspan="${(puedeVerDinero?15:13)+(selMode?1:0)}" class="empty">Nada aquí</td></tr>`;
+    S.subRecienAbierta=null;
+    return _tbody;
+    })()}</tbody>
   </table></div>`;
 };
 

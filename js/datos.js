@@ -30,8 +30,10 @@ let S = {
   sub:null, tab:null, phone:false, phTec:"T1", phView:"agenda", phWO:null, phSub:null,
   // Avisos sembrados para que la pestaña del celular no arranque vacía: uno sin leer, uno ya leído.
   notis:[
+    /* Ejemplos de hoy comentados — cada área va a generar sus propios avisos.
     {t:"Nueva Work Order confirmada", b:"WO-1048 · Bayside Landing A-105 quedó confirmada por el cliente.", h:"8:15", leido:false},
     {t:"Recordatorio", b:"No olvides la foto del antes en cada unidad antes de empezar.", h:"7:30", leido:true}
+    */
   ],
   coach:true,   // asistente "¿qué hago ahora?" — se puede apagar desde su tarjeta
   /* El celular tiene dos dueños distintos: el técnico ejecuta, el supervisor reporta.
@@ -41,44 +43,20 @@ let S = {
   impuestos:[],
 
   clientes:[
-    {id:"CL1",nombre:"Coastal PM",contacto:"Danielle Pratt",tel:"850-555-0142",mail:"danielle@coastalpm.com",fechaAlta:"2026-06-02"},
-    {id:"CL2",nombre:"Trident Group",contacto:"Rick Halloway",tel:"251-555-0198",mail:"rick@tridentgrp.com",fechaAlta:"2026-06-15"},
-    {id:"CL3",nombre:"Meridian Residential",contacto:"Stacey Boone",tel:"850-555-077",mail:"stacey@meridianres.com",fechaAlta:"2026-08-05"}
+    {id:"CL2",nombre:"Trident Group",contacto:"Rick Halloway",tel:"251-555-0198",mail:"rick@tridentgrp.com",fechaAlta:"2026-06-15"}
   ],
-  comunicaciones:[
-    {id:"CM1",prop:"P1",fecha:"2026-07-28",medio:"Llamada",contacto:"Danielle Pratt",quien:"Lydia",nota:"Confirmó el ajuste de tarifa de limpieza para agosto."},
-    {id:"CM2",prop:"P1",fecha:"2026-08-01",medio:"Correo",contacto:"Danielle Pratt",quien:"Lydia",nota:"Envió por escrito la aprobación de la tarifa."}
-  ],
+  comunicaciones:[],
   // Los campos "shop / paint / horario / expectativas" ya existen en su pestaña Propiedades
   // (Paint logistics, Paint specificatios, Cleaning details, Final Expectations, Notas para el tecnico).
   // Hoy no llegan al técnico porque le mandan una captura de Schedule, que no las tiene.
   propiedades:[
-    {id:"P1",nombre:"Bayside Landing",zona:"Pensacola",cliente:"CL1",estado:"Active",origen:"Referido",dir:"1420 Bayfront Pkwy",activa:true,regalo:"Yes",door:"4417",aprob:"Correo al manager",pref:"Correo",
-     polizas:[{tipo:"General Liability",aseguradora:"Ategrity Specialty",poliza:"01-C-PK-P20181323-0",vence:"2026-12-31"}],
-     horario:"Oficina abre 8:00 · unidades disponibles desde 8:30",
-     shop:"Edificio de mantenimiento, detrás de la alberca",shopCode:"8812",
-     notasPaint:"Sherwin ProMar 200, eggshell. Techos blanco plano.",
-     notasClean:"No usar químicos con aroma — política del management",
-     finalExp:"Ventanas por dentro y por fuera. Filtros de A/C cambiados.",
-     notasTec:"Estacionarse en visitas, no en la entrada principal.",
-     notas:"No se cobra cambio de brillo. Siempre aprobado el cambio de color."},
-    {id:"P2",nombre:"Magnolia Court",zona:"Pensacola",cliente:"CL1",estado:"Active",origen:"Referido",dir:"88 Magnolia Ave",activa:true,regalo:"Yes",door:"2280",aprob:"Mensaje al manager",pref:"Mensaje",
-     polizas:[{tipo:"General Liability",aseguradora:"Ategrity Specialty",poliza:"01-C-PK-P20181323-0",vence:"2026-09-15"}],
-     horario:"Oficina abre 9:00",
-     shop:"Bodega junto al buzón, lado norte",shopCode:"3390",
-     notasPaint:"Color change requiere 2 manos",notasClean:"",
-     finalExp:"Dejar llaves en la oficina al terminar.",notasTec:"",
-     notas:"Solicitan estimado antes de cualquier reparación."},
     {id:"P3",nombre:"Harbor Pointe",zona:"Gulf Breeze",cliente:"CL2",estado:"Active",origen:"Llamada",dir:"9 Harbor Blvd",activa:true,regalo:"No",door:"9134",aprob:"Texto al manager",pref:"Texto/Llamada",
      polizas:[{tipo:"General Liability",aseguradora:"Ategrity Specialty",poliza:"01-C-PK-P20181323-0",vence:"2026-08-20"},
               {tipo:"Auto Liability",aseguradora:"Progressive Express",poliza:"999240061",vence:"2026-06-23"}],
      horario:"Acceso 24h con código",
      shop:"No tiene shop — el material se lleva desde la base",shopCode:"",
      notasPaint:"Behr Marquee, satin. No usar semi-gloss aunque el tenant lo pida.",notasClean:"",finalExp:"",notasTec:"Perro suelto en el patio de la C-8.",
-     notas:"Aprobaciones con el manager y apertura de gate en oficina."},
-    {id:"P4",nombre:"Cypress Run",zona:"Foley",cliente:"CL2",estado:"Active",origen:"Llamada",dir:"305 Cypress Rd",activa:false,regalo:"Yes",door:"5561",aprob:"Llamada a mantenimiento",pref:"Llamada",
-     polizas:[],
-     horario:"",shop:"",shopCode:"",notasPaint:"",notasClean:"",finalExp:"",notasTec:"",notas:""}
+     notas:"Aprobaciones con el manager y apertura de gate en oficina."}
   ],
   // UC-10: reemplaza el True/False de la columna Asistencia, que hoy marca alguien de oficina
   asistencias:[],
@@ -88,29 +66,12 @@ let S = {
      (building-número, o solo el número si no hay building) y es lo que se
      muestra en todas las pantallas; building/unidadNum son la fuente. */
   unidades:[
-    {id:"U1",prop:"P1",building:"A",unidadNum:"204",num:"A-204",ubicacionUnidad:"Building A · east side",rooms:"2 bedroom",pisos:1,detalle:[{tipo:"Bedroom",cantidad:2},{tipo:"Bathroom",cantidad:2}]},
-    {id:"U2",prop:"P1",building:"A",unidadNum:"211",num:"A-211",rooms:"3 bedroom",pisos:2,detalle:[{tipo:"Bedroom",cantidad:3},{tipo:"Bathroom",cantidad:2}]},
-    {id:"U3",prop:"P1",building:"B",unidadNum:"102",num:"B-102",rooms:"1 bedroom",pisos:1,detalle:[{tipo:"Bedroom",cantidad:1},{tipo:"Bathroom",cantidad:1}]},
-    {id:"U9",prop:"P1",building:"A",unidadNum:"105",num:"A-105",rooms:"Studio",pisos:1,detalle:[{tipo:"Studio",cantidad:1},{tipo:"Bathroom",cantidad:1}]},
-    {id:"U10",prop:"P1",building:"B",unidadNum:"201",num:"B-201",rooms:"1 bedroom",pisos:2,detalle:[{tipo:"Bedroom",cantidad:1},{tipo:"Bathroom",cantidad:1}]},
-    {id:"U11",prop:"P1",building:"C",unidadNum:"310",num:"C-310",rooms:"2 bedroom",pisos:3,detalle:[{tipo:"Bedroom",cantidad:2},{tipo:"Bathroom",cantidad:2},{tipo:"Living Room",cantidad:1}]},
-    {id:"U4",prop:"P2",building:"",unidadNum:"14",num:"14",rooms:"2 bedroom",pisos:1,detalle:[{tipo:"Bedroom",cantidad:2},{tipo:"Bathroom",cantidad:2}]},
-    {id:"U5",prop:"P2",building:"",unidadNum:"27",num:"27",rooms:"2 bedroom",pisos:2,detalle:[{tipo:"Bedroom",cantidad:2},{tipo:"Bathroom",cantidad:1}]},
-    {id:"U12",prop:"P2",building:"",unidadNum:"8",num:"8",rooms:"1 bedroom",pisos:1,detalle:[{tipo:"Bedroom",cantidad:1},{tipo:"Bathroom",cantidad:1}]},
-    {id:"U13",prop:"P2",building:"",unidadNum:"33",num:"33",rooms:"3 bedroom",pisos:2,detalle:[{tipo:"Bedroom",cantidad:3},{tipo:"Bathroom",cantidad:2}]},
     {id:"U6",prop:"P3",building:"C",unidadNum:"8",num:"C-8",rooms:"3 bedroom",pisos:1,detalle:[{tipo:"Bedroom",cantidad:3},{tipo:"Bathroom",cantidad:2}]},
     {id:"U7",prop:"P3",building:"C",unidadNum:"12",num:"C-12",rooms:"2 bedroom",pisos:1,detalle:[{tipo:"Bedroom",cantidad:2},{tipo:"Bathroom",cantidad:2}]},
     {id:"U14",prop:"P3",building:"D",unidadNum:"3",num:"D-3",rooms:"Studio",pisos:1,detalle:[{tipo:"Studio",cantidad:1},{tipo:"Bathroom",cantidad:1}]},
-    {id:"U15",prop:"P3",building:"D",unidadNum:"20",num:"D-20",rooms:"2 bedroom",pisos:2,detalle:[{tipo:"Bedroom",cantidad:2},{tipo:"Bathroom",cantidad:1}]},
-    {id:"U8",prop:"P4",building:"",unidadNum:"31",num:"31",rooms:"Studio",pisos:1,detalle:[{tipo:"Studio",cantidad:1},{tipo:"Bathroom",cantidad:1}]},
-    {id:"U16",prop:"P4",building:"",unidadNum:"12",num:"12",rooms:"1 bedroom",pisos:1,detalle:[{tipo:"Bedroom",cantidad:1},{tipo:"Bathroom",cantidad:1}]},
-    {id:"U17",prop:"P4",building:"",unidadNum:"22",num:"22",rooms:"2 bedroom",pisos:1,detalle:[{tipo:"Bedroom",cantidad:2},{tipo:"Bathroom",cantidad:2}]},
-    {id:"U18",prop:"P4",building:"",unidadNum:"40",num:"40",rooms:"3 bedroom",pisos:2,detalle:[{tipo:"Bedroom",cantidad:3},{tipo:"Bathroom",cantidad:2},{tipo:"Living Room",cantidad:1}]}
+    {id:"U15",prop:"P3",building:"D",unidadNum:"20",num:"D-20",rooms:"2 bedroom",pisos:2,detalle:[{tipo:"Bedroom",cantidad:2},{tipo:"Bathroom",cantidad:1}]}
   ],
   contactos:[
-    {id:"C1",prop:"P1",tipo:"Manager",nombre:"Danielle Pratt",mail:"danielle@coastalpm.com",tel:"850-555-0142"},
-    {id:"C2",prop:"P1",tipo:"Maintenance",nombre:"Tim Reyes",mail:"tim@coastalpm.com",tel:"850-555-0166"},
-    {id:"C3",prop:"P2",tipo:"Manager",nombre:"Danielle Pratt",mail:"danielle@coastalpm.com",tel:"850-555-0142"},
     {id:"C4",prop:"P3",tipo:"Manager",nombre:"Rick Halloway",mail:"rick@tridentgrp.com",tel:"251-555-0198"},
     {id:"C5",prop:"P3",tipo:"Assistant",nombre:"Kaylah S.",mail:"kaylah@tridentgrp.com",tel:"251-555-0111"}
   ],
@@ -122,7 +83,8 @@ let S = {
     {id:"T5",nombre:"Reyna",apellido:"Bonilla",esp:["Housekeeper"],zona:"Pensacola",tel:"850-555-0305",nac:"1995-05-30",dir:"Pensacola FL",movimiento:false,activo:true},
     {id:"T6",nombre:"Gustavo",apellido:"Andrade",esp:["Supervisor"],zona:"Pensacola",tel:"850-555-0306",nac:"1982-09-14",dir:"Pensacola FL",movimiento:true,activo:true}
   ],
-  disponibilidad:[{id:"D1",tec:"T3",desde:"2026-08-11",hasta:"2026-08-14",motivo:"Permiso personal",estado:"Aprobado"}],
+  disponibilidad:[/* Ejemplo comentado — cada técnico va a enviar la suya.
+    {id:"D1",tec:"T3",desde:"2026-08-11",hasta:"2026-08-14",motivo:"Permiso personal",estado:"Aprobado"} */],
   // Tarifario: nivel General (Ingreso Fijo) + por propiedad (Ingreso Variable)
   tarifas:[
     {id:"TR1",prop:null,cat:"Clean",serv:"Full clean",variante:"1 bedroom",precio:110,pago:55},
@@ -150,129 +112,82 @@ let S = {
       motivo:"Especialista en resane de tinas — tarifa más alta por experiencia",quien:"Claudia",fecha:"2026-08-05"}
   ],
   estimados:[
-    {id:"E1",num:"EST-2026-018",cliente:"CL1",prop:"P1",fecha:"2026-08-04",estado:"Aprobado",lineas:[{unidad:"U1",cat:"Clean",serv:"Full clean",precio:132,pago:70,nivel:"Propiedad"},{unidad:"U1",cat:"Paint",serv:"Full paint",precio:600,pago:320,nivel:"Propiedad"}],aprob:{medio:"Llamada",quien:"Danielle Pratt",fecha:"2026-08-05 10:22",ip:null}},
-    {id:"E2",num:"EST-2026-019",cliente:"CL3",prop:"P3",fecha:"2026-08-08",estado:"Enviado",lineas:[{unidad:"U6",cat:"Clean",serv:"Deep clean",precio:210,pago:105,nivel:"General"}],aprob:null}
+    /* Ejemplo comentado — Comercial va a crear sus propios estimados de 0.
+    {id:"E2",num:"EST-2026-019",cliente:"CL2",prop:"P3",fecha:"2026-08-08",estado:"Enviado",lineas:[{unidad:"U6",cat:"Clean",serv:"Deep clean",precio:210,pago:105,nivel:"General"}],aprob:null}
+    */
   ],
   wos:[
-    {id:1038,prop:"P1",unidad:"U1",cat:"Clean",serv:"Full clean",tec:"T1",estado:"Completed",semana:33,fecha:"2026-08-10",horaProg:"9:00",po:"PO-8841",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T1",hora:"11:40"}],supervisada:true,validada:true,pagadaTec:false,facturada:false,mats:[],notas:"",notasTec:"",hist:[["8:10","Creada","Thalia"],["8:12","Asignada a Diego Ramírez","Thalia"],["9:02","Llegó a la propiedad","Diego"],["11:40","Terminó · 1 evidencia","Diego"],["12:00","Revisión operativa completada","Oficina"]]},
-    {id:1039,prop:"P2",unidad:"U4",cat:"Paint",serv:"Touch up paint",tec:"T2",estado:"Completed",semana:33,fecha:"2026-08-10",horaProg:"8:30",po:"PO-8842",asistencia:true,evid:0,mats:[],notas:"",notasTec:"",hist:[["8:15","Creada","Thalia"],["8:16","Asignada a Marcos Ayala","Thalia"],["9:30","Llegó a la propiedad","Marcos"],["13:20","Terminó — sin cargar evidencia","Marcos"]]},
-    /* corroborado:true a propósito — así "Mientras trabajas" (con el botón
-       nuevo "Compra de materiales") se ve directo, sin tener que primero
-       tocar "Sí, coincide — empezar" en el celular de Diego (técnico por
-       defecto del celular, para que Claudia lo vea sin buscar). */
+    /* ░░ EJEMPLOS DE HOY COMENTADOS (9 WO: 1039,1040,1043,1047,1049,1050,1055,1057,1062) ░░
+    Cada área va a crear y registrar sus propias Work Orders desde 0.
+    Se deja el texto de las notas originales como referencia, sin el formato
+    de comentario interno (para no anidar comentarios dentro de éste):
+
+    1039 Paint·Touch up paint·T2·Completed — Migrada de Magnolia Court (P2) al reducir a 1 sola
+    propiedad: era la base de DS-SEED2 (descuento aplicado) y NM-SEED2 (pago parcial a técnico).
+    {id:1039,prop:"P3",unidad:"U7",cat:"Paint",serv:"Touch up paint",tec:"T2",estado:"Completed",semana:33,fecha:"2026-08-10",horaProg:"8:30",po:"PO-8842",asistencia:true,evid:0,mats:[],notas:"",notasTec:"",hist:[["8:15","Creada","Thalia"],["8:16","Asignada a Marcos Ayala","Thalia"],["9:30","Llegó a la propiedad","Marcos"],["13:20","Terminó — sin cargar evidencia","Marcos"]]},
+
+    1040 Carpet·Carpet clean·T1·In progress — corroborado:true a propósito, así "Mientras trabajas"
+    (botón "Compra de materiales") se ve directo sin pasar primero por "Sí, coincide — empezar".
     {id:1040,prop:"P3",unidad:"U6",cat:"Carpet",serv:"Carpet clean",tec:"T1",estado:"In progress",semana:33,fecha:"2026-08-11",horaProg:"8:00",po:"",asistencia:true,evid:0,corroborado:true,mats:[],notas:"",notasTec:"",
      hist:[["8:05","Creada","Thalia"],["8:06","Asignada a Diego Ramírez","Thalia"],["8:52","Llegó a la propiedad","Diego"],
            ["8:55","Sub-WO planificada creada: Sheetrock","Diego Ramírez"],
            ["9:15","Aprobada por el cliente vía Llamada","Claudia"],
            ["9:20","Initial finding agregado a Sub-WO · Sheetrock (desde oficina)","Claudia"],
            ["9:30","Compró en tienda (Home Depot): Sellador de grout × 3 · usó 2 · sobró 1 (queda en inventario) · con foto del ticket","Diego"]]},
-    /* Estado "Returned" y devuelta:1 a propósito: es la WO que trae la
-       return DV1 sembrada más abajo — así queda un ejemplo real y
-       visible desde que abre el prototipo, sin tener que armar uno a
-       mano para poder mostrarlo. */
-    {id:1041,prop:"P1",unidad:"U2",cat:"Paint",serv:"Full paint",tec:"T2",estado:"Returned",devuelta:1,
-     motivoDev:"Quedó pintura en el marco de la puerta y el zócalo sin retocar.",
-     semana:33,fecha:"2026-08-11",horaProg:"9:00",po:"",asistencia:true,evid:1,mats:[],notas:"",
-     notasTec:"Color change aprobado por manager",
-     hist:[["8:20","Creada","Thalia"],["8:21","Asignada a Marcos Ayala","Thalia"],
-           ["14:10","Return por supervisión: Quedó pintura en el marco de la puerta y el zócalo sin retocar.","Gustavo"]]},
-    {id:1042,prop:"P2",unidad:"U5",cat:"Clean",serv:"Deep clean",tec:null,estado:"Pending",semana:33,fecha:"2026-08-12",horaProg:"9:00",po:"",asistencia:false,evid:0,mats:[],notas:"Waiting for water service",notasTec:"",hist:[["7:50","Creada","Claudia"],["8:10","Pending: unit does not have water","Thalia"]]},
+
+    1043 Repair·Drywall repair·T4·Confirmed — confirmCliente es solo de oficina, el técnico la ve
+    en su agenda igual que cualquier otra. fotosPrevias = Work to Be Performed.
     {id:1043,prop:"P3",unidad:"U7",cat:"Repair",serv:"Drywall repair",tec:"T4",estado:"Confirmed",semana:33,fecha:"2026-08-12",horaProg:"10:00",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",
-     /* Confirmada con el cliente; la 1044 queda sin confirmar. El técnico
-        ve las dos igual en su agenda: la confirmación es solo de oficina. */
      confirmCliente:{fecha:"2026-08-12",medio:"Llamada",contacto:"Property Manager",quien:"Thalia",hora:"8:40"},
-     /* Fotos de referencia: lo que hay que reparar, para que el técnico lo vea
-        antes de ir — Work to Be Performed, sembrado para que la galería no
-        arranque siempre vacía. */
      fotosPrevias:[{url:FOTO_SEED,quien:"Thalia",hora:"8:25"},{url:FOTO_SEED,quien:"Thalia",hora:"8:25"}],
      hist:[["8:25","Creada","Thalia"],["8:26","Asignada a Andrés Solís","Thalia"]]},
-    /* Ejemplo para el cierre de agendamiento: Harbor Pointe tiene dos
-       unidades elegibles mañana, por lo que debe salir UN solo correo con
-       ambas líneas al cerrar el día. */
+
+    1062 Clean·Full clean·T4·Confirmed — ejemplo para el cierre de agendamiento: Harbor Pointe
+    tiene dos unidades elegibles el mismo día (ésta y la 1043), debe salir UN solo correo.
     {id:1062,prop:"P3",unidad:"U14",cat:"Clean",serv:"Full clean",tec:"T4",estado:"Confirmed",semana:33,fecha:"2026-08-12",horaProg:"13:00",horaFin:"15:00",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",
      confirmCliente:{fecha:"2026-08-12",medio:"Email",contacto:"Rick Halloway",quien:"Thalia",hora:"9:05"},
      hist:[["9:00","Creada","Thalia"],["9:05","Fecha confirmada con el cliente","Thalia"],["9:06","Asignada a Andrés Solís","Thalia"]]},
-    /* A propósito sin confirmCliente: la oficina la ve "Sin confirmar", pero
-       Diego la ve en su agenda igual que una confirmada y va igual. */
-    {id:1044,prop:"P1",unidad:"U3",cat:"Clean",serv:"Full clean",tec:"T1",estado:"Scheduled",semana:33,fecha:"2026-08-13",horaProg:"9:00",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",hist:[["8:30","Creada","Claudia"]]},
-    /* Terminada y con evidencia, pero todavía sin que nadie la revise — a
-       diferencia de la 1039 (sin evidencia), a ésta SÍ se le puede tocar
-       «Aprobar supervisión» y va a funcionar: sirve para probar el flujo de
-       Gustavo de punta a punta, en vivo, sin que se bloquee. */
-    // antesFotos: foto del "antes" sembrada aparte de evidFotos, para mostrar los dos grupos en oficina
-    {id:1045,prop:"P2",unidad:"U5",cat:"Clean",serv:"Deep clean",tec:"T1",estado:"Completed",semana:33,fecha:"2026-08-12",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T1",hora:"12:15"}],antesFotos:[{url:FOTO_SEED,quien:"T1",hora:"9:10"}],mats:[],notas:"",notasTec:"",hist:[["8:00","Creada","Thalia"],["8:01","Asignada a Diego Ramírez","Thalia"],["9:05","Llegó a la propiedad","Diego"],["12:15","Terminó · 1 evidencia","Diego"]]},
-    /* Ya la aprobó Gustavo (supervisada:true) pero Erika todavía no la validó
-       en Nómina — el paso intermedio entre las dos personas, que hasta ahora
-       no tenía ejemplo propio. infoPedida: oficina le pidió resolver la
-       tarifa antes de que entre a su pago (bloque "Te falta completar esto"). */
-    {id:1046,prop:"P1",unidad:"U3",cat:"Clean",serv:"Full clean",tec:"T1",estado:"Completed",semana:33,fecha:"2026-08-12",horaProg:"9:30",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T1",hora:"12:40"}],supervisada:true,pagadaTec:false,facturada:false,mats:[],notas:"",notasTec:"",
-     infoPedida:{quien:"Erika",fecha:"2026-08-13",hora:"9:10",falta:["tarifa"]},
-     hist:[["8:20","Creada","Thalia"],["8:22","Asignada a Diego Ramírez","Thalia"],["9:35","Llegó a la propiedad","Diego"],["12:40","Terminó · 1 evidencia","Diego"],["13:00","Revisión operativa completada","Gustavo"],["13:10","Erika pidió resolver la tarifa","Erika"]]},
-    /* El circuito ya cerrado del todo: aprobada, validada, pagada al técnico
-       y ya facturada — su factura está sembrada más abajo (S.facturas). */
+
+    1047 Repair·Drywall repair·T4·Completed — circuito completo: aprobada, validada, pagada al
+    técnico y facturada (S.facturas F601). También la WO de la nota de crédito (S.devoluciones).
     {id:1047,prop:"P3",unidad:"U7",cat:"Repair",serv:"Drywall repair",tec:"T4",estado:"Completed",semana:33,fecha:"2026-08-08",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T4",hora:"11:20"}],supervisada:true,validada:true,pagadaTec:true,facturada:true,mats:[],notas:"",notasTec:"",hist:[["8:00","Creada","Thalia"],["8:02","Asignada a Andrés Solís","Thalia"],["9:05","Llegó a la propiedad","Andrés"],["11:20","Terminó · 1 evidencia","Andrés"],["11:40","Revisión operativa completada","Gustavo"],["14:00","Validada y pagada en nómina","Erika"],["15:00","Facturada — INV-2026-1041","Erika"]]},
-    /* Nómina por técnico: trabajos listos para pagar de varios técnicos, para
-       marcar pagado a uno sin tocar a los demás (Marcos además tiene la 1039 frenada). */
-    {id:1052,prop:"P1",unidad:"U1",cat:"Clean",serv:"Full clean",tec:"T3",estado:"Completed",semana:33,fecha:"2026-08-11",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T3",hora:"11:30"}],supervisada:true,validada:true,pagadaTec:false,facturada:false,mats:[],notas:"",notasTec:"",
-     hist:[["8:00","Creada","Thalia"],["8:02","Asignada a Luz","Thalia"],["9:05","Llegó a la propiedad","Luz"],["11:30","Terminó · 1 evidencia","Luz"],["12:00","Revisión operativa completada","Gustavo"],["13:00","Validada","Erika"]]},
-    {id:1053,prop:"P2",unidad:"U5",cat:"Clean",serv:"Deep clean",tec:"T5",estado:"Completed",semana:33,fecha:"2026-08-11",horaProg:"10:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T5",hora:"13:10"}],supervisada:true,validada:true,pagadaTec:false,facturada:false,mats:[],notas:"",notasTec:"",
-     hist:[["8:10","Creada","Thalia"],["8:12","Asignada a Reyna","Thalia"],["10:05","Llegó a la propiedad","Reyna"],["13:10","Terminó · 1 evidencia","Reyna"],["13:30","Revisión operativa completada","Gustavo"],["14:00","Validada","Erika"]]},
-    {id:1054,prop:"P1",unidad:"U1",cat:"Clean",serv:"Full clean",tec:"T2",estado:"Completed",semana:33,fecha:"2026-08-12",horaProg:"8:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T2",hora:"10:40"}],supervisada:true,validada:true,pagadaTec:false,facturada:false,mats:[],notas:"",notasTec:"",
-     hist:[["7:30","Creada","Thalia"],["7:32","Asignada a Marcos Ayala","Thalia"],["8:05","Llegó a la propiedad","Marcos"],["10:40","Terminó · 1 evidencia","Marcos"],["11:00","Revisión operativa completada","Gustavo"],["11:30","Validada","Erika"]]},
-    /* Confirmada esperando "Ya llegué": ejemplo del técnico por defecto (Diego)
-       con una WO agendada y confirmada, sin marcar llegada todavía. */
-    {id:1048,prop:"P1",unidad:"U9",cat:"Clean",serv:"Full clean",tec:"T1",estado:"Confirmed",semana:33,fecha:"2026-08-13",horaProg:"10:30",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",
-     confirmCliente:{fecha:"2026-08-13",medio:"Texto",contacto:"Danielle Pratt",quien:"Thalia",hora:"8:15"},
-     hist:[["8:00","Creada","Thalia"],["8:05","Asignada a Diego Ramírez","Thalia"],["8:15","Confirmada por el cliente vía Texto","Thalia"]]},
-    /* En progreso SIN corroborar todavía: para ver la tarjeta "corrobora la
-       unidad" antes de que se destrabe "Mientras trabajas". */
-    {id:1049,prop:"P2",unidad:"U13",cat:"Clean",serv:"Full clean",tec:"T1",estado:"In progress",semana:33,fecha:"2026-08-12",horaProg:"13:00",po:"",asistencia:true,evid:0,mats:[],notas:"",notasTec:"",
+
+    1049 Clean·Full clean·T1·In progress — SIN corroborar todavía, para ver la tarjeta "corrobora
+    la unidad" antes de destrabar "Mientras trabajas".
+    {id:1049,prop:"P3",unidad:"U15",cat:"Clean",serv:"Full clean",tec:"T1",estado:"In progress",semana:33,fecha:"2026-08-12",horaProg:"13:00",po:"",asistencia:true,evid:0,mats:[],notas:"",notasTec:"",
      hist:[["12:40","Creada","Thalia"],["12:41","Asignada a Diego Ramírez","Thalia"],["13:05","Llegó a la propiedad","Diego"]]},
-    /* Estado "Esperando aprobación" (frenada por un adicional), ya corroborada:
-       trae los adicionales pendiente/rechazado/parcial sembrados más abajo. */
-    {id:1050,prop:"P1",unidad:"U10",cat:"Repair",serv:"Drywall repair",tec:"T1",estado:"Esperando aprobación",semana:33,fecha:"2026-08-12",horaProg:"14:00",po:"",asistencia:true,evid:0,corroborado:true,mats:[],notas:"",notasTec:"",
+
+    1050 Repair·Drywall repair·T1·Esperando aprobación — frenada por un adicional, ya corroborada;
+    trae los adicionales pendiente/rechazado/parcial. Base de DS-SEED3 y NM-SEED1.
+    {id:1050,prop:"P3",unidad:"U14",cat:"Repair",serv:"Drywall repair",tec:"T1",estado:"Esperando aprobación",semana:33,fecha:"2026-08-12",horaProg:"14:00",po:"",asistencia:true,evid:0,corroborado:true,mats:[],notas:"",notasTec:"",
      hist:[["13:40","Creada","Thalia"],["13:41","Asignada a Diego Ramírez","Thalia"],["14:05","Llegó a la propiedad","Diego"],
            ["14:10","Confirmó la unidad","Diego"],["14:30","Pidió aprobación de un adicional · Sheetrock","Diego"]]},
-    /* Touch-up de corrección (w.touchup): Diego rehaciendo su propia WO-1038
-       por el return DV2 — no se le paga por ser su propio error. */
-    {id:1051,prop:"P1",unidad:"U1",cat:"Clean",serv:"Full clean",tec:"T1",estado:"Confirmed",semana:33,fecha:"2026-08-13",horaProg:"9:00",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",
-     touchup:true,facturable:false,devOrigen:"DV2",woOrigen:1038,tecOriginal:"T1",avance:0,
-     confirmCliente:{fecha:"2026-08-13",medio:"Llamada",contacto:"Danielle Pratt",quien:"Thalia",hora:"9:20"},
-     hist:[["9:15","Return fix creado desde el return — no facturable","Gustavo Andrade"],["9:16","Asignado a Diego Ramírez","Gustavo Andrade"],["9:20","Confirmada por el cliente vía Llamada","Thalia"]]},
-    /* Más ejemplos para probar Facturación y Cobranza (pedido de Claudia): Harbor
-       Pointe lista para facturar con 2 WO, una con Sub-WO facturable en la misma
-       factura y otra en factura separada. */
+
+    1055 Clean·Full clean·T3·Completed — ejemplo para probar Facturación y Cobranza: Completed
+    y lista para facturar.
     {id:1055,prop:"P3",unidad:"U14",cat:"Clean",serv:"Full clean",tec:"T3",estado:"Completed",semana:33,fecha:"2026-08-12",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T3",hora:"11:05"}],supervisada:true,validada:true,pagadaTec:false,facturada:false,mats:[],notas:"",notasTec:"",
      hist:[["8:30","Creada","Thalia"],["8:32","Asignada a Luz Ferrer","Thalia"],["9:05","Llegó a la propiedad","Luz"],["11:05","Terminó · 1 evidencia","Luz"],["11:30","Revisión operativa completada","Gustavo"],["12:00","Validada","Erika"]]},
-    {id:1056,prop:"P3",unidad:"U15",cat:"Clean",serv:"Full clean",tec:"T4",estado:"Completed",semana:33,fecha:"2026-08-13",horaProg:"9:30",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T4",hora:"12:10"}],supervisada:true,validada:true,pagadaTec:false,facturada:false,mats:[],notas:"",notasTec:"",
-     hist:[["9:00","Creada","Thalia"],["9:02","Asignada a Andrés Solís","Thalia"],["9:35","Llegó a la propiedad","Andrés"],["10:20","Encontró una fuga bajo el lavamanos de la cocina","Andrés"],["12:10","Terminó · 1 evidencia","Andrés"],["12:30","Revisión operativa completada","Gustavo"],["13:00","Validada","Erika"]]},
-    /* Cobranza — un ejemplo por cada estado que distingue la pantalla: enviada
-       dentro de plazo, vencida hace pocos días con reminder, vencida hace más
-       de un mes con correo overdue y llamada con promesa, y pagada. */
-    {id:1057,prop:"P2",unidad:"U12",cat:"Clean",serv:"Full clean",tec:"T5",estado:"Completed",semana:33,fecha:"2026-08-09",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T5",hora:"11:15"}],supervisada:true,validada:true,pagadaTec:true,facturada:true,mats:[],notas:"",notasTec:"",
-     hist:[["8:15","Creada","Thalia"],["8:16","Asignada a Reyna Bonilla","Thalia"],["9:05","Llegó a la propiedad","Reyna"],["11:15","Terminó · 1 evidencia","Reyna"],["11:40","Revisión operativa completada","Gustavo"],["12:00","Validada","Erika"],["13:00","Pagada al técnico en nómina — semana 33","Erika"],["14:00","Facturada — INV-2026-1042","Erika"]]},
-    /* Vencida hace pocos días, con reminder ya enviado (INV-2026-1043). */
-    {id:1058,prop:"P1",unidad:"U11",cat:"Clean",serv:"Full clean",tec:"T2",estado:"Completed",semana:27,fecha:"2026-07-01",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T2",hora:"11:20"}],supervisada:true,validada:true,pagadaTec:true,facturada:true,mats:[],notas:"",notasTec:"",
-     hist:[["8:10","Creada","Thalia"],["8:12","Asignada a Marcos Ayala","Thalia"],["9:05","Llegó a la propiedad","Marcos"],["11:20","Terminó · 1 evidencia","Marcos"],["11:45","Revisión operativa completada","Gustavo"],["12:00","Validada","Erika"],["13:00","Pagada al técnico en nómina — semana 27","Erika"],["14:00","Facturada — INV-2026-1043","Erika"]]},
-    /* Vencida hace más de un mes, con correo overdue y llamada con promesa
-       (INV-2026-1044). Con un plazo normal de 30 días esto no entra en las
-       semanas 31–33 — HOY_SUP está fijo en 2026-08-11, así que "vencida hace
-       30+ días" obliga a una WO bastante anterior; ver nota en el reporte. */
-    {id:1059,prop:"P2",unidad:"U13",cat:"Clean",serv:"Full clean",tec:"T1",estado:"Completed",semana:23,fecha:"2026-06-04",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T1",hora:"11:30"}],supervisada:true,validada:true,pagadaTec:true,facturada:true,mats:[],notas:"",notasTec:"",
-     hist:[["8:00","Creada","Thalia"],["8:02","Asignada a Diego Ramírez","Thalia"],["9:05","Llegó a la propiedad","Diego"],["11:30","Terminó · 1 evidencia","Diego"],["11:50","Revisión operativa completada","Gustavo"],["12:10","Validada","Erika"],["13:00","Pagada al técnico en nómina","Erika"],["14:00","Facturada — INV-2026-1044","Erika"]]},
-    /* Pagada, con su registro de pago (INV-2026-1045). */
-    {id:1060,prop:"P1",unidad:"U9",cat:"Clean",serv:"Full clean",tec:"T1",estado:"Completed",semana:33,fecha:"2026-08-10",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T1",hora:"11:00"}],supervisada:true,validada:true,pagadaTec:true,facturada:true,cobrada:true,mats:[],notas:"",notasTec:"",
-     hist:[["8:00","Creada","Thalia"],["8:02","Asignada a Diego Ramírez","Thalia"],["9:05","Llegó a la propiedad","Diego"],["11:00","Terminó · 1 evidencia","Diego"],["11:20","Revisión operativa completada","Gustavo"],["11:40","Validada","Erika"],["12:00","Pagada al técnico en nómina — semana 33","Erika"],["12:30","Facturada — INV-2026-1045","Erika"],["15:00","Cobrada INV-2026-1045","Claudia"]]},
-    /* Touch-up de DV1 hecho por Andrés (no por Marcos, el responsable): origina el descuento DS-SEED1. */
-    {id:1061,prop:"P1",unidad:"U2",cat:"Paint",serv:"Touch up paint",tec:"T4",estado:"Completed",semana:33,fecha:"2026-08-11",horaProg:"14:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T4",hora:"15:30"}],supervisada:true,validada:true,pagadaTec:false,facturada:false,pago:60,mats:[],notas:"",notasTec:"",
-     touchup:true,facturable:false,devOrigen:"DV1",woOrigen:1041,tecOriginal:"T2",avance:100,
-     hist:[["8:55","Return fix creado desde el return — no facturable","Gustavo Andrade"],["8:56","Asignado a Andrés Solís","Gustavo Andrade"],["15:30","Terminó · 1 evidencia","Andrés"],["15:45","Validada","Erika"]]}
+
+    1057 Clean·Full clean·T5·Completed — ejemplo de AjusteTotal (descuento en factura) para
+    Auditoría financiera, ver S.facturas F602.
+    {id:1057,prop:"P3",unidad:"U15",cat:"Clean",serv:"Full clean",tec:"T5",estado:"Completed",semana:33,fecha:"2026-08-09",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T5",hora:"11:15"}],supervisada:true,validada:true,pagadaTec:true,facturada:true,mats:[],notas:"",notasTec:"",
+     hist:[["8:15","Creada","Thalia"],["8:16","Asignada a Reyna Bonilla","Thalia"],["9:05","Llegó a la propiedad","Reyna"],["11:15","Terminó · 1 evidencia","Reyna"],["11:40","Revisión operativa completada","Gustavo"],["12:00","Validada","Erika"],["13:00","Pagada al técnico en nómina — semana 33","Erika"],["14:00","Facturada — INV-2026-1042","Erika"]]}
+    */
   ],
-  /* Hallazgo real encontrado en sitio (WO-1040, en progreso): Diego reportó
-     la humedad desde su celular pero no pudo cargar la foto (mala señal).
-     Queda sembrado ya aprobado y con la foto cargada desde oficina — el
-     ejemplo pedido para mostrar el botón nuevo sin tener que armarlo a mano. */
   adicionales:[
+    /* ░░ EJEMPLOS DE HOY COMENTADOS (adicionales/Sub-WO: 951-958, 961) ░░
+    Cada área va a crear sus propios adicionales y Sub-WO desde 0.
+    Resumen de lo que mostraba cada uno, sin anidar comentarios:
+    951 — hallazgo real en WO-1040: Diego reportó humedad sin poder cargar la foto desde el
+    celular; aprobado, con foto cargada después desde oficina.
+    952 — Pendiente: adicional recién enviado por Diego en WO-1050, todavía sin decidir.
+    953 — Rechazado: el cliente no autorizó el cambio de color.
+    954/955 — Parcial: dos líneas del mismo envío, una aprobada y otra rechazada.
+    956 — Sub-WO planificada asignada, sin empezar (sin initial finding ni evidencia).
+    957 — Sub-WO planificada ya terminada, con initial finding y evidencia.
+    958 — Aprobado SIN precio: quedaba como Request "Definir precio del adicional".
+    961 — Sub-WO planificada en curso, sin técnico asignado aparte.
+
     {id:951, sol:"SOL20260811A", wo:1040, desc:"Manchas de humedad y olor en el techo del baño — no estaba en el pedido original.", ubic:"Bano",
      concepto:"Sheetrock", cant:1, precio:85, pago:45, precioOrigen:"manual", catalogoId:null,
      estado:"Aprobado", aprob:{medio:"Llamada", quien:"Claudia", hora:"9:15"}, origen:"Técnico",
@@ -282,15 +197,12 @@ let S = {
      hist:[["8:55","Creada por el técnico en sitio: Sheetrock · precio manual pendiente","Diego Ramírez"],
            ["9:15","Aprobada por el cliente vía Llamada","Claudia"],
            ["9:20","Initial finding cargado desde oficina — el técnico no pudo adjuntarlo desde el celular","Claudia"]]},
-    /* Pendiente: adicional recién enviado por Diego en WO-1050, todavía sin
-       decidir — el ejemplo que faltaba para Requests. */
     {id:952, sol:"SOL20260812P", wo:1050, desc:"Grieta en el techo de la sala, no estaba en el pedido original.", ubic:"Sala",
      concepto:"Sheetrock", cant:1, precio:85, pago:45, precioOrigen:"manual", catalogoId:null,
      estado:"Pendiente", aprob:null, origen:"Técnico",
      fotosRefArr:[], fotosEvidArr:[], hallazgoFoto:{url:FOTO_SEED, quien:"Diego", hora:"14:25"},
      specs:{}, tec:null, fecha:null, facturaSeparada:false, facturable:true,
      hist:[["14:25","Creada por el técnico en sitio: Sheetrock · precio manual pendiente","Diego Ramírez"]]},
-    /* Rechazado: el cliente no autorizó el cambio de color. */
     {id:953, sol:"SOL20260812R", wo:1050, desc:"Cambio de color solicitado por el inquilino, no estaba en el contrato.", ubic:"Dormitorio",
      concepto:"Color change", cant:1, precio:120, pago:60, precioOrigen:"manual", catalogoId:null,
      estado:"Rechazado", aprob:{medio:"Correo", quien:"Danielle Pratt", hora:"15:10"}, origen:"Técnico",
@@ -298,7 +210,6 @@ let S = {
      specs:{}, tec:null, fecha:null, facturaSeparada:false, facturable:true,
      hist:[["14:50","Creada por el técnico en sitio: Color change · precio manual pendiente","Diego Ramírez"],
            ["15:10","Rechazada por el cliente vía Correo","Thalia"]]},
-    /* Parcial: dos líneas del mismo envío — una aprobada, otra rechazada. */
     {id:954, sol:"SOL20260812X", wo:1050, desc:"Grieta secundaria cerca de la ventana; pidió aprobar solo el tape, no la masa extra.", ubic:"Sala",
      concepto:"Tape", cant:1, precio:40, pago:20, precioOrigen:"manual", catalogoId:null,
      estado:"Aprobado", aprob:{medio:"Llamada", quien:"Danielle Pratt", hora:"15:40"}, origen:"Técnico",
@@ -313,8 +224,6 @@ let S = {
      specs:{}, tec:null, fecha:null, facturaSeparada:false, facturable:true,
      hist:[["15:20","Creada por el técnico en sitio: Masa · precio manual pendiente","Diego Ramírez"],
            ["15:40","Rechazada por el cliente vía Llamada","Danielle Pratt"]]},
-    /* Sub-WO planificada asignada al técnico, sin empezar todavía — sin
-       initial finding ni evidencia (botón "Empezar Sub-WO"). */
     {id:956, sol:"SUBP-1040A", wo:1040, desc:"Reparación de sheetrock en la pared del pasillo, planificada aparte del carpet clean.", ubic:"Pasillo",
      concepto:"Sheetrock", cant:1, precio:85, pago:45, precioOrigen:"manual", catalogoId:null,
      estado:"Aprobado", aprob:{medio:"Llamada", quien:"Rick Halloway", hora:"9:00"}, origen:"Planificada",
@@ -322,7 +231,6 @@ let S = {
      specs:{}, tec:null, fecha:"2026-08-12", facturaSeparada:false, facturable:true,
      estadoTrabajo:"Assigned", cantRealizada:0, cantPendiente:0, parcial:false, facturada:false,
      hist:[["9:00","Sub-WO planificada aprobada: Sheetrock","Claudia"]]},
-    /* Sub-WO planificada ya terminada, CON initial finding y evidencia. */
     {id:957, sol:"SUBP-1040B", wo:1040, desc:"Reemplazo de bisagra de puerta del clóset, hallada floja durante el carpet clean.", ubic:"Dormitorio",
      concepto:"Door", cant:1, precio:60, pago:30, precioOrigen:"manual", catalogoId:null,
      estado:"Aprobado", aprob:{medio:"Correo", quien:"Rick Halloway", hora:"9:05"}, origen:"Planificada",
@@ -332,9 +240,6 @@ let S = {
      estadoTrabajo:"Completed", cantRealizada:1, cantPendiente:0, parcial:false, facturada:false,
      hist:[["9:05","Sub-WO planificada aprobada: Door","Claudia"],["9:10","Initial finding cargado","Diego Ramírez"],
            ["9:50","Evidencia cargada","Diego Ramírez"],["9:55","Sub-WO terminada","Diego Ramírez"]]},
-    /* Aprobado SIN precio (Claudia): Thalia habló con la propiedad y aprobó,
-       pero el cliente no dijo cuánto — queda como Request "Definir
-       precio del adicional" para Erika (o Claudia, si hay que estimarlo). */
     {id:958, sol:"SOL20260811B", wo:1040, desc:"Manchas de moho detrás del refrigerador — no estaba en el pedido original.", ubic:"Cocina",
      concepto:"Moho", cant:1, precio:null, pago:null, precioOrigen:null, catalogoId:null,
      estado:"Aprobado", precioPend:true, aprob:{medio:"Llamada", quien:"Thalia", hora:"9:35"}, origen:"Técnico",
@@ -342,116 +247,82 @@ let S = {
      specs:{}, tec:null, fecha:null, facturaSeparada:false, facturable:false,
      hist:[["9:30","Creada por el técnico en sitio: Moho · precio manual pendiente","Diego Ramírez"],
            ["9:35","Aprobada por llamada — sin precio, falta definirlo","Thalia"]]},
-    /* Más Sub-WO planificadas, una por cada situación que se ve en la lista general:
-       pendiente de aprobación (con costo), asignada a otro técnico, en curso y sin técnico. */
-    {id:959, sol:"SUBP-1044A", wo:1044, desc:"Cambio de la puerta del baño, el cliente la pidió aparte del clean.", ubic:"Bano",
-     concepto:"Door", cant:1, precio:95, pago:50, precioOrigen:"manual", catalogoId:null,
-     estado:"Pendiente", aprob:null, origen:"Planificada",
-     fotosRefArr:[], fotosEvidArr:[], hallazgoFoto:null,
-     specs:{}, tec:null, fecha:"2026-08-13", facturaSeparada:false, facturable:true,
-     estadoTrabajo:"Pending approval", cantRealizada:0, cantPendiente:0, parcial:false, facturada:false,
-     hist:[["10:20","Sub-Work Order planificada creada: Door","Thalia"]]},
-    {id:960, sol:"SUBP-1048A", wo:1048, desc:"Retoque de tape en el cuarto, lo hace otro técnico ese mismo día.", ubic:"Dormitorio",
-     concepto:"Tape", cant:1, precio:null, pago:null, precioOrigen:null, catalogoId:null,
-     estado:"Aprobado", aprob:{medio:"Directo", quien:"Thalia", fecha:"10:30"}, origen:"Planificada",
-     fotosRefArr:[], fotosEvidArr:[], hallazgoFoto:null,
-     specs:{}, tec:"T5", fecha:"2026-08-13", facturaSeparada:false, facturable:false,
-     estadoTrabajo:"Assigned", cantRealizada:0, cantPendiente:0, parcial:false, facturada:false,
-     hist:[["10:30","Sub-Work Order planificada creada: Tape","Thalia"]]},
     {id:961, sol:"SUBP-1049A", wo:1049, desc:"Reparación de sheetrock en el pasillo, se hace durante el clean.", ubic:"Pasillo",
      concepto:"Sheetrock", cant:1, precio:85, pago:45, precioOrigen:"manual", catalogoId:null,
      estado:"Aprobado", aprob:{medio:"Llamada", quien:"Rick Halloway", hora:"9:40"}, origen:"Planificada",
      fotosRefArr:[], fotosEvidArr:[], hallazgoFoto:{url:FOTO_SEED, quien:"T1", hora:"13:30"},
      specs:{}, tec:null, fecha:"2026-08-12", facturaSeparada:false, facturable:true,
      estadoTrabajo:"In progress", cantRealizada:0, cantPendiente:0, parcial:false, facturada:false,
-     hist:[["9:40","Sub-WO planificada aprobada: Sheetrock","Claudia"],["13:30","Initial finding cargado","Diego Ramírez"]]},
-    {id:962, sol:"SUBP-1042A", wo:1042, desc:"Limpieza de moho en el baño, sin técnico todavía porque la unidad no tiene agua.", ubic:"Bano",
-     concepto:"Moho", cant:1, precio:null, pago:null, precioOrigen:null, catalogoId:null,
-     estado:"Aprobado", aprob:{medio:"Directo", quien:"Thalia", fecha:"10:40"}, origen:"Planificada",
-     fotosRefArr:[], fotosEvidArr:[], hallazgoFoto:null,
-     specs:{}, tec:null, fecha:"2026-08-14", facturaSeparada:false, facturable:false,
-     estadoTrabajo:"Unassigned", cantRealizada:0, cantPendiente:0, parcial:false, facturada:false,
-     hist:[["10:40","Sub-Work Order planificada creada: Moho","Thalia"]]}
+     hist:[["9:40","Sub-WO planificada aprobada: Sheetrock","Claudia"],["13:30","Initial finding cargado","Diego Ramírez"]]}
+    */
   ],
-  /* Facturación y Cobranza arrancan con ejemplos completos: una factura dentro
-     del plazo, otra vencida con reminder, otra escalada hasta llamada y una ya
-     pagada/cerrada. Así cada estado y su próximo paso se puede probar. */
   facturas:[
+    /* ░░ EJEMPLOS DE HOY COMENTADOS (F601, F602, F-CN-SEED1) ░░
+    Facturación va a emitir y cobrar sus propias facturas desde 0.
+    F601 INV-2026-1041 — factura normal de la WO-1047, dentro del plazo.
+    F602 INV-2026-1042 — con AjusteTotal (descuento en el invoice) para Auditoría financiera.
+    F-CN-SEED1 CN-2026-1041 — nota de crédito por el return DV-SEED1 sobre la WO-1047 ya facturada
+    en F601: F601 queda intacta, ésta es la factura nueva en negativo, vinculada.
+
     {id:"F601",num:"INV-2026-1041",prop:"P3",lineas:[1047],
       conceptos:[{tipo:"WO",wo:1047,subwo:null,unidad:"U7",descripcion:"Drywall repair",cantidad:1,importe:220,evidencia:1}],
       total:220,separada:false,emision:"2026-08-09",vence:"2026-09-08",estado:"Emitida",
       pdf:"INV-2026-1041.pdf",pdfHora:"15:00",pdfQuien:"Erika",seguimiento:[]},
-    {id:"F602",num:"INV-2026-1042",prop:"P2",lineas:[1057],
-      /* AjusteTotal sembrado a propósito: es el ejemplo de "descuento en el
-         invoice" que pide el cliente en Auditoría financiera — ya queda
-         completo en Bitácora (facAjusteAplicar), y además visible acá. */
-      conceptos:[{tipo:"WO",wo:1057,subwo:null,unidad:"U12",descripcion:"Full clean",cantidad:1,importe:140,evidencia:1},
-        {tipo:"AjusteTotal",final:110,motivo:"Cliente pidió descuento por atraso en el acceso",importe:-30,calc:140}],
-      total:110,separada:false,emision:"2026-08-09",vence:"2026-09-08",estado:"Emitida",
+    {id:"F602",num:"INV-2026-1042",prop:"P3",lineas:[1057],
+      conceptos:[{tipo:"WO",wo:1057,subwo:null,unidad:"U15",descripcion:"Full clean",cantidad:1,importe:145,evidencia:1},
+        {tipo:"AjusteTotal",final:115,motivo:"Cliente pidió descuento por atraso en el acceso",importe:-30,calc:145}],
+      total:115,separada:false,emision:"2026-08-09",vence:"2026-09-08",estado:"Emitida",
       pdf:"INV-2026-1042.pdf",pdfHora:"14:00",pdfQuien:"Erika",seguimiento:[]},
-    {id:"F603",num:"INV-2026-1043",prop:"P1",lineas:[1058],
-      conceptos:[{tipo:"WO",wo:1058,subwo:null,unidad:"U11",descripcion:"Full clean",cantidad:1,importe:125,evidencia:1}],
-      total:125,separada:false,emision:"2026-07-02",vence:"2026-08-02",estado:"Enviada",
-      pdf:"INV-2026-1043.pdf",pdfHora:"14:00",pdfQuien:"Erika",
-      seguimiento:[{tipo:"reminder",fecha:"2026-08-05",hora:"9:15",quien:"Erika",nota:"Recordatorio enviado al contacto de la propiedad."}]},
-    {id:"F604",num:"INV-2026-1044",prop:"P2",lineas:[1059],
-      conceptos:[{tipo:"WO",wo:1059,subwo:null,unidad:"U13",descripcion:"Full clean",cantidad:1,importe:125,evidencia:1}],
-      total:125,separada:false,emision:"2026-06-06",vence:"2026-07-06",estado:"Enviada",
-      pdf:"INV-2026-1044.pdf",pdfHora:"14:00",pdfQuien:"Erika",
-      seguimiento:[{tipo:"reminder",fecha:"2026-07-09",hora:"9:20",quien:"Erika"},{tipo:"overdue",fecha:"2026-07-15",hora:"10:00",quien:"Erika"},{tipo:"llamada",fecha:"2026-08-04",hora:"11:30",quien:"Claudia",nota:"El cliente confirmó que el pago está en proceso.",promesa:"2026-08-15"}]},
-    {id:"F605",num:"INV-2026-1045",prop:"P1",lineas:[1060],
-      conceptos:[{tipo:"WO",wo:1060,subwo:null,unidad:"U9",descripcion:"Full clean",cantidad:1,importe:125,evidencia:1}],
-      total:125,separada:false,emision:"2026-08-10",vence:"2026-09-09",estado:"Pagada",
-      pdf:"INV-2026-1045.pdf",pdfHora:"12:30",pdfQuien:"Erika",
-      seguimiento:[{tipo:"pago",fecha:"2026-08-11",hora:"15:00",quien:"Claudia",nota:"Pago recibido y conciliado."},{tipo:"cierre",fecha:"2026-08-11",hora:"15:00",quien:"Claudia"}]},
-    /* Nota de crédito sembrada por el return DV-SEED1 sobre WO-1047 (ya facturada en F601/INV-2026-1041).
-       F601 queda intacta — esta es la factura nueva, en negativo, vinculada. Ejemplo para Auditoría financiera. */
     {id:"F-CN-SEED1",num:"CN-2026-1041",prop:"P3",facturaOrigen:"F601",dev:"DV-SEED1",
       conceptos:[{tipo:"Manual",cat:"Nota de crédito",nombre:"Nota de crédito — El parche de drywall quedó con textura distinta a la pared, se nota el remiendo.",cantidad:1,importe:-60}],
       lineas:[],total:-60,separada:false,emision:"2026-08-11",vence:null,estado:"Nota de crédito",
       motivo:"El parche de drywall quedó con textura distinta a la pared, se nota el remiendo.",
       quien:"Thalia",fecha:"2026-08-11",pdf:null,seguimiento:[]}
+    */
   ],
-  creditosProp:[{id:"CR0",prop:"P1",unidad:"U1",tipo:"Abono",monto:150,motivo:"Retraso en entrega",quien:"Claudia",fecha:"2026-08-05"}],
-  pinturas:[{id:"PT0",prop:"P1",superficie:"Paredes",marca:"Sherwin Williams",color:"",codigo:"ProMar 200",acabado:"Eggshell",nota:"",quien:"Claudia",fecha:"2026-08-05"},
-    {id:"PT1",prop:"P1",superficie:"Cielos",marca:"",color:"Blanco",codigo:"",acabado:"Flat",nota:"",quien:"Claudia",fecha:"2026-08-05"}],
-  creditosServ:[{id:"CS0",prop:"P1",unidad:null,serv:"Full clean",cant:2,tipo:"Abono",motivo:"Cortesía por retraso",quien:"Claudia",fecha:"2026-08-05"}],
-  pagos:[{id:"PG1",factura:"F601",monto:120,medio:"Check",referencia:"CHK-10488",fecha:"2026-08-11",evidencia:true,quien:"Claudia",nota:"Partial payment received"}],
-  /* Sembrados para la tabla "Pagos parciales a técnicos" de Auditoría financiera. */
+  creditosProp:[/* Ejemplo comentado, migrado de Bayside Landing al reducir a 1 propiedad.
+    {id:"CR0",prop:"P3",unidad:"U7",tipo:"Abono",monto:150,motivo:"Retraso en entrega",quien:"Claudia",fecha:"2026-08-05"} */],
+  pinturas:[],
+  // Migrado de Bayside Landing (P1) al reducir a 1 sola propiedad — ejemplo de Auditoría financiera.
+  creditosServ:[/* Ejemplo comentado, migrado de Bayside Landing al reducir a 1 propiedad.
+    {id:"CS0",prop:"P3",unidad:null,serv:"Full clean",cant:2,tipo:"Abono",motivo:"Cortesía por retraso",quien:"Claudia",fecha:"2026-08-05"} */],
+  pagos:[/* Ejemplo comentado, cobranza va a registrar sus propios pagos.
+    {id:"PG1",factura:"F601",monto:120,medio:"Check",referencia:"CHK-10488",fecha:"2026-08-11",evidencia:true,quien:"Claudia",nota:"Partial payment received"} */],
   nomina:[
+    /* Ejemplos de hoy comentados (NM-SEED1/2) — pagos parciales a técnicos.
     {id:"NM-SEED1", semana:33, periodo:{tipo:"semana",sem:33}, tec:"T1", wos:[1050], total:90, tipo:"Parcial", nota:"Adelanto pedido por el técnico", cheque:"", foto:null, quien:"Erika", fecha:"2026-08-11", hora:"9:50"},
     {id:"NM-SEED2", semana:33, periodo:{tipo:"semana",sem:33}, tec:"T2", wos:[1039], total:50, tipo:"Parcial", nota:"", cheque:"CHK-10512", foto:null, quien:"Claudia", fecha:"2026-08-11", hora:"10:40"}
+    */
   ],
-  /* Sembrada con ejemplos reales de cada módulo para poder mostrar la Bitácora
-     en una demo sin tener que generar acciones primero. */
   bitacora:[
-    {n:6, fecha:"2026-08-11", hora:"10:30", usuario:"Erika", rol:"Administración", accion:"Ajustó el total de una factura del borrador (de → a · motivo)", modulo:"Facturación", ref:"Magnolia Court · Factura INV-2026-1042: $140.00 → $110.00 · Cliente pidió descuento por atraso en el acceso"},
+    /* Ejemplos de hoy comentados (bitácora n:1 a 6) — queda vacía, cada acción real que
+    hagan las áreas la va completando sola.
+    {n:6, fecha:"2026-08-11", hora:"10:30", usuario:"Erika", rol:"Administración", accion:"Ajustó el total de una factura del borrador (de → a · motivo)", modulo:"Facturación", ref:"Harbor Pointe · Factura INV-2026-1042: $145.00 → $115.00 · Cliente pidió descuento por atraso en el acceso"},
     {n:5, fecha:"2026-08-11", hora:"10:05", usuario:"Thalia", rol:"Programación", accion:"Decidió un adicional", modulo:"Excepciones", ref:"WO-1040"},
     {n:4, fecha:"2026-08-11", hora:"9:40", usuario:"Erika", rol:"Administración", accion:"Marcó como pagado a un técnico", modulo:"Nómina", ref:"Diego Ramírez · Semana 33"},
     {n:3, fecha:"2026-08-11", hora:"9:10", usuario:"Gustavo", rol:"Supervisión", accion:"Hizo un return a un trabajo", modulo:"Work Orders", ref:"WO-1039"},
     {n:2, fecha:"2026-08-10", hora:"16:20", usuario:"Claudia", rol:"Administración / Estimados", accion:"Aprobó la nómina de un técnico", modulo:"Nómina", ref:"Marcos Ayala · Semana 33"},
     {n:1, fecha:"2026-08-10", hora:"8:16", usuario:"Thalia", rol:"Programación", accion:"Creó una Work Order", modulo:"Work Orders", ref:"WO-1050"}
-  ], audSeq:6, avisos:[], campana:false,
+    */
+  ], audSeq:0, avisos:[], campana:false,
   /* Expedientes post-work enviados al cliente: se conserva el token para
      que el enlace pueda abrirse en otra pestaña del mismo origen. */
   revisionesCliente:[], aprobadoresSol:{},
   /* Lo que Gustavo manda desde el campo. Hoy va por WhatsApp: llega, pero no se queda.
      A los dos meses, cuando el manager reclama, esas fotos ya no las encuentra nadie. */
   reportes:[
-    {id:"R1", tipo:"previo", prop:"P1", unidad:"U2", wo:null,
+    /* Ejemplo de hoy comentado (R1) — cada supervisor va a subir sus propios reportes.
+    {id:"R1", tipo:"previo", prop:"P3", unidad:"U7", wo:null,
      fecha:"2026-08-08", hora:"8:40", quien:"T6", antesDe:"Full paint",
      lotes:[loteSeed("Sala","Accesorios",6,"8:40"),loteSeed("Sala","Pared / drywall",9,"8:41"),
             loteSeed("Bano","Accesorios",11,"8:42"),loteSeed("Room","Pisos",7,"8:43")],
      nota:"Interruptores de la sala ya venian manchados de pintura del trabajo anterior. Golpe en la pared del bano, junto al lavamanos.",
      medidas:"", servicios:[], estado:"Archivado", accion:"Archivado en la unidad"},
+    */
   ],
   /* UC — «Recibir Solicitud Comercial de Lydia»: es el paso 1 del flujograma
      de Propuestas y Estimados, antes de que exista ningun estimado. */
-  solicitudesComerciales:[
-    {id:"SC1", fecha:"2026-08-09", prop:"P2", propNombre:"", contacto:"Rick Halloway", correo:"rick@tridentgrp.com",
-     alcance:"Pintura completa de 2 unidades por cambio de inquilino.", inspeccion:false, fechaObjetivo:"2026-08-20",
-     notas:"Cliente pidio que sea antes de fin de mes.", quien:"Lydia", estado:"Lista para estimado", estimadoId:null},
-  ],
+  solicitudesComerciales:[],
   draftEst:[], estHdr:{cli:"CL1",prop:"P1",cat:"Clean"},
   diasCerrados:[],   // «una vez que ya tenemos cerrado nuestro agendamiento... ahora sí las empezamos a asignar»
   bajas:{},   // valores de catálogo dados de baja — no se borran, dejan de ofrecerse
@@ -462,34 +333,21 @@ let S = {
   // ahora el prototipo saltaba de "registrar prospecto" directo a "Solicitud
   // Comercial", sin la visita en sí — y sin ella, un prospecto que no se
   // decide en el momento ("sigue en seguimiento") no quedaba en ningún lado.
-  visitas:[
-    {id:"VC1", tipo:"Comercial", prop:"P4", propNombre:"", fecha:"2026-08-06", hora:"11:15",
-     contacto:"—", correo:"", quien:"Lydia",
-     notas:"El manager quiere cotizar pero está esperando aprobación de presupuesto del dueño. Pidió que lo contactemos la semana siguiente.",
-     resultado:"Sigue en seguimiento", proximaAccion:"2026-08-08", estado:"En seguimiento",
-     hist:[["10:40","Visita comercial registrada","Lydia"]]},
-  ],
+  visitas:[],
   /* «Recibir Agendamiento Diario de CLAUDIA» — el primer paso de su flujograma.
      Claudia decide a dónde va; el sistema ordena las paradas por zona para que
      no dé vueltas. Lo que hoy se dice por teléfono cada mañana. */
   agendaSup:[
-    {id:"AS1", fecha:"2026-08-11", prop:"P1", motivo:"Supervisar", nota:"Revisar el clean de A-204 antes de que llegue el manager",
-     estado:"Pendiente", hora:null, quien:"Claudia"},
+    /* Ejemplo de hoy comentado (AS2) — Claudia va a cargar su propia agenda.
     {id:"AS2", fecha:"2026-08-11", prop:"P3", motivo:"Inspección para estimado", nota:"El manager pidió cotizar dos unidades más",
-     estado:"Pendiente", hora:null, quien:"Claudia"},
-    {id:"AS3", fecha:"2026-08-12", prop:"P2", motivo:"Supervisar", nota:"Cierre de limpieza profunda",
-     estado:"Pendiente", hora:null, quien:"Claudia"},
-    {id:"AS4", fecha:"2026-08-14", prop:"P3", motivo:"Inspección para estimado", nota:"Revisar pisos del edificio B",
      estado:"Pendiente", hora:null, quien:"Claudia"}
+    */
   ],
-  /* Thalia pide la visita con fecha tentativa; Claudia la agenda en un día de la ruta de Gustavo. */
   solicitudesSup:[
-    {id:"SS1", tipo:"Estimado", prop:"P2", unidad:"", fechaTentativa:"2026-08-13", nota:"El manager quiere cotizar pintura de pasillos",
-     estado:"Por agendar", pide:"Thalia", hora:"8:55", fecha:"2026-08-11", hist:[["8:55","Solicitud creada","Thalia"]]},
-    {id:"SS2", tipo:"Supervisión", prop:"P1", unidad:"", fechaTentativa:"2026-08-14", nota:"Revisar el trabajo terminado esta semana",
-     estado:"Por agendar", pide:"Thalia", hora:"9:10", fecha:"2026-08-11", hist:[["9:10","Solicitud creada","Thalia"]]},
+    /* Ejemplo de hoy comentado (SS3) — Thalia va a pedir sus propias visitas.
     {id:"SS3", tipo:"Estimado", prop:"P3", unidad:"", fechaTentativa:"2026-08-18", nota:"",
      estado:"Por agendar", pide:"Thalia", hora:"9:25", fecha:"2026-08-11", hist:[["9:25","Solicitud creada","Thalia"]]}
+    */
   ],
   /* ── DEVOLUCIONES ─────────────────────────────────────────────────────
      Hasta ahora una devolucion era solo un estado de la Work Order que
@@ -501,33 +359,16 @@ let S = {
      pero no por que paso — y de eso depende si se le paga al tecnico y
      si se le puede cobrar al cliente. */
   devoluciones:[
-    {id:"DV1", prop:"P1", unidad:"U2", wo:1041, areas:["Baño"],
-     desc:"Quedó pintura en el marco de la puerta y el zócalo sin retocar.",
-     causa:"Trabajo mal ejecutado por el técnico", responsable:"T2",
-     prioridad:"Alta", fechaRep:"2026-08-09", fechaLimite:"2026-08-12", horaLimite:"17:00",
-     estado:"Abierta", lotesAntes:[loteSeed("Baño",null,4,"8:50")], lotesDespues:[],
-     verifica:null, quien:"T6", touchup:1061,
-     hist:[["8:52","Return creado desde informe de supervisión","Gustavo Andrade"],
-           ["8:56","Se creó el return fix WO-1061 para Andrés Solís","Gustavo Andrade"]]},
-    /* Genera la corrección WO-1051, del propio Diego corrigiendo su propia WO-1038. */
-    {id:"DV2", prop:"P1", unidad:"U1", wo:1038, areas:["Cocina"],
-     desc:"Faltó limpiar el interior del refrigerador y el microondas.",
-     causa:"Trabajo mal ejecutado por el técnico", responsable:"T1",
-     prioridad:"Media", fechaRep:"2026-08-11", fechaLimite:"2026-08-14", horaLimite:"17:00",
-     estado:"Abierta", lotesAntes:[loteSeed("Cocina",null,2,"9:08")], lotesDespues:[],
-     verifica:null, quien:"T6", touchup:1051,
-     hist:[["9:10","Return creado desde informe de supervisión","Gustavo Andrade"],
-           ["9:15","Se creó el return fix WO-1051 para Diego Ramírez","Gustavo Andrade"]]},
-    /* Sembrada a propósito sobre WO-1047, que ya está facturada (INV-2026-1041, F601) —
-       es el ejemplo de "nota de crédito" en Auditoría financiera: la factura original
-       no se toca, se emite una nueva en negativo vinculada a ella. */
-    {id:"DV-SEED1", prop:"P3", unidad:"U7", wo:1047, areas:["Drywall"],
+    /* Ejemplo de hoy comentado (DV-SEED1) — sembraba la "nota de crédito" sobre la
+    WO-1047 ya facturada, con 2 áreas para probar varias áreas por return.
+    {id:"DV-SEED1", prop:"P3", unidad:"U7", wo:1047, areas:["Bano","Room"],
      desc:"El parche de drywall quedó con textura distinta a la pared, se nota el remiendo.",
      causa:"Trabajo mal ejecutado por el técnico", responsable:"T4",
      prioridad:"Media", fechaRep:"2026-08-11", fechaLimite:"2026-08-14", horaLimite:"17:00",
-     estado:"Abierta", lotesAntes:[loteSeed("Drywall",null,1,"9:08")], lotesDespues:[],
+     estado:"Abierta", lotesAntes:[loteSeed("Bano",null,1,"9:08")], lotesDespues:[],
      verifica:null, quien:"Gustavo",
      hist:[["9:10","Return creado desde informe de supervisión","Gustavo Andrade"]]}
+    */
   ],
 
   /* ── REPORTE DIARIO ───────────────────────────────────────────────────
@@ -546,11 +387,8 @@ let S = {
   borradores:[],
   /* Ejemplo: Marcos hizo mal WO-1041, Andrés lo corrigió (WO-1061); Erika/Claudia decide si se descuenta. */
   descuentos:[
-    {id:"DS-SEED1", tec:"T2", wo:1061, dev:"DV1", monto:60, montoReal:60, tope:false, semana:33, fecha:"2026-08-11", estado:"Por decidir",
-     motivo:"Return fix de Baño en la unidad A-211 — lo corrigió Andrés Solís"},
-    /* Sembrados ya decididos (Aplicado / No aplicado) para la tabla "Descuentos
-       en nómina" de Auditoría financiera — DS-SEED1 de arriba sigue "Por
-       decidir" a propósito, esa pantalla es Nómina, no esta. */
+    /* Ejemplos de hoy comentados (DS-SEED2 Aplicado, DS-SEED3 No aplicado) para la
+    tabla "Descuentos en nómina" de Auditoría financiera.
     {id:"DS-SEED2", tipo:"Manual", estado:"Aplicado", tec:"T2", semana:33, wo:1039,
      concepto:"Material dañado por mal manejo", motivo:"Material dañado por mal manejo", desc:"",
      monto:25, quien:"Thalia", fecha:"2026-08-11", hora:"9:30"},
@@ -558,6 +396,7 @@ let S = {
      estado:"No aplicado", decidio:"Claudia", horaDecision:"11:15", fechaDecision:"2026-08-11",
      motivoDecision:"Material defectuoso, no es responsabilidad del técnico",
      motivo:"Return fix de Drywall en la unidad U10 — lo corrigió Diego Ramírez"}
+    */
   ],
   repDiario:[],
   phDev:null,      // return abierto en el celular
@@ -568,12 +407,12 @@ let S = {
   // EXCEPCIONES: todo lo que se sale de la regla y necesita que alguien más decida.
   // Una excepción atada a una WO frena solo esa WO; sin WO, frena todo (ver woBloqueada).
   excepciones:[
+    /* Ejemplos de hoy comentados (X1 Pendiente, X2/X3 Aprobada automática por Sub-WO)
+    para la tabla "Descuentos/Pagos" de Auditoría financiera.
     {id:"X1",tipo:"Pago adicional al técnico",wo:1039,motivo:"Marcos tuvo que hacer resane de pared antes de pintar; no está en la tarifa.",monto:75,pide:"Marcos Ayala",aprueba:"Claudia",estado:"Pendiente",fecha:"2026-08-10",creada:{quien:"Marcos Ayala",hora:"7:50"},resol:null},
-    /* Sembrados en estado "Aprobada" a propósito — son el ejemplo de "Auditoría
-       financiera" (ver VIEWS.auditoria): se aprueban solos al aceptar la
-       Sub-Work Order, sin pasar por una pantalla de aprobación. */
     {id:"X2",tipo:"Pago adicional al técnico",wo:1040,subwo:"SW1040A",tec:"T1",motivo:"Sub-Work Order aprobada · Sheetrock · Closet pared norte",monto:60,pide:"Oficina",aprueba:"Thalia",estado:"Aprobada",fecha:"2026-08-11",creada:{quien:"Oficina",hora:"8:55"},resol:{quien:"Thalia",hora:"9:05"}},
     {id:"X3",tipo:"Pago adicional al técnico",wo:1043,subwo:"SW1043A",tec:"T1",motivo:"Sub-Work Order aprobada · Drywall patch · Hallway",monto:45,pide:"Diego Ramírez",aprueba:"Claudia",estado:"Aprobada",fecha:"2026-08-11",creada:{quien:"Diego Ramírez",hora:"10:20"},resol:{quien:"Claudia",hora:"10:30"}}
+    */
   ],
   excCreadas:{},   // primera vez que se vio cada excepción automática: id -> hora. Así queda "creada el/a las" sin tener que guardarlas de antemano.
   // Las solicitudes automáticas se reconstruyen al renderizar. Su propietario
@@ -590,30 +429,37 @@ let S = {
     {id:"PT1",cat:"Compra en tienda",nombre:"Sellador de grout",um:"unidad",costo:0,min:0}
     ,{id:"EQ1",cat:"Herramientas y equipos",nombre:"Aspiradora industrial",um:"unidad",costo:420,min:0,consumible:false,responsable:"T3",estado:"Operativa",ubicacion:"Bodega Pensacola"}
     ,{id:"AF1",cat:"Muebles / activos",nombre:"Laptop administración",um:"unidad",costo:780,min:0,consumible:false,responsable:"Claudia",estado:"Operativa",ubicacion:"Oficina"}
-    ,{id:"IN1",cat:"Material para instalación",nombre:"LVT flooring",um:"caja",costo:48,min:4,consumible:true,reservadoPara:"WO-1040",ubicacion:"Bodega"}
+    ,{id:"IN1",cat:"Material para instalación",nombre:"LVT flooring",um:"caja",costo:48,min:4,consumible:true,reservadoPara:"",ubicacion:"Bodega"}
     ,{id:"OF1",cat:"Suministros de oficina",nombre:"Papel carta",um:"resma",costo:6.5,min:3,consumible:true,ubicacion:"Oficina"}
   ],
   gastosCompartidos:[
-    {id:"GC1",tipo:"Fuel",concepto:"Gasolina para ruta de 3 unidades",monto:90,fecha:"2026-08-10",vehiculo:"Ford Transit 12",evidencia:true,notas:"Ruta lejana Pensacola",asignaciones:[{wo:1038,monto:30},{wo:1039,monto:30},{wo:1040,monto:30}],quien:"Gustavo"},
+    /* Ejemplos de hoy comentados (GC1/GC2/GC3) — cada quien va a registrar sus propios gastos.
+    {id:"GC1",tipo:"Fuel",concepto:"Gasolina para ruta de 2 unidades",monto:60,fecha:"2026-08-10",vehiculo:"Ford Transit 12",evidencia:true,notas:"Ruta lejana Pensacola",asignaciones:[{wo:1039,monto:30},{wo:1040,monto:30}],quien:"Gustavo"},
     {id:"GC2",tipo:"Accommodation",concepto:"Airbnb para finalizar trabajos",monto:420,fecha:"2026-08-09",vehiculo:"",evidencia:true,notas:"Semana de cierre",asignaciones:[{wo:1040,monto:210},{wo:1043,monto:210}],quien:"Erika"},
     {id:"GC3",tipo:"Office",concepto:"Internet oficina",monto:95,fecha:"2026-08-01",vehiculo:"",evidencia:true,notas:"Gasto administrativo",asignaciones:[],quien:"Claudia"}
+    */
   ],
   vehiculos:[{id:"V1",nombre:"Ford Transit 12",placa:"FL CPS-012"},{id:"V2",nombre:"Chevrolet Silverado 8",placa:"FL CPS-008"}],
-  recordatoriosWO:[{id:"RW1",wo:1043,tipo:"1 day before",fecha:"2026-08-11",hora:"10:00",cliente:true,tecnico:false,estado:"Scheduled"},{id:"RW2",wo:1043,tipo:"1 hour before",fecha:"2026-08-12",hora:"09:00",cliente:true,estado:"Scheduled"}],
-  comunicacionesWO:[{id:"CW1",wo:1042,medio:"Email",fecha:"2026-08-11",quien:"Thalia",motivo:"Unit does not have water",mensaje:"Hello, work order WO-1042 is pending because the unit does not have water. Please let us know when the unit is ready for service.",estado:"Sent"}],
+  recordatoriosWO:[/* Ejemplos comentados (RW1/RW2) — se generan solos con cada WO real.
+    {id:"RW1",wo:1043,tipo:"1 day before",fecha:"2026-08-11",hora:"10:00",cliente:true,tecnico:false,estado:"Scheduled"},{id:"RW2",wo:1043,tipo:"1 hour before",fecha:"2026-08-12",hora:"09:00",cliente:true,estado:"Scheduled"} */],
+  comunicacionesWO:[],
   movs:[
+    /* ░░ EJEMPLOS DE HOY COMENTADOS (M1-M7, movimientos de inventario) ░░
+    Oficina y técnicos van a registrar sus propios movimientos desde 0.
+    M6/M7 mostraban la "Compra de materiales" desde el celular del técnico: Diego
+    compró 3 en Home Depot, usó 2 en la unidad y 1 quedó en inventario.
+
     {id:"M1",prod:"PR1",tipo:"entrada",cant:24,fecha:"2026-08-03",wo:null,costo:780,tienda:"Sherwin Williams",quien:"Erika",evid:true},
     {id:"M2",prod:"PR3",tipo:"entrada",cant:8,fecha:"2026-07-20",wo:null,costo:239.44,tienda:"Home Depot",quien:"Gustavo",evid:true},
     {id:"M3",prod:"PR1",tipo:"salida",cant:2,fecha:"2026-08-10",wo:1039,costo:65,tienda:"",quien:"Marcos",evid:false},
     {id:"M4",prod:"PR4",tipo:"entrada",cant:12,fecha:"2026-08-05",wo:null,costo:225,tienda:"Home Depot",quien:"Gustavo",evid:true},
     {id:"M5",prod:"PR3",tipo:"salida",cant:3,fecha:"2026-08-11",wo:1040,costo:89.79,tienda:"",quien:"Diego",evid:false},
-    /* Ejemplo de "Compra de materiales" desde el celular del técnico: Diego
-       compró 3 en Home Depot, usó 2 en la unidad y 1 quedó en inventario. */
     {id:"M6",prod:"PT1",tipo:"entrada",cant:3,fecha:"2026-08-11",wo:null,compraWo:1040,costo:0,costoPend:true,
      tienda:"Home Depot",quien:"Diego",
      notas:"Comprado en tienda con tarjeta de la empresa — falta cargar el costo del ticket",
      recibo:FOTO_SEED,evid:true},
     {id:"M7",prod:"PT1",tipo:"salida",cant:2,fecha:"2026-08-11",wo:1040,costo:0,compra:"M6",tienda:"",quien:"Diego",evid:false}
+    */
   ]
 };
 
