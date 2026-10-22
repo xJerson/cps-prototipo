@@ -107,9 +107,12 @@ const aprobPagoOK = w => !!(w.aprobPago || w.validada);
 const aprobFacturaOK = w => !!(w.aprobFactura || w.validada);
 /* Una corrección o un cambio en la WO invalida las dos aprobaciones, no solo la marca general. */
 function desvalidar(w){ w.validada=false; w.aprobPago=null; w.aprobFactura=null; }
+/* «Aprobada p/ Nómina» / «Aprobada p/ Facturación» son APROBACIONES, no hechos: no dicen que ya se pagó o se facturó
+   (eso está en «Pagado» de Nómina y en la factura). El tooltip lo aclara y, si hay, dice quién aprobó y cuándo. */
 function pillsAprob(w){
-  const p=(ok,t,a)=>`<span class="pill ${ok?"v":"g"}" ${a?`title="${esc(a.quien+" · "+a.fecha+" "+a.hora)}"`:""}>${t}${ok?" ✓":" —"}</span>`;
-  return p(aprobPagoOK(w),"Pago",w.aprobPago)+" "+p(aprobFacturaOK(w),"Factura",w.aprobFactura);
+  const p=(ok,si,no,aclara,a)=>`<span class="pill ${ok?"v":"g"}" style="white-space:nowrap" title="${esc((ok?"Aprobado: ":"Todavía sin aprobar: ")+aclara+(a?` · ${a.quien} · ${a.fecha} ${a.hora}`:""))}">${ok?si+" ✓":no+" —"}</span>`;
+  return p(aprobPagoOK(w),"Aprobada p/ Nómina","Nómina pendiente","ya se le puede pagar al técnico (no quiere decir que ya se pagó).",w.aprobPago)+" "
+    +p(aprobFacturaOK(w),"Aprobada p/ Facturación","Facturación pendiente","ya se puede facturar al cliente (no quiere decir que ya se facturó).",w.aprobFactura);
 }
 /* Responsable de un activo: id de técnico o nombre de oficina. */
 const respN = v => v ? (T(v)?tecN(v):v) : "—";
