@@ -47,7 +47,10 @@ function vDevoluciones(){
       <td><span class="pill ${d.prioridad==="Alta"?"b":"g"}">${esc(d.prioridad)}</span>${d.urgente&&d.estado!=="Cerrada"?`<div><span class="pill r" style="margin-top:3px">Entra inquilino pronto</span></div>`:""}</td>
       <td>${esc(d.fechaRep)}<div style="font-size:10.5px;color:${v?"var(--rojo)":"var(--faint)"}">límite ${esc(d.fechaLimite)} ${esc(d.horaLimite||"")}</div></td>
       <td class="num">${d.estado==="Cerrada"?"—":`<b style="color:${v?"var(--rojo)":"var(--tinta)"}">${dias}</b>`}</td>
-      <td>${(d.lotesAntes||[]).reduce((t,l)=>t+(l.fotosArr||[]).length,0)} / ${(d.lotesDespues||[]).reduce((t,l)=>t+(l.fotosArr||[]).length,0)}</td>
+      <td>${(()=>{ const ant=(d.lotesAntes||[]).flatMap(l=>l.fotosArr||[]), des=(d.lotesDespues||[]).flatMap(l=>l.fotosArr||[]);
+        /* Antes/después en miniatura (abren en grande en otra pestaña): quien lleva el return desde la oficina las ve sin pedírselas a Gustavo. */
+        const mini=(arr,t)=>arr.length?`<div style="display:flex;gap:3px;align-items:center;margin-top:3px"><span style="font-size:10px;color:var(--faint);width:44px">${t}</span>${arr.filter(f=>f.url).slice(0,3).map(f=>`<a href="${f.url}" target="_blank"><img src="${f.url}" style="width:34px;height:26px;object-fit:cover;border-radius:4px;border:1px solid var(--line);display:block"></a>`).join("")}${arr.length>3?`<span style="font-size:10px;color:var(--faint)">+${arr.length-3}</span>`:""}</div>`:"";
+        return `${ant.length} / ${des.length}`+mini(ant,"Antes")+mini(des,"Después"); })()}</td>
       <td><span class="pill ${d.estado==="Cerrada"?"v":d.estado==="Corregida"?"a":"b"}">${esc(d.estado)}</span>
         ${d.verifica?`<div style="font-size:10px;color:var(--verde)">✓ ${esc(tecN(d.verifica))}</div>`:d.cerro?`<div style="font-size:10px;color:var(--verde)">✓ ${esc(d.cerro.quien)}</div>`:""}</td>
       <td style="text-align:right">${(()=>{ const tu=touchupDe(d.id);
