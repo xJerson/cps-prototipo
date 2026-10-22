@@ -545,7 +545,21 @@ function alertas(){
   const A=[];
   S.wos.filter(w=>!w.tec && esAgendada(w.estado)).forEach(w=>A.push({t:"Work Order sin técnico",d:`WO-${w.id} · ${P(w.prop).nombre} ${U(w.unidad).num}`,q:"Thalia",n:"w"}));
   S.asistencias.filter(a=>a.puntualidad==="Tarde").forEach(a=>A.push({t:"Llegada tarde",d:`${tecN(a.tec)} llegó ${a.horaReal} a WO-${a.wo} (programada ${a.horaProg})`,q:"Gustavo",n:"w"}));
-  S.wos.filter(w=>w.tec && esAgendada(w.estado) && !asisDe(w.id)).forEach(w=>A.push({t:"Sin marcar llegada",d:`WO-${w.id} · ${tecN(w.tec)} no ha marcado llegada (programada ${w.horaProg||"9:00"})`,q:"Thalia",n:"g"}));
+  /* Técnico que no responde. Estas alertas miran la FECHA: antes "Sin marcar llegada" salía en gris incluso por una WO de mañana,
+     y un trabajo empezado que nunca se cerró no avisaba nada. No frenan a las demás WO: la pendiente solo no entra a nómina ni a
+     factura hasta que se cierre o se reasigne. */
+  const minProg = w => { const [h,m]=String(w.horaProg||"9:00").split(":").map(Number); return h*60+(m||0); };
+  S.wos.filter(w=>w.tec && esAgendada(w.estado) && !asisDe(w.id) && w.fecha).forEach(w=>{
+    const donde=`${P(w.prop).nombre} ${U(w.unidad).num}`;
+    if(w.fecha<HOY_SUP) A.push({t:"Técnico no se presentó",d:`WO-${w.id} · ${tecN(w.tec)} no marcó llegada el ${w.fecha} (${donde}). Confirma con el técnico o reasigna la WO.`,q:"Thalia · Gustavo",n:"r"});
+    else if(w.fecha===HOY_SUP && S.reloj>minProg(w)+10) A.push({t:"Sin marcar llegada",d:`WO-${w.id} · ${tecN(w.tec)} no ha marcado llegada (programada ${w.horaProg||"9:00"})`,q:"Thalia",n:"a"});
+  });
+  S.wos.filter(w=>w.tec && w.estado==="In progress" && w.fecha && w.fecha<HOY_SUP && asisDe(w.id)).forEach(w=>A.push({t:"Trabajo sin cerrar",
+    d:`WO-${w.id} · ${tecN(w.tec)} llegó a las ${asisDe(w.id).horaReal} del ${w.fecha} y la WO sigue en curso sin cerrarse (${P(w.prop).nombre} ${U(w.unidad).num})`,q:"Gustavo · Thalia",n:"r"}));
+  S.wos.filter(w=>w.tec && w.infoPedida && (w.infoPedida.falta||[]).includes("evidencia")).forEach(w=>{
+    const dias=Math.round((new Date(HOY_SUP)-new Date(w.infoPedida.fecha))/86400000);
+    if(dias>=1) A.push({t:"Información sin responder",d:`WO-${w.id} · ${tecN(w.tec)} no ha completado la evidencia que se le pidió el ${w.infoPedida.fecha} (${dias} día${dias===1?"":"s"})`,q:"Erika",n:"a"});
+  });
   respuestasVencidas().forEach(c=>{ const w=W(c.wo), vencida=c.limite<HOY_SUP; A.push({t:vencida?"Respuesta del cliente vencida":"Respuesta del cliente para hoy",
     d:`WO-${c.wo}${w?` · ${P(w.prop).nombre} ${U(w.unidad).num}`:""} · ${c.motivo} — responder antes del ${c.limite}`,q:"Thalia",n:vencida?"r":"w"}); });
   solTodas().filter(solPend).forEach(s=>A.push({t:"Adicional esperando aprobación",
