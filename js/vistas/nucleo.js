@@ -221,7 +221,9 @@ function capturarFoto(cb0){
           const [MAX,Q]=INTENTOS[i], k=Math.min(1, MAX/Math.max(img.width,img.height));
           const c=document.createElement("canvas");
           c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
-          c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+          const cx=c.getContext("2d");
+          cx.fillStyle="#fff"; cx.fillRect(0,0,c.width,c.height);   // JPEG no tiene transparencia: sin esto un PNG con fondo transparente queda negro
+          cx.drawImage(img,0,0,c.width,c.height);
           c.toBlob(blob=>{
             if(blob && blob.size>OBJETIVO_KB*1024 && i<INTENTOS.length-1){ comprimir(i+1); return; }
             const dataUrl=c.toDataURL("image/jpeg",Q);
@@ -237,8 +239,10 @@ function capturarFoto(cb0){
         };
         comprimir(0);
       };
+      img.onerror=()=>toast("No se pudo leer la imagen","Elige una foto en JPG, PNG o WebP. Ese archivo no se pudo abrir.","r");
       img.src=r.result;
     };
+    r.onerror=()=>toast("No se pudo leer el archivo","Intenta de nuevo con otra foto.","r");
     r.readAsDataURL(f);
   };
   inp.click();
