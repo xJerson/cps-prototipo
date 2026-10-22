@@ -198,6 +198,10 @@ async function nubeRefrescar(){
   const a = document.activeElement;
   if(a && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
   try{
+    /* Si aquí hay cambios que todavía no se subieron (algo que no pasó por una acción normal),
+       primero se suben: traer la nube encima los borraría. */
+    const ahora = _nubeTodo();
+    if(JSON.stringify(ahora) !== JSON.stringify(_nubeSnap)){ nubeGuardar(); return; }
     const tablas = Object.values(NUBE_TABLAS).concat("config");
     const filas = await Promise.all(tablas.map(_nubePedir));
     if(_nubeSucio || _nubeOcupado) return;
@@ -210,3 +214,18 @@ async function nubeRefrescar(){
 }
 document.addEventListener("visibilitychange", () => { if(!document.hidden) nubeRefrescar(); });
 setInterval(() => { if(!document.hidden) nubeRefrescar(); }, 30000);
+
+/* ── FOTOS ── Worker de Cloudflare con un bucket R2 (ver worker/fotos.js).
+   Devuelve la dirección pública de la foto subida.
+   PRODUCCIÓN: subida firmada por usuario y escaneo del archivo; hoy cualquiera con la URL puede subir. */
+const FOTOS_URL = "https://cps-fotos.sukkiejerson.workers.dev";
+async function subirFoto(blob){
+  const r = await fetch(FOTOS_URL + "/subir", { method: "POST", headers: { "Content-Type": blob.type || "image/jpeg" }, body: blob });
+  if(!r.ok){
+    let d = {}; try{ d = await r.json(); }catch(e){}
+    const err = new Error(d.error || ("subir " + r.status));
+    err.cuota = d.codigo === "limite";   // el Worker bloqueó la subida para no pasar del plan gratis
+    throw err;
+  }
+  return (await r.json()).url;
+}

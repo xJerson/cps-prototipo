@@ -3,7 +3,7 @@
    no solo el índice, o si no la app queda vacía sin internet: index.html
    carga pero sus <script src> no resuelven. Sube CACHE_V cuando cambies
    algo de estos archivos para que el celular baje la versión nueva. */
-const CACHE_V = "gustavo-v29";
+const CACHE_V = "gustavo-v31";
 const SHELL = [
   "index.html?gustavo=1",
   "gustavo.html",
@@ -53,8 +53,8 @@ self.addEventListener("activate", e => {
    cae al cache. No hay backend real todavía — esto es la parte de "que
    funcione sin señal" que sí se puede probar ya con el prototipo. */
 self.addEventListener("fetch", e => {
-  /* Los datos de la nube nunca se cachean: siempre van a la red. */
-  if(new URL(e.request.url).hostname.endsWith("supabase.co")) return;
+  /* Los datos y las fotos de la nube nunca pasan por este caché: siempre van a la red. */
+  { const h=new URL(e.request.url).hostname; if(h.endsWith("supabase.co") || h.endsWith("workers.dev")) return; }
   e.respondWith(
     caches.match(e.request).then(hit =>
       hit || fetch(e.request).then(res => {

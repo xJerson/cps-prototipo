@@ -190,12 +190,15 @@ const chk = id => { const e=document.getElementById(id); return e? e.checked : f
 function marcaFalta(ids){ let bad=false; ids.forEach(i=>{ const e=document.getElementById(i);
   if(e && !e.value.trim()){ e.parentElement.classList.add("bad"); bad=true; } else if(e) e.parentElement.classList.remove("bad"); }); return bad; }
 
-/* Punto 7 del feedback (fotos): el prototipo no tiene servidor, así que no hay
-   dónde "subir" nada de verdad — pero ya no hace falta simular con un
-   contador. Se elige una foto real (cámara o galería), se ve de verdad en
-   pantalla y se puede abrir en grande. Se reescala en un canvas antes de
-   guardarla en memoria para no inflar el estado con archivos gigantes. */
-function capturarFoto(cb){
+/* Punto 7 del feedback (fotos): se elige una foto real (cámara o galería), se ve de
+   verdad en pantalla y se puede abrir en grande. Se reescala en un canvas y se sube
+   al Worker de Cloudflare (bucket R2): en los datos solo queda su dirección, no la
+   imagen. Si la subida falla se guarda la imagen reducida dentro del dato, como antes,
+   para no perder la foto. */
+function capturarFoto(cb0){
+  /* La foto llega unos instantes DESPUÉS de la acción (leer, reducir y subir), cuando el guardado
+     automático de esa acción ya pasó: se guarda de nuevo al llegar, o la foto no quedaría en la nube. */
+  const cb = url => { cb0(url); if(typeof guardarEstado==="function") guardarEstado(); };
   // Gancho para las pruebas automáticas: un Chrome headless no tiene forma
   // de tocar el selector de archivos real del sistema operativo, así que
   // la prueba simula la elección seteando esto antes de disparar la acción.
@@ -210,11 +213,29 @@ function capturarFoto(cb){
     r.onload=()=>{
       const img=new Image();
       img.onload=()=>{
-        const MAX=1000, k=Math.min(1, MAX/Math.max(img.width,img.height));
-        const c=document.createElement("canvas");
-        c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
-        c.getContext("2d").drawImage(img,0,0,c.width,c.height);
-        cb(c.toDataURL("image/jpeg",0.72));
+        /* Se prueba de mejor a menor calidad hasta que la foto pese poco: una foto de 1280 px con
+           calidad 0.8 se ve nítida en pantalla y en una ficha impresa, y casi siempre ya pesa 150-350 KB.
+           Con menos peso se cabe mucho más en el espacio gratuito de la nube. */
+        const INTENTOS=[[1280,0.8],[1280,0.68],[1024,0.6]], OBJETIVO_KB=500;
+        const comprimir=i=>{
+          const [MAX,Q]=INTENTOS[i], k=Math.min(1, MAX/Math.max(img.width,img.height));
+          const c=document.createElement("canvas");
+          c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
+          c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+          c.toBlob(blob=>{
+            if(blob && blob.size>OBJETIVO_KB*1024 && i<INTENTOS.length-1){ comprimir(i+1); return; }
+            const dataUrl=c.toDataURL("image/jpeg",Q);
+            if(typeof subirFoto!=="function" || !blob){ cb(dataUrl); return; }
+            subirFoto(blob).then(cb, e=>{
+              console.warn("[fotos] no se pudo subir:", e.message);
+              if(e.cuota){   // tope del plan gratis: se bloquea, NO se guarda por otro camino
+                toast("Límite gratuito de fotos alcanzado", e.message, "r"); return; }
+              toast("La foto no se pudo subir","Quedó dentro de los datos y sigue visible, pero sin pasar por el almacenamiento de fotos.","w");
+              cb(dataUrl);
+            });
+          }, "image/jpeg", Q);
+        };
+        comprimir(0);
       };
       img.src=r.result;
     };
