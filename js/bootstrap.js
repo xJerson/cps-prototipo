@@ -400,7 +400,7 @@ function guardarEstado(){
     if(b){ b.classList.remove("flash-ok"); void b.offsetWidth; b.classList.add("flash-ok"); b.title=(_nubeActiva?"Guardado en la nube · ":"Guardado en este navegador · ")+hora(); }
   }catch(e){
     if(!_guardadoFalloAvisado){ _guardadoFalloAvisado=true;
-      toast("No se pudo guardar","El almacenamiento de este navegador está lleno (puede ser por muchas fotos). Hacé una copia de lo importante antes de seguir probando.","r"); }
+      toast("No se pudo guardar","El almacenamiento de este navegador está lleno (puede ser por muchas fotos). Haz una copia de lo importante antes de seguir probando.","r"); }
   }
   nubeGuardar();
 }

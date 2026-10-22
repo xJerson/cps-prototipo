@@ -18,7 +18,7 @@ function renderFon(){
   if(S.phRol==="supervisor") return renderFonSup();
   const t = T(S.phTec) || S.tecnicos[0];
   $("#favi").textContent = t.nombre[0]+t.apellido[0];
-  /* El nombre y la zona ya los dice el desplegable de la cabecera; acá se
+  /* El nombre y la zona ya los dice el desplegable de la cabecera; aquí se
      dejan cortos para que el desplegable + el toggle Técnico/Supervisor
      entren sin apretar. */
   $("#fanm").textContent = "Celular";
@@ -188,7 +188,7 @@ function renderFon(){
         <span>${l.estado==="Aprobado"?"✓":l.estado==="Rechazado"?"✗":"○"} ${esc(l.concepto)}${(l.cant||1)>1?` ×${l.cant}`:""}</span>
         <span style="color:var(--faint)">${l.estado==="Pendiente"?"esperando":l.estado.toLowerCase()}</span></div>`).join("")}
       ${(s.lineas.some(l=>l.hallazgoFoto))?`<div class="dph s" style="margin-top:7px">📷 ${s.lineas.filter(l=>l.hallazgoFoto).length} foto(s) de hallazgo reportadas</div>`:""}
-      ${(s.lineas.some(l=>l.fotosRefArr&&l.fotosRefArr.length))?`<div class="dph s" style="margin-top:4px">📷 ${s.lineas.reduce((t,l)=>t+((l.fotosRefArr||[]).length),0)} foto(s) de referencia — mirá antes de empezar</div>`:""}
+      ${(s.lineas.some(l=>l.fotosRefArr&&l.fotosRefArr.length))?`<div class="dph s" style="margin-top:4px">📷 ${s.lineas.reduce((t,l)=>t+((l.fotosRefArr||[]).length),0)} foto(s) de referencia — mira antes de empezar</div>`:""}
       ${(s.lineas.some(l=>l.fotosEvidArr&&l.fotosEvidArr.length))?`<div class="dph s" style="margin-top:4px">📷 ${s.lineas.reduce((t,l)=>t+((l.fotosEvidArr||[]).length),0)} foto(s) de evidencia</div>`:""}
       ${e==="Aprobado"?`<div class="ds" style="margin-top:5px;color:var(--verde)"><b>✓ Autorizado</b> — ya puedes hacerlo</div>`:""}
       ${e==="Rechazado"?`<div class="ds" style="margin-top:5px;color:var(--rojo)"><b>No autorizado</b> — no lo ejecutes</div>`:""}
@@ -267,7 +267,7 @@ function renderFon(){
            <button class="db g" data-a="fMaterial" data-id="${w.id}">${icBtn(IC_CAJA)}Materiales${(S.movs.some(m=>m.wo===w.id&&m.tipo==="salida")?` · registrado`:"")}</button>
            <div class="ds" style="margin:-4px 0 7px;padding:0 2px">Lo que usaste en este trabajo — queda registrado en la orden.</div>
            <button class="db g" data-a="fCompraMaterial" data-id="${w.id}">${icBtn(IC_TICKET)}Compra de materiales</button>
-           <div class="ds" style="margin:-4px 0 7px;padding:0 2px">¿Vas a Home Depot/Lowe's con la tarjeta de la empresa? Acá tenés el teléfono para el cajero y subís la foto del ticket.</div>
+           <div class="ds" style="margin:-4px 0 7px;padding:0 2px">¿Vas a Home Depot/Lowe's con la tarjeta de la empresa? Aquí tienes el teléfono para el cajero y subes la foto del ticket.</div>
            ${(()=>{ const ms=S.movs.filter(m=>m.wo===w.id&&m.tipo==="salida"); if(!ms.length) return "";
              const tot=ms.reduce((a,m)=>a+(m.costo||0),0), falta=ms.some(m=>!m.costo);
              return `<div class="dc" style="margin:0 0 9px"><div class="dl" style="margin:0 0 5px">Material usado</div>

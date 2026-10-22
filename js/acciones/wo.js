@@ -87,7 +87,7 @@ Object.assign(ACC, {
   agendaCerrarDia: () => {
     const fecha=(S.cierreAgendamiento&&S.cierreAgendamiento.fecha)||proximoDiaLaborableConfirmacion(), grupos={};
     if(esFinDeSemanaConfirmacion(fecha)){
-      toast("No se enviaron confirmaciones","Las confirmaciones solo se envían de lunes a viernes. Elegí un día laborable.","w");
+      toast("No se enviaron confirmaciones","Las confirmaciones solo se envían de lunes a viernes. Elige un día laborable.","w");
       return;
     }
     wosPorAvisar(fecha).forEach(w=>(grupos[w.prop]=grupos[w.prop]||[]).push(w));
@@ -890,7 +890,7 @@ Object.assign(ACC, {
   /* Reasignar: la WO pasa al nuevo tecnico y el anterior deja de verla.
      El descuento siempre apunta al que hizo mal el trabajo, no al que corrige.
      Mismo patrón de un clic que Asignar (asigSi/asigNo): la tarjeta ya viene
-     deshabilitada si no puede, así que acá solo falta el caso "mismo técnico". */
+     deshabilitada si no puede, así que aquí solo falta el caso "mismo técnico". */
   woReasignar: d => { const w=W(+d.id); if(w && hayNotasAsig(w)) modalNotasAsig(w,"reasignar"); else modalReasignar(+d.id); },
 
   woReasignarNo: d => {
@@ -1029,7 +1029,7 @@ Object.assign(ACC, {
     }
     w.corroborado=true; w.corroboradoNota=resumen+(txt?` · ${txt}`:""); S.phSheet=null;
     w.hist.push([hora(),`Reported unit data mismatch: ${w.corroboradoNota}`,T(w.tec).nombre]);
-    toast("Enviado para revisión","Podés seguir trabajando. Oficina debe revisar el cambio antes de actualizar la unidad.","v");
+    toast("Enviado para revisión","Puedes seguir trabajando. Oficina debe revisar el cambio antes de actualizar la unidad.","v");
     render();
   },
 
@@ -1137,7 +1137,7 @@ Object.assign(ACC, {
     cm(); flash("wo:"+w.id); toast("✓ Sub-Work Order actualizada","La agenda y la nómina usarán esta asignación.","v"); render();
   },
   subwoGuardar: d => {
-    if(marcaFalta(["swTipo","swUbic","swCant"])){ toast("Faltan datos","Elegí el tipo, la ubicación y la cantidad.","r"); return; }
+    if(marcaFalta(["swTipo","swUbic","swCant"])){ toast("Faltan datos","Elige el tipo, la ubicación y la cantidad.","r"); return; }
     const w=W(+val("swWo"));
     const tipo=val("swTipo"), ubic=val("swUbic"), cant=parseFloat(val("swCant"))||1,
       precio=parseFloat(val("swPrecio"))||null, notas=val("swNotas")||"";

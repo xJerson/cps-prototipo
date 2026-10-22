@@ -106,7 +106,7 @@ VIEWS.wo = () => {
     ${S.woFt||S.woFz?`<button class="btn sm" data-a="woFiltroQuitar">Quitar filtros</button>`:""}
   </div></div>
   <div class="card"><table>
-    <thead><tr>${selMode?"<th></th>":""}<th>WO</th><th>Fecha</th><th>Hora</th><th>Sem</th><th>Propiedad · Unidad</th><th>Zona</th><th>Rooms</th><th>Tipo</th><th>Servicio</th><th>Técnico</th><th>Llegada</th><th>Estado</th>${puedeVerDinero?'<th class="num">Cobrado</th><th class="num">Pagado</th>':""}<th></th></tr></thead>
+    <thead><tr>${selMode?"<th></th>":""}<th>WO</th><th>Fecha</th><th>Hora</th><th>Sem</th><th>Propiedad · Unidad</th><th>Zona</th><th>Rooms</th><th>Tipo</th><th>Servicio</th><th>Técnico</th><th>Llegada</th><th>Estado</th>${puedeVerDinero?'<th class="num">Facturado</th><th class="num">Pago a técnico</th>':""}<th></th></tr></thead>
     <tbody>${(()=>{
     const _tbody = ws.map(w=>{
       const t=tarifaWO(w);
@@ -505,7 +505,7 @@ function trazaWO(w){
         a?`${e==="Parcial"?"Aprobado en parte":esc(e)} por ${esc(a.aprob.quien)} vía ${esc(a.aprob.medio)}${a.aprob.ip?" · IP "+a.aprob.ip:""}`:"esperando decisión");
     }).join("")}
     ${paso(!!w.supervisada,"Supervisión",
-      w.supervisada?"Revisada y aprobada":"Pendiente de que Gustavo la revise",
+      w.supervisada?"Supervisión aprobada":"Supervisión pendiente (a cargo de Gustavo)",
       w.supervisada?esc((w.hist.find(h=>h[1].includes("Supervisión"))||[])[2]||""):null)}
     ${paso(!!fac, fac?`Facturada en ${esc(fac.num)}`:"Sin facturar",
       fac?`${puedeVerDinero?money(ingresoWO(w)||0)+" de "+money(fac.total)+" · ":""}vence ${esc(fac.vence||"al enviar")}`:"Todavía no entra a ninguna factura",null)}
@@ -523,7 +523,7 @@ function trazaWO(w){
    Copia su pestaña `Calendar`: AGENDA SEMANAL, con el año y la semana arriba,
    los técnicos en filas y de LUNES a SÁBADO en columnas. En la celda va la
    propiedad con su dirección y la unidad, como lo escriben ellos.
-   La diferencia es que acá se arma sola al agendar. */
+   La diferencia es que aquí se arma sola al agendar. */
 /* Punto 9 del feedback: Weekly View (grilla técnico×día, de siempre) y
    Daily View (lista de lo agendado ese día) — más el mismo selector de
    período de Nómina/Facturación (Día, Semana, Rango, Mes), así se puede
@@ -602,11 +602,11 @@ function vistaDiaria(dia){
   const ws = S.wos.filter(w=>w.fecha===dia && w.estado!=="Canceled").sort((a,b)=>(a.horaProg||"9:00").localeCompare(b.horaProg||"9:00"));
   return `
   <div class="card">
-    <div class="chd"><h3>${dia||"— elegí un día —"}</h3>
+    <div class="chd"><h3>${dia||"— elige un día —"}</h3>
       <span class="r"><span class="pill ${ws.length?"a":"g"}">${ws.length} trabajo(s)</span></span></div>
     ${ws.length?`<table><thead><tr><th>Hora</th><th>Propiedad · Unidad</th><th>Servicio</th><th>Técnico</th><th>Estado</th><th>WO</th></tr></thead>
       <tbody>${ws.map(filaWOAgenda).join("")}</tbody></table>`
-      :`<div class="cp" style="color:var(--faint);font-size:12px">${dia?"Nada agendado para este día.":"Elegí una fecha arriba para ver qué está agendado."}</div>`}
+      :`<div class="cp" style="color:var(--faint);font-size:12px">${dia?"Nada agendado para este día.":"Elige una fecha arriba para ver qué está agendado."}</div>`}
   </div>`;
 }
 
@@ -649,7 +649,7 @@ VIEWS.despacho = () => {
   const nDia = f => new Date(f+"T12:00:00").getDate();
   return `
   <div class="ph"><div><h2>Disponibilidad del equipo</h2>
-    <p>Antes de prometerle una fecha a un cliente, mirá si el equipo tiene lugar ese día. La regla:
+    <p>Antes de prometerle una fecha a un cliente, mira si el equipo tiene lugar ese día. La regla:
     <b>${CAP} trabajos por técnico y por día</b>.</p></div>
     <div class="act">
       <button class="btn sm" data-a="calSem" data-s="${sem-1}">‹ Semana ${sem-1}</button>
@@ -974,7 +974,7 @@ function modalDupWO(dup, edicion){
   modal(`<div class="mh"><h3>Ya existe una Work Order igual</h3></div>
   <div class="mb">
     <div class="note w">WO-${dup.id} ya es <b>${esc(dup.serv)}</b> para esta unidad el <b>${esc(dup.fecha)}</b>${dup.ubic?` en «${esc(dup.ubic)}»`:""}.
-      Si es el mismo pedido, abrila en vez de crear otra. Si es un trabajo nuevo que coincide en fecha, seguí y se crea igual.</div>
+      Si es el mismo pedido, ábrela en vez de crear otra. Si es un trabajo nuevo que coincide en fecha, sigue y se crea igual.</div>
   </div>
   <div class="mf">
     <button class="btn" data-a="woVerDesdeModal" data-id="${dup.id}">Abrir WO-${dup.id}</button>
@@ -1321,7 +1321,7 @@ function modalAsig(id){
 }
 
 /* Reasignar mostraba un <select> con solo el nombre del técnico — Erika pidió
-   ver acá la misma disponibilidad (permiso, carga del día, zona/especialidad)
+   ver aquí la misma disponibilidad (permiso, carga del día, zona/especialidad)
    y la última ubicación marcada que ya usa Asignar, para saber de un vistazo
    quién puede y quién está más cerca sin tener que abrir Técnicos aparte. */
 function modalReasignar(id){

@@ -54,13 +54,13 @@ function ayudaContexto(){
     // El que la propia app marcó (viniste a llenar justo ese, desde el Expediente)
     const m = $("#mroot").querySelector(".fld.bad input,.fld.bad select,.fld.bad textarea,.bad>input,.bad>select,.bad>textarea");
     if(m && !String(m.value||"").trim())
-      return {el:m, txt:"Llená este campo — es el que te falta para completar el Expediente."};
+      return {el:m, txt:"Llena este campo — es el que te falta para completar el Expediente."};
     // Si no, el primer campo obligatorio vacío del formulario
     for(const f of $("#mroot").querySelectorAll(".fld")){
       if(!f.querySelector(".req")) continue;
       const inp = f.querySelector("input,select,textarea");
       if(inp && !String(inp.value||"").trim())
-        return {el:inp, txt:"Llená este campo — está en rojo porque es obligatorio para guardar."};
+        return {el:inp, txt:"Llena este campo — está en rojo porque es obligatorio para guardar."};
     }
     return null;
   }
@@ -71,31 +71,31 @@ function ayudaContexto(){
   if(S.phone && S.phRol==="supervisor"){
     if(!diarioHoy())
       return {sel:'[data-a="fView"][data-v="dia"]',
-        txt:"Todavía no abriste tu reporte de hoy. Andá a «Mi día» y tocá «Abrir mi reporte de hoy» — se va llenando solo con todo lo que hagas de acá en más."};
+        txt:"Todavía no abriste tu reporte de hoy. Ve a «Mi día» y toca «Abrir mi reporte de hoy» — se va llenando solo con todo lo que hagas de aquí en más."};
     const ag = agendaHoy();
     const sinLlegar = ag.find(a=>!["Visitada","No completada"].includes(a.estado));
     if(sinLlegar){
       if(S.phView!=="ruta")
         return {sel:'[data-a="fView"][data-v="ruta"]',
-          txt:`Te falta llegar a ${esc(P(sinLlegar.prop).nombre)}. Andá a «Mi ruta» y marcá cuando llegues.`};
+          txt:`Te falta llegar a ${esc(P(sinLlegar.prop).nombre)}. Ve a «Mi ruta» y marca cuando llegues.`};
       return {sel:`[data-a="gLlegue"][data-id="${sinLlegar.id}"]`,
-        txt:`Tocá «Llegué» cuando estés en ${esc(P(sinLlegar.prop).nombre)}.`};
+        txt:`Toca «Llegué» cuando estés en ${esc(P(sinLlegar.prop).nombre)}.`};
     }
     if(S.gRep)
       return {sel:'[data-a="gRepOK"]',
-        txt:"Cargá las fotos que hagan falta y tocá el botón de enviar — le llega a Claudia al instante, con la propiedad, la hora y las fotos ya ordenadas."};
+        txt:"Carga las fotos que hagan falta y toca el botón de enviar — le llega a Claudia al instante, con la propiedad, la hora y las fotos ya ordenadas."};
     const sinReportar = ag.find(a=>a.estado==="Visitada"
       && !S.reportes.some(r=>r.prop===a.prop && r.fecha===HOY_SUP));
     if(sinReportar){
       if(S.phView!=="reportar")
         return {sel:'[data-a="fView"][data-v="reportar"]',
-          txt:`Ya llegaste a ${esc(P(sinReportar.prop).nombre)}. Andá a «Reportar» y contá qué encontraste.`};
+          txt:`Ya llegaste a ${esc(P(sinReportar.prop).nombre)}. Ve a «Reportar» y cuenta qué encontraste.`};
       return {sel:`[data-a="gRepPro"][data-prop="${sinReportar.prop}"]`,
-        txt:"Tocá esta propiedad para empezar el reporte."};
+        txt:"Toca esta propiedad para empezar el reporte."};
     }
     if(diarioHoy().estado!=="Completado")
       return {sel:'[data-a="fView"][data-v="dia"]',
-        txt:"Ya recorriste tu ruta y reportaste todo. Andá a «Mi día» y cerrá tu reporte para terminar la jornada."};
+        txt:"Ya recorriste tu ruta y reportaste todo. Ve a «Mi día» y cierra tu reporte para terminar la jornada."};
     return null;
   }
 
@@ -105,22 +105,22 @@ function ayudaContexto(){
     if(!expedienteOK(pid)){
       if(tab!=="expediente")
         return {sel:'[data-a="tab"][data-t="expediente"]',
-          txt:"A esta propiedad le falta completar el Expediente. Abrí esta pestaña para ver qué falta."};
+          txt:"A esta propiedad le falta completar el Expediente. Abre esta pestaña para ver qué falta."};
       const falta = expedienteDe(pid).find(c=>!c.ok);
-      let sel, extra="Tocá el botón de esa fila para completarlo.";
+      let sel, extra="Toca el botón de esa fila para completarlo.";
       if(falta.k==="contacto") sel=`[data-a="conNuevo"][data-prop="${pid}"]`;
       else if(falta.k==="coi") sel=`[data-a="coiDirecto"][data-id="${pid}"]`;
       else if(falta.k==="estimado"){
         const solL = S.solicitudesComerciales.find(sc=>sc.prop===pid && sc.estado!=="Estimado creado" && sc.estado!=="Descartada");
-        if(solL){ sel=`[data-a="solComEstimado"][data-id="${solL.id}"]`; extra="Tocá «Crear estimado» — ya hay una Solicitud Comercial esperando."; }
-        else { sel=`[data-a="ir"][data-m="solicitudes"]`; extra="Primero registrá una Solicitud Comercial de esta propiedad."; }
+        if(solL){ sel=`[data-a="solComEstimado"][data-id="${solL.id}"]`; extra="Toca «Crear estimado» — ya hay una Solicitud Comercial esperando."; }
+        else { sel=`[data-a="ir"][data-m="solicitudes"]`; extra="Primero registra una Solicitud Comercial de esta propiedad."; }
       }
       else sel=`[data-a="propNueva"][data-id="${pid}"][data-f="${falta.k}"]`;
       return {sel, txt:`Falta «${falta.n}». ${extra}`};
     }
     if(tab==="expediente")
       return {sel:'[data-a="transferir"]',
-        txt:"El Expediente está completo. Ya podés transferir la propiedad a programación."};
+        txt:"El Expediente está completo. Ya puedes transferir la propiedad a programación."};
     return null;
   }
 
@@ -128,7 +128,7 @@ function ayudaContexto(){
   if(S.mod==="propiedades" && !S.sub){
     const p = S.propiedades.find(x=>x.activa && !expedienteOK(x.id));
     if(p) return {sel:`tr[data-a="propVer"][data-id="${p.id}"]`,
-      txt:`«${esc(p.nombre)}» tiene el Expediente incompleto. Entrá para terminarlo.`};
+      txt:`«${esc(p.nombre)}» tiene el Expediente incompleto. Entra para terminarlo.`};
     return null;
   }
 
@@ -136,27 +136,27 @@ function ayudaContexto(){
   if(S.mod==="solicitudes"){
     const s = S.solicitudesComerciales.find(x=>x.estado==="Lista para estimado" && !x.estimadoId);
     if(s) return {sel:`[data-a="solComEstimado"][data-id="${s.id}"]`,
-      txt:`«${esc(P(s.prop).nombre)}» está lista. Tocá «Crear estimado».`};
+      txt:`«${esc(P(s.prop).nombre)}» está lista. Toca «Crear estimado».`};
     const sp = S.solicitudesComerciales.find(x=>x.estado==="Esperando inspección" && !solInspeccionLista(x));
     if(sp) return {sel:`[data-a="solComInspeccion"][data-id="${sp.id}"]`,
-      txt:`«${esc(sp.prop?P(sp.prop).nombre:(sp.propNombre||"Propiedad nueva"))}» necesita la inspección de Gustavo. Tocá «Asignar inspección a Gustavo»; cuando él entregue su reporte, la solicitud queda lista para armar el estimado.`};
+      txt:`«${esc(sp.prop?P(sp.prop).nombre:(sp.propNombre||"Propiedad nueva"))}» necesita la inspección de Gustavo. Toca «Asignar inspección a Gustavo»; cuando él entregue su reporte, la solicitud queda lista para armar el estimado.`};
     return null;
   }
 
   /* E · Estimados */
   if(S.mod==="estimados"){
     const eB = S.estimados.find(e=>e.estado==="Borrador");
-    if(eB) return {sel:`[data-a="estEnviar"][data-id="${eB.id}"]`, txt:`El estimado ${esc(eB.num)} está en borrador. Tocá «Enviar».`};
+    if(eB) return {sel:`[data-a="estEnviar"][data-id="${eB.id}"]`, txt:`El estimado ${esc(eB.num)} está en borrador. Toca «Enviar».`};
     const eP = S.estimados.find(e=>e.estado==="Aprobado" && e.prospecto);
-    if(eP) return {sel:`[data-a="estConvertir"][data-id="${eP.id}"]`, txt:`El prospecto de ${esc(eP.num)} aprobó. Tocá «Convertir en cliente» para registrar su propiedad y poder transferirlo.`};
+    if(eP) return {sel:`[data-a="estConvertir"][data-id="${eP.id}"]`, txt:`El prospecto de ${esc(eP.num)} aprobó. Toca «Convertir en cliente» para registrar su propiedad y poder transferirlo.`};
     const eA = S.estimados.find(e=>e.estado==="Aprobado" && !e.prospecto && expedienteOK(e.prop));
-    if(eA) return {sel:`[data-a="estAgendar"][data-id="${eA.id}"]`, txt:`El estimado ${esc(eA.num)} está aprobado y su Expediente completo. Tocá «Transferir a programación».`};
+    if(eA) return {sel:`[data-a="estAgendar"][data-id="${eA.id}"]`, txt:`El estimado ${esc(eA.num)} está aprobado y su Expediente completo. Toca «Transferir a programación».`};
     const eX = S.estimados.find(e=>e.estado==="Aprobado" && !e.prospecto && !expedienteOK(e.prop));
     if(eX) return {sel:`[data-a="estIrExpediente"][data-id="${eX.id}"]`, txt:`Al estimado ${esc(eX.num)} le falta completar el Expediente de la propiedad.`};
     const eE = S.estimados.find(e=>e.estado==="Enviado");
-    if(eE) return {sel:`[data-a="estClienteOK"][data-id="${eE.id}"]`, txt:`El estimado ${esc(eE.num)} está enviado. Cuando el cliente responda, marcá «Aprobar» o «Rechazar».`};
+    if(eE) return {sel:`[data-a="estClienteOK"][data-id="${eE.id}"]`, txt:`El estimado ${esc(eE.num)} está enviado. Cuando el cliente responda, marca «Aprobar» o «Rechazar».`};
     const eRj = S.estimados.find(e=>e.estado==="Rechazado");
-    if(eRj) return {sel:`[data-a="estModificar"][data-id="${eRj.id}"]`, txt:`El cliente rechazó el estimado ${esc(eRj.num)}. Tocá «Modificar propuesta y reenviar» para ajustarlo y mandarlo de nuevo.`};
+    if(eRj) return {sel:`[data-a="estModificar"][data-id="${eRj.id}"]`, txt:`El cliente rechazó el estimado ${esc(eRj.num)}. Toca «Modificar propuesta y reenviar» para ajustarlo y mandarlo de nuevo.`};
     return null;
   }
 
@@ -164,22 +164,22 @@ function ayudaContexto(){
   if(S.mod==="wo" && !S.sub){
     const sol = S.solicitudes.find(x=>x.estado==="Pendiente");
     if(sol) return {sel:`[data-a="solProgramar"][data-id="${sol.id}"]`,
-      txt:`«${esc(P(sol.prop).nombre)}» llegó de un estimado aprobado. Tocá «Programar» para crear las Work Orders.`};
+      txt:`«${esc(P(sol.prop).nombre)}» llegó de un estimado aprobado. Toca «Programar» para crear las Work Orders.`};
     const w = S.wos.find(x=>!x.tec && esAgendada(x.estado));
-    if(w) return {sel:`tr[data-a="woVer"][data-id="${w.id}"]`, txt:w.fecha?`La WO-${w.id} todavía no tiene técnico. Entrá para asignarlo.`:`La WO-${w.id} todavía no tiene fecha. Entrá y coordínala con el cliente antes de asignar técnico.`};
+    if(w) return {sel:`tr[data-a="woVer"][data-id="${w.id}"]`, txt:w.fecha?`La WO-${w.id} todavía no tiene técnico. Entra para asignarlo.`:`La WO-${w.id} todavía no tiene fecha. Entra y coordínala con el cliente antes de asignar técnico.`};
     return null;
   }
   if(S.mod==="wo" && S.sub){
     const w = W(S.sub);
-    if(w && !w.fecha && esAgendada(w.estado)) return {sel:'[data-a="progCliente"]', txt:"Esta Work Order nació de un estimado y todavía no tiene fecha. Tocá «Coordinar fecha con el cliente»; después podrás asignar técnico."};
-    if(w && !w.tec && esAgendada(w.estado)) return {sel:'[data-a="asigModal"]', txt:"Esta Work Order no tiene técnico. Tocá «Asignar técnico»."};
-    if(w && w.infoPedida) return {sel:'[data-a="verWoEnCel"]', txt:`Le pediste algo al técnico. Abrí su celular para que lo complete: «Ver en el celular de ${esc(T(w.tec)?T(w.tec).nombre:"el técnico")}».`};
-    if(w && w.tec && esAgendada(w.estado) && !asisDe(w.id)) return {sel:'[data-a="verWoEnCel"]', txt:`Ya está asignada y con fecha. Ahora le toca al técnico: abrí su celular con «Ver en el celular de ${esc(T(w.tec)?T(w.tec).nombre:"el técnico")}» y seguí desde ahí.`};
-    if(w && w.estado==="Completed" && !w.supervisada && w.evid) return {sel:'[data-a="supervisar"]', txt:"El trabajo está terminado y tiene evidencia. Tocá «Aprobar supervisión»."};
+    if(w && !w.fecha && esAgendada(w.estado)) return {sel:'[data-a="progCliente"]', txt:"Esta Work Order nació de un estimado y todavía no tiene fecha. Toca «Coordinar fecha con el cliente»; después podrás asignar técnico."};
+    if(w && !w.tec && esAgendada(w.estado)) return {sel:'[data-a="asigModal"]', txt:"Esta Work Order no tiene técnico. Toca «Asignar técnico»."};
+    if(w && w.infoPedida) return {sel:'[data-a="verWoEnCel"]', txt:`Le pediste algo al técnico. Abre su celular para que lo complete: «Ver en el celular de ${esc(T(w.tec)?T(w.tec).nombre:"el técnico")}».`};
+    if(w && w.tec && esAgendada(w.estado) && !asisDe(w.id)) return {sel:'[data-a="verWoEnCel"]', txt:`Ya está asignada y con fecha. Ahora le toca al técnico: abre su celular con «Ver en el celular de ${esc(T(w.tec)?T(w.tec).nombre:"el técnico")}» y sigue desde ahí.`};
+    if(w && w.estado==="Completed" && !w.supervisada && w.evid) return {sel:'[data-a="supervisar"]', txt:"El trabajo está terminado y tiene evidencia. Toca «Aprobar supervisión»."};
     return null;
   }
 
-  /* F2 · Agenda: si hay órdenes con fecha pero sin técnico, señalá la primera.
+  /* F2 · Agenda: si hay órdenes con fecha pero sin técnico, señala la primera.
      Solo tiene sentido en la Vista semanal — la grilla de "Sin asignar" que
      este tip señala no existe en Vista diaria ni en rango/mes. */
   if(S.mod==="calendario"){
@@ -198,13 +198,13 @@ function ayudaContexto(){
     const mios=pend.filter(x=>x.assignedTo===S.usuario || (!x.assignedTo && x.aprueba===S.usuario));
     if(mios.length && filtro!=="mine" && !mios.some(x=>!x.assignedTo))
       return {sel:'[data-a="excFiltro"][data-f="mine"]',
-        txt:`Tenés ${mios.length} asignado(s) a vos. Abrí la pestaña «Mine» para resolverlos.`};
+        txt:`Tienes ${mios.length} asignado(s) a ti. Abre la pestaña «Mine» para resolverlos.`};
     if(mios.length)
       return {sel:'[data-a="excTarifa"],[data-a="excAprob"],[data-a="excDefinirPrecio"],[data-a="excUnidadRevisar"],[data-a="excAyudaResolver"]',
-        txt:"Resolvé cada uno con su botón — mientras siga pendiente, frena el pago y la factura de esa WO (solo de esa). «Resolver» (Ayuda en sitio) no frena nada."};
+        txt:"Resuelve cada uno con su botón — mientras siga pendiente, frena el pago y la factura de esa WO (solo de esa). «Resolver» (Ayuda en sitio) no frena nada."};
     if(pend.some(x=>!x.assignedTo))
       return {sel:'[data-a="excAsignarYo"],[data-a="excAsignarModal"]',
-        txt:"Estos todavía no tienen dueño. Tocá «Assign to me» para tomarlo, o «Assign» para pasárselo a alguien (le llega un aviso). Al asignarlo sale de «Unassigned» y queda en «All»."};
+        txt:"Estos todavía no tienen dueño. Toca «Assign to me» para tomarlo, o «Assign» para pasárselo a alguien (le llega un aviso). Al asignarlo sale de «Unassigned» y queda en «All»."};
     return {sel:'[data-a="excFiltro"][data-f="all"]',
       txt:"Todos los pendientes ya tienen dueño. En «All» ves a quién le tocó cada uno."};
   }
@@ -212,25 +212,25 @@ function ayudaContexto(){
   /* H · Nómina / Facturación */
   if(S.mod==="nomina"){
     const wv = S.wos.find(w=>w.estado==="Completed" && !w.validada);
-    if(wv) return {sel:`[data-a="validarModal"][data-id="${wv.id}"]`, txt:`Falta validar la WO-${wv.id}. Tocá «Revisar y validar».`};
+    if(wv) return {sel:`[data-a="validarModal"][data-id="${wv.id}"]`, txt:`Falta validar la WO-${wv.id}. Toca «Revisar y validar».`};
     if(S.periodo.tipo==="semana"){
       const tecs = S.tecnicos.filter(t=>t.activo!==false && nominaCalc(t.id).ws.length);
       if(puedeAprobarNomina()){
         const t = tecs.find(x=>!nomAprob(x.id,S.periodo.sem));
-        if(t) return {sel:`[data-a="nomAprobar"][data-tec="${t.id}"]`, txt:`La nómina de ${esc(tecN(t.id))} ya está validada. Tocá «Aprobar»: el técnico la ve en su celular y puede dar su conformidad o enviar una observación.`};
+        if(t) return {sel:`[data-a="nomAprobar"][data-tec="${t.id}"]`, txt:`La nómina de ${esc(tecN(t.id))} ya está validada. Toca «Aprobar»: el técnico la ve en su celular y puede dar su conformidad o enviar una observación.`};
       }
       const ob = tecs.find(x=>{ const a=nomAprob(x.id,S.periodo.sem); return a && a.conf==="Observada"; });
       if(ob && puedeResponderNomina()) return {sel:`[data-a="nomResponder"][data-tec="${ob.id}"]`, txt:`${esc(tecN(ob.id))} envió una observación sobre su pago. Respóndele en su tarjeta.`};
       const pg = tecs.find(x=>nomAprob(x.id,S.periodo.sem));
-      if(pg && puedeVerUtilidad()) return {sel:`[data-a="pagarTec"][data-tec="${pg.id}"]`, txt:`La nómina de ${esc(tecN(pg.id))} está aprobada. Tocá «Marcar pagado» e ingresá el número de cheque (el pago no depende de su conformidad).`};
+      if(pg && puedeVerUtilidad()) return {sel:`[data-a="pagarTec"][data-tec="${pg.id}"]`, txt:`La nómina de ${esc(tecN(pg.id))} está aprobada. Toca «Marcar pagado» e ingresa el número de cheque (el pago no depende de su conformidad).`};
     }
     return null;
   }
   if(S.mod==="facturacion"){
     const fb = S.facturas.find(f=>f.estado==="Borrador");
-    if(fb) return {sel:`[data-a="facEnviar"][data-id="${fb.id}"]`, txt:`La factura ${esc(fb.num)} está en borrador. Revisala (puedes editarla) y tocá «Enviar al cliente»; desde ahí pasa a Cobranza.`};
+    if(fb) return {sel:`[data-a="facEnviar"][data-id="${fb.id}"]`, txt:`La factura ${esc(fb.num)} está en borrador. Revísala (puedes editarla) y toca «Enviar al cliente»; desde ahí pasa a Cobranza.`};
     const wf = S.wos.find(w=>enPeriodo(w.fecha,S.periodo) && w.estado==="Completed" && w.supervisada && aprobFacturaOK(w) && !w.facturada && puedeFacturar(w) && !woBloqueada(w.id));
-    if(wf) return {sel:`[data-a="facturar"][data-prop="${wf.prop}"]`, txt:"Hay trabajo listo para facturar. Tocá «Generar factura»."};
+    if(wf) return {sel:`[data-a="facturar"][data-prop="${wf.prop}"]`, txt:"Hay trabajo listo para facturar. Toca «Generar factura»."};
     return null;
   }
 
@@ -245,25 +245,25 @@ function ayudaContexto(){
   /* J · Management: documentos pendientes */
   if(S.mod==="clientes"){
     const c = S.clientes.find(x=>!x.vendorPacketPdf && x.vendorPacket!=="Recibido" || !x.w9Pdf && x.w9!=="Recibido");
-    if(c) return {sel:`[data-a="cliDocsModal"][data-id="${c.id}"]`, txt:`A «${esc(c.nombre)}» le falta subir el Vendor Packet o el W-9. Tocá «Documentos», adjuntá el archivo y guardá: queda como Subido.`};
+    if(c) return {sel:`[data-a="cliDocsModal"][data-id="${c.id}"]`, txt:`A «${esc(c.nombre)}» le falta subir el Vendor Packet o el W-9. Toca «Documentos», adjunta el archivo y guarda: queda como Subido.`};
     return null;
   }
 
   /* K · Cobranza: la factura vencida se gestiona; la enviada se cobra */
   if(S.mod==="cobranza"){
     const v = S.facturas.find(facVencida);
-    if(v) return {sel:`[data-a="cobGestionar"][data-id="${v.id}"]`, txt:`La factura ${esc(v.num)} está vencida. Tocá «Gestionar»: primero el reminder, luego el correo overdue, después registrá la llamada y, cuando pague, el pago.`};
+    if(v) return {sel:`[data-a="cobGestionar"][data-id="${v.id}"]`, txt:`La factura ${esc(v.num)} está vencida. Toca «Gestionar»: primero el reminder, luego el correo overdue, después registra la llamada y, cuando pague, el pago.`};
     const e = S.facturas.find(f=>f.estado==="Enviada");
-    if(e) return {sel:`[data-a="cobGestionar"][data-id="${e.id}"]`, txt:`La factura ${esc(e.num)} está enviada. Cuando el cliente pague, tocá «Gestionar cobranza» y registrá el pago.`};
+    if(e) return {sel:`[data-a="cobGestionar"][data-id="${e.id}"]`, txt:`La factura ${esc(e.num)} está enviada. Cuando el cliente pague, toca «Gestionar cobranza» y registra el pago.`};
     return null;
   }
 
   /* L · Returns: abrir el return fix y, cuando lo terminan, cerrarlo */
   if(S.mod==="devoluciones"){
     const cr = S.devoluciones.find(d=>d.estado==="Corregida");
-    if(cr && puede("devoluciones")) return {sel:`[data-a="devCerrar"][data-id="${cr.id}"]`, txt:`El return fix de «${esc(P(cr.prop).nombre)}» ya está terminado. Revisalo y tocá «Cerrar».`};
+    if(cr && puede("devoluciones")) return {sel:`[data-a="devCerrar"][data-id="${cr.id}"]`, txt:`El return fix de «${esc(P(cr.prop).nombre)}» ya está terminado. Revísalo y toca «Cerrar».`};
     const ab = devAbiertas().find(d=>!touchupDe(d.id));
-    if(ab) return {sel:`[data-a="devTouchup"][data-id="${ab.id}"]`, txt:`El return de «${esc(P(ab.prop).nombre)}» todavía no tiene return fix. Tocá «Crear return fix» y elegí quién lo corrige.`};
+    if(ab) return {sel:`[data-a="devTouchup"][data-id="${ab.id}"]`, txt:`El return de «${esc(P(ab.prop).nombre)}» todavía no tiene return fix. Toca «Crear return fix» y elige quién lo corrige.`};
     return null;
   }
 
@@ -294,51 +294,51 @@ function renderCoach(){
   } else S._guiaSel = "";
 
   box.innerHTML = `<div class="coach">
-    <div class="ch"><span class="ico">!</span><b>Te ayudo con esto</b>
+    <div class="ch"><span class="ico">!</span><b>Ayuda sobre este paso</b>
       <button class="cx" data-a="coachOff" title="Apagar la ayuda">×</button></div>
     <div class="cb"><div class="paso">${a.txt}</div>
-      ${el?`<div class="cgo on" style="cursor:default">👉 Mirá lo marcado en rojo</div>`
-          :`<div class="quien">Buscalo en esta pantalla.</div>`}
+      ${el?`<div class="cgo on" style="cursor:default">👉 Mira lo marcado en rojo</div>`
+          :`<div class="quien">Búscalo en esta pantalla.</div>`}
     </div></div>`;
 }
 
-/* ══════════ "QUÉ HACER ACÁ" ══════════
+/* ══════════ "QUÉ HACER Aquí" ══════════
    Nota siempre visible arriba de cada vista (no hace falta tocar nada para
    verla) con el paso concreto a seguir — distinta de "¿Qué es esta
    pantalla?" de abajo, que es la explicación general y queda a demanda.
    No se muestra en el celular ni adentro de una ficha/detalle (S.sub). */
 const NOTA_VISTA = {
-  tablero:"Revisá «Lo que necesita tu atención» y resolvé primero lo más urgente.",
-  wo:"Creá la Work Order con «+ Nueva Work Order», asignale técnico y seguila hasta Completed.",
-  calendario:"Elegí Día/Semana/Rango/Mes arriba y asigná técnico a lo que sale en «Sin asignar».",
-  despacho:"Antes de prometerle una fecha a un cliente, mirá acá si el equipo tiene cupo ese día.",
-  propiedades:"Creá la propiedad con «+ Nueva propiedad» y completá su «Expediente» antes de poder agendarla.",
-  tecnicos:"Dalos de alta con «+ Nuevo técnico» y mantené sus datos al día.",
-  tarifario:"Cargá los precios generales con «+ Nueva tarifa» antes de armar Work Orders.",
-  catalogos:"Agregá o quitá acá los valores que después llenan los desplegables del sistema.",
-  clientes:"Registrá la Management con «+ Nuevo» y completá su ficha — de ahí cuelgan sus propiedades.",
-  solicitudes:"Registrá la solicitud del cliente con «+ Nueva solicitud» y contestala dentro de las 24 h.",
-  estimados:"Creá el estimado, armá sus líneas y mandalo — al aprobarse se puede transferir a programación.",
-  excepciones:"Tomalo con «Assign to me» (o asignalo) y resolvelo antes de que frene el pago o la factura de esa WO.",
-  nomina:"Validá cada WO que le falte algo y marcá pagado al técnico cuando corresponda.",
-  facturacion:"Una vez aprobada y validada, generá la factura de la propiedad y armá sus líneas.",
-  cobranza:"Seguí el reclamo de lo vencido (reminder → correo overdue → llamada) y registrá el pago.",
-  auditoria:"Es solo para revisar — si algo está mal, resolvelo en Requests o en el borrador de la factura.",
-  inventario:"Registrá entradas y salidas de material — el stock se calcula solo.",
-  finanzas:"Cargá los gastos y repartilos entre las Work Orders que correspondan.",
-  reportes:"Cruzá los números por semana, zona o servicio — tocá uno para ver qué hay detrás.",
-  buscar:"Filtrá las Work Orders y agrupá para ver promedios de cobro, pago o utilidad.",
-  supervision:"Revisá «De campo», armá la ruta del día de Gustavo y aprobá o hacé return a lo terminado.",
-  devoluciones:"Registrá el return con su causa y creá el return fix asignando a quien esté más cerca.",
-  bitacora:"Solo lectura — filtrá por persona o módulo para auditar qué pasó.",
-  alertas:"Resolvé cada alerta antes de que venza (seguro, tarifa faltante, orden sin técnico).",
+  tablero:"Revisa «Lo que necesita tu atención» y resuelve primero lo más urgente.",
+  wo:"Crea la Work Order con «+ Nueva Work Order», asígnale técnico y seguila hasta Completed.",
+  calendario:"Elige Día/Semana/Rango/Mes arriba y asigna técnico a lo que sale en «Sin asignar».",
+  despacho:"Antes de prometerle una fecha a un cliente, mira aquí si el equipo tiene cupo ese día.",
+  propiedades:"Crea la propiedad con «+ Nueva propiedad» y completa su «Expediente» antes de poder agendarla.",
+  tecnicos:"Dalos de alta con «+ Nuevo técnico» y mantén sus datos al día.",
+  tarifario:"Carga los precios generales con «+ Nueva tarifa» antes de armar Work Orders.",
+  catalogos:"Agrega o quita aquí los valores que después llenan los desplegables del sistema.",
+  clientes:"Registra la Management con «+ Nuevo» y completa su ficha — de ahí cuelgan sus propiedades.",
+  solicitudes:"Registra la solicitud del cliente con «+ Nueva solicitud» y contéstala dentro de las 24 h.",
+  estimados:"Crea el estimado, arma sus líneas y mándalo — al aprobarse se puede transferir a programación.",
+  excepciones:"Tómalo con «Assign to me» (o asígnalo) y resuélvelo antes de que frene el pago o la factura de esa WO.",
+  nomina:"Valida cada WO que le falte algo y marca pagado al técnico cuando corresponda.",
+  facturacion:"Una vez aprobada y validada, genera la factura de la propiedad y arma sus líneas.",
+  cobranza:"Sigue el reclamo de lo vencido (reminder → correo overdue → llamada) y registra el pago.",
+  auditoria:"Es solo para revisar — si algo está mal, resuélvelo en Requests o en el borrador de la factura.",
+  inventario:"Registra entradas y salidas de material — el stock se calcula solo.",
+  finanzas:"Carga los gastos y repartilos entre las Work Orders que correspondan.",
+  reportes:"Cruza los números por semana, zona o servicio — toca uno para ver qué hay detrás.",
+  buscar:"Filtra las Work Orders y agrupa para ver promedios de cobro, pago o utilidad.",
+  supervision:"Revisa «De campo», arma la ruta del día de Gustavo y aprueba o haz return a lo terminado.",
+  devoluciones:"Registra el return con su causa y crea el return fix asignando a quien esté más cerca.",
+  bitacora:"Solo lectura — filtra por persona o módulo para auditar qué pasó.",
+  alertas:"Resuelve cada alerta antes de que venza (seguro, tarifa faltante, orden sin técnico).",
   gustavoweb:"Vista de referencia — las acciones reales se hacen desde el celular de Gustavo."
 };
 function notaVistaHTML(){
   if(S.phone || S.sub) return "";
   const texto = NOTA_VISTA[S.mod];
   if(!texto) return "";
-  return `<div class="note v" style="margin-bottom:12px"><b>Qué hacer acá</b> — ${texto}</div>`;
+  return `<div class="note v" style="margin-bottom:12px"><b>Qué hacer aquí</b> — ${texto}</div>`;
 }
 
 /* ══════════ MAPA DE PASOS DE LA VISTA ══════════
@@ -436,70 +436,70 @@ function mapaVistaHTML(){
 
 /* ══════════ "¿QUÉ ES ESTA PANTALLA?" ══════════
    Un botón fijo en la esquina de cada vista. Al tocarlo, un panel explica
-   para qué sirve esa pantalla y qué se puede hacer ahí (incluido «hacé clic
+   para qué sirve esa pantalla y qué se puede hacer ahí (incluido «haz clic
    en una fila para ver el detalle» donde aplica). Se abre y cierra a mano. */
 const AYUDA_VISTA = {
   tablero:{t:"Tablero", d:"Los números de la semana, calculados solos: cuántas órdenes hay, cuántas terminadas, cuánto se facturó. Es lo que hoy se arma a mano en la hoja Dashboard.",
-    tips:["La lista «Lo que necesita tu atención» ordena los pendientes por urgencia — tocá «Ir →» en cualquiera para ir a resolverlo."]},
+    tips:["La lista «Lo que necesita tu atención» ordena los pendientes por urgencia — toca «Ir →» en cualquiera para ir a resolverlo."]},
   wo:{t:"Work Orders", d:"Las órdenes de trabajo: una unidad, un servicio, una fecha, un técnico. Es la hoja Schedule del Excel.",
-    tips:["Hacé clic en cualquier fila para abrir el detalle de esa orden.","«+ Nueva Work Order» crea una a mano.","Las pestañas de arriba filtran: sin técnico, en curso, de la semana…"]},
-  calendario:{t:"Agenda", d:"Todas las Work Orders ubicadas en su fecha y técnico. Se llena sola: cada orden que creás con fecha aparece acá. Elegí Día, Semana, Rango de fechas o Mes arriba para mirar el período que necesites.",
-    tips:["Semana es la vista de siempre: técnico por fila, día por columna.","Día muestra en una lista exactamente lo agendado ese día puntual.","Rango de fechas y Mes agrupan por fecha lo agendado en ese período — por ejemplo, del 1 al 30 de septiembre.","Las que todavía no tienen técnico salen arriba, en la fila «Sin asignar» (vista Semana) — tocalas para asignar.","Hacé clic en cualquier orden para abrir su detalle."]},
+    tips:["Haz clic en cualquier fila para abrir el detalle de esa orden.","«+ Nueva Work Order» crea una a mano.","Las pestañas de arriba filtran: sin técnico, en curso, de la semana…"]},
+  calendario:{t:"Agenda", d:"Todas las Work Orders ubicadas en su fecha y técnico. Se llena sola: cada orden que creas con fecha aparece aquí. Elige Día, Semana, Rango de fechas o Mes arriba para mirar el período que necesites.",
+    tips:["Semana es la vista de siempre: técnico por fila, día por columna.","Día muestra en una lista exactamente lo agendado ese día puntual.","Rango de fechas y Mes agrupan por fecha lo agendado en ese período — por ejemplo, del 1 al 30 de septiembre.","Las que todavía no tienen técnico salen arriba, en la fila «Sin asignar» (vista Semana) — tocalas para asignar.","Haz clic en cualquier orden para abrir su detalle."]},
   despacho:{t:"Disponibilidad del equipo", d:"Un solo objetivo: antes de prometerle una fecha a un cliente, ver si el equipo tiene lugar ese día. La regla de la que sale todo: 2 trabajos por técnico y por día.",
     tips:["<b>Cupo del equipo</b> de un día = técnicos disponibles ese día × 2. Un técnico con permiso aprobado no cuenta.","<b>Trabajos del día</b> = todas las Work Orders con esa fecha. Si pasan el cupo, la fila se pone roja: hay que mover alguna a otro día.","La barra muestra cuánto del cupo ya está en uso (con técnico) y cuánto queda libre.","<b>Cerrar el día</b>: cuando ya no se juntan más trabajos y se empiezan a repartir a los técnicos.","«+ Registrar permiso» marca a un técnico como no disponible unos días — Gustavo lo aprueba, y esos días le baja el cupo al equipo."]},
   supervision:{t:"Supervisión", d:"Panel de oficina para la supervisión de Gustavo: lo que manda desde el campo, la ruta que se le arma, qué revisar, los returns y lo que quedó acordado con cada propiedad.",
-    tips:["«De campo»: lo que Gustavo mandó desde el celular, esperando que decidas qué hacer con eso.","«Ruta del día»: las propiedades que le armaste para hoy.","«Por revisar»: Work Orders terminadas por el técnico, esperando que Gustavo apruebe o haga return.","«Returns»: lo que se mandó a corregir por calidad, con su motivo y estado.","«Reporte diario»: el resumen del día de Gustavo, se arma solo.","«Ver su celular» abre el simulador — ahí es donde se prueban todas estas acciones de verdad."]},
+    tips:["«De campo»: lo que Gustavo mandó desde el celular, esperando que decidas qué hacer con eso.","«Ruta del día»: las propiedades que le armaste para hoy.","«Por supervisar»: Work Orders terminadas por el técnico, esperando que Gustavo apruebe o haga return.","«Returns»: lo que se mandó a corregir por calidad, con su motivo y estado.","«Reporte diario»: el resumen del día de Gustavo, se arma solo.","«Ver su celular» abre el simulador — ahí es donde se prueban todas estas acciones de verdad."]},
   devoluciones:{t:"Returns", d:"Los trabajos que hay que corregir. Aquí se registra la solicitud (venga de Gustavo, de la propiedad o de un correo), se ve quién puede ir y quién está más cerca, y se asigna el return fix.",
     tips:["«Registrar return»: elige la propiedad y la unidad, quién hizo el trabajo y qué está mal.","«Crear return fix»: muestra a cada técnico con su carga del día y su zona, para mandar a quien esté cerca.","La causa decide la plata: si el trabajo estaba mal hecho, al que lo hizo se le descuenta.","Al crear el return fix se genera una Work Order nueva, vinculada a la original (se ve en su detalle «return fix de WO-X»): no hay que buscarla, el sistema la liga sola."]},
   reportes:{t:"Reportes", d:"Los números del trabajo cruzados como quieras: por semana, por zona, por servicio.",
-    tips:["Tocá un número de la tabla para ver qué órdenes hay detrás."]},
+    tips:["Toca un número de la tabla para ver qué órdenes hay detrás."]},
   auditoria:{t:"Auditoría financiera", d:"Para revisar, no para aprobar: dinero que se movió o se descontó sin pasar por una pantalla de aprobación activa — queda a la vista con monto y motivo.",
-    tips:["No hay botones de aprobar o rechazar acá: si algo está mal, se resuelve en Requests o en el borrador de la factura, donde ya se resuelve hoy.","Los descuentos de factura ya quedan completos en Bitácora también — esta vista los junta con el resto en un solo lugar."]},
+    tips:["No hay botones de aprobar o rechazar aquí: si algo está mal, se resuelve en Requests o en el borrador de la factura, donde ya se resuelve hoy.","Los descuentos de factura ya quedan completos en Bitácora también — esta vista los junta con el resto en un solo lugar."]},
   buscar:{t:"Buscar", d:"Filtra las Work Orders y mira cobro, pago y utilidad de cada una. Sirve para saber cuánto se pagó antes por un mismo trabajo.",
     tips:["Usa Agrupar para ver promedios por propiedad, técnico, servicio o semana.","CSV descarga lo que estás viendo."]},
   clientes:{t:"Management", d:"Las empresas administradoras (property management). Se registra una vez y todas sus propiedades cuelgan de ahí.",
-    tips:["Hacé clic en una fila para ver o corregir una administradora.","«+ Nuevo» registra una."]},
+    tips:["Haz clic en una fila para ver o corregir una administradora.","«+ Nuevo» registra una."]},
   solicitudes:{t:"Solicitudes Comerciales", d:"El pedido del cliente, registrado antes de que exista ningún estimado. Arriba están las visitas comerciales.",
     tips:["<b>Cómo se registra:</b> «+ Nueva solicitud» → propiedad, contacto, <b>Origen</b> (Claudia, Correo, Gustavo o Visita) y qué pidió el cliente.",
       "Las de Gustavo (desde su informe) y las de una visita comercial se crean solas.",
       "<b>Plazo de 24 h:</b> la columna «Respuesta» muestra cuánto falta. Amarilla con 4 h o menos, roja si se venció (y sale en Alertas). Si la registra otra persona, a Claudia le llega un aviso.",
       "<b>Contestar</b> = tocar «Crear estimado», «Asignar inspección a Gustavo» o «Descartar». Queda si fue a tiempo o tarde.",
       "«Cliente lo necesita» es para cuándo el cliente quiere el trabajo — no es el plazo de 24 h.",
-      "El plazo de 24 h corre solo para lo que entra por acá. Un estimado directo («+ Nuevo estimado» en Estimados) no tiene solicitud ni plazo.",
-      "Si la conversación fue en una visita, registrala arriba con «+ Registrar visita»."]},
+      "El plazo de 24 h corre solo para lo que entra por aquí. Un estimado directo («+ Nuevo estimado» en Estimados) no tiene solicitud ni plazo.",
+      "Si la conversación fue en una visita, regístrala arriba con «+ Registrar visita»."]},
   estimados:{t:"Estimados", d:"Las cotizaciones que se le mandan al cliente. Se crean desde una Solicitud Comercial (corre el plazo de 24 h) o directo con «+ Nuevo estimado».",
-    tips:["<b>Cómo se crea uno:</b> «+ Nuevo estimado» arriba, o «Crear estimado» en una Solicitud Comercial. Directo, elegís arriba <b>Cliente existente</b> (propiedad y contactos) o <b>Prospecto nuevo</b> (solo nombre, correo y propiedad o dirección — no se registra nada todavía).",
+    tips:["<b>Cómo se crea uno:</b> «+ Nuevo estimado» arriba, o «Crear estimado» en una Solicitud Comercial. Directo, eliges arriba <b>Cliente existente</b> (propiedad y contactos) o <b>Prospecto nuevo</b> (solo nombre, correo y propiedad o dirección — no se registra nada todavía).",
       "Cada línea se arma como una de factura: «+ Agregar línea» → servicio, descripción, <b>precio</b>, cantidad y descuento. «Editar» la reabre cuando haga falta.",
-      "El precio se precarga de la tarifa <b>General</b> o <b>Propia</b>, pero siempre lo podés cambiar. Si no hay tarifa, usá <b>Concepto libre</b> (nombre, tipo de servicio y precio): también se vuelve Work Order al aprobarse. Se pueden mezclar en un mismo estimado.",
-      "Bajo el precio ves lo que se cobró antes por ese servicio, con porcentaje y cuántas veces — tocá uno para usarlo.",
+      "El precio se precarga de la tarifa <b>General</b> o <b>Propia</b>, pero siempre lo puedes cambiar. Si no hay tarifa, usa <b>Concepto libre</b> (nombre, tipo de servicio y precio): también se vuelve Work Order al aprobarse. Se pueden mezclar en un mismo estimado.",
+      "Bajo el precio ves lo que se cobró antes por ese servicio, con porcentaje y cuántas veces — toca uno para usarlo.",
       "«Al tarifario» (en cada línea) guarda ese precio en el Price List de la propiedad. Es opcional: <b>no hace falta tarifa para aprobar ni para transferir</b>.",
       "Opcional: depósito, documentos, firma del cliente, términos y nota. «Save draft» lo guarda; «Send» lo envía.",
       "«Aprobar» / «Rechazar» se registra a mano cuando el cliente responde, indicando por qué medio avisó. Si lo rechaza: «Modificar propuesta y reenviar».",
       "Un <b>prospecto</b> aprobado se pasa a cliente con «Convertir en cliente» (crea la propiedad con sus datos); recién ahí se puede transferir a programación."]},
   propiedades:{t:"Propiedades", d:"Cada edificio o complejo, con todo lo suyo adentro: unidades, contactos, seguro, precios.",
-    tips:["Hacé clic en cualquier fila para abrir la ficha de esa propiedad.","Adentro, la pestaña «Expediente» te marca lo que falta para poder agendar.","«+ Nueva propiedad» solo pide nombre y dirección — el resto se completa después entrando a la ficha.","En la ficha: «Crédito» (dinero, con unidad opcional) y «Créditos de servicio» (cortesías, p. ej. Full clean × 2). Se usan desde el borrador de factura."]},
+    tips:["Haz clic en cualquier fila para abrir la ficha de esa propiedad.","Adentro, la pestaña «Expediente» te marca lo que falta para poder agendar.","«+ Nueva propiedad» solo pide nombre y dirección — el resto se completa después entrando a la ficha.","En la ficha: «Crédito» (dinero, con unidad opcional) y «Créditos de servicio» (cortesías, p. ej. Full clean × 2). Se usan desde el borrador de factura."]},
   tecnicos:{t:"Técnicos", d:"El equipo: quién está hoy en campo, la lista completa y el historial de asistencia.",
-    tips:["Hacé clic en una fila para ver o corregir un técnico.","«+ Nuevo técnico» lo da de alta."]},
+    tips:["Haz clic en una fila para ver o corregir un técnico.","«+ Nuevo técnico» lo da de alta."]},
   tarifario:{t:"Tarifario", d:"Los precios generales: los que aplican a cualquier propiedad que no tenga un precio propio negociado.",
-    tips:["«+ Nueva tarifa» agrega uno.","Hacé clic en «Editar» para modificar uno existente.","La llave es Servicio + Rooms + Piso."]},
+    tips:["«+ Nueva tarifa» agrega uno.","Haz clic en «Editar» para modificar uno existente.","La llave es Servicio + Rooms + Piso."]},
   catalogos:{t:"Catálogos", d:"Las listas que llenan cada desplegable del sistema: zonas, tipos de servicio, ubicaciones, estados de la orden.",
-    tips:["Se agregan y se quitan acá, sin tocar nada más."]},
-  nomina:{t:"Nómina", d:"Se arma sola con las órdenes validadas. Las completas se validan solas; acá solo aparecen las que les falta algo. El período (semana / día / rango / mes) se elige arriba.",
-    tips:["Regla para pagarle al técnico: alcanza con que Erika la valide acá — no hace falta esperar que Gustavo la haya aprobado.","«Revisar y validar» abre el detalle de una orden. Ahí mismo se ajustan los materiales con «Ajustar».","Una WO con Request pendiente no se paga hasta que se resuelva — el resto del período sí.",
-      "«Marcar pagado» pide el número de cheque y la foto del comprobante. Si pagás a todos juntos, la foto se agrega después con «Adjuntar» en el historial.",
+    tips:["Se agregan y se quitan aquí, sin tocar nada más."]},
+  nomina:{t:"Nómina", d:"Se arma sola con las órdenes validadas. Las completas se validan solas; aquí solo aparecen las que les falta algo. El período (semana / día / rango / mes) se elige arriba.",
+    tips:["Regla para pagarle al técnico: alcanza con que Erika la valide aquí — no hace falta esperar que Gustavo la haya aprobado.","«Revisar y validar» abre el detalle de una orden. Ahí mismo se ajustan los materiales con «Ajustar».","Una WO con Request pendiente no se paga hasta que se resuelva — el resto del período sí.",
+      "«Marcar pagado» pide el número de cheque y la foto del comprobante. Si pagas a todos juntos, la foto se agrega después con «Adjuntar» en el historial.",
       "«Descuento» (en la tarjeta del técnico): monto, concepto, WO y una descripción corta. El técnico lo ve en su celular.",
       "«Parcial» paga una parte de una WO; queda el saldo. Lo que no se pagó en su semana aparece la siguiente en «Pendientes anteriores».",
       "El historial se filtra por técnico, fechas o palabra (WO, propiedad, número de cheque). «Ver» abre qué WO incluyó cada pago."]},
   facturacion:{t:"Facturación", d:"De órdenes terminadas a factura, agrupadas por propiedad, sin volver a escribir nada. El período (semana / día / rango / mes) se elige arriba.",
     tips:["Regla para poder facturar: hacen falta las DOS cosas juntas — aprobada por Gustavo (Supervisión) y validada por Erika (Nómina). Si falta una, no aparece.","La tabla «Por qué todavía no aparecen algunas WO» explica el motivo exacto de cada una que quedó afuera.","«Generar factura» crea la factura de esa propiedad.","Se frena solo la WO con Request pendiente o sin tarifa, no toda la propiedad.",
-      "<b>Normal:</b> todo lo de la propiedad va junto en Factura 1. Solo si la propiedad lo pide separado, usá «Lote manual»: fechas + tipo (Clean, Paint, Extras) → Factura 1, 2, 3…",
-      "<b>+ Factura manual:</b> elegí la propiedad y armá la factura aunque no haya WO; agregá líneas manuales con su tipo y, si querés, su unidad. Ideal para facturas mensuales (todas las pinturas, todas las limpiezas, oficinas).",
-      "<b>Mes:</b> en «Lote manual», elegí un mes y se llenan Desde/Hasta; con Tipo (ej. Clean) y Factura destino, «Seleccionar y asignar lote» junta todo lo de ese mes.",
+      "<b>Normal:</b> todo lo de la propiedad va junto en Factura 1. Solo si la propiedad lo pide separado, usa «Lote manual»: fechas + tipo (Clean, Paint, Extras) → Factura 1, 2, 3…",
+      "<b>+ Factura manual:</b> elige la propiedad y arma la factura aunque no haya WO; agrega líneas manuales con su tipo y, si quieres, su unidad. Ideal para facturas mensuales (todas las pinturas, todas las limpiezas, oficinas).",
+      "<b>Mes:</b> en «Lote manual», elige un mes y se llenan Desde/Hasta; con Tipo (ej. Clean) y Factura destino, «Seleccionar y asignar lote» junta todo lo de ese mes.",
       "<b>Vencimiento:</b> cuenta desde que se <b>envía</b>, con los días de crédito de la propiedad (30 si no tiene otro). Al enviar se puede cambiar.",
       "<b>Línea manual:</b> «Del catálogo» elige un Item (servicio) y precarga nombre y precio; «Libre» es un nombre a mano. La descripción siempre se puede editar.",
       "<b>Créditos de la propiedad:</b> el panel siempre está arriba. Dinero: «Usar» y en qué factura va. Servicios (cortesías): «Agregar» pone una fila Extra N/A «(complimentary)» con el precio real y descuenta 1 del crédito. Los créditos de una unidad de la factura salen primero; «+ Agregar crédito» no pierde el borrador.",
       "<b>Extras:</b> + Suma, − Resta ($ o % del total en ese punto), × Multiplica, ÷ Divide (factor, no 0) y N/A (se muestra pero no suma). Se aplican en orden, por factura.",
-      "<b>Ajustar total:</b> por factura, escribí el total final y el motivo; queda un ajuste fijo en la factura y en la Bitácora. Si después cambian las líneas, avisa «revisalo».",
+      "<b>Ajustar total:</b> por factura, escribe el total final y el motivo; queda un ajuste fijo en la factura y en la Bitácora. Si después cambian las líneas, avisa «revísalo».",
       "El buscador y los filtros (propiedad, estado, fechas) acotan la tabla de facturas.","El PDF se descarga con el número de factura, la fecha y la hora."]},
   cobranza:{t:"Cobranza", d:"El seguimiento de las facturas emitidas. Al pasar su vencimiento sin pago, arranca la secuencia de reclamo.",
     tips:["<b>Vencidas por cliente:</b> junta todas las facturas vencidas de un cliente (aunque sean de varias propiedades). «Enviar recordatorio» manda un solo correo con todas.",
@@ -515,7 +515,7 @@ const AYUDA_VISTA = {
   alertas:{t:"Alertas", d:"Cosas que vencen o que faltan (un seguro por vencer, una tarifa faltante, una orden sin técnico), recalculadas solas. Ninguna es genérica.",
     tips:[]},
   excepciones:{t:"Requests", d:"Pedidos que necesitan que alguien de oficina decida o responda: un pago extra al técnico, una tarifa que no existe, un trabajo cerrado sin fotos, un adicional que pidió el técnico desde el celular — o un técnico pidiendo ayuda en sitio (no abre la llave, falta pintura o material, sin acceso al shop, sin luz o agua…). Mientras uno siga pendiente, frena el pago y la factura <b>solo de su WO</b> — el resto sigue normal. La excepción: «Ayuda en sitio» <b>no frena</b> ni pago ni factura, pero se vuelve URGENT a los 20 min.",
-    tips:["<b>Primero se asigna un dueño:</b> «Assign to me» lo tomás vos; «Assign» se lo pasás a otra persona (a esa persona le llega un aviso).",
+    tips:["<b>Primero se asigna un dueño:</b> «Assign to me» lo tomas tú; «Assign» se lo pasas a otra persona (a esa persona le llega un aviso).",
       "<b>Las pestañas:</b> «Unassigned» = nadie lo tomó todavía · «Mine» = los tuyos · «All» = todos. Al asignar uno, sale de «Unassigned» — no se borra: queda en «All» y en el «Mine» de quien lo recibió.",
       "El botón para resolver (Aprobar, Rechazar, «Definir tarifa»…) solo le aparece al dueño asignado o a quien figura como <b>approver</b>.",
       "«Tarifa no encontrada»: la WO no tiene precio en el tarifario. Quien la tiene asignada toca «Definir tarifa» y pone el precio.",
@@ -527,7 +527,7 @@ const AYUDA_VISTA = {
 
 /* Lo mismo que AYUDA_VISTA, pero para las 5 pantallas del celular de
    Gustavo (S.phView, con S.phRol==="supervisor"). Antes esta ayuda se
-   apagaba entera al abrir el celular — acá adentro es donde más perdida
+   apagaba entera al abrir el celular — aquí adentro es donde más perdida
    queda una persona que nunca lo usó. */
 const AYUDA_FON_SUP = {
   panel:{t:"Hoy", d:"La pantalla de inicio del celular de Gustavo: un resumen de su día — cuántas paradas tiene, cuántas ya visitó, returns y materiales pendientes.",
@@ -535,11 +535,11 @@ const AYUDA_FON_SUP = {
       "«Unidades pendientes de supervisión»: trabajos que el técnico ya terminó y Gustavo todavía tiene que revisar. No son trabajos que el técnico no pudo completar."]},
   ruta:{t:"Mi ruta", d:"Las propiedades que le tocan hoy, ya ordenadas por zona. Esta ruta la arma Claudia — Gustavo no elige a dónde va, solo marca cómo le va yendo.",
     tips:["«Voy en camino» y «Llegué» actualizan su estado en vivo — Claudia lo ve al instante.","«No pude completarla» pide un motivo: queda igual el registro de que fue, aunque no haya podido entrar.","Una vez que marca «Llegué», ahí mismo aparece el botón «Reportar desde aquí»."]},
-  reportar:{t:"Reportar", d:"Acá es donde Gustavo registra lo que encontró y sube las fotos. Se elige primero la propiedad, después qué tipo de reporte es.",
+  reportar:{t:"Reportar", d:"Aquí es donde Gustavo registra lo que encontró y sube las fotos. Se elige primero la propiedad, después qué tipo de reporte es.",
     tips:["Los 4 tipos: inspección para un estimado, estado previo (cómo estaba antes de empezar), revisión de un trabajo del técnico, o falta de material.","Cada uno pide fotos agrupadas por ambiente — no se puede enviar sin al menos una.","Apenas toca enviar, el reporte le llega a Claudia al instante: aparece en la pantalla web «Supervisión», pestaña «De campo»."]},
   dia:{t:"Mi día", d:"Un solo reporte por jornada. Se abre solo con la primera actividad y se va llenando; nada se escribe a mano salvo lo que nadie más puede saber.",
     tips:["Una vez que lo cierra, no se puede editar — si falta algo, se agrega como nota aparte.","Esto es lo mismo que ve Claudia en la web, en «Supervisión → Reporte diario»."]},
-  devs:{t:"Returns", d:"Los trabajos que Gustavo mandó a corregir por calidad. Acá verifica si el return fix que hizo el técnico ya quedó bien.",
+  devs:{t:"Returns", d:"Los trabajos que Gustavo mandó a corregir por calidad. Aquí verifica si el return fix que hizo el técnico ya quedó bien.",
     tips:["Hace falta una foto del después para poder cerrarla.","Hasta que no se cierra, esa Work Order no se puede facturar."]}
 };
 
@@ -548,7 +548,7 @@ const AYUDA_FON_TEC = {
   agenda:{t:"Agenda", d:"Los trabajos del técnico, por día y hora. Cada tarjeta es una Work Order: tocala para abrirla.",
     tips:["«Pedir permiso o vacaciones» le avisa a la oficina."]},
   wo:{t:"Work Order", d:"Lo que el técnico hace en la unidad, paso a paso.",
-    tips:["«Trabajo autorizado» (si aparece) es lo que el cliente aprobó en el estimado: hacé eso y nada más. No muestra precios.",
+    tips:["«Trabajo autorizado» (si aparece) es lo que el cliente aprobó en el estimado: haz eso y nada más. No muestra precios.",
       "Al llegar, confirma que la unidad coincide («Sí, coincide — empezar») o avisa si no («No coincide — avisar»).",
       "«Foto del antes» y «Foto de cómo quedó»: sin fotos de cómo quedó, la oficina no puede cobrar el trabajo.",
       "«Necesito ayuda»: si no puede entrar (la llave no abre) o no tiene acceso al shop, falta pintura o material, o la unidad no tiene luz, agua u otro servicio. Le llega a Thalia y Gustavo como Request «Ayuda en sitio»; no frena su pago.",
@@ -557,7 +557,7 @@ const AYUDA_FON_TEC = {
       "«Terminé» cierra el trabajo."]},
   subwo:{t:"Sub-Work Order", d:"Un trabajo extra dentro de una orden. Se hace solo lo que la oficina autorizó.", tips:[]},
   pago:{t:"Mi pago", d:"Lo que se le paga al técnico esta semana: sus trabajos, extras aprobados y descuentos.",
-    tips:["Si algo quedó sin pagar la semana anterior, aparece acá también.","«Pagado parcial» muestra cuánto lleva cobrado de un trabajo grande.","Cada descuento dice su motivo y de qué WO viene."]},
+    tips:["Si algo quedó sin pagar la semana anterior, aparece aquí también.","«Pagado parcial» muestra cuánto lleva cobrado de un trabajo grande.","Cada descuento dice su motivo y de qué WO viene."]},
   avisos:{t:"Avisos", d:"Los mensajes que la oficina le manda al técnico.", tips:[]}
 };
 
@@ -574,7 +574,7 @@ function renderAyudaVista(){
       tips:["«Asignar técnico» / «Programar con el cliente»: los dos pasos antes de que arranque el trabajo.","«Ver en el celular de …»: abre esta orden en el celular del técnico que la tiene — desde ahí él marca llegada, sube fotos y cierra.","«Detener trabajo»: si empezó pero no puede seguir por algo externo (falta material, no hay acceso…)."]};
     if(S.mod==="propiedades" && S.sub) info = {t:"Ficha de la propiedad",
       d:"Todo lo de esta propiedad, en pestañas. Se completan en cualquier orden; el «Expediente» te va marcando lo que falta.",
-      tips:["«Datos» son los datos generales — «Editar datos» los modifica.","«Expediente»: la lista de control. Sin completarla no se puede transferir a programación.","«Contactos», «Documentos» (el seguro), «Price List» y «Unidades» se cargan cada uno en su pestaña.","«Comunicación»: anotá cada llamada o correo con esta propiedad, para que quede el registro."]};
+      tips:["«Datos» son los datos generales — «Editar datos» los modifica.","«Expediente»: la lista de control. Sin completarla no se puede transferir a programación.","«Contactos», «Documentos» (el seguro), «Price List» y «Unidades» se cargan cada uno en su pestaña.","«Comunicación»: anota cada llamada o correo con esta propiedad, para que quede el registro."]};
   }
   const btn = `<button class="avb" data-a="ayudaVistaToggle">❔ ¿Qué es esta pantalla?</button>`;
   if(!S.ayudaVista || !info){ box.innerHTML = btn; return; }

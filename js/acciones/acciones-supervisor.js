@@ -492,7 +492,7 @@ Object.assign(ACC, {
     if(g.tipo==="relevamiento"){
       S.solicitudesComerciales.filter(sc=>sc.inspeccion && sc.prop===r.prop && sc.estado==="Esperando inspección").forEach(sc=>{
         sc.estado="Lista para estimado";
-        avisar("Claudia","Inspección entregada — ya se puede armar el estimado",`${P(sc.prop).nombre}: Gustavo entregó su reporte de campo. Tocá «Crear estimado» en Solicitudes.`,"v");
+        avisar("Claudia","Inspección entregada — ya se puede armar el estimado",`${P(sc.prop).nombre}: Gustavo entregó su reporte de campo. Toca «Crear estimado» en Solicitudes.`,"v");
       });
     }
     /* El estado previo no espera decisión de nadie: se archiva en la unidad */

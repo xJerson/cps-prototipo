@@ -479,7 +479,7 @@ function modalVisitaCom(id){
 
 VIEWS.estimados = () => `
   <div class="ph"><div><h2>Estimados</h2>
-    <p>Armás las líneas como en una factura: el precio se precarga del tarifario si existe, pero siempre se puede ajustar.</p></div>
+    <p>Armas las líneas como en una factura: el precio se precarga del tarifario si existe, pero siempre se puede ajustar.</p></div>
     <div class="act"><button class="btn" data-a="ir" data-m="solicitudes">Ir a Solicitudes</button>
       <button class="btn p" data-a="estNuevo">+ Nuevo estimado</button></div></div>
   <div class="note" style="margin-bottom:12px">Un estimado puede nacer de una <b>Solicitud Comercial</b> (corre el plazo de 24 h) o directo con «+ Nuevo estimado», para un cliente existente o un <b>prospecto nuevo</b> — sin registrar nada todavía.</div>
@@ -535,7 +535,7 @@ function modalEst(){
       <div class="fg c2">
         <div class="fld"><label>Correo <span class="req">*</span></label><input id="ePC" value="${esc(pr.correo||"")}"></div>
         <div class="fld"><label>Propiedad o dirección</label><input id="ePP" value="${esc(pr.propiedad||"")}"></div></div>
-      <div class="hint" style="margin:-4px 0 12px">No se registra propiedad ni contacto todavía. Si aprueba, lo convertís en cliente desde la lista.</div>`
+      <div class="hint" style="margin:-4px 0 12px">No se registra propiedad ni contacto todavía. Si aprueba, lo conviertes en cliente desde la lista.</div>`
     :`<div class="fld"><label>Bill To <span class="req">*</span> <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— la propiedad y su Management</span></label>
       ${S.propiedades.length
         ? `<select id="eProp" data-a="estHdr">${S.propiedades.map(p=>`<option value="${p.id}" ${p.id===h.prop?"selected":""}>${esc(p.nombre)} — ${esc(p.zona)}</option>`).join("")}</select>
@@ -683,7 +683,7 @@ function modalLineaEst(){
         <input id="eLNom" list="eLNomList" data-a="estLinSug" value="${esc(L.nombre||"")}" placeholder="Drywall repair…">
         <datalist id="eLNomList">${nombres.map(n=>`<option value="${esc(n)}">`).join("")}</datalist></div>
       <div class="fld"><label>Tipo de servicio <span class="req">*</span></label>
-        <select id="eLCat" data-a="estLinSug"><option value="">— elegí —</option>${activos("categorias").map(c=>`<option ${c===L.cat?"selected":""}>${esc(c)}</option>`).join("")}</select></div></div>`
+        <select id="eLCat" data-a="estLinSug"><option value="">— elige —</option>${activos("categorias").map(c=>`<option ${c===L.cat?"selected":""}>${esc(c)}</option>`).join("")}</select></div></div>`
     :`<div class="fld"><label>Servicio <span class="req">*</span></label>
         <select id="eLTar" data-a="estLinTar">${lista.length?lista.map(opt).join(""):`<option value="">— sin tarifas —</option>`}</select></div>`}
 
@@ -763,7 +763,7 @@ function estCrearEst(){
   if(pros){
     const pr=h.prospecto||{};
     if(!pr.nombre||!pr.correo){ S.audOmitir=true; marcaFalta(["ePN","ePC"]); toast("Faltan datos","Para un prospecto, nombre y correo son obligatorios — sin correo no se le puede enviar.","r"); return; }
-  } else if(!h.prop){ S.audOmitir=true; toast("Falta la propiedad","Elegí una propiedad, o pasá a «Prospecto nuevo».","r"); return; }
+  } else if(!h.prop){ S.audOmitir=true; toast("Falta la propiedad","Elige una propiedad, o pasa a «Prospecto nuevo».","r"); return; }
   const datos = {num:h.num||estSiguienteNum(),label:h.label||"Estimate",prop:pros?null:h.prop,
     ...(pros?{prospecto:{...h.prospecto}}:{}), ...(h.origen?{origen:h.origen}:{}),
     contactos:pros?[]:(h.contactos||[]).slice(),fecha:h.issueDate,vence:h.expDate,po:h.po||"",

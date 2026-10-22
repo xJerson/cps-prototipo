@@ -9,7 +9,7 @@ VIEWS.supervision = () => {
     <div class="act"><button class="btn" data-a="verGustavoCel">Ver su celular</button></div></div>
   <div class="tabs">${[["campo",`De campo (${repPend().length})`],["ruta","Ruta del día"],
       ["devs",`Returns (${devAbiertas().length})`],["diario","Reporte diario"],
-      ["revisar",`Por revisar (${rev.length})`],
+      ["revisar",`Por supervisar (${rev.length})`],
       ["insp",`Inspecciones (${insp.length})`],["calidad","Calidad por técnico"],["reporte","Resumen del día"]]
     .map(([k,n])=>`<button class="tab ${t===k?"on":""}" data-a="tab" data-t="${k}">${n}</button>`).join("")}</div>
   ${t==="campo"?vCampoRep():t==="ruta"?vRuta():t==="devs"?vDevoluciones():t==="diario"?vDiarioWeb()
@@ -454,7 +454,7 @@ function vRutaCalc(){
 /* UC-12 — aprobar O DEVOLVER, con el return medido por técnico (H-10) */
 function vRevisar(rev){
   return `
-  <div class="card"><div class="chd"><h3>Por revisar</h3>
+  <div class="card"><div class="chd"><h3>Por supervisar</h3>
     <span class="s">la visita no frena nómina ni facturación; Erika valida el expediente final</span></div>
     ${rev.length?`<table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Servicio</th><th>Técnico</th><th>Evidencia</th><th></th></tr></thead>
     <tbody>${rev.map(w=>`<tr class="${fl("wo:"+w.id)}"><td class="mono" style="font-weight:700">WO-${w.id}</td>
@@ -466,7 +466,7 @@ function vRevisar(rev){
       <td style="text-align:right;white-space:nowrap">
         <button class="btn sm" data-a="devolverModal" data-id="${w.id}">Hacer return</button>
         <button class="btn sm" data-a="noSupervisarModal" data-id="${w.id}">No se pudo supervisar</button>
-        <button class="btn sm ${w.evid?"v":""}" data-a="supervisar" data-id="${w.id}">Revisada sin observaciones</button></td></tr>`).join("")}
+        <button class="btn sm ${w.evid?"v":""}" data-a="supervisar" data-id="${w.id}">Aprobar supervisión</button></td></tr>`).join("")}
     </tbody></table>`:`<div class="empty"><div class="b">✓</div>Nada pendiente de revisar</div>`}
   </div>
   <div class="tr">Si no hubo acceso, registra el motivo y reagenda cuando corresponda. Un return crea un return fix asignable sin reabrir la WO original.</div>`;

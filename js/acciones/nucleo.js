@@ -168,7 +168,7 @@ Object.assign(ACC, {
         if(w) w.hist.push([hora(), `Foto de ${etiqueta} agregada a Sub-Work Order · ${a.concepto}`, S.usuario]);
       } else if(m.tipo==="subwoHallazgo"){
         /* Es una sola foto (no una galería) — si el técnico no pudo cargarla
-           desde el celular, oficina la sube acá con el mismo dato final. */
+           desde el celular, oficina la sube aquí con el mismo dato final. */
         const a=S.adicionales.find(x=>x.id===m.id); if(!a) return;
         a.hallazgoFoto=fotoNueva(url, S.usuario);
         (a.hist=a.hist||[]).push([hora(), "Initial finding cargado desde oficina", S.usuario]);

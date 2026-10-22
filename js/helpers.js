@@ -321,7 +321,7 @@ function pagoTecnicoWO(w){
    por Rooms+Pisos, que puede no calzar con los items estilo vCita y facturar "sin tarifa"
    algo que el cliente ya aprobó a un precio especifico. */
 /* Reunión Claudia (feedback prototipo): lo que se aprueba de un Sub-Work
-   Order y se marca "cobrar al cliente" (ver medioOK) se suma acá encima de
+   Order y se marca "cobrar al cliente" (ver medioOK) se suma aquí encima de
    la tarifa normal — w.extraFacturable. Si no hay tarifa base pero sí hay
    extra aprobado para cobrar, igual es facturable (es un cargo aparte, no
    depende de que la WO en sí tenga precio). */
@@ -537,7 +537,7 @@ const flash = k => { S.flash = Array.isArray(k) ? k : [k]; };
 const fl    = k => (S.flash||[]).includes(k) ? " flash" : "";
 
 /* "Confirmed" es un dato real (columna "Client confirmation" de su Excel):
-   nomás dice que el cliente ya confirmó la fecha, no que el trabajo avanzó
+   solo dice que el cliente ya confirmó la fecha, no que el trabajo avanzó
    de etapa. Antes solo "Scheduled" daba acceso al técnico — apenas Thalia
    confirmaba la fecha con el cliente (lo que el propio sistema empuja a
    hacer en «Asignar»), la Work Order se quedaba sin ningún botón: ni

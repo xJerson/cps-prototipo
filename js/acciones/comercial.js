@@ -72,7 +72,7 @@ Object.assign(ACC, {
   /* La propiedad ya existe pero no tiene a quién se le habló registrado —
      antes esto era un callejón sin salida: solo un aviso que mandaba a ir
      al Expediente de la propiedad, perdiendo lo que ya se llevaba escrito
-     acá. Mismo mecanismo que "+ Crear propiedad". */
+     aquí. Mismo mecanismo que "+ Crear propiedad". */
   solConNuevo: d => { S.solComDraft = leerSolComDraft(); ACC.conNuevo({prop:val("scProp")}); },
   solComGuardar: d => {
     if(marcaFalta(["scProp","scContacto","scCorreo","scAlcance"])){ toast("Faltan datos","Propiedad, contacto, correo y alcance son obligatorios.","r"); return; }
@@ -270,7 +270,7 @@ Object.assign(ACC, {
     const mal = marcaFalta(libre?["eLNom","eLCat","eLP","eLC"]:["eLP","eLC"]) || !Number.isFinite(precio) || precio<0
       || !(cant>0) || desc<0 || (descTipo==="%"&&desc>100) || (!libre&&!t);
     if(mal){ S.audOmitir=true;
-      toast("Revisá la línea", libre?"Nombre, tipo de servicio, precio y cantidad son obligatorios (el descuento % no pasa de 100).":"Elegí el servicio y poné precio y cantidad válidos (el descuento % no pasa de 100).","r"); return; }
+      toast("Revisa la línea", libre?"Nombre, tipo de servicio, precio y cantidad son obligatorios (el descuento % no pasa de 100).":"Elige el servicio y pon precio y cantidad válidos (el descuento % no pasa de 100).","r"); return; }
     let uid = pros ? "" : L.unidad;
     if(uid==="__new__"){
       const numR = val("eUniNum"), bld = val("eUniBld");
@@ -318,7 +318,7 @@ Object.assign(ACC, {
   alTarGuardar: () => {
     const x=alTarObj(); if(!x||!x.o){ S.audOmitir=true; cm(); return; }
     const o=x.o, precio=parseFloat(val("atP")), variante=val("atR"), pisos=val("atPi")?parseInt(val("atPi")):null;
-    if(!(precio>0)){ S.audOmitir=true; marcaFalta(["atP"]); toast("Falta el precio","Poné un precio mayor a 0.","r"); return; }
+    if(!(precio>0)){ S.audOmitir=true; marcaFalta(["atP"]); toast("Falta el precio","Pon un precio mayor a 0.","r"); return; }
     const ex=alTarExiste(x.prop,o,variante,pisos);
     let tid;
     if(ex){ ex.precio=precio; tid=ex.id; }
@@ -404,7 +404,7 @@ Object.assign(ACC, {
       if(p.estado==="Prospect"){ p.estado="Active"; }
       toast("✓ El cliente aprobó",`<b>${esc(e.num)}</b> · ${esc(d.medio)}.`
         + (era==="Prospect"?` <b>${esc(p.nombre)}</b> dejó de ser prospecto y ya es cliente.`:"")
-        + (e.prospecto?` Tocá «Convertir en cliente» para poder transferirlo a programación.`:""),"v");
+        + (e.prospecto?` Toca «Convertir en cliente» para poder transferirlo a programación.`:""),"v");
       /* Un prospecto todavía no tiene propiedad: el COI y el Expediente vienen
          después de convertirlo en cliente. */
       if(e.prospecto){ cm(); render(); return; }
@@ -433,7 +433,7 @@ Object.assign(ACC, {
       toast("🚫 El estimado todavía no está aprobado",`<b>${esc(e.num)}</b> está en «${esc(e.estado)}». Solo se transfiere a programación cuando el cliente lo aprobó.`,"r"); return; }
     if(e.prospecto){
       S.audOmitir=true;
-      toast("🚫 Primero convertí al prospecto en cliente",`<b>${esc(e.num)}</b> es de un prospecto sin propiedad registrada. Tocá «Convertir en cliente» y después transferilo.`,"r"); return; }
+      toast("🚫 Primero convierte al prospecto en cliente",`<b>${esc(e.num)}</b> es de un prospecto sin propiedad registrada. Toca «Convertir en cliente» y después transferilo.`,"r"); return; }
     /* El Price List ya no es requisito: el precio de cada línea viaja con el
        estimado a la WO, haya o no tarifa para esa propiedad. */
     if(!expedienteOK(e.prop)){

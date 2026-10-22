@@ -138,7 +138,7 @@ Object.assign(ACC, {
   fAyudaOK: d => {
     const sh=leerAyuda(), w=W(+d.id); if(!sh||sh.t!=="ayuda"||!w) return;
     const txt=(sh.txt||"").trim();
-    if(!sh.opc){ toast("Elegí qué pasa","Marcá una opción para que oficina sepa por dónde empezar.","r"); return; }
+    if(!sh.opc){ toast("Elige qué pasa","Marca una opción para que oficina sepa por dónde empezar.","r"); return; }
     if(sh.opc==="Otro" && !txt){ toast("Contanos qué pasa","Con «Otro» hace falta una línea de texto.","r"); return; }
     S.reloj+=3;
     const nx={id:"X"+Date.now(), tipo:"Ayuda en sitio", wo:w.id, motivo:sh.opc+(txt?" — "+txt:""), monto:null,
@@ -328,7 +328,7 @@ Object.assign(ACC, {
     w.hist.push([hora(),`Pidió aprobación de un adicional · ${lista}`,T(w.tec).nombre]);
     S.phSheet=null;
     toast("⚠ Adicional enviado a oficina",
-      `${sh.filas.length} concepto(s): ${esc(lista)}. Entró como <b>Request</b>: Thalia recibe primero la decisión; si está fuera de su alcance puede reasignarla a Gustavo u otra persona. La WO no se paga ni factura hasta resolverla — pero podés seguir con lo programado.`,"w");
+      `${sh.filas.length} concepto(s): ${esc(lista)}. Entró como <b>Request</b>: Thalia recibe primero la decisión; si está fuera de su alcance puede reasignarla a Gustavo u otra persona. La WO no se paga ni factura hasta resolverla — pero puedes seguir con lo programado.`,"w");
     avisar("Thalia","Adicional esperando aprobación",`WO-${w.id} · ${lista}. Revisa el alcance y aprueba o reasigna la solicitud.`,"r");
     render(); },
   fTermine: d => {
@@ -356,7 +356,7 @@ Object.assign(ACC, {
     // WO enlazadas: al terminar esta, la que iba después queda libre y su técnico se entera
     S.wos.filter(x=>x.dependeDe===w.id && x.estado!=="Canceled").forEach(x=>{
       x.hist.push([hora(),`Ya puede empezar: terminó WO-${w.id}`,"Sistema"]);
-      if(x.tec) noti(`Ya podés empezar WO-${x.id}`,`${P(x.prop).nombre} ${U(x.unidad).num} · ${x.serv} — terminó WO-${w.id}.`);
+      if(x.tec) noti(`Ya puedes empezar WO-${x.id}`,`${P(x.prop).nombre} ${U(x.unidad).num} · ${x.serv} — terminó WO-${w.id}.`);
     });
     // Hoy Erika revisa a mano porque los reportes le llegan en papel.
     // Aquí el dato ya está: si está completo, se valida solo. A ella solo le llega lo que falla.

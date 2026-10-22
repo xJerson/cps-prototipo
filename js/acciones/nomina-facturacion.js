@@ -110,7 +110,7 @@ Object.assign(ACC, {
   excAyudaOK: d => {
     const x=by(S.excepciones,d.id), nota=leerF("ayN","");
     if(!x) return;
-    if(!nota){ marcaFalta(["ayN"]); toast("Falta información","Escribí qué se hizo.","r"); return; }
+    if(!nota){ marcaFalta(["ayN"]); toast("Falta información","Escribe qué se hizo.","r"); return; }
     x.estado="Resuelta"; x.resol={quien:S.usuario,hora:hora(),nota};
     registrarHistorialApproval(x,"Resolved",nota);
     const w=W(x.wo);
@@ -190,7 +190,7 @@ Object.assign(ACC, {
     S._medioLid = null;
     document.querySelectorAll(".adprecio").forEach(e=>{ const l=pend.find(x=>x.id===+e.dataset.lid); if(l){ const p=parseFloat(e.value); if(Number.isFinite(p)&&p>=0){ l.precio=p; l.precioOrigen="manual-aprobado"; if(puedeAprobarCambioMonto()) l.precioFijado=sellarPrecio(); } } });
     // Aprobar y ponerle precio son decisiones distintas (Claudia): el precio
-    // es opcional acá — si queda sin él, se resuelve después como Approval
+    // es opcional aquí — si queda sin él, se resuelve después como Approval
     // Request "Definir precio del adicional" (ver excAuto / precioDefGuardar).
     // Con un solo concepto no hay tildes que leer: se aprueba entero.
     const chks = Array.from(document.querySelectorAll(".adchk"));
@@ -201,7 +201,7 @@ Object.assign(ACC, {
     // facturación?" — antes no se reflejaba en ninguna de las dos.
     //   · Nómina: automático siempre que la línea tenga precio — se genera
     //     y se aprueba sola una excepción "Pago adicional al técnico" (la
-    //     decisión de aprobarlo YA se tomó acá mismo, no hace falta otra).
+    //     decisión de aprobarlo YA se tomó aquí mismo, no hace falta otra).
     //   · Facturación: NO es automático — cada línea trae su propio
     //     casillero "Cobrar al cliente" (a veces se hace de cortesía), así
     //     que cubre los dos casos sin asumir ninguno por defecto.
@@ -210,7 +210,7 @@ Object.assign(ACC, {
     // Punto 7 del feedback: "cuando Claudia aprueba o rechaza un adicional,
     // no queda ninguna foto asociada a esa decisión" — el comprobante (si se
     // adjuntó desde el botón del modal) queda pegado a CADA línea que se
-    // decide acá, apruebe o rechace.
+    // decide aquí, apruebe o rechace.
     const fotoAprob = S._aprobFoto||null; S._aprobFoto=null;
     const sello = ip => ({medio:d.medio, quien:S.usuario, hora:hora(), ip, foto:fotoAprob});
     let pagoTec = 0, cobroCliente = 0; const sinPrecio = [];
@@ -235,7 +235,7 @@ Object.assign(ACC, {
       (l.hist=l.hist||[]).push([hora(), "Rechazada", S.usuario]); });
     // El pago/factura de la WO sigue frenado (vía woBloqueada) solo si queda
     // otra solicitud del técnico sin decidir — el técnico nunca estuvo
-    // frenado, así que acá no hay nada que destrabarle a él.
+    // frenado, así que aquí no hay nada que destrabarle a él.
     const quedan = S.adicionales.filter(a=>a.wo===w.id && a.estado==="Pendiente").length;
     flash("wo:"+w.id);
     const nom = a => a.map(l=>l.concepto).join(", ");
@@ -697,7 +697,7 @@ function prepararGuardadoBorrador(b){
   if(sinCon.length||div0.length){ S.audOmitir=true; modalBorradorFactura();
     marcaFalta(sinCon.map(e=>"fbx_"+e.id+"_con"));
     div0.forEach(e=>{ const el=document.getElementById("fbx_"+e.id+"_val"); if(el&&el.parentElement) el.parentElement.classList.add("bad"); });
-    toast(div0.length?"No se puede dividir entre 0":"Falta el concepto del extra",div0.length?"Escribí un factor mayor a 0 en el extra ÷.":"Cada extra lleva su concepto.","r"); return null; }
+    toast(div0.length?"No se puede dividir entre 0":"Falta el concepto del extra",div0.length?"Escribe un factor mayor a 0 en el extra ÷.":"Cada extra lleva su concepto.","r"); return null; }
   // créditos de servicio: no se puede usar más de lo disponible
   const usoK={}; exAct.filter(e=>e.credServ).forEach(e=>{ usoK[e.credServ]=(usoK[e.credServ]||0)+1; });
   const faltaCr=Object.keys(usoK).find(k=>{ const c=credServSaldos(b.prop,b.id).find(y=>y.key===k); return !c||c.saldo<usoK[k]; });
@@ -942,13 +942,13 @@ Object.assign(ACC, {
   /* Factura manual: sin WO de por medio (p. ej. «una factura al mes con todas las pinturas»). Abre el mismo compositor, aunque no haya WO. */
   facManualAbrir: () => {
     const ps=S.propiedades.filter(p=>p.activa).sort((a,b)=>a.nombre.localeCompare(b.nombre));
-    modal(`<div class="mh"><h3>Factura manual</h3><p>Elegí la propiedad. Las WO listas aparecen solas; si no hay, agregás líneas a mano.</p></div>
-    <div class="mb"><div class="fld"><label>Propiedad <span class="req">*</span></label><select id="fmProp"><option value="">— elegí —</option>${ps.map(p=>`<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join("")}</select></div></div>
+    modal(`<div class="mh"><h3>Factura manual</h3><p>Elige la propiedad. Las WO listas aparecen solas; si no hay, agregas líneas a mano.</p></div>
+    <div class="mb"><div class="fld"><label>Propiedad <span class="req">*</span></label><select id="fmProp"><option value="">— elige —</option>${ps.map(p=>`<option value="${esc(p.id)}">${esc(p.nombre)}</option>`).join("")}</select></div></div>
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="facManualOK">Abrir</button></div>`);
   },
   facManualOK: () => {
     const id=val("fmProp"), p=S.propiedades.find(x=>String(x.id)===id);
-    if(!p){ S.audOmitir=true; marcaFalta(["fmProp"]); toast("Elegí la propiedad","Sin propiedad no se puede armar la factura.","r"); return; }
+    if(!p){ S.audOmitir=true; marcaFalta(["fmProp"]); toast("Elige la propiedad","Sin propiedad no se puede armar la factura.","r"); return; }
     abrirBorradorFactura(p.id);   // sin el guard de «Preparar factura»: abre aunque no haya WO
   },
   /* Mes → Desde/Hasta (primer y último día). Solo toca esos dos campos: el resto del borrador queda como está. */
@@ -1012,7 +1012,7 @@ Object.assign(ACC, {
     modalBorradorFactura();
     const mal=(b.extras||[]).filter(e=>e.op==="/"&&!(e.valor>0));
     if(mal.length){ mal.forEach(e=>{ const el=document.getElementById("fbx_"+e.id+"_val"); if(el&&el.parentElement) el.parentElement.classList.add("bad"); });
-      toast("No se puede dividir entre 0","Escribí un factor mayor a 0 en el extra ÷.","r"); } },
+      toast("No se puede dividir entre 0","Escribe un factor mayor a 0 en el extra ÷.","r"); } },
   /* «Agregar» de un crédito de servicio: fila Extra N/A «<Servicio> (complimentary)» con el precio real, ligada al crédito */
   facCredServUsar: d => { const b=leerBorrador(); if(!b) return;
     const x=credServSaldos(b.prop,b.id).find(y=>y.key===d.k), usadas=(b.extras||[]).filter(e=>e.credServ===d.k).length;
@@ -1025,10 +1025,10 @@ Object.assign(ACC, {
   facAjusteAplicar: d => { const b=leerBorrador(); if(!b) return; const g=+d.g;
     const x=resumenBorrador(b).grupos.find(y=>y.g===g); if(!x) return;
     const inp=(b.ajIn||{})[g]||{}, fin=parseFloat(inp.final), mot=(inp.motivo||"").trim();
-    if(!Number.isFinite(fin)){ S.audOmitir=true; modalBorradorFactura(); marcaFalta(["fbAjF_"+g]); toast("Falta el total final","Escribí el total que va en esta factura.","r"); return; }
+    if(!Number.isFinite(fin)){ S.audOmitir=true; modalBorradorFactura(); marcaFalta(["fbAjF_"+g]); toast("Falta el total final","Escribe el total que va en esta factura.","r"); return; }
     const delta=r2(fin-x.pre);
     if(Math.abs(delta)<0.005 && !x.aj){ S.audOmitir=true; toast("Sin cambios","El total final es igual al calculado.","w"); return; }
-    if(Math.abs(delta)>=0.005 && !mot){ S.audOmitir=true; modalBorradorFactura(); marcaFalta(["fbAjM_"+g]); toast("Falta el motivo","Escribí por qué cambia el total.","r"); return; }
+    if(Math.abs(delta)>=0.005 && !mot){ S.audOmitir=true; modalBorradorFactura(); marcaFalta(["fbAjM_"+g]); toast("Falta el motivo","Escribe por qué cambia el total.","r"); return; }
     b.ajustes=b.ajustes||{};
     if(Math.abs(delta)<0.005){ delete b.ajustes[g]; S._audAj=`${P(b.prop).nombre} · Factura ${g}: quitó el ajuste (${money(x.total)} \u2192 ${money(x.pre)})`; }
     else { b.ajustes[g]={final:r2(fin),motivo:mot,delta,calc:x.pre};

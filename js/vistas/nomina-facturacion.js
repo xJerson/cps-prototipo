@@ -33,7 +33,7 @@ function excAuto(){
   // Una excepción por SOLICITUD, no por concepto: el técnico mandó un aviso,
   // no tres. Claudia lo abre una vez y adentro decide línea por línea.
   // Sección 5 del feedback: una Sub-Work Order planificada con costo entra
-  // por el mismo camino (S.adicionales) que un hallazgo del técnico — acá
+  // por el mismo camino (S.adicionales) que un hallazgo del técnico — aquí
   // solo se distingue el rótulo y quién la pidió, según origen.
   solTodas().filter(solPend).forEach(s=>{
     const p = s.lineas.filter(l=>l.estado==="Pendiente");
@@ -400,7 +400,7 @@ function modalMedio(sol, lid){
     ${pend.length>1?`<div class="fld" style="margin-bottom:12px">
       <label>¿Qué le autorizas?</label>
       <div class="hint">Destilda lo que el cliente no aprobó. Al técnico le llega el detalle: qué sí hace y qué no.
-        Lo aprobado con precio le queda pendiente de pago al técnico solo; tildá «Cobrar al cliente» aparte, por cada concepto, si además hay que facturárselo — a veces se hace de cortesía.
+        Lo aprobado con precio le queda pendiente de pago al técnico solo; tilda «Cobrar al cliente» aparte, por cada concepto, si además hay que facturárselo — a veces se hace de cortesía.
         El precio no se ve aquí: si el adicional no trae precio, queda una Request para que Erika o Claudia lo definan antes de que entre a nómina y factura.</div>
       <table style="margin-top:6px"><tbody>
       <tr><td></td><td></td>${ver?`<td class="num">Precio</td>`:""}<td style="text-align:center">Cobrar<br>al cliente</td></tr>
@@ -506,7 +506,7 @@ function modalDefinirPrecio(id){
 /* ── SUB-WORK ORDERS ──────────────────────────────────────────────────
    Sección 5 del feedback: trabajo que cuelga de una WO principal sin
    perder la relación con ella (Main WO Full Paint → Sub-WO Door paint,
-   Sub-WO Garage paint...). Oficina la crea acá ya aprobada — la que
+   Sub-WO Garage paint...). Oficina la crea aquí ya aprobada — la que
    aprobar es la que descubre el técnico en sitio (fAdic / fAdicOK). */
 /* Una revisión ya validada se puede reabrir mientras no se haya movido dinero: sin pago al técnico (ni parcial) y sin entrar a una factura. */
 const revisionEditable = w => puedeValidar() && w.estado==="Completed" && (aprobPagoOK(w)||aprobFacturaOK(w)) && !w.pagadaTec && pagadoTecWO(w)===0 && !w.facturada;
@@ -535,8 +535,8 @@ VIEWS.nomina = () => {
     return `<tr><td class="mono" style="font-weight:700">WO-${w.id}${ant?`<div style="font-size:10.5px;color:var(--ambar);font-weight:400">${esc(w.fecha)}</div>`:""}</td>
       <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td><td>${esc(w.serv)}</td><td>${esc(U(w.unidad).rooms)}</td>
       <td class="num mono">${U(w.unidad).pisos||"—"}</td>
-      <td style="white-space:nowrap">${w.pagadaTec?'<span class="pill v">✓ sí</span>':woBloqueada(w.id)?'<span class="pill r">approval pending</span>':parc?`<span class="pill a">Parcial ${money(pg)}</span>`:'<span class="pill g">no</span>'}
-        ${woPagable(w)&&saldoTecWO(w)>0.009?`<button class="btn sm" data-a="parcialModal" data-id="${w.id}">Parcial</button>`:""}</td>
+      <td style="white-space:nowrap">${w.pagadaTec?'<span class="pill v">✓ Pagado</span>':woBloqueada(w.id)?'<span class="pill r">Retenida por Request</span>':parc?`<span class="pill a">Pago parcial ${money(pg)}</span>`:'<span class="pill g">Pendiente</span>'}
+        ${woPagable(w)&&saldoTecWO(w)>0.009?`<button class="btn sm" data-a="parcialModal" data-id="${w.id}">Pago parcial</button>`:""}</td>
       <td style="white-space:nowrap">${pillsAprob(w)}${revisionEditable(w)?` <button class="btn sm" data-a="editarRevision" data-id="${w.id}" title="La regresa al cuadro de arriba para corregirla">Editar revisión</button>`:""}</td>
       <td class="num mono">${ingresoWO(w)!==null?money(ingresoWO(w)):'<span class="pill w">NA</span>'}</td>
       <td class="num mono">${e!==null?(parc?`${money(saldoTecWO(w))}<div style="font-size:10px;color:var(--faint)">de ${money(e)}</div>`:money(e)):"—"}</td>
@@ -605,7 +605,7 @@ VIEWS.nomina = () => {
       </tbody></table>
       <div class="cp" style="border-top:1px solid var(--line)"><div class="tr" style="margin:0">
         Su flujograma dice «Solicitar información al Técnico» y vuelve a «Información validada».
-        Acá le aparece en el celular con solo lo que falta, y al completarlo te avisa.</div></div>
+        Aquí le aparece en el celular con solo lo que falta, y al completarlo te avisa.</div></div>
     </div>`;})()}
 
   ${(()=>{ // El reporte del técnico le llega a Erika directo: no espera a la supervisión de Gustavo
@@ -613,7 +613,7 @@ VIEWS.nomina = () => {
     return porVal.length?`<div class="card" style="border-color:var(--ambar)">
       <div class="chd" style="background:var(--ambar-cl)"><h3 style="color:var(--ambar)">Solo estas necesitan tu revisión</h3>
         <span class="s">${porVal.length} de ${S.wos.filter(w=>w.estado==="Completed").length} terminadas · las completas se validaron solas</span></div>
-      <table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Técnico</th><th>Evidencia</th><th>Tiempo en sitio</th><th>Aprobado</th><th></th></tr></thead>
+      <table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Técnico</th><th>Evidencia</th><th>Tiempo en sitio</th><th>Aprobaciones</th><th></th></tr></thead>
       <tbody>${porVal.map(w=>`<tr><td class="mono" style="font-weight:700">WO-${w.id}</td>
         <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td><td>${esc(tecN(w.tec))}</td>
         <td>${w.evid?`<span class="pill v">${w.evid}</span>`:'<span class="pill r">falta</span>'}</td>
@@ -657,7 +657,7 @@ VIEWS.nomina = () => {
       ${semP?(()=>{ const ap=nomAprob(tid,S.periodo.sem); if(!ap||!(ap.hilo||[]).length) return "";
         return `<div class="note ${ap.conf==="Observada"?"w":""}" style="margin:8px 12px"><b>Observación del técnico</b>${hiloNomHTML(ap)}
           ${ap.conf==="Observada"&&puedeResponderNomina()?`<div style="display:flex;gap:6px;margin-top:6px"><input id="nomResp${tid}" placeholder="Respuesta para el técnico (corrige o explica el porqué)" style="flex:1"><button class="btn sm v" data-a="nomResponder" data-tec="${tid}">Responder</button></div>`:""}</div>`; })():""}
-      <table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Servicio</th><th>Rooms</th><th>Floors</th><th>Pagado</th><th>Aprobado</th><th class="num">Ingreso</th><th class="num">Egreso</th><th class="num">Material</th>${puedeVerUtilidad()?`<th class="num">Utilidad</th>`:""}</tr></thead>
+      <table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Servicio</th><th>Rooms</th><th>Floors</th><th>Pago a técnico</th><th>Aprobaciones</th><th class="num">Ingreso</th><th class="num">Egreso</th><th class="num">Material</th>${puedeVerUtilidad()?`<th class="num">Utilidad</th>`:""}</tr></thead>
       <tbody>${arr.map(w=>filaNom(w,false)).join("")}
       ${prev.length?`<tr style="background:var(--ambar-cl)"><td colspan="${puedeVerUtilidad()?11:10}" style="font-weight:700;color:var(--ambar)">Pendientes anteriores · sin pagar de semanas pasadas</td></tr>${prev.map(w=>filaNom(w,true)).join("")}`:""}
       ${extras.map(x=>`<tr style="background:var(--ambar-cl)"><td colspan="8">Pago adicional aprobado · WO-${x.wo}
@@ -943,7 +943,7 @@ function modalBorradorFactura(){
       return `<div style="border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-top:8px">
         <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><b>Factura ${x.g}</b><span class="mono">Calculado ${money(x.pre)}</span>
           ${x.aj?`<span class="pill a">Ajustado a ${money(x.aj.final)} (${sgnMoney(x.aj.delta)})</span>`:""}</div>
-        ${x.aj&&x.aj.viejo?`<div class="note w" style="margin:6px 0 0">Total ajustado a mano — revisalo</div>`:""}
+        ${x.aj&&x.aj.viejo?`<div class="note w" style="margin:6px 0 0">Total ajustado a mano — revísalo</div>`:""}
         <div class="fg c3" style="margin-top:8px"><div class="fld"><label>Total final</label><input id="fbAjF_${x.g}" type="number" step="0.01" class="mono" value="${esc(fin)}" placeholder="0.00"></div>
           <div class="fld" style="grid-column:span 2"><label>Motivo <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— obligatorio si cambia</span></label><input id="fbAjM_${x.g}" value="${esc(mot)}"></div></div>
         <div style="display:flex;gap:6px"><button class="btn sm p" data-a="facAjusteAplicar" data-g="${x.g}">Aplicar</button>
@@ -983,7 +983,7 @@ function modalBorradorFactura(){
         <td class="num mono">${textoDescLinea(l)}</td>
         <td class="num mono">${money(importeLinea(l))}</td>
         <td><button class="btn sm" data-a="facLineaEditar" data-k="${esc(l.clave)}">Editar</button></td></tr>`;}).join("")}
-    </tbody></table>`:`<div class="empty">Sin WO para facturar: agregá líneas manuales.</div>`}
+    </tbody></table>`:`<div class="empty">Sin WO para facturar: agrega líneas manuales.</div>`}
     <button class="btn sm" data-a="facBorradorAgregarLinea">+ Agregar línea manual</button>
     ${extrasHTML}
     ${ajHTML}
@@ -1013,7 +1013,7 @@ function modalLineaFactura(clave){
     ${man?`<div class="fld"><label>Cómo se arma</label><div style="display:flex;gap:6px">
       <button type="button" class="btn sm ${modo==="catalogo"?"p":""}" data-a="facLineaModo" data-k="${esc(l.clave)}" data-m="catalogo">Del catálogo</button>
       <button type="button" class="btn sm ${modo==="libre"?"p":""}" data-a="facLineaModo" data-k="${esc(l.clave)}" data-m="libre">Libre</button></div></div>
-    ${modo==="catalogo"?`<div class="fld"><label>Item</label><select id="fleItem" data-a="facLineaItem" data-k="${esc(l.clave)}"><option value="">— elegí —</option>${items.map(i=>`<option value="${esc(i.nombre)}" ${i.nombre===itemSel?"selected":""}>${esc(i.nombre)}</option>`).join("")}</select></div>`:""}`:""}
+    ${modo==="catalogo"?`<div class="fld"><label>Item</label><select id="fleItem" data-a="facLineaItem" data-k="${esc(l.clave)}"><option value="">— elige —</option>${items.map(i=>`<option value="${esc(i.nombre)}" ${i.nombre===itemSel?"selected":""}>${esc(i.nombre)}</option>`).join("")}</select></div>`:""}`:""}
     <div class="fld"><label>Nombre</label><input id="fleNom" value="${esc(l.nombre||"")}" ${man&&modo==="libre"?'list="fleNomList"':""}>
       ${man&&modo==="libre"?`<datalist id="fleNomList">${items.map(i=>`<option value="${esc(i.nombre)}">`).join("")}</datalist>`:""}</div>
     ${man?`<div class="fg c2"><div class="fld"><label>Trabajo</label><select id="fleCat">${["Extras",...CAT.categorias].map(c=>`<option ${c===(l.cat||"Extras")?"selected":""}>${esc(c)}</option>`).join("")}</select></div>
@@ -1474,7 +1474,7 @@ function modalRegistrarPago(fid){
 /* Ventana de solo lectura para Claudia con las dos cosas que ella pidió ver
    en un solo lugar: adicionales pagados en nómina y descuentos aplicados en
    facturas. Las dos quedan también en Bitácora (completas, con antes/después
-   y motivo — ver facAjusteAplicar/medioOK en js/bootstrap.js), pero acá se
+   y motivo — ver facAjusteAplicar/medioOK en js/bootstrap.js), pero aquí se
    muestran igual: Claudia pidió una ventana propia para esto, no que lo
    busque filtrando un log técnico. No hay botones de aprobar o rechazar — si
    algo está mal, se resuelve donde ya se resuelve hoy (Requests o el
@@ -1492,7 +1492,7 @@ function vAuditoriaFinanciera(){
   <div class="ph"><div><h2>Auditoría financiera</h2>
     <p>Para revisar, no para aprobar: dinero que ya se movió o se descontó sin pasar por una pantalla de aprobación.</p></div></div>
   <div class="card"><div class="chd"><h3>Adicionales pagados en nómina</h3>
-    <span class="s">se aprueban solos al aceptar la Sub-Work Order — acá quedan a la vista con monto y motivo</span></div>
+    <span class="s">se aprueban solos al aceptar la Sub-Work Order — aquí quedan a la vista con monto y motivo</span></div>
     ${extras.length?`<table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Técnico</th><th class="num">Monto</th><th>Motivo</th><th>Aprobó</th><th>Fecha</th></tr></thead>
     <tbody>${extras.map(x=>{ const w=W(x.wo); return `<tr>
       <td class="mono" style="font-weight:700">WO-${esc(x.wo)}</td>
@@ -1516,7 +1516,7 @@ function vAuditoriaFinanciera(){
     </tbody></table>`:`<div class="empty">Sin descuentos aplicados todavía.</div>`}
   </div>
   <div class="card"><div class="chd"><h3>Descuentos en nómina</h3>
-    <span class="s">manuales o por return, ya decididos — Por decidir se ve en Nómina, no acá</span></div>
+    <span class="s">manuales o por return, ya decididos — Por decidir se ve en Nómina, no aquí</span></div>
     ${descNom.length?`<table><thead><tr><th>Técnico</th><th>WO</th><th class="num">Monto</th><th>Motivo</th><th>Estado</th><th>Decidió</th><th>Fecha</th></tr></thead>
     <tbody>${descNom.map(x=>`<tr>
       <td style="font-weight:650">${esc(tecN(x.tec))}</td>

@@ -9,7 +9,7 @@ VIEWS.gustavoweb = () => {
   <div class="card" style="max-width:560px">
     <div class="cp">${gustavoScreenHTML(t)}</div>
   </div>
-  <div class="tr">Esta vista es de contenido, no de interacción completa: los formularios que se abren como hoja (Reportar, Mi día) se prueban de verdad en <code>Supervisión → Ver su celular</code>. Acá se ve qué información trae cada pantalla.</div>`;
+  <div class="tr">Esta vista es de contenido, no de interacción completa: los formularios que se abren como hoja (Reportar, Mi día) se prueban de verdad en <code>Supervisión → Ver su celular</code>. Aquí se ve qué información trae cada pantalla.</div>`;
 };
 
 function renderFonSup(){
@@ -396,7 +396,7 @@ function hojaCel(sh){
     <label>Monto</label><input id="gvMonto" value="${esc(sh.monto)}" inputmode="decimal" placeholder="$0.00">
     <label>Foto <span class="req">*</span></label>
     <button type="button" class="db g" data-a="gVehFoto">${sh.foto
-      ?`<img src="${sh.foto}" style="width:16px;height:16px;object-fit:cover;border-radius:3px"> Foto agregada — tocá para cambiar`
+      ?`<img src="${sh.foto}" style="width:16px;height:16px;object-fit:cover;border-radius:3px"> Foto agregada — toca para cambiar`
       :"📷 Foto del recibo"}</button>
     <label>Nota</label><input id="gvNota" value="${esc(sh.nota)}">
     <button class="db p" style="margin-top:11px" data-a="gVehOK">Guardar</button>
@@ -426,7 +426,7 @@ function hojaCel(sh){
         <label>Cant.<input id="paQ${i}" value="${esc(String(f.q))}" inputmode="numeric"></label>
       </div>
       <button type="button" class="db g" style="grid-column:1/3;margin:0;padding:7px" data-a="fAdicFoto" data-i="${i}">${f.foto
-        ?`<img src="${f.foto}" style="width:16px;height:16px;object-fit:cover;border-radius:3px"> Foto agregada — tocá para cambiar`
+        ?`<img src="${f.foto}" style="width:16px;height:16px;object-fit:cover;border-radius:3px"> Foto agregada — toca para cambiar`
         :"📷 Agregar foto de esto"}</button>
     </div>`).join("")}
     <button class="db g admas" data-a="fAdicMas">+ Agregar otro concepto</button>
@@ -445,7 +445,7 @@ function hojaCel(sh){
     ${AYUDA_OPC.map((o,i)=>`<button type="button" class="db ${sh.opc===o?"p":"g"}" style="margin:0 0 5px" data-a="fAyudaOpc" data-i="${i}">${esc(o)}</button>`).join("")}
     <textarea id="ayT" placeholder="${{"Falta material":"¿Qué material?","Falta pintura":"¿Qué pintura?","Unidad sin luz, agua u otro servicio":"¿Qué servicio falta?","Otro":"Contanos qué pasa"}[sh.opc]||"Algo más (opcional)"}">${esc(sh.txt||"")}</textarea>
     <button type="button" class="db g" style="margin-top:7px" data-a="fAyudaFoto">${sh.foto
-      ?`<img src="${sh.foto}" style="width:16px;height:16px;object-fit:cover;border-radius:3px"> Foto agregada — tocá para cambiar`
+      ?`<img src="${sh.foto}" style="width:16px;height:16px;object-fit:cover;border-radius:3px"> Foto agregada — toca para cambiar`
       :"📷 Agregar foto (opcional)"}</button>
     <button class="db p" style="margin-top:11px" data-a="fAyudaOK" data-id="${sh.wo}">Enviar</button>
     <button class="db g" data-a="fSheetNo">Cancelar</button>
@@ -493,7 +493,7 @@ function hojaCel(sh){
     <div class="sub">Si vas a comprar algo para este trabajo con la tarjeta de la empresa.</div>
 
     <div class="dc" style="background:var(--azul-cl);border-color:transparent">
-      <div class="dl" style="margin:0 0 6px;color:var(--azul)">Dale esto al cajero</div>
+      <div class="dl" style="margin:0 0 6px;color:var(--azul)">Entrega esto al cajero</div>
       <div class="ds"><b>Teléfono para autorizar el cobro:</b> ${esc(CLAUDIA_TEL)}</div>
       <div class="ds"><b>Propiedad:</b> ${esc(p.nombre)}</div>
       <div class="ds"><b>Unidad:</b> ${esc(u.num)}</div>
@@ -522,9 +522,9 @@ function hojaCel(sh){
     <button class="db g admas" data-a="fCompraMas">+ Agregar otro</button>
     <label>Total ticket</label>
     <input id="cpTotal" value="${esc(String(sh.total||""))}" inputmode="decimal" placeholder="$0.00">
-    <div class="sub">"Pagó" por producto es opcional. Si solo sabés el total, oficina lo reparte con la foto del ticket. Lo que sobra queda en inventario.</div>
+    <div class="sub">"Pagó" por producto es opcional. Si solo sabes el total, oficina lo reparte con la foto del ticket. Lo que sobra queda en inventario.</div>
     <button type="button" class="db g" style="margin-top:7px" data-a="fCompraFoto">${sh.foto
-      ?`<img src="${sh.foto}" style="width:16px;height:16px;object-fit:cover;border-radius:3px"> Foto agregada — tocá para cambiar`
+      ?`<img src="${sh.foto}" style="width:16px;height:16px;object-fit:cover;border-radius:3px"> Foto agregada — toca para cambiar`
       :"📷 Agregar foto del ticket"}</button>
     <button class="db p" style="margin-top:11px" data-a="fCompraOK" data-id="${sh.wo}">Enviar a oficina</button>
     <button class="db g" data-a="fSheetNo">Cancelar</button>
@@ -547,7 +547,7 @@ function hojaCel(sh){
   if(sh.t==="corrobNo"){ const w=W(sh.wo), u=U(w.unidad), ocup=u.ocupacion||"Occupied"; return `<div class="fscrim" data-a="fSheetNo"><div class="fsheet" data-stop>
     <div class="grab"></div>
     <h4>Corregir datos de la unidad</h4>
-    <div class="sub">Esto crea una Request para oficina. Reportá solo lo que veas distinto — lo que dejes igual no se toca.</div>
+    <div class="sub">Esto crea una Request para oficina. Reporta solo lo que veas distinto — lo que dejes igual no se toca.</div>
     <label>Unit number observado</label><input id="cnNum" value="${esc(u.num)}">
     ${u.bedrooms!=null?`<label>Bedrooms observados</label><input id="cnBed" type="number" min="0" value="${esc(String(u.bedrooms))}">`:""}
     ${u.bathrooms!=null?`<label>Bathrooms observados</label><input id="cnBath" type="number" min="0" value="${esc(String(u.bathrooms))}">`:""}

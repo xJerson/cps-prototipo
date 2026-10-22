@@ -3,7 +3,7 @@ Object.assign(ACC, {
 
 
   propVer: d => { S.mod="propiedades"; S.sub=d.id; S.tab="datos"; render(); },
-  /* Crédito de propiedad: solo abonos manuales acá; el uso se descuenta desde el borrador de factura. */
+  /* Crédito de propiedad: solo abonos manuales aquí; el uso se descuenta desde el borrador de factura. */
   creditoNuevo: d => {
     const pid=propIdDe(d.id), fb=!!d.fb, unis=S.unidades.filter(u=>u.prop===pid);
     if(fb) leerBorrador();   // desde el borrador de factura: se guarda lo tipeado y se vuelve ahí
@@ -51,7 +51,7 @@ Object.assign(ACC, {
     const nombres=[...new Set(CAT.servicios.filter(x=>!x.baja).map(x=>x.nombre))];
     modal(`<div class="mh"><h3>Agregar crédito de servicio</h3><p>${esc(P(pid).nombre)}</p></div>
     <div class="mb"><div class="fg c2">
-      <div class="fld"><label>Servicio <span class="req">*</span></label><select id="crsServ"><option value="">— elegí —</option>${nombres.map(n=>`<option>${esc(n)}</option>`).join("")}</select></div>
+      <div class="fld"><label>Servicio <span class="req">*</span></label><select id="crsServ"><option value="">— elige —</option>${nombres.map(n=>`<option>${esc(n)}</option>`).join("")}</select></div>
       <div class="fld"><label>Cantidad <span class="req">*</span></label><input id="crsCant" type="number" min="1" step="1" class="mono" value="1"></div></div>
       <div class="fld"><label>Unidad <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label>
         <select id="crsUni"><option value="">— toda la propiedad —</option>${unis.map(u=>`<option value="${esc(u.id)}">${esc(u.num)}</option>`).join("")}</select></div>
@@ -59,7 +59,7 @@ Object.assign(ACC, {
     <div class="mf"><button class="btn" data-a="${fb?"facLineaVolver":"cm"}">Cancelar</button><button class="btn p" data-a="creditoServGuardar" data-id="${esc(d.id)}" ${fb?'data-fb="1"':""}>Guardar</button></div>`); },
   creditoServGuardar: d => {
     const pid=propIdDe(d.id), serv=val("crsServ"), cant=parseFloat(val("crsCant"));
-    if(!serv||!(cant>=1)||!Number.isInteger(cant)){ S.audOmitir=true; marcaFalta(["crsServ","crsCant"]); toast("Falta información","Elegí el servicio y una cantidad entera de 1 o más.","r"); return; }
+    if(!serv||!(cant>=1)||!Number.isInteger(cant)){ S.audOmitir=true; marcaFalta(["crsServ","crsCant"]); toast("Falta información","Elige el servicio y una cantidad entera de 1 o más.","r"); return; }
     (S.creditosServ=S.creditosServ||[]).push({id:"CS"+Date.now(),prop:pid,unidad:val("crsUni")||null,serv,cant,tipo:"Abono",motivo:val("crsMot")||"—",quien:S.usuario,fecha:HOY_SUP});
     if(d.fb && S.facturaBorrador){ modalBorradorFactura(); toast("✓ Crédito de servicio agregado",`${esc(serv)} × ${cant} · ${esc(P(pid).nombre)}.`,"v"); return; }
     cm(); toast("✓ Crédito de servicio agregado",`${esc(serv)} × ${cant} · ${esc(P(pid).nombre)}.`,"v"); render();
@@ -174,7 +174,7 @@ Object.assign(ACC, {
     S.estConvDraft=null;
     cm();
   },
-  /* Reunión Claudia (feedback prototipo): antes acá faltaba directamente el
+  /* Reunión Claudia (feedback prototipo): antes aquí faltaba directamente el
      campo que arma el precio (rooms quedaba vacío en silencio). Ahora se
      compone solo desde Tipo + Bedrooms + "tiene estudio aparte" — el mismo
      texto exacto que sigue usando tarifa(), cero cambios ahí. El "Detail"

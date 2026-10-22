@@ -284,8 +284,8 @@ function modalFotos(){
     ${arr.length?`<div style="display:flex;flex-wrap:wrap;gap:8px">${arr.map(f=>`
       <a href="${f.url}" target="_blank" style="display:block;border-radius:8px;overflow:hidden;border:1px solid var(--line)">
         <img src="${f.url}" style="width:84px;height:84px;object-fit:cover;display:block"></a>`).join("")}</div>
-      <div class="hint" style="margin-top:10px">Tocá una foto para abrirla en grande, en una pestaña nueva.</div>`
-      : `<div class="note" style="text-align:center">Todavía no hay fotos acá.</div>`}
+      <div class="hint" style="margin-top:10px">Toca una foto para abrirla en grande, en una pestaña nueva.</div>`
+      : `<div class="note" style="text-align:center">Todavía no hay fotos aquí.</div>`}
   </div>
   <div class="mf"><button class="btn" data-a="cm">Cerrar</button>
     <button class="btn p" data-a="fotoModalAgregar">📷 Agregar foto</button></div>`);

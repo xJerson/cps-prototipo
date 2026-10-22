@@ -398,7 +398,7 @@ VIEWS.tarifario = () => {
     ${enviadas.map(x=>`<tr class="${fl('lp:'+x.id)}"><td>${esc(P(x.prop).nombre)}</td><td>${esc(x.tipo)}</td><td class="num mono">${x.filas}</td><td>${esc(x.para.join(", "))}</td><td>${esc(x.quien)}</td><td class="mono">${esc(x.fecha.slice(5))} ${esc(x.hora)}</td></tr>`).join("")}
     </tbody></table></div>`:""}
   <div class="card" style="margin-top:12px"><div class="chd"><h3>Pago diferenciado por técnico</h3>
-    <span class="s">override opcional — si no hay uno acá, el pago sigue saliendo de la tarifa de arriba</span></div>
+    <span class="s">override opcional — si no hay uno aquí, el pago sigue saliendo de la tarifa de arriba</span></div>
     <div class="cp">
     ${(S.pagosTecnico||[]).length?`<table><thead><tr><th>Técnico</th><th>Propiedad</th><th>Servicio</th><th>Detail</th><th class="num">Pago</th><th>Motivo</th><th>Quién</th><th></th></tr></thead>
     <tbody>${S.pagosTecnico.map(x=>`<tr class="${fl('pt:'+x.id)}">
