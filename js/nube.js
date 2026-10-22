@@ -37,6 +37,11 @@ const NUBE_CONFIG = ["cierreAgendamiento","cat","aprobadoresSol","bajas","excCre
      disponibilidad, mandar una lista de precios) y desde ahí se comparten igual que los demás. */
   "nomAprob","dispSemana","listasPrecio","correosPropiedad"];
 
+/* Listas a las que el prototipo agrega registros AL PRINCIPIO (unshift). Su posición se guarda contando desde el final:
+   así un registro nuevo no cambia la posición de los anteriores y solo se sube la fila nueva (antes, cada aviso nuevo
+   re-subía los cientos que ya había). */
+const NUBE_PREPEND = new Set(["bitacora","avisos","notis","gastosCompartidos","solicitudesComerciales","comunicacionesWO","revisionesCliente","facturas","estimados","confirmacionesAgendamiento"]);
+
 let _nubeActiva = false;      // true cuando la nube respondió al abrir
 let _nubeSnap = {};           // tabla -> {k: json} lo último que ya está en la nube
 let _nubeSucio = false, _nubeOcupado = false, _nubeTimer = null, _nubeAvisoFallo = false;
@@ -72,21 +77,21 @@ async function _nubeFetch(ruta, op){
 }
 
 /* ── S -> filas ── */
-function _nubeFilasDe(arr){
+function _nubeFilasDe(arr, alFinal){
   const m = {};
   arr.forEach((r, i) => {
     let k, data;
     if(r !== null && typeof r === "object"){
       if(!r._k) r._k = _nubeUid();
-      k = r._k; data = Object.assign({}, r, { _pos: i });
-    }else{ k = "v:" + String(r); data = { _v: r, _pos: i }; }
+      k = r._k; data = Object.assign({}, r, { _pos: alFinal ? arr.length - 1 - i : i });
+    }else{ k = "v:" + String(r); data = { _v: r, _pos: alFinal ? arr.length - 1 - i : i }; }
     m[k] = _canon(data);
   });
   return m;
 }
 function _nubeTodo(){
   const t = {};
-  Object.entries(NUBE_TABLAS).forEach(([lista, tabla]) => { t[tabla] = _nubeFilasDe(S[lista] || []); });
+  Object.entries(NUBE_TABLAS).forEach(([lista, tabla]) => { t[tabla] = _nubeFilasDe(S[lista] || [], NUBE_PREPEND.has(lista)); });
   const c = {};
   NUBE_CONFIG.forEach(k => { if(S[k] !== undefined) c[k] = _canon({ v: S[k] }); });
   c.ID = _canon({ v: ID });
@@ -105,7 +110,7 @@ async function _nubePedir(tabla){
 }
 function _nubeAplicar(datos){
   Object.entries(NUBE_TABLAS).forEach(([lista, tabla]) => {
-    const rows = (datos[tabla] || []).slice().sort((a, b) => (a.data._pos || 0) - (b.data._pos || 0));
+    const rows = (datos[tabla] || []).slice().sort((a, b) => NUBE_PREPEND.has(lista) ? (b.data._pos || 0) - (a.data._pos || 0) : (a.data._pos || 0) - (b.data._pos || 0));
     const arr = S[lista]; arr.length = 0;
     rows.forEach(f => {
       const d = f.data;

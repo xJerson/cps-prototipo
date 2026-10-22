@@ -204,12 +204,14 @@ const fmtHoras = h => { const a=Math.abs(h); return a<1?"<1h":Math.round(a)+"h";
    sea suya. `avisar` deja el mensaje en SU campanita, para cuando entre. */
 function avisar(para, t, b, k){
   S.avisos.unshift({t, b, k:k||"", hora:hora(), leido:false, quien:S.usuario, para});
+  if(S.avisos.length>400) S.avisos.length=400;   // son notificaciones pasajeras: con la base compartida no pueden crecer sin límite
 }
 const avisosDe = u => S.avisos.filter(a => a.para ? a.para===u : a.quien===u);
 
 /* Todo aviso se muestra Y se guarda: si se te pasó, está en la campanita */
 function toast(t,b,k){
   S.avisos.unshift({t,b,k:k||"",hora:hora(),leido:false,quien:S.usuario});
+  if(S.avisos.length>400) S.avisos.length=400;
   const e=document.createElement("div"); e.className="toast "+(k||"");
   e.innerHTML=`<div class="t">${t}</div><div class="b">${b}</div>`; $("#toasts").appendChild(e);
   setTimeout(()=>{e.style.transition="opacity .4s";e.style.opacity="0";setTimeout(()=>e.remove(),400);},5000);
@@ -217,7 +219,7 @@ function toast(t,b,k){
 }
 /* Aviso dentro de la app del técnico. El canal (push, WhatsApp) es otra
    discusión — la del informe, niveles 1 a 3 — y no se mezcla con esta bandeja. */
-function noti(t,b){ S.notis.unshift({t,b,h:hora(),leido:false}); }
+function noti(t,b){ S.notis.unshift({t,b,h:hora(),leido:false}); if(S.notis.length>200) S.notis.length=200; }
 const notiSinLeer = () => S.notis.filter(n=>!n.leido).length;
 
 /* Tarifario — la llave es la de su Tabla Maestra: Rooms + Pisos + Servicio.
