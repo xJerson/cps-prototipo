@@ -807,44 +807,44 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
       <button class="btn p" data-a="cliGuardar" data-id="${c?c.id:""}">${c?"Guardar corrección":"Guardar"}</button></div>`,true); },
   cliDocsModal: d => {
     const c = by(S.clientes, d.id);
+    /* El borrador de cada archivo arranca con lo que ya está guardado: así «Adjuntar» y «Quitar» parten de la realidad. */
+    S.docVPPdf = c.vendorPacketPdf || null; S.docW9Pdf = c.w9Pdf || null;
+    S.docCliNombre = c.nombre;
+    const fila = (id, titulo, sel, pdf, info, accion) => `<div class="fld"><label>${titulo}</label>
+        <select id="${id}">${["Pendiente","Recibido"].map(x=>`<option ${x===(sel||"Pendiente")?"selected":""}>${x}</option>`).join("")}</select>
+        <div style="display:flex;align-items:center;gap:9px;margin-top:7px">
+          <button class="btn sm" id="${id}B" data-a="${accion}">${pdf?"Quitar archivo":"Adjuntar archivo"}</button>
+          <span id="${id}N" style="font-size:11.5px;color:${pdf?"var(--verde)":"var(--faint)"}">${pdf?"📎 "+esc(pdf):"sin archivo"}</span></div>
+        <div id="${id}I" style="font-size:10.5px;color:var(--faint);margin-top:3px">${info?`Subido por ${esc(info.quien)} · ${esc(info.fecha)} ${esc(info.hora)}`:""}</div></div>`;
     modal(`<div class="mh"><h3>Documentos de ${esc(c.nombre)}</h3>
-      <p>Vendor Packet y W-9 no vencen: se marcan recibidos una sola vez y se adjunta el archivo.</p></div>
+      <p>Vendor Packet y W-9 no vencen: se suben una sola vez. Al adjuntar el archivo, el documento queda como <b>Subido</b> y se guarda en la base.</p></div>
     <div class="mb">
-      <div class="fld"><label>Vendor Packet</label><select id="docVP">${["Pendiente","Recibido"].map(x=>`<option ${x===(c.vendorPacket||"Pendiente")?"selected":""}>${x}</option>`).join("")}</select>
-        <div style="display:flex;align-items:center;gap:9px;margin-top:7px">
-          <button class="btn sm" data-a="cliDocsVPAdj">Adjuntar archivo</button>
-          <span id="docVPN" style="font-size:11.5px;color:${c.vendorPacketPdf?"var(--verde)":"var(--faint)"}">${c.vendorPacketPdf?"📎 "+esc(c.vendorPacketPdf):"sin archivo"}</span></div></div>
-      <div class="fld"><label>W-9</label><select id="docW9">${["Pendiente","Recibido"].map(x=>`<option ${x===(c.w9||"Pendiente")?"selected":""}>${x}</option>`).join("")}</select>
-        <div style="display:flex;align-items:center;gap:9px;margin-top:7px">
-          <button class="btn sm" data-a="cliDocsW9Adj">Adjuntar archivo</button>
-          <span id="docW9N" style="font-size:11.5px;color:${c.w9Pdf?"var(--verde)":"var(--faint)"}">${c.w9Pdf?"📎 "+esc(c.w9Pdf):"sin archivo"}</span></div></div>
-      <div class="note">Sirve para validar rápido si esta empresa ya está habilitada como proveedor, sin salir de Management.</div>
+      ${fila("docVP","Vendor Packet",c.vendorPacket,c.vendorPacketPdf,c.vendorPacketSubido,"cliDocsVPAdj")}
+      ${fila("docW9","W-9",c.w9,c.w9Pdf,c.w9Subido,"cliDocsW9Adj")}
+      <div class="note">Sirve para validar rápido si esta empresa ya está habilitada como proveedor, sin salir de Management.
+        Los archivos son de ejemplo: no se sube un PDF real, solo queda el registro de que se subió.</div>
     </div>
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
       <button class="btn p" data-a="cliDocsOK" data-id="${c.id}">Guardar</button></div>`);
   },
-  /* Igual que coiAdj: no llama a render(), para no perder lo que ya se eligió en los selects */
-  cliDocsVPAdj: () => {
-    S.docVPPdf = S.docVPPdf ? null : "VendorPacket_Cordova_Property_Services.pdf";
-    const e = document.getElementById("docVPN");
-    if(e){ e.textContent = S.docVPPdf ? "📎 " + S.docVPPdf : "sin archivo";
-      e.style.color = S.docVPPdf ? "var(--verde)" : "var(--faint)"; }
-  },
-  cliDocsW9Adj: () => {
-    S.docW9Pdf = S.docW9Pdf ? null : "W9_Cordova_Property_Services.pdf";
-    const e = document.getElementById("docW9N");
-    if(e){ e.textContent = S.docW9Pdf ? "📎 " + S.docW9Pdf : "sin archivo";
-      e.style.color = S.docW9Pdf ? "var(--verde)" : "var(--faint)"; }
-  },
+  /* Igual que coiAdj: no llama a render(), para no perder lo que ya se eligió en los selects.
+     Adjuntar marca el documento como Recibido; quitarlo lo regresa a Pendiente. */
+  cliDocsVPAdj: d => docAdjuntar("docVP", "VendorPacket", "docVPPdf"),
+  cliDocsW9Adj: d => docAdjuntar("docW9", "W9", "docW9Pdf"),
   cliDocsOK: d => {
-    const c = by(S.clientes, d.id);
-    c.vendorPacket = val("docVP"); c.w9 = val("docW9");
-    if(S.docVPPdf!==undefined) c.vendorPacketPdf = S.docVPPdf || c.vendorPacketPdf || null;
-    if(S.docW9Pdf!==undefined) c.w9Pdf = S.docW9Pdf || c.w9Pdf || null;
+    const c = by(S.clientes, d.id), sello = () => ({quien:S.usuario, fecha:HOY_SUP, hora:hora()});
+    const aplicar = (campoEst, campoPdf, campoInfo, id, borrador) => {
+      c[campoEst] = val(id);
+      if(borrador && !c[campoPdf]) c[campoInfo] = sello();          // se acaba de subir: queda quién y cuándo
+      if(!borrador) delete c[campoInfo];
+      c[campoPdf] = borrador || null;
+    };
+    aplicar("vendorPacket","vendorPacketPdf","vendorPacketSubido","docVP",S.docVPPdf);
+    aplicar("w9","w9Pdf","w9Subido","docW9",S.docW9Pdf);
     S.docVPPdf = undefined; S.docW9Pdf = undefined;
     flash("cli:"+c.id); cm();
     toast("✓ Documentos actualizados",
-      `Vendor Packet: <b>${esc(c.vendorPacket)}</b> · W-9: <b>${esc(c.w9)}</b>.`,"v");
+      `Vendor Packet: <b>${esc(docEstadoTxt(c.vendorPacket,c.vendorPacketPdf))}</b> · W-9: <b>${esc(docEstadoTxt(c.w9,c.w9Pdf))}</b>.`,"v");
     render();
   },
   /* La comunicación vive en la Propiedad, no en el Management — ver pestaña "Comunicación" de fichaProp. */

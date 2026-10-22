@@ -568,6 +568,19 @@ VIEWS.catalogos = () => {
    todavia — "es abstracto, podrian demorar en conseguirlo" — y se vincula despues. */
 const CAMPO_INPUT = {nombre:"nP", dir:"nD", zona:"nZ",
                      door:"nDC", pref:"nPR", aprob:"nAP", notas:"nNT", notasPaint:"nPaint"};
+/* Estado de un documento del management: con archivo adjunto está «Subido»; sin archivo, el que se marcó a mano. */
+const docEstadoTxt = (est, pdf) => pdf ? "Subido" : (est || "Pendiente");
+const docPill = (nombre, est, pdf) => { const t = docEstadoTxt(est, pdf);
+  return `<span class="pill ${t==="Subido"?"v":t==="Recibido"?"a":"g"}" style="margin-right:4px">${nombre} · ${t}</span>`; };
+/* Adjunta o quita el archivo de ejemplo y deja el selector de estado coherente (sin repintar el modal). */
+function docAdjuntar(id, prefijo, campoDraft){
+  S[campoDraft] = S[campoDraft] ? null : prefijo + "_" + String(S.docCliNombre||"management").replace(/[^A-Za-z0-9]+/g,"_").replace(/^_|_$/g,"") + ".pdf";
+  const n = document.getElementById(id+"N"), b = document.getElementById(id+"B"), sel = document.getElementById(id), inf = document.getElementById(id+"I");
+  if(n){ n.textContent = S[campoDraft] ? "📎 " + S[campoDraft] : "sin archivo"; n.style.color = S[campoDraft] ? "var(--verde)" : "var(--faint)"; }
+  if(b) b.textContent = S[campoDraft] ? "Quitar archivo" : "Adjuntar archivo";
+  if(sel) sel.value = S[campoDraft] ? "Recibido" : "Pendiente";
+  if(inf) inf.textContent = S[campoDraft] ? "Se marca como Subido al guardar." : "";
+}
 VIEWS.clientes = () => `
   <div class="ph"><div><h2>Management</h2><p>El punto de entrada. Hoy esto no existe: se salta directo a la propiedad.</p></div>
     <div class="act"><button class="btn p" data-a="cliNuevo">+ Nuevo</button></div></div>
@@ -576,7 +589,8 @@ VIEWS.clientes = () => `
     <tbody>${S.clientes.map(c=>`<tr class="${fl("cli:"+c.id)}"><td style="font-weight:650">${esc(c.nombre)}</td>
       <td>${esc(c.contacto)}</td><td class="mono">${esc(c.tel)}</td><td>${esc(c.mail)}</td>
       <td class="num mono">${S.propiedades.filter(p=>p.cliente===c.id).length}</td>
-      <td><button class="btn sm" data-a="cliDocsModal" data-id="${c.id}">${(c.vendorPacket==="Recibido"?1:0)+(c.w9==="Recibido"?1:0)}/2${c.vendorPacketPdf||c.w9Pdf?` 📎`:""}</button></td>
+      <td>${docPill("Vendor Packet",c.vendorPacket,c.vendorPacketPdf)}${docPill("W-9",c.w9,c.w9Pdf)}
+        <button class="btn sm" data-a="cliDocsModal" data-id="${c.id}">Documentos</button></td>
       <td style="text-align:right"><button class="btn sm" data-a="cliNuevo" data-id="${c.id}">Editar</button></td></tr>`).join("")}</tbody></table></div>
   <div class="tr">El sistema avisa si el teléfono ya existe, para no duplicar el mismo management dos veces. Y si algo se tecleó mal, <b>Editar</b> lo arregla: el valor anterior queda en la Bitácora. Client Status, Client Source e historial de comunicación se registran en cada <b>Propiedad</b>, no aquí — un mismo management puede tener varias, cada una con su propio estado.</div>`;
 

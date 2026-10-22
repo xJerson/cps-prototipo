@@ -126,6 +126,7 @@ const AUD = {
   tecGuardar:{a:"Dio de alta un técnico", m:"Técnicos"},
   tecBaja:{a:"Cambió el estado de un técnico (activo/inactivo)", m:"Técnicos"},
   cliGuardar:{a:"Registró un management", m:"Comercial"},
+  cliDocsOK:{a:"Actualizó los documentos de un management (Vendor Packet / W-9)", m:"Comercial"},
   transferir:{a:"Transfirió a programación", m:"Comercial"},
   solProgramar:{a:"Programó Work Orders desde una solicitud", m:"Comercial"},
   solComGuardar:{a:"Registró una Solicitud Comercial", m:"Comercial"},
