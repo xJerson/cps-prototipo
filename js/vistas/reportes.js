@@ -1,7 +1,7 @@
 "use strict";
 const DIMS = {
-  semana:  {n:"Semana",           f:w=>"Semana "+w.semana},
-  fecha:   {n:"Día",              f:w=>w.fecha},
+  semana:  {n:"Semana",           f:w=>w.semana==null?"Sin fecha":"Semana "+w.semana},
+  fecha:   {n:"Día",              f:w=>w.fecha||"Sin fecha"},
   prop:    {n:"Propiedad",        f:w=>P(w.prop).nombre},
   tec:     {n:"Técnico",          f:w=>w.tec?tecN(w.tec):"— sin asignar —"},
   zona:    {n:"Zona",             f:w=>P(w.prop).zona},
@@ -201,7 +201,7 @@ const BUSQ_AGR = {
   prop:{n:"Propiedad", f:w=>P(w.prop).nombre},
   tec: {n:"Técnico",   f:w=>w.tec?tecN(w.tec):"— sin asignar —"},
   serv:{n:"Servicio",  f:w=>w.serv},
-  sem: {n:"Semana",    f:w=>"Semana "+(w.semana||semanaDe(w.fecha))}
+  sem: {n:"Semana",    f:w=>{ const n=w.semana||(w.fecha?semanaDe(w.fecha):null); return n?"Semana "+n:"Sin fecha"; }}
 };
 const BUSQ_MAX = 200;
 function busqWOs(b){

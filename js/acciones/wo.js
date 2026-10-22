@@ -459,7 +459,7 @@ Object.assign(ACC, {
       flash("wo:"+w.id);
       cm();
       if(motivo){
-        toast("✓ Reagendada",`WO-${w.id} pasó al ${f}. Se liberó el cupo del ${antes}. <b>${esc(contacto)}</b> confirmó por ${esc(medio.toLowerCase())}, y se le avisó a <b>${esc(tecN(w.tec))}</b>.`,"v");
+        toast("✓ Reagendada",`WO-${w.id} pasó al ${f}. Se liberó el cupo del ${antes}. <b>${esc(contacto)}</b> confirmó por ${esc(medio.toLowerCase())}${w.tec?`, y se le avisó a <b>${esc(tecN(w.tec))}</b>`:". Todavía no tiene técnico asignado"}.`,"v");
       } else {
         toast("✓ Fecha confirmada con el cliente",
           `<b>${esc(contacto)}</b> confirmó el <b>${f}</b> por ${esc(medio.toLowerCase())}.`
@@ -493,7 +493,11 @@ Object.assign(ACC, {
   },
 
   /* Si la WO o la propiedad traen notas, primero se leen y se aceptan; sin notas no hay nada que aceptar. */
-  asigModal: d => { const w=W(+d.id); if(w && hayNotasAsig(w)) modalNotasAsig(w,"asignar"); else modalAsig(+d.id); },
+  asigModal: d => { const w=W(+d.id);
+    /* Las WO que nacen de un estimado no traen fecha: primero se coordina con el cliente, y recién ahí se asigna técnico
+       (la disponibilidad y el cupo dependen del día). */
+    if(w && !w.fecha){ toast("Falta la fecha","Esta Work Order todavía no tiene fecha. Primero coordínala con el cliente («Coordinar fecha con el cliente») y después asigna técnico.","r"); return; }
+    if(w && hayNotasAsig(w)) modalNotasAsig(w,"asignar"); else modalAsig(+d.id); },
   asigNotasOK: d => d.destino==="reasignar" ? modalReasignar(+d.id) : modalAsig(+d.id),
   woFiltroTipo: () => { S.woFt = val("woFtSel"); render(); },
   woFiltroZona: () => { S.woFz = val("woFzSel"); render(); },
@@ -621,7 +625,7 @@ Object.assign(ACC, {
       hist:[[hora(),"Return creado desde revisión de supervisión",S.usuario]]};
     S.devoluciones.push(dv); flash("dv:"+dv.id);
     cm();
-    toast("Return fix creado",`WO-${w.id} conserva su cierre original. El return queda disponible para crear y asignar un return fix a cualquier técnico.`,"w");
+    toast("Return registrado",`WO-${w.id} conserva su cierre original. El return queda abierto en Returns: desde ahí se crea el return fix y se asigna a cualquier técnico.`,"w");
     noti("Trabajo con return",`${P(w.prop).nombre} · ${U(w.unidad).num}: ${m}`);
     render();
   },
@@ -1013,7 +1017,7 @@ Object.assign(ACC, {
     if(!abierta){
       const quien=T(w.tec).nombre;
       const x={id:"X"+Date.now(), tipo:"Unit data mismatch", wo:w.id,
-        motivo: cambios.map(c=>`${ETQ_CAMPO_UNIDAD[c.campo]}: system says ${c.anterior}; technician observed ${c.propuesto}.`).join(" ") + (txt?` ${txt}`:""),
+        motivo: cambios.map(c=>`${ETQ_CAMPO_UNIDAD[c.campo]}: system says ${c.anterior==null||c.anterior===""?"not set":c.anterior}; technician observed ${c.propuesto==null||c.propuesto===""?"not set":c.propuesto}.`).join(" ") + (txt?` ${txt}`:""),
         monto:null, pide:quien, aprueba:"Thalia", estado:"Pendiente",
         assignedTo:null, assignedBy:null, assignedAt:null, workStatus:"Unassigned",
         fecha:HOY_SUP, creada:{quien,hora:hora(),minuto:S.reloj,fecha:HOY_SUP},

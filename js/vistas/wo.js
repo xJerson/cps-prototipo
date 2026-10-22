@@ -119,7 +119,7 @@ VIEWS.wo = () => {
       return `<tr class="cl${fl("wo:"+w.id)}" data-a="woVer" data-id="${w.id}"${propia?"":' style="opacity:.65"'}>
         ${selMode?`<td><input type="checkbox" data-a="pendSel" data-id="${w.id}" ${sel.includes(w.id)?"checked":""}></td>`:""}
         <td class="mono" style="font-weight:700">WO-${w.id}</td>
-        <td class="mono">${w.fecha.slice(5)}</td><td class="mono">${esc(w.horaProg||"9:00")}</td><td class="mono">${w.semana}</td>
+        <td class="mono">${w.fecha?w.fecha.slice(5):"sin fecha"}</td><td class="mono">${w.fecha?esc(w.horaProg||"9:00"):"—"}</td><td class="mono">${w.semana==null?"—":w.semana}</td>
         <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td>
         <td>${P(w.prop).zona?`<span class="pill g">${esc(P(w.prop).zona)}</span>`:"—"}</td>
         <td>${esc(U(w.unidad).rooms)}</td>
@@ -275,8 +275,8 @@ function fichaWO(id){
   <div class="ph"><div>
     <button class="btn sm" data-a="ir" data-m="wo" style="margin-bottom:7px">‹ Work Orders</button>
     <h2>WO-${w.id} · ${esc(p.nombre)} ${esc(u.num)}</h2>
-    <p>${esc(w.cat)} → ${esc(w.serv)} · ${esc(u.rooms)} · ${w.fecha} ·
-      <a href="#" data-a="verEnAgenda" data-id="${w.id}" style="color:var(--azul);font-weight:650">semana ${w.semana} — ver en la agenda</a></p></div>
+    <p>${esc(w.cat)} → ${esc(w.serv)} · ${esc(u.rooms)} · ${w.fecha||'<span class="pill w">sin fecha — falta coordinarla con el cliente</span>'}${w.semana!=null?` ·
+      <a href="#" data-a="verEnAgenda" data-id="${w.id}" style="color:var(--azul);font-weight:650">semana ${w.semana} — ver en la agenda</a>`:""}</p></div>
     <div class="act">
       ${woEditable(w)?`<button class="btn" data-a="woEditar" data-id="${w.id}">Editar datos</button>`:""}
       ${esAgendada(w.estado)
