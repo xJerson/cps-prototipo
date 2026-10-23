@@ -11,7 +11,7 @@ const DIMS = {
 const MEDIDAS = {
   cant:  {n:"Cantidad de trabajos", f:()=>1,                     fmt:v=>v||""},
   ing:   {n:"Ingreso",              f:w=>ingresoWO(w)||0,        fmt:v=>v?money(v):""},
-  egr:   {n:"Pago a técnicos",      f:w=>egresoWO(w)||0,         fmt:v=>v?money(v):""},
+  egr:   {n:"Egreso (pago a técnicos)",      f:w=>egresoWO(w)||0,         fmt:v=>v?money(v):""},
   util:  {n:"Utilidad",             f:w=>utilidadWO(w)||0,       fmt:v=>v?money(v):""}
 };
 
@@ -273,7 +273,7 @@ VIEWS.buscar = () => {
 
   ${!filas.length?`<div class="card"><div class="empty">Ningún trabajo con estos filtros.</div></div>`
   : grupos ? `<div class="card" style="overflow-x:auto"><div class="chd"><h3>Por ${esc(BUSQ_AGR[b.agr].n.toLowerCase())}</h3><span class="s">${grupos.length} grupo(s) · ${T.n} WO</span></div>
-    <table><thead><tr><th>${esc(BUSQ_AGR[b.agr].n)}</th><th class="num">WO</th><th class="num">Cobro</th><th class="num">Pago</th><th class="num">Material</th><th class="num">Utilidad</th><th class="num">Pago prom.</th></tr></thead>
+    <table><thead><tr><th>${esc(BUSQ_AGR[b.agr].n)}</th><th class="num">WO</th><th class="num">Ingreso</th><th class="num">Egreso</th><th class="num">Material</th><th class="num">Utilidad</th><th class="num">Egreso prom.</th></tr></thead>
     <tbody>${grupos.map(g=>`<tr><td style="font-weight:650">${esc(g.k)}</td><td class="num mono">${g.n}</td>
       <td class="num mono">${money(g.cobro)}</td><td class="num mono">${money(g.pago)}</td><td class="num mono">${money(g.mat)}</td>
       <td class="num mono" ${col(g.uti)}>${money(g.uti)}</td><td class="num mono">${m$(g.promPago)}</td></tr>`).join("")}
@@ -281,7 +281,7 @@ VIEWS.buscar = () => {
         <td class="num mono">${money(T.cobro)}</td><td class="num mono">${money(T.pago)}</td><td class="num mono">${money(T.mat)}</td>
         <td class="num mono" ${col(T.uti)}>${money(T.uti)}</td><td class="num mono">${m$(T.promPago)}</td></tr></tbody></table></div>`
   : `<div class="card" style="overflow-x:auto"><div class="chd"><h3>Work Orders</h3><span class="s">${T.n} encontrada(s)${T.n>BUSQ_MAX?` · mostrando ${BUSQ_MAX}`:""}</span></div>
-    <table><thead><tr><th>WO</th><th>Fecha</th><th>Propiedad</th><th>Unidad</th><th>Servicio</th><th>Técnico</th><th class="num">Cobro</th><th class="num">Pago</th><th class="num">Material</th><th class="num">Utilidad</th></tr></thead>
+    <table><thead><tr><th>WO</th><th>Fecha</th><th>Propiedad</th><th>Unidad</th><th>Servicio</th><th>Técnico</th><th class="num">Ingreso</th><th class="num">Egreso</th><th class="num">Material</th><th class="num">Utilidad</th></tr></thead>
     <tbody>${filas.slice(0,BUSQ_MAX).map(f=>{const w=f.w; return `<tr class="cl" data-a="woVer" data-id="${w.id}">
       <td class="mono" style="font-weight:700">WO-${w.id}</td><td class="mono">${esc(w.fecha||"—")}</td>
       <td>${esc(P(w.prop).nombre)}</td><td>${esc(U(w.unidad).num)}</td><td>${esc(w.serv)}</td>

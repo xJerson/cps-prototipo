@@ -101,7 +101,7 @@ Object.assign(ACC, {
   },
   buscarCSV: () => {
     const rows=busqWOs(busq()).map(busqFila);
-    descargarCSV("cps-search.csv",["WO","Date","Property","Unit","Service","Technician","Billed","Paid","Material","Profit"],
+    descargarCSV("cps-search.csv",["WO","Date","Property","Unit","Service","Technician","Income","Expense","Material","Profit"],
       rows.map(f=>[f.w.id,f.w.fecha||"",P(f.w.prop).nombre,U(f.w.unidad).num,f.w.serv,f.w.tec?tecN(f.w.tec):"",f.cobro,f.pago,f.mat,f.uti]));
     toast("✓ Archivo preparado",`${rows.length} Work Order(s) exportadas.`,"v");
   }

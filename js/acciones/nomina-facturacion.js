@@ -550,9 +550,9 @@ function modalValidar(w){
 function campoCobroVal(w,dr,cobro,num){
   const pf=precioFijadoWO(w);
   if(!(cobro!==null && precioBloqueado(pf)))
-    return `<div class="fld"><label>Cobro</label><input id="vaCobro" class="mono" value="${esc(dr.cobro!==undefined?dr.cobro:num(cobro))}" placeholder="0.00">${cobro!==null?`<div class="hint">${esc(precioEtqWO(w))}</div>`:""}</div>`;
+    return `<div class="fld"><label>Ingreso (cobro al cliente)</label><input id="vaCobro" class="mono" value="${esc(dr.cobro!==undefined?dr.cobro:num(cobro))}" placeholder="0.00">${cobro!==null?`<div class="hint">${esc(precioEtqWO(w))}</div>`:""}</div>`;
   const pend=S.excepciones.some(x=>x.tipo==="Cambio de precio fijado"&&x.estado==="Pendiente"&&x.cambioPrecio&&x.cambioPrecio.clave==="wo:"+w.id);
-  return `<div class="fld"><label>Cobro</label><div class="mono" style="padding:6px 0">${money(cobro)}</div>
+  return `<div class="fld"><label>Ingreso (cobro al cliente)</label><div class="mono" style="padding:6px 0">${money(cobro)}</div>
     <div class="hint">${esc(precioOrigenTxt(pf))}</div>
     ${pend?`<span class="pill a">Cambio de precio pendiente</span>`:`<button class="btn sm" data-a="precioPedirCambio" data-wo="${w.id}">Pedir cambio de precio</button>`}</div>`;
 }
@@ -566,9 +566,9 @@ function bloqueDineroVal(w,dr){
   return `<div class="card" style="margin-top:14px"><div class="chd"><h3>Dinero</h3></div><div class="cp">
     <div class="fg c2">
       ${campoCobroVal(w,dr,cobro,num)}
-      <div class="fld"><label>Pago técnico</label><input id="vaPago" class="mono" value="${esc(dr.pago!==undefined?dr.pago:num(pago))}" placeholder="0.00">
+      <div class="fld"><label>Egreso (pago al técnico)</label><input id="vaPago" class="mono" value="${esc(dr.pago!==undefined?dr.pago:num(pago))}" placeholder="0.00">
         ${pagoTecnicoWO(w)?`<div class="hint">Pago especial para ${esc(tecN(w.tec))} · ${esc(pagoTecnicoWO(w).motivo)}</div>`:""}</div></div>
-    <div class="fld"><label>Motivo</label><input id="vaMot" value="${esc(dr.mot||"")}" placeholder="Obligatorio si cambias Cobro o Pago"></div>
+    <div class="fld"><label>Motivo</label><input id="vaMot" value="${esc(dr.mot||"")}" placeholder="Obligatorio si cambias el Ingreso o el Egreso"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;padding:3px 0;font-size:12px"><span style="color:var(--soft)">Materiales</span><span><span class="mono">${money(mat)}</span> <button class="btn sm" data-a="valMatModal" data-id="${w.id}">Ajustar</button></span></div>
     ${comp?fila("Gastos compartidos",money(comp)):""}
     ${ajC||ajP?fila("Extras y descuentos",`cobro ${ajC>=0?"+":"−"}${money(Math.abs(ajC))} · pago ${ajP>=0?"+":"−"}${money(Math.abs(ajP))}`):""}
@@ -602,7 +602,7 @@ function aplicarEdicionVal(w){
     if(actual===null || Math.abs(n-actual)>.004) cambios.push({campo,etq,antes:actual,despues:n});
     return true;
   };
-  if(!rev("vaCobro",ingresoBaseWO(w),"precio","Cobro") || !rev("vaPago",egresoBaseWO(w),"pago","Pago técnico")) return false;
+  if(!rev("vaCobro",ingresoBaseWO(w),"precio","Ingreso") || !rev("vaPago",egresoBaseWO(w),"pago","Egreso")) return false;
   if(cambios.length && !mot){ S.audOmitir=true; marcaFalta(["vaMot"]); toast("Falta el motivo","Escribe por qué cambias el cobro o el pago.","r"); return false; }
   cambios.forEach(c=>{
     w[c.campo]=c.despues/cant;
