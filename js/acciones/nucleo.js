@@ -41,20 +41,28 @@ Object.assign(ACC, {
   calperAnio:  () => { S.periodoCal.anio = +document.querySelector('[data-a="calperAnio"]').value; render(); },
 
   /* ── Búsqueda de Work Orders: texto y fecha se combinan, no se reemplazan. */
-  woFiltroRapido: d => {
-    const f=S.filtroWO||(S.filtroWO={modo:"todos",sem:S.semana,desde:"",hasta:""});
-    f.modo=d.m; render();
+  woFiltroModo: () => {
+    const f=S.filtroWO||(S.filtroWO={modo:"todos",dia:"",desde:"",hasta:""});
+    f.modo=document.getElementById("woFmodo").value; render();
   },
-  woFiltroSemana: () => {
-    const f=S.filtroWO||(S.filtroWO={modo:"semana",sem:S.semana,desde:"",hasta:""});
-    f.modo="semana"; f.sem=+document.getElementById("woFsem").value||S.semana; render();
+  woFiltroDia: () => {
+    const f=S.filtroWO||(S.filtroWO={modo:"fecha",dia:"",desde:"",hasta:""});
+    f.modo="fecha"; f.dia=document.getElementById("woFdia").value; render();
+  },
+  woFiltroMes: () => {
+    const f=S.filtroWO||(S.filtroWO={modo:"mes",dia:"",desde:"",hasta:""});
+    f.mes=document.getElementById("woFmes").value; render();
+  },
+  woFiltroAnio: () => {
+    const f=S.filtroWO||(S.filtroWO={modo:"anio",dia:"",desde:"",hasta:""});
+    f.anio=document.getElementById("woFanio").value; render();
   },
   woFiltroDesde: () => {
-    const f=S.filtroWO||(S.filtroWO={modo:"rango",sem:S.semana,desde:"",hasta:""});
+    const f=S.filtroWO||(S.filtroWO={modo:"rango",dia:"",desde:"",hasta:""});
     f.modo="rango"; f.desde=document.getElementById("woFdesde").value; render();
   },
   woFiltroHasta: () => {
-    const f=S.filtroWO||(S.filtroWO={modo:"rango",sem:S.semana,desde:"",hasta:""});
+    const f=S.filtroWO||(S.filtroWO={modo:"rango",dia:"",desde:"",hasta:""});
     f.modo="rango"; f.hasta=document.getElementById("woFhasta").value; render();
   },
 

@@ -499,9 +499,10 @@ Object.assign(ACC, {
     if(w && !w.fecha){ toast("Falta la fecha","Esta Work Order todavía no tiene fecha. Primero coordínala con el cliente («Coordinar fecha con el cliente») y después asigna técnico.","r"); return; }
     if(w && hayNotasAsig(w)) modalNotasAsig(w,"asignar"); else modalAsig(+d.id); },
   asigNotasOK: d => d.destino==="reasignar" ? modalReasignar(+d.id) : modalAsig(+d.id),
+  woFiltroSemana: () => { S.woFs = val("woFsSel"); render(); },
   woFiltroTipo: () => { S.woFt = val("woFtSel"); render(); },
   woFiltroZona: () => { S.woFz = val("woFzSel"); render(); },
-  woFiltroQuitar: () => { S.woFt=""; S.woFz=""; render(); },
+  woFiltroQuitar: () => { S.woFt=""; S.woFz=""; S.woFs=""; S.filtroWO=null; render(); },
   asigNo: d => {
     const w=W(+d.id), t=T(d.tec), b=bloqueo(d.tec,w.fecha);
     toast("🚫 No se puede asignar", b

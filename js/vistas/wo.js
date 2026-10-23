@@ -15,12 +15,21 @@ VIEWS.wo = () => {
   if(f==="camino") ws = ws.filter(w=>w.tec && esAgendada(w.estado) && !asisDe(w.id));
   if(f==="pend") ws = ws.filter(w=>ESTADOS_PEND.includes(w.estado));
   const selMode = f==="pend" && puedeAvisarPend(), sel = (S.pendSel||[]).filter(id=>{ const w=W(id); return w && ESTADOS_PEND.includes(w.estado); });
-  const filtroFecha=S.filtroWO||{modo:"todos",sem:S.semana,desde:"",hasta:""};
-  const fechaRapida={hoy:HOY_SUP,manana:fechaMover(HOY_SUP,1),ayer:fechaMover(HOY_SUP,-1)};
-  if(fechaRapida[filtroFecha.modo]) ws=ws.filter(w=>w.fecha===fechaRapida[filtroFecha.modo]);
-  if(filtroFecha.modo==="semana") ws=ws.filter(w=>w.semana===filtroFecha.sem);
-  if(filtroFecha.modo==="rango") ws=ws.filter(w=>(!filtroFecha.desde||w.fecha>=filtroFecha.desde)&&(!filtroFecha.hasta||w.fecha<=filtroFecha.hasta));
+  /* Fecha: «todos» no filtra; «fecha» un día; «rango» de una fecha a otra; «mes» un mes del año actual;
+     «mesanio» un mes de un año a elegir; «anio» un año completo. */
+  const filtroFecha=S.filtroWO||{modo:"todos",dia:"",desde:"",hasta:""};
+  const anioActual=String(new Date().getFullYear());
+  const fechaActiva=(filtroFecha.modo==="fecha"&&!!filtroFecha.dia)||(["mes","mesanio"].includes(filtroFecha.modo)&&!!filtroFecha.mes)||(filtroFecha.modo==="anio"&&!!filtroFecha.anio)||(filtroFecha.modo==="rango"&&!!(filtroFecha.desde||filtroFecha.hasta));
+  const fechaOk = fe => { const m=filtroFecha.modo, d=fe||"";
+    if(m==="fecha") return !filtroFecha.dia || d===filtroFecha.dia;
+    if(m==="rango") return (!filtroFecha.desde||d>=filtroFecha.desde)&&(!filtroFecha.hasta||d<=filtroFecha.hasta);
+    if(m==="mes") return !filtroFecha.mes || (d.slice(5,7)===filtroFecha.mes && d.slice(0,4)===anioActual);
+    if(m==="mesanio") return !filtroFecha.mes || (d.slice(5,7)===filtroFecha.mes && d.slice(0,4)===String(filtroFecha.anio||anioActual));
+    if(m==="anio") return !filtroFecha.anio || d.slice(0,4)===String(filtroFecha.anio);
+    return true; };
+  ws=ws.filter(w=>fechaOk(w.fecha));
   /* Se filtra desde el encabezado: Tipo y Zona abren su lista de valores. */
+  if(S.woFs) ws=ws.filter(w=>String(w.semana)===String(S.woFs));
   if(S.woFt) ws=ws.filter(w=>w.cat===S.woFt);
   if(S.woFz) ws=ws.filter(w=>P(w.prop).zona===S.woFz);
   // «luego preguntan de unidades de hace dos meses, qué se hizo, qué pasó»
@@ -36,7 +45,7 @@ VIEWS.wo = () => {
       return (terms.length&&terms.every(term=>txt.includes(term))) || (qn && un&&uNorm(un.num).includes(qn)); }); }
 
   /* Sub-WO planificadas: cada WO las lleva desplegables; con un filtro activo, una WO sale también si alguna de sus Sub-WO coincide. */
-  const filtrando = f!=="abiertas" || filtroFecha.modo!=="todos" || !!S.busca || !!S.woFt || !!S.woFz;
+  const filtrando = f!=="abiertas" || fechaActiva || !!S.busca || !!S.woFs || !!S.woFt || !!S.woFz;
   const subOk = (w,a) => {
     const fe=fechaSubWO(a)||w.fecha, sem=semanaDe(fe), tec=tecSubWO(a), et=a.estadoTrabajo;
     if(ETAPAS_WO.includes(f) && etapaWO(w)!==f) return false;
@@ -45,11 +54,10 @@ VIEWS.wo = () => {
     if(f==="curso" && et!=="In progress") return false;
     if(f==="camino" && !(tec && et==="Assigned")) return false;
     if(f==="pend") return false;   // «Pendientes» son WO que esperan algo del cliente
+    if(S.woFs && String(sem)!==String(S.woFs)) return false;
     if(S.woFt && w.cat!==S.woFt) return false;
     if(S.woFz && P(w.prop).zona!==S.woFz) return false;
-    if(fechaRapida[filtroFecha.modo] && fe!==fechaRapida[filtroFecha.modo]) return false;
-    if(filtroFecha.modo==="semana" && sem!==filtroFecha.sem) return false;
-    if(filtroFecha.modo==="rango" && ((filtroFecha.desde&&fe<filtroFecha.desde)||(filtroFecha.hasta&&fe>filtroFecha.hasta))) return false;
+    if(!fechaOk(fe)) return false;
     if(S.busca){ const un=U(w.unidad), txt=[un&&un.num,P(w.prop).nombre,a.concepto,a.ubic,w.serv,w.cat,w.id,tec?tecN(tec):""].filter(Boolean).join(" ").toLowerCase();
       if(!S.busca.toLowerCase().split(/\s+/).filter(Boolean).every(t=>txt.includes(t))) return false; }
     return true;
@@ -59,7 +67,9 @@ VIEWS.wo = () => {
   if(filtrando) S.wos.forEach(w=>{ if(!propias.has(w.id) && (subsVistas[w.id]||[]).length) ws.push(w); });
   ws.sort((a,b)=>b.id-a.id);
   const cuenta = f => S.wos.reduce((m,w)=>{ const v=f(w); if(v) m[v]=(m[v]||0)+1; return m; },{});
-  const cT = cuenta(w=>w.cat), cZ = cuenta(w=>P(w.prop).zona);
+  const cT = cuenta(w=>w.cat), cZ = cuenta(w=>P(w.prop).zona), cS = cuenta(w=>w.semana);
+  const semanasWO = Object.keys(cS).map(Number).sort((a,b)=>b-a).map(s=>[s,cS[s]]);
+  const cA = cuenta(w=>(w.fecha||"").slice(0,4)), aniosWO = Object.keys(cA).sort().reverse().map(a=>[a,cA[a]]);
   const tiposWO = activos("categorias").map(c=>[c,cT[c]||0]);
   const zonasWO = zonasN().map(z=>[z,cZ[z]||0]);
   const nSubVistas = ws.reduce((n,w)=>n+(subsVistas[w.id]||[]).length,0);
@@ -67,16 +77,6 @@ VIEWS.wo = () => {
   <div class="ph"><div><h2>Work Orders</h2><p>La pestaña <code>Schedule</code>, con los mismos campos — pero el técnico y la propiedad se eligen, no se escriben.</p></div>
     <div class="act">
       <button class="btn p" data-a="woNueva">+ Nueva Work Order</button></div></div>
-  <div class="card" style="margin-bottom:12px"><div class="cp" style="display:flex;gap:7px;align-items:center;flex-wrap:wrap">
-    <span style="font-size:11px;color:var(--faint);font-weight:700;text-transform:uppercase">Fecha</span>
-    ${[["todos","Todas"],["hoy","Hoy"],["manana","Mañana"],["ayer","Ayer"]].map(([m,n])=>`<button class="btn sm ${filtroFecha.modo===m?"p":""}" data-a="woFiltroRapido" data-m="${m}">${n}</button>`).join("")}
-    <span style="font-size:11px;color:var(--faint);margin-left:5px">Semana</span>
-    <input id="woFsem" data-a="woFiltroSemana" type="number" min="1" max="53" value="${esc(String(filtroFecha.sem||S.semana))}" class="mono" style="width:56px;padding:5px">
-    <span style="font-size:11px;color:var(--faint);margin-left:5px">Rango</span>
-    <input id="woFdesde" data-a="woFiltroDesde" type="date" value="${esc(filtroFecha.desde||"")}">
-    <span style="color:var(--faint)">al</span>
-    <input id="woFhasta" data-a="woFiltroHasta" type="date" value="${esc(filtroFecha.hasta||"")}">
-  </div></div>
   ${S.busca?`<div class="note" style="margin-bottom:12px"><b>Buscando «${esc(S.busca)}»</b> — se combinan las palabras: propiedad, unidad, técnico, servicio y notas.
     <button class="btn sm" data-a="buscarLimpiar" style="margin-left:8px">Limpiar</button></div>`:""}
 
@@ -101,7 +101,25 @@ VIEWS.wo = () => {
   </div>
   <div class="note" style="margin-bottom:12px;display:flex;align-items:center;gap:10px"><span><b>${ws.length} resultado(s)${nSubVistas?` · ${nSubVistas} Sub-WO`:""}.</b> Los filtros de texto y fecha se mantienen juntos hasta que los cambies.</span>
     ${selMode?`<button class="btn p" style="margin-left:auto" data-a="pendAvisar" ${sel.length?"":"disabled"}>Avisar (${sel.length})</button>`:""}</div>
-  <div class="card" style="margin-bottom:10px"><div class="cp" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+  <div class="card" style="margin-bottom:10px"><div class="cp" style="display:flex;flex-direction:column;gap:9px">
+   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+    <span style="font-size:11px;color:var(--faint);font-weight:700;text-transform:uppercase">Semana</span>
+    <select id="woFsSel" data-a="woFiltroSemana"><option value="">Todas las semanas</option>${semanasWO.map(([v,n])=>`<option value="${v}" ${String(S.woFs)===String(v)?"selected":""}>Semana ${v} (${n})</option>`).join("")}</select>
+    <span style="font-size:11px;color:var(--faint);font-weight:700;text-transform:uppercase;margin-left:6px">Fecha</span>
+    <select id="woFmodo" data-a="woFiltroModo">
+      ${[["todos","Todas las fechas"],["fecha","Una fecha"],["rango","Rango de fechas"],["mes","Mes (este año)"],["mesanio","Mes y año"],["anio","Año"]].map(([m,n])=>`<option value="${m}" ${filtroFecha.modo===m?"selected":""}>${n}</option>`).join("")}
+    </select>
+    ${filtroFecha.modo==="fecha"?`<input id="woFdia" data-a="woFiltroDia" type="date" value="${esc(filtroFecha.dia||"")}">`:""}
+    ${["mes","mesanio"].includes(filtroFecha.modo)?`<select id="woFmes" data-a="woFiltroMes"><option value="">Elige un mes</option>${MESES.map((n,i)=>{ const v=String(i+1).padStart(2,"0"); return `<option value="${v}" ${filtroFecha.mes===v?"selected":""}>${n[0].toUpperCase()+n.slice(1)}</option>`; }).join("")}</select>`:""}
+    ${filtroFecha.modo==="mes"?`<span style="font-size:11px;color:var(--faint)">de ${anioActual}</span>`:""}
+    ${filtroFecha.modo==="mesanio"?`<select id="woFanio" data-a="woFiltroAnio">${[...new Set([anioActual,...aniosWO.map(a=>a[0])])].sort().reverse().map(v=>`<option value="${v}" ${String(filtroFecha.anio||anioActual)===String(v)?"selected":""}>${v}</option>`).join("")}</select>`:""}
+    ${filtroFecha.modo==="anio"?`<select id="woFanio" data-a="woFiltroAnio"><option value="">Elige un año</option>${aniosWO.map(([v,n])=>`<option value="${v}" ${String(filtroFecha.anio)===String(v)?"selected":""}>${v} (${n})</option>`).join("")}</select>`:""}
+    ${filtroFecha.modo==="rango"?`<span style="font-size:11px;color:var(--faint)">Desde</span>
+    <input id="woFdesde" data-a="woFiltroDesde" type="date" value="${esc(filtroFecha.desde||"")}">
+    <span style="font-size:11px;color:var(--faint)">Hasta</span>
+    <input id="woFhasta" data-a="woFiltroHasta" type="date" value="${esc(filtroFecha.hasta||"")}">`:""}
+   </div>
+   <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <input id="woBuscar" value="${esc(S.busca||"")}" placeholder="Buscar propiedad, unidad, técnico o palabras…"
       style="font-family:inherit;font-size:12.5px;padding:7px 10px;border:1px solid var(--line);border-radius:7px;background:var(--surface);color:var(--ink);width:260px">
     <button class="btn" data-a="buscarUni">Buscar</button>
@@ -109,7 +127,8 @@ VIEWS.wo = () => {
     <select id="woFtSel" data-a="woFiltroTipo"><option value="">Todos los tipos</option>${tiposWO.map(([v,n])=>`<option value="${esc(v)}" ${S.woFt===v?"selected":""}>${esc(v)} (${n})</option>`).join("")}</select>
     <span style="font-size:11px;color:var(--faint);font-weight:700;text-transform:uppercase;margin-left:6px">Zona</span>
     <select id="woFzSel" data-a="woFiltroZona"><option value="">Todas las zonas</option>${zonasWO.map(([v,n])=>`<option value="${esc(v)}" ${S.woFz===v?"selected":""}>${esc(v)} (${n})</option>`).join("")}</select>
-    ${S.woFt||S.woFz?`<button class="btn sm" data-a="woFiltroQuitar">Quitar filtros</button>`:""}
+    ${S.woFt||S.woFz||S.woFs||fechaActiva?`<button class="btn sm" data-a="woFiltroQuitar">Quitar filtros</button>`:""}
+   </div>
   </div></div>
   <div class="card"><table>
     <thead><tr>${selMode?"<th></th>":""}<th>WO</th><th>Fecha</th><th>Hora</th><th>Sem</th><th>Propiedad · Unidad</th><th>Zona</th><th>Rooms</th><th>Tipo</th><th>Servicio</th><th>Técnico</th><th>Llegada</th><th>Estado</th>${puedeVerDinero?'<th class="num">Facturado</th><th class="num">Pago a técnico</th>':""}<th></th></tr></thead>
