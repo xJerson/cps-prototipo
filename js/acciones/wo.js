@@ -155,7 +155,7 @@ Object.assign(ACC, {
     if(!q){ sug.innerHTML=""; refWO(); return; }
     const ms = S.propiedades.filter(p=>p.activa && p.nombre.toLowerCase().includes(q)).slice(0,6);
     sug.innerHTML = ms.length
-      ? ms.map(p=>`<div class="sugrow" data-a="woPropElegir" data-id="${p.id}"><b>${esc(p.nombre)}</b><span class="sugsub">${esc(p.zona)}</span></div>`).join("")
+      ? ms.map(p=>`<div class="sugrow" data-a="woPropElegir" data-id="${p.id}"><b>${esc(p.nombre)}</b><span class="sugsub">${esc(p.zona)}${p.dir?" · "+esc(p.dir):""}</span></div>`).join("")
       : `<div class="sugrow sugvacio">Sin propiedades que coincidan</div>`;
     refWO();
   },

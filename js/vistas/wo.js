@@ -921,6 +921,11 @@ function modalWO(w){
         <div id="wUniSug" class="sugbox"></div>
       </div>
     </div>
+    <div class="fld">
+      <label>Dirección de la propiedad</label>
+      <input id="wDir" readonly tabindex="-1" style="font-weight:650" placeholder="Elige una propiedad" value="${w&&P(w.prop).dir?esc(P(w.prop).dir):""}">
+      <div class="hint">Viene de la propiedad. Para cambiarla, edítala en Propiedades.</div>
+    </div>
     <div id="wUniNueva"></div>
     <div id="wDeriv"></div>
     <div id="wSugerencia"></div>
@@ -991,6 +996,9 @@ function refWO(){
   const pid=val("wProp"), cat=val("wCat");
   const uid=val("wUni"), esNueva=uid==="__new__";
   const uniTxt=document.getElementById("wUniTxt");
+  // El campo Dirección se completa apenas se elige la propiedad, sin esperar a la unidad ni bajar al recuadro «Se llenan solos»
+  const dirEl=document.getElementById("wDir"), prDir=pid?by(S.propiedades,pid):null;
+  if(dirEl){ dirEl.value = prDir ? (prDir.dir||"Sin dirección registrada en la propiedad") : ""; dirEl.style.color = prDir&&!prDir.dir ? "var(--rojo)" : ""; }
   // «Va después de»: solo WO abiertas de la misma unidad, sin ciclos (ver woOpcionesDepende)
   const selD=document.getElementById("wDep");
   if(selD){
