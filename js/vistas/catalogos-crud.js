@@ -502,6 +502,8 @@ const CAT_VISTAS = {
   estados:{n:"Estados", d:"Las etapas por las que pasa una Work Order, de agendada a terminada.", cuenta:()=>CAT.estados.length}
 };
 LISTAS.forEach(L=>{ CAT_VISTAS[L.k]={...L, cuenta:()=>activos(L.k).length}; });
+// Change order items cuenta también los servicios de Surcharges y Miscellaneous, que solo existen para change orders.
+CAT_VISTAS.adicionales.cuenta = () => (CAT.tiposCO||[]).reduce((n,t)=>n+servDe(t).length,0) + activos("adicionales").length;
 const CAT_INDICE = [
   {g:"Servicios", ks:["tys","adicionales"]},
   {g:"Propiedades y unidades", ks:["zonas","rooms","pisos","ubicaciones"]},
@@ -578,6 +580,29 @@ function catVistaLista(L){
   <div class="cat-pie">Editar permite renombrar, y el nombre nuevo pasa a todos los registros que ya lo usan. Dar de baja lo saca de los formularios nuevos sin borrarlo de lo que ya existe.</div>`;
 }
 
+/* Change orders: el técnico elige cualquier servicio de Tipos y servicios. Aquí está solo lo que existe nada más
+   para change orders (Surcharges, Miscellaneous) y los change order items que todavía no tienen servicio. */
+function catVistaCO(){
+  const L=CAT_VISTAS.adicionales, tipos=CAT.tiposCO||[];
+  const pend=CAT.adicionales.map((v,i)=>({v,i})).filter(x=>!debaja("adicionales",x.v)), baja=CAT.adicionales.map((v,i)=>({v,i})).filter(x=>debaja("adicionales",x.v));
+  const filaServ = s => `<tr class="${fl("serv:"+s.id)}"><td>${esc(s.nombre)}</td><td style="color:var(--soft)">Lo define oficina al aprobar</td>
+    <td class="cat-fila-acc"><button class="cat-lnk suave" data-a="servRen" data-id="${s.id}">Editar</button></td></tr>`;
+  return `
+  <div class="cat-cab"><div><h3>${esc(L.n)}</h3><p>${esc(L.d)} El técnico elige el tipo y el servicio igual que en una Work Order; aquí está lo que solo existe para change orders.</p>
+    <div class="cat-uso">${L.cuenta()} opciones propias · además, cualquier servicio de <b>Tipos y servicios</b> salvo Estimate e Inspection</div></div></div>
+  ${tipos.map(t=>{ const ss=servTodos(t).filter(s=>!s.baja);
+    return `<div class="cat-tipo-cab"><h3>${esc(t)}</h3><span class="cat-dim" style="font-size:12px">${t==="Surcharges"?"Recargos por espacio extra de la unidad":"Lo que no encaja en ningún servicio"}</span>
+      <div class="cat-acc"><button class="btn sm" data-a="servAdd" data-t="${esc(t)}">Nuevo servicio</button></div></div>
+    <table><tbody>${ss.map(filaServ).join("")||`<tr><td class="empty">Sin servicios.</td></tr>`}</tbody></table>`;}).join("")}
+  ${pend.length?`<div class="cat-tipo-cab"><h3>Por definir con Erika</h3><span class="pill w">${pend.length} sin servicio</span></div>
+  <table><tbody>${pend.map(({v,i})=>{ const c=adicionalCatalogo(v);
+    return `<tr class="${fl("cat:adicionales:"+v)}"><td>${esc(v)}</td><td style="color:var(--soft)">${c?`Precio fijo ${money(c.precio)}`:"Lo define oficina al aprobar"}</td>
+      <td class="cat-fila-acc"><button class="cat-lnk suave" data-a="catRen" data-k="adicionales" data-i="${i}">Editar</button></td></tr>`;}).join("")}</tbody></table>`:""}
+  ${baja.length?`<details class="cat-bajas"><summary>${baja.length} change order item(s) reemplazado(s) por un servicio</summary><table><tbody>
+    ${baja.map(({v,i})=>`<tr><td>${esc(v)}</td><td class="cat-fila-acc"><button class="cat-lnk" data-a="catAlta" data-k="adicionales" data-i="${i}">Reactivar</button></td></tr>`).join("")}</tbody></table></details>`:""}
+  <div class="cat-pie">Si el servicio tiene tarifa, el precio del change order sale de ahí. Si no, oficina lo define al aprobar.</div>`;
+}
+
 const EST_DESC = {"Scheduled":"Agendada, sin técnico todavía","Confirmed":"El cliente confirmó la fecha",
   "In progress":"El técnico está en la propiedad","Esperando aprobación":"Frenada por un adicional sin decidir",
   "Detenido":"Empezó pero está frenado por algo externo","Completed":"Trabajo terminado","Pending":"En espera de algo externo","Rescheduled":"Se movió de fecha",
@@ -596,7 +621,7 @@ function catVistaEstados(){
 
 VIEWS.catalogos = () => {
   const sel = CAT_VISTAS[S.catSel] ? S.catSel : "tys";
-  const det = sel==="tys" ? catVistaTys() : sel==="estados" ? catVistaEstados() : catVistaLista(CAT_VISTAS[sel]);
+  const det = sel==="tys" ? catVistaTys() : sel==="estados" ? catVistaEstados() : sel==="adicionales" ? catVistaCO() : catVistaLista(CAT_VISTAS[sel]);
   return `
   <div class="ph"><div><h2>Catálogos</h2>
     <p>Las listas de opciones que aparecen en los formularios del sistema. Elige una para ver qué tiene y dónde se usa.</p></div></div>

@@ -1062,6 +1062,9 @@ Object.assign(ACC, {
 
   subwoNueva: d => modalSubWO(+d.id),
   subwoTipoRef: () => refSubWO(),
+  /* El servicio depende del tipo: se rellena sin repintar el modal, para no perder lo ya escrito. */
+  subwoCat: () => { const s=document.getElementById("swTipo"); if(!s) return;
+    s.innerHTML=opcionesCO(val("swCat")).map(c=>`<option>${esc(c)}</option>`).join(""); refSubWO(); },
   subwoGestionar: d => modalGestionSubWO(+d.id),
   /* Elegir técnico desde las tarjetas de disponibilidad (llenan el mismo select que ya usaba el guardado). */
   subwoElegir: d => { const s=document.getElementById("swTec")||document.getElementById("sgTec"); if(s){ s.value=d.tec; subwoMarcar(); } },
@@ -1155,7 +1158,8 @@ Object.assign(ACC, {
        Excepciones y se aprueba con el mismo modal de "¿cómo aprobó el
        cliente?" (medioOK), que ahí mismo decide nómina y si se factura.
        Sin costo no hay nada que aprobar, queda directo como antes. */
-    const na={id:nid("ad"), sol:"SOL"+Date.now(), wo:w.id, desc:notas, ubic, concepto:tipo,
+    const catSW=val("swCat"), item=catSW===CO_PEND;
+    const na={id:nid("ad"), sol:"SOL"+Date.now(), wo:w.id, desc:notas, ubic, concepto:tipo, cat:item?null:catSW, serv:item?null:tipo,
       cant, precio, estado: monto>0 ? "Pendiente" : "Aprobado",
       aprob: monto>0 ? null : {medio:"Directo",quien:S.usuario,fecha:hora()},
       origen:"Planificada", fotosRefArr:[], fotosEvidArr:[], specs,

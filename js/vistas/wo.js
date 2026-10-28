@@ -759,7 +759,11 @@ function modalSubWO(woId){
     <input type="hidden" id="swWo" value="${w.id}">
     <div class="fg c2">
       <div class="fld"><label>Tipo de trabajo <span class="req">*</span></label>
-        <select id="swTipo" data-a="subwoTipoRef">${activos("adicionales").map(c=>`<option>${esc(c)}</option>`).join("")}</select></div>
+        <select id="swCat" data-a="subwoCat">${tiposCO().map(t=>`<option>${esc(t)}</option>`).join("")}</select></div>
+      <div class="fld"><label>Servicio <span class="req">*</span></label>
+        <select id="swTipo" data-a="subwoTipoRef">${opcionesCO(tiposCO()[0]).map(c=>`<option>${esc(c)}</option>`).join("")}</select></div>
+    </div>
+    <div class="fg c2">
       <div class="fld"><label>Ubicación (Location) <span class="req">*</span></label>
         <select id="swUbic">${activos("ubicaciones").map(u2=>`<option>${esc(u2)}</option>`).join("")}</select></div>
     </div>
@@ -909,6 +913,7 @@ function refMaterial(){
 /* ── NÓMINA ── la pestaña Payroll, armada sola ── */
 const SUBWO_SPECS = {
   "Door":            ["Door","Current color","New color"],
+  "Color change":    ["Current color","New color"],     // el servicio de Paint que reemplazó a «Cambio de color»
   "Cambio de color": ["Current color","New color"],
   "Garage":          ["Current color","New color"]
 };

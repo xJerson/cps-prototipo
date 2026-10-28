@@ -117,16 +117,21 @@ Object.assign(ACC, {
     });
   },
   /* Arranca VACÍA: antes traía un texto de ejemplo ("Hueco en el sheetrock…") y un toque en Enviar creaba un adicional falso. */
-  fAdic: d => { S.phSheet={t:"adic", wo:+d.id,
+  fAdic: d => { const t=tiposCO()[0]||"";
+    S.phSheet={t:"adic", wo:+d.id,
     desc:"",
-    ubic:activos("ubicaciones")[0]||"", filas:[{c:activos("adicionales")[0]||"",q:"1"}]}; render(); },
+    ubic:activos("ubicaciones")[0]||"", filas:[{t, c:opcionesCO(t)[0]||"", q:"1"}]}; render(); },
+  /* Cambiar el tipo cambia la lista de servicios: arranca en el primero del tipo nuevo. */
+  fAdicTipo: d => { leerAdic(); const f=S.phSheet&&S.phSheet.filas[+d.i]; if(!f) return;
+    f.c=opcionesCO(f.t)[0]||""; render(); },
   fAdicFoto: d => { leerAdic();
     capturarFoto(url=>{ S.phSheet.filas[+d.i].foto=url; render(); }); },
   fAdicMas: () => { leerAdic();
     // El renglón nuevo arranca en un concepto que todavía no usó: nadie quiere
     // «Sheetrock, Sheetrock» y tener que corregirlo a mano en el celular.
-    const cs=activos("adicionales"), ya=S.phSheet.filas.map(f=>f.c);
-    S.phSheet.filas.push({c: cs.find(c=>!ya.includes(c)) || cs[0], q:"1"});
+    const ult=S.phSheet.filas[S.phSheet.filas.length-1], t=ult?ult.t:tiposCO()[0];
+    const cs=opcionesCO(t), ya=S.phSheet.filas.filter(f=>f.t===t).map(f=>f.c);
+    S.phSheet.filas.push({t, c: cs.find(c=>!ya.includes(c)) || cs[0], q:"1"});
     render(); },
   fAdicMenos: d => { leerAdic(); S.phSheet.filas.splice(+d.i,1); render(); },
 
@@ -298,17 +303,23 @@ Object.assign(ACC, {
     if(!sh.desc.trim()){ toast("Falta decir qué encontraste","Con la foto sola oficina no puede decidir.","r"); return; }
     const ya=new Set();
     for(const f of sh.filas){
-      if(ya.has(f.c)){ toast("Concepto repetido",
+      if(!f.c){ toast("Falta el servicio","Elige qué hay que hacer en cada renglón.","r"); return; }
+      if(ya.has(f.t+"|"+f.c)){ toast("Servicio repetido",
         `<b>${esc(f.c)}</b> está dos veces. Súbele la cantidad en vez de repetir el renglón.`,"r"); return; }
-      ya.add(f.c);
+      ya.add(f.t+"|"+f.c);
     }
     S.reloj+=8;
     // Un solo envío para el técnico; N líneas para el sistema, unidas por `sol`.
-    const sol="SOL"+Date.now(), lista=sh.filas.map(f=>f.c).join(", ");
-    sh.filas.forEach(f=>{ const cat=adicionalCatalogo(f.c); S.adicionales.push({
+    const sol="SOL"+Date.now(), lista=sh.filas.map(f=>f.c).join(", "), u=U(w.unidad);
+    /* El precio sale de la tarifa del servicio para esta unidad. Sin tarifa (Surcharges, Other o un servicio sin
+       precio cargado) entra como manual y oficina lo define al aprobar. Un change order item pendiente conserva su
+       precio fijo si lo tiene. */
+    sh.filas.forEach(f=>{ const item=f.t===CO_PEND, cat=item?adicionalCatalogo(f.c):null,
+      tf=item?null:tarifa(w.prop,f.t,f.c,u.rooms,u.pisos), ref=cat||tf;
+      S.adicionales.push({
       id:nid("ad"), sol, wo:w.id, desc:sh.desc.trim(), ubic:sh.ubic,
-      concepto:f.c, cant:parseFloat(f.q)||1,
-      precio:cat?cat.precio:null, pago:cat?cat.pago:null, precioOrigen:cat?"catalogo":"manual", catalogoId:cat?cat.id:null,
+      concepto:f.c, cat:item?null:f.t, serv:item?null:f.c, cant:parseFloat(f.q)||1,
+      precio:ref?ref.precio:null, pago:ref?ref.pago:null, precioOrigen:cat?"catalogo":tf?"tarifario":"manual", catalogoId:cat?cat.id:null,
       estado:"Pendiente", aprob:null, origen:"Técnico",
       // Punto 7 del feedback: antes era una sola foto fija para todo el
       // aviso — ahora cada hallazgo trae la suya propia (f.foto, opcional,
@@ -319,7 +330,7 @@ Object.assign(ACC, {
       // visual por etapas que pidió Claudia.
       fotosRefArr:[], fotosEvidArr:[], hallazgoFoto:f.foto?fotoNueva(f.foto,T(w.tec).nombre):null,
       specs:{}, tec:null, fecha:null,
-      hist:[[hora(),`Creada por el técnico en sitio: ${f.c}${cat?` · precio de catálogo ${money(cat.precio)}`:" · precio manual pendiente"}`,T(w.tec).nombre]]}); });
+      hist:[[hora(),`Creada por el técnico en sitio: ${item?f.c:f.t+" · "+f.c}${cat?` · precio de catálogo ${money(cat.precio)}`:tf?` · precio de tarifa ${money(tf.precio)}`:" · precio manual pendiente"}`,T(w.tec).nombre]]}); });
     /* El técnico sigue con lo que tenía programado — el adicional no frena
        la WO. Lo que sí queda frenado es el pago/factura de ESA WO puntual:
        la excepción en vivo que arma excAuto() ("Adicional en sitio") ya se

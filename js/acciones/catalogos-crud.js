@@ -740,7 +740,7 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
   servAdd: d => modal(`<div class="mh"><h3>Nuevo servicio</h3><p>Cada servicio cuelga de un tipo. Así el desplegable se filtra solo al agendar.</p></div>
     <div class="mb">
       <div class="fld"><label>Tipo de servicio <span class="req">*</span></label>
-        <select id="sT">${activos("categorias").map(c=>`<option ${d&&d.t===c?"selected":""}>${esc(c)}</option>`).join("")}</select></div>
+        <select id="sT">${activos("categorias").concat(CAT.tiposCO||[]).map(c=>`<option ${d&&d.t===c?"selected":""}>${esc(c)}</option>`).join("")}</select></div>
       <div class="fld"><label>Nombre del servicio <span class="req">*</span></label><input id="sN" placeholder="Full paint, Deep clean…"></div>
       <div class="note">Después hay que darle tarifa en el Tarifario, si no saldrá como «NA» y levantará una excepción.</div></div>
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="servSave">Agregar</button></div>`),

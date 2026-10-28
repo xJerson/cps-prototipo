@@ -56,18 +56,23 @@ const CAT = {
     {id:"S66",tipo:"Removal",nombre:"Removal"},
     {id:"S24",tipo:"Estimate",nombre:"Estimate"},
     {id:"S25",tipo:"Inspection",nombre:"Inspection"},
-    {id:"S26",tipo:"Ceramica",nombre:"Ceramica",baja:true}
+    {id:"S26",tipo:"Ceramica",nombre:"Ceramica",baja:true},
+    // Solo para change orders (ver tiposCO): no se agendan como Work Order. El precio lo pone oficina al aprobar.
+    {id:"S67",tipo:"Surcharges",nombre:"Studio surcharge"},{id:"S68",tipo:"Surcharges",nombre:"Garage surcharge"},
+    {id:"S69",tipo:"Miscellaneous",nombre:"Other"}
   ],
-  // Catalogo!P — OJO: es otra lista distinta, son conceptos de trabajo extra, no servicios que se venden
-  // Los cinco del flujograma del técnico + los de Catalogo!P del Excel
+  /* Un change order es un servicio del catálogo pedido desde el campo: el técnico elige tipo y servicio, y el precio
+     sale de su tarifa. Estos dos tipos existen solo para change orders (recargos por espacio extra y lo imprevisto),
+     por eso no están en «categorias» ni aparecen al crear una Work Order. */
+  tiposCO:["Surcharges","Miscellaneous"],
+  /* Change order items: la lista suelta de antes (Catalogo!P + flujograma del técnico). Los que tienen servicio
+     equivalente en Services.xlsx quedaron de baja (S.bajas.adicionales); los activos esperan que Erika diga a qué
+     servicio corresponden. */
   adicionales:["Extra clean","Cambio de color","Cambio de brillo (sheen)","Extra prep","Heavy clean","Simple repair","Servicio adicional",
                "Studio","Balcony","Living room (carpet)","Tape","Sheetrock","Masa","Garage","Primer","Textura","Closet exterior","Door","Caulking","Other"],
-  // Adicionales estándar con precio de catálogo. Los conceptos complejos
-  // siguen entrando como "Other" y oficina captura el precio al aprobarlos.
+  // Precio fijo de un change order item pendiente. Heavy clean ya sale de su tarifa y Simple repair dejó de existir.
   adicionalesCatalogo:[
-    {id:"AD1",nombre:"Extra clean",precio:55,pago:30},
-    {id:"AD2",nombre:"Heavy clean",precio:210,pago:105},
-    {id:"AD3",nombre:"Simple repair",precio:75,pago:38}
+    {id:"AD1",nombre:"Extra clean",precio:55,pago:30}
   ],
   ubicaciones:["Sala","Comedor","Room","Bano","Closet","Pantry","Exterior","Otro"],   // Catalogo!Q
   // Cómo se clasifica un daño previo. Sale de lo que describió Claudia:
@@ -120,6 +125,14 @@ function semanaDe(fecha){ const d=new Date(fecha+"T00:00:00"); const e=new Date(
   return Math.ceil((((d-e)/86400000)+e.getDay()+1)/7); }
 const servDe = t => CAT.servicios.filter(s=>s.tipo===t && !s.baja).map(s=>s.nombre);
 const servTodos = t => CAT.servicios.filter(s=>s.tipo===t);
+/* Lo que se puede pedir como change order (técnico en sitio o Sub-WO de oficina): los tipos de servicio que son
+   trabajo (Estimate e Inspection no), los dos tipos propios de change order y, mientras queden, los change order items
+   que Erika todavía no ubicó en un servicio. */
+const CO_PEND = "Change order items";
+const tiposCO = () => activos("categorias").filter(c=>!["Estimate","Inspection"].includes(c))
+  .concat((CAT.tiposCO||[]).filter(t=>!debaja("categorias",t)))
+  .concat(activos("adicionales").length ? [CO_PEND] : []);
+const opcionesCO = t => t===CO_PEND ? activos("adicionales") : servDe(t);
 
 /* ══════════ ROLES — quién ve qué (UC del módulo que le toca) ══════════ */
 const ROLES = {

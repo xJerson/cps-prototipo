@@ -442,9 +442,10 @@ function leerAdic(){
   const t=document.getElementById("paD"); if(t) sh.desc=t.value;
   const u=document.getElementById("paU"); if(u) sh.ubic=u.value;
   sh.filas.forEach((f,i)=>{
-    const c=document.getElementById("paC"+i),
+    const t=document.getElementById("paT"+i),
+          c=document.getElementById("paC"+i),
           q=document.getElementById("paQ"+i);
-    if(c) f.c=c.value; if(q) f.q=q.value;
+    if(t) f.t=t.value; if(c) f.c=c.value; if(q) f.q=q.value;
   });
 }
 function leerMaterial(){

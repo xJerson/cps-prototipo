@@ -354,7 +354,10 @@ let S = {
   solicitudesComerciales:[],
   draftEst:[], estHdr:{cli:"CL1",prop:"P1",cat:"Clean"},
   diasCerrados:[],   // «una vez que ya tenemos cerrado nuestro agendamiento... ahora sí las empezamos a asignar»
-  bajas:{categorias:["Carpet","Trash out","Pressure washing","Cabinet","Ceramica"]},   // valores de catálogo dados de baja — no se borran, dejan de ofrecerse
+  bajas:{categorias:["Carpet","Trash out","Pressure washing","Cabinet","Ceramica"],
+    // Change order items que ya son un servicio de Services.xlsx, o que pasaron a Surcharges / Miscellaneous.
+    adicionales:["Cambio de color","Cambio de brillo (sheen)","Closet exterior","Heavy clean","Extra prep","Tape","Sheetrock",
+      "Textura","Living room (carpet)","Studio","Garage","Simple repair","Servicio adicional","Other"]},   // valores de catálogo dados de baja — no se borran, dejan de ofrecerse
   // UC-02: lo que Lydia pasa a Thalia sin llamada ni reingreso de datos
   solicitudes:[],
   // UC-01b / UC-04b / UC-12b: visitas comerciales, inspecciones y supervisión.
