@@ -65,15 +65,13 @@ const CAT = {
      sale de su tarifa. Estos dos tipos existen solo para change orders (recargos por espacio extra y lo imprevisto),
      por eso no están en «categorias» ni aparecen al crear una Work Order. */
   tiposCO:["Surcharges","Miscellaneous"],
-  /* Change order items: la lista suelta de antes (Catalogo!P + flujograma del técnico). Los que tienen servicio
-     equivalente en Services.xlsx quedaron de baja (S.bajas.adicionales); los activos esperan que Erika diga a qué
-     servicio corresponden. */
+  /* Change order items: la lista suelta de antes (Catalogo!P + flujograma del técnico). Toda quedó de baja
+     (S.bajas.adicionales): Services.xlsx es el catálogo, y lo que no está ahí no se usa. Se conserva para que los
+     registros viejos sigan mostrando su concepto. */
   adicionales:["Extra clean","Cambio de color","Cambio de brillo (sheen)","Extra prep","Heavy clean","Simple repair","Servicio adicional",
                "Studio","Balcony","Living room (carpet)","Tape","Sheetrock","Masa","Garage","Primer","Textura","Closet exterior","Door","Caulking","Other"],
-  // Precio fijo de un change order item pendiente. Heavy clean ya sale de su tarifa y Simple repair dejó de existir.
-  adicionalesCatalogo:[
-    {id:"AD1",nombre:"Extra clean",precio:55,pago:30}
-  ],
+  // Precio fijo por change order item: ya no queda ninguno, el precio sale de la tarifa del servicio.
+  adicionalesCatalogo:[],
   ubicaciones:["Sala","Comedor","Room","Bano","Closet","Pantry","Exterior","Otro"],   // Catalogo!Q
   // Cómo se clasifica un daño previo. Sale de lo que describió Claudia:
   // «interruptores manchados con pintura», golpes, marcas que ya estaban.
