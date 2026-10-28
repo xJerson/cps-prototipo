@@ -310,6 +310,9 @@ const EXIGE_UBIC = Object.keys(REGLAS_UBICACION);
    ni floors. Tampoco resurfacing" — son las mismas categorías que ya cobran
    por arreglo puntual (Tub only, Per trailer…), no por tamaño del apartamento. */
 const SIN_BEDROOMS = ["Repair","Cabinet","Resurface","Installation","Ceramica","Trash out","Pressure washing"];
+/* Trash out y Pressure washing pasaron a ser servicios de Clean (Services.xlsx): siguen sin pedir Bedrooms. */
+const SIN_BEDROOMS_SERV = ["Trash out","Pressure washing"];
+const sinBedrooms = (cat,serv) => SIN_BEDROOMS.includes(cat) || SIN_BEDROOMS_SERV.includes(serv);
 
 /* Sección 5 del feedback: cada Sub-Work Order trae specs propias según su tipo
    — el ejemplo del doc es "Sub-WO: Door Paint" con Door/Current color/New color
@@ -325,7 +328,7 @@ const CAMPOS = {
   num:"Número de unidad", rooms:"Rooms", pisos:"Floor", detalle:"Detail",
   esp:"Especialidad", movimiento:"Se mueve de zona",
   prop:"Propiedad", cat:"Tipo de servicio", serv:"Servicio", variante:"Rooms",
-  precio:"Se cobra al cliente", pago:"Se paga al técnico",
+  precio:"Se cobra al cliente", pago:"Se paga al técnico", provisional:"Tarifa provisoria",
   desc:"Description", tax:"Tax", descuento:"Total Discount", cantidad:"Quantity",
   unidad:"Unidad", fecha:"Fecha", horaProg:"Hora", semana:"Semana",
   cant:"Cantidad", po:"PO", notasTec:"Notas al técnico", notasOficina:"Notas internas de oficina",

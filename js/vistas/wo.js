@@ -746,7 +746,7 @@ function subwoCandidatos(w, fecha, sel){
   const heredado = `<button type="button" class="btn" style="width:100%;justify-content:flex-start;margin-bottom:7px;padding:10px 12px" data-a="subwoElegir" data-id="${w.id}" data-tec="">
     <div style="flex:1;text-align:left"><div style="font-weight:700">El mismo técnico de la WO</div>
       <div style="font-size:11px;color:var(--faint)">${w.tec?esc(tecN(w.tec)):"La WO todavía no tiene técnico"} · lo normal cuando se hace en la misma visita</div></div></button>`;
-  return heredado + cand.map(c=>candidatoCardHTML(c, w.id, ESP_REQ[w.cat]||"Tecnico", {actionSi:"subwoElegir", actionNo:"subwoNoDisp"})).join("");
+  return heredado + cand.map(c=>candidatoCardHTML(c, w.id, espReqDe(w.cat,w.serv), {actionSi:"subwoElegir", actionNo:"subwoNoDisp"})).join("");
 }
 function subwoMarcar(){
   const s=document.getElementById("swTec")||document.getElementById("sgTec"), c=document.getElementById("swCand"); if(!s||!c) return;
@@ -1109,11 +1109,11 @@ function refWO(){
       <input id="wUniLoc" data-a="woUniCampo" placeholder="Ej. edificio A, lado este / entrada trasera" value="${esc(locN)}">
       <div class="hint">Referencia específica de esta unidad; la zona pertenece a la propiedad.</div></div>
     ${tipoN==="Residencial"?`<div class="fg c2" style="margin:-4px 0 12px">
-      <div class="fld" style="margin-bottom:0"><label>Bedrooms ${SIN_BEDROOMS.includes(cat)?'<span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional para este servicio</span>':'<span class="req">*</span>'}</label>
+      <div class="fld" style="margin-bottom:0"><label>Bedrooms ${sinBedrooms(cat,val("wServ"))?'<span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional para este servicio</span>':'<span class="req">*</span>'}</label>
         <input id="wUniBedrooms" data-a="woUniCampo" type="number" min="0" class="mono" placeholder="0 = Studio" value="${esc(bedroomsN)}"></div>
       <div class="fld" style="margin-bottom:0"><label>Bathrooms <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— informativo</span></label>
         <input id="wUniBathrooms" data-a="woUniCampo" type="number" min="0" class="mono" placeholder="opcional" value="${esc(bathroomsN)}"></div>
-    </div>${SIN_BEDROOMS.includes(cat)?`<div class="tr" style="margin:-2px 0 12px">Para «${esc(cat)}», Bedrooms y Bathrooms son informativos: puedes completarlos si los conoces, pero no bloquean el agendamiento.</div>`:`<div class="tr" style="margin:-2px 0 12px">Studio, balcón y living room no se guardan en la unidad: el técnico los solicita como adicionales solo cuando aplican.</div>`}`:""}`;
+    </div>${sinBedrooms(cat,val("wServ"))?`<div class="tr" style="margin:-2px 0 12px">Para «${esc(SIN_BEDROOMS.includes(cat)?cat:val("wServ"))}», Bedrooms y Bathrooms son informativos: puedes completarlos si los conoces, pero no bloquean el agendamiento.</div>`:`<div class="tr" style="margin:-2px 0 12px">Studio, balcón y living room no se guardan en la unidad: el técnico los solicita como adicionales solo cuando aplican.</div>`}`:""}`;
   })() : "";
   // Lo que hoy se reescribe en cada fila de Schedule y aquí sale solo
   document.getElementById("wDeriv").innerHTML = u
@@ -1294,9 +1294,9 @@ function modalProg(id){
    El cupo lleno no bloquea (una corrección puede ser urgente): solo el permiso o vacaciones. */
 function tuCandidatos(dv, fecha){
   const orig=W(dv.wo), cat=orig?orig.cat:activos("categorias")[0];
-  const w={prop:dv.prop, unidad:dv.unidad, cat, fecha, tec:null};
+  const w={prop:dv.prop, unidad:dv.unidad, cat, serv:orig?orig.serv:"", fecha, tec:null};
   const cand=candidatosTec(w).map(c=>c.est==="lleno"?{...c,est:"warn"}:c);
-  return cand.map(c=>candidatoCardHTML(c,dv.id,ESP_REQ[cat]||"Tecnico",{actionSi:"tuElegir",actionNo:"tuNoDisp",tecOriginalId:dv.responsable})).join("");
+  return cand.map(c=>candidatoCardHTML(c,dv.id,espReqDe(cat,orig?orig.serv:""),{actionSi:"tuElegir",actionNo:"tuNoDisp",tecOriginalId:dv.responsable})).join("");
 }
 function tuMarcar(){ const s=document.getElementById("tuT"), c=document.getElementById("tuCand"); if(!s||!c) return;
   c.querySelectorAll("button[data-tec]").forEach(b=>b.classList.toggle("p",b.dataset.tec===s.value)); }
@@ -1334,7 +1334,7 @@ function modalNotasAsig(w,destino){
 }
 function modalAsig(id){
   const w=W(id), p=P(w.prop);
-  const espReq = ESP_REQ[w.cat] || "Tecnico";
+  const espReq = espReqDe(w.cat,w.serv);
   const cand = candidatosTec(w);
   modal(`
   <div class="mh"><h3>Asignar WO-${id}</h3><p>${esc(p.nombre)} · ${esc(U(w.unidad).num)} · ${esc(w.serv)}</p></div>
@@ -1359,7 +1359,7 @@ function modalAsig(id){
    quién puede y quién está más cerca sin tener que abrir Técnicos aparte. */
 function modalReasignar(id){
   const w=W(id), p=P(w.prop);
-  const espReq = ESP_REQ[w.cat] || "Tecnico";
+  const espReq = espReqDe(w.cat,w.serv);
   const cand = candidatosTec(w);
   modal(`
   <div class="mh"><h3>Reasignar WO-${id}</h3>

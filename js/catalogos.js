@@ -9,27 +9,54 @@ const CAT = {
   rooms:["Studio","1 bedroom","2 bedroom","3 bedroom","4 bedroom","Oficina",
          "1 bedroom and studio","2 bedroom and studio","3 bedroom and studio"],   // Catalogo!F
   pisos:[1,2,3],                                                                  // Catalogo!G
-  categorias:["Clean","Paint","Repair","Carpet","Trash out","Pressure washing","Cabinet",
-              "Resurface","Installation","Make Ready Punch","Estimado","Inspection","Ceramica"], // Catalogo!H
-  // Catalogo!I — hoy es una lista plana; aquí cada servicio cuelga de su tipo
+  /* Services.xlsx (CPS, 2026-10-28): la lista oficial de tipos de servicio y servicios.
+     Los tipos retirados (Carpet, Trash out, Pressure washing, Cabinet, Ceramica) quedan al final y
+     están en S.bajas.categorias, para que los registros viejos conserven su historia. */
+  categorias:["Clean","Paint","Resurface","Make Ready Checklist","Flooring Services","Repair",
+              "Installation","Removal","Estimate","Inspection",
+              "Carpet","Trash out","Pressure washing","Cabinet","Ceramica"],
+  // Cada servicio cuelga de su tipo. Se conservan los ids existentes para que los renombrados sigan
+  // enlazados; los que no tienen equivalente en Services.xlsx quedan con baja:true.
   servicios:[
-    {id:"S1",tipo:"Clean",nombre:"Full clean"},{id:"S2",tipo:"Clean",nombre:"Deep clean"},
-    {id:"S3",tipo:"Clean",nombre:"Touch up clean"},{id:"S4",tipo:"Clean",nombre:"Office"},
-    {id:"S5",tipo:"Clean",nombre:"Amenities"},
-    {id:"S6",tipo:"Paint",nombre:"Full paint"},{id:"S7",tipo:"Paint",nombre:"Partial paint"},
-    {id:"S8",tipo:"Paint",nombre:"Color change"},{id:"S9",tipo:"Paint",nombre:"Touch up paint"},
-    {id:"S10",tipo:"Paint",nombre:"Gloss finish change"},{id:"S11",tipo:"Paint",nombre:"Ceilings"},
-    {id:"S12",tipo:"Repair",nombre:"Drywall repair"},{id:"S13",tipo:"Repair",nombre:"Extra prep"},
-    {id:"S14",tipo:"Carpet",nombre:"Carpet clean"},
-    {id:"S15",tipo:"Trash out",nombre:"Trash out"},
-    {id:"S16",tipo:"Pressure washing",nombre:"Pressure wash"},
-    {id:"S17",tipo:"Cabinet",nombre:"Bathroom cabinet resurfacing"},{id:"S18",tipo:"Cabinet",nombre:"Kitchen cabinet paint"},
-    {id:"S19",tipo:"Resurface",nombre:"Tub resurfacing"},{id:"S20",tipo:"Resurface",nombre:"Tub resurfacing with wall"},
-    {id:"S21",tipo:"Resurface",nombre:"Resurface countertops"},
-    {id:"S22",tipo:"Installation",nombre:"Installation cabinets"},
-    {id:"S23",tipo:"Make Ready Punch",nombre:"Make ready punch"},
-    {id:"S24",tipo:"Estimado",nombre:"Estimado"},{id:"S25",tipo:"Inspection",nombre:"Inspection"},
-    {id:"S26",tipo:"Ceramica",nombre:"Ceramica"}
+    {id:"S1",tipo:"Clean",nombre:"Full clean"},{id:"S2",tipo:"Clean",nombre:"Heavy clean"},
+    {id:"S4",tipo:"Clean",nombre:"Office and amenities"},{id:"S3",tipo:"Clean",nombre:"Touch up clean"},
+    {id:"S14",tipo:"Clean",nombre:"Carpet clean"},{id:"S15",tipo:"Clean",nombre:"Trash out"},
+    {id:"S16",tipo:"Clean",nombre:"Pressure washing"},{id:"S27",tipo:"Clean",nombre:"Carpet - Pet treatment"},
+    {id:"S5",tipo:"Clean",nombre:"Amenities",baja:true},
+    {id:"S6",tipo:"Paint",nombre:"Full paint"},{id:"S8",tipo:"Paint",nombre:"Color change"},
+    {id:"S10",tipo:"Paint",nombre:"Gloss finish change"},{id:"S9",tipo:"Paint",nombre:"Touch up paint"},
+    {id:"S11",tipo:"Paint",nombre:"Full ceilings paint"},{id:"S28",tipo:"Paint",nombre:"Partial ceilings paint"},
+    {id:"S29",tipo:"Paint",nombre:"Exterior door paint"},{id:"S30",tipo:"Paint",nombre:"Bathroom cabinet paint"},
+    {id:"S18",tipo:"Paint",nombre:"Kitchen cabinet paint"},{id:"S31",tipo:"Paint",nombre:"Exterior closet paint"},
+    {id:"S32",tipo:"Paint",nombre:"Color change ceilings paint"},{id:"S33",tipo:"Paint",nombre:"Accent wall paint"},
+    {id:"S7",tipo:"Paint",nombre:"Partial paint",baja:true},
+    {id:"S19",tipo:"Resurface",nombre:"Tub resurfacing just tub"},{id:"S20",tipo:"Resurface",nombre:"Tub resurfacing with wall"},
+    {id:"S17",tipo:"Resurface",nombre:"Bathroom cabinet resurface"},{id:"S34",tipo:"Resurface",nombre:"Kitchen cabinet resurface"},
+    {id:"S35",tipo:"Resurface",nombre:"Bathroom countertop resurface"},{id:"S36",tipo:"Resurface",nombre:"Kitchen countertop resurface"},
+    {id:"S37",tipo:"Resurface",nombre:"Sink resurface"},{id:"S38",tipo:"Resurface",nombre:"Kitchen countertop marble resurface"},
+    {id:"S39",tipo:"Resurface",nombre:"Bathroom countertop marble resurface"},
+    {id:"S21",tipo:"Resurface",nombre:"Resurface countertops",baja:true},
+    {id:"S23",tipo:"Make Ready Checklist",nombre:"Make Ready Checklist"},
+    {id:"S40",tipo:"Flooring Services",nombre:"Carpet tear out"},
+    {id:"S12",tipo:"Repair",nombre:"Sheetrock repair"},{id:"S41",tipo:"Repair",nombre:"Tape repair"},
+    {id:"S42",tipo:"Repair",nombre:"Popcorn texture repair"},{id:"S43",tipo:"Repair",nombre:"Texture repair"},
+    {id:"S44",tipo:"Repair",nombre:"Countertop repair"},{id:"S45",tipo:"Repair",nombre:"Bath tub repair"},
+    {id:"S46",tipo:"Repair",nombre:"Tile repair"},{id:"S47",tipo:"Repair",nombre:"Door repair"},
+    {id:"S48",tipo:"Repair",nombre:"Window repair"},{id:"S49",tipo:"Repair",nombre:"Balcony repair"},
+    {id:"S13",tipo:"Repair",nombre:"Extra prep"},
+    {id:"S50",tipo:"Installation",nombre:"Tile installation"},{id:"S51",tipo:"Installation",nombre:"Grab bar installation"},
+    {id:"S52",tipo:"Installation",nombre:"Bath tub installation"},{id:"S53",tipo:"Installation",nombre:"Light fixture installation"},
+    {id:"S54",tipo:"Installation",nombre:"Blinds installation"},{id:"S55",tipo:"Installation",nombre:"Dishwasher installation"},
+    {id:"S56",tipo:"Installation",nombre:"Kitchen installation"},{id:"S57",tipo:"Installation",nombre:"Interior door installation"},
+    {id:"S58",tipo:"Installation",nombre:"Exterior door installation"},{id:"S59",tipo:"Installation",nombre:"2 doors interior closet installation"},
+    {id:"S60",tipo:"Installation",nombre:"4 doors interior closet installation"},{id:"S61",tipo:"Installation",nombre:"Trim installation"},
+    {id:"S62",tipo:"Installation",nombre:"Baseboard installation"},{id:"S22",tipo:"Installation",nombre:"Full cabinets installation"},
+    {id:"S63",tipo:"Installation",nombre:"Full cabinets door installation"},{id:"S64",tipo:"Installation",nombre:"Shower rod installation"},
+    {id:"S65",tipo:"Installation",nombre:"Cabinet handles installation"},
+    {id:"S66",tipo:"Removal",nombre:"Removal"},
+    {id:"S24",tipo:"Estimate",nombre:"Estimate"},
+    {id:"S25",tipo:"Inspection",nombre:"Inspection"},
+    {id:"S26",tipo:"Ceramica",nombre:"Ceramica",baja:true}
   ],
   // Catalogo!P — OJO: es otra lista distinta, son conceptos de trabajo extra, no servicios que se venden
   // Los cinco del flujograma del técnico + los de Catalogo!P del Excel

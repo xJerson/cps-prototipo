@@ -217,7 +217,7 @@ Object.assign(ACC, {
     const faltan=[];
     if(!pid) faltan.push("propiedad");
     const tipoNueva = val("wUniTipo")||"Residencial";
-    const requiereBedrooms = tipoNueva==="Residencial" && !SIN_BEDROOMS.includes(cat);
+    const requiereBedrooms = tipoNueva==="Residencial" && !sinBedrooms(cat,serv);
     if(esNueva){
       if(!val("wUniNum")) faltan.push("número de unidad");
       if(requiereBedrooms && val("wUniBedrooms")==="") faltan.push("bedrooms de la unidad");

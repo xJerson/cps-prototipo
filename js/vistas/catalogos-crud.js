@@ -355,7 +355,8 @@ function listaPrecios(prop, tipo){
     .sort((a,b)=>String(a.cat).localeCompare(String(b.cat))||String(a.serv).localeCompare(String(b.serv))||((a.pisos==null?-1:a.pisos)-(b.pisos==null?-1:b.pisos)));
 }
 /* Lo que se va a enviar: los precios del filtro actual, menos los que se desmarcaron. */
-const tarSeleccion = () => listaPrecios(S.tarFp||"", S.tarFt||"").filter(t=>!(S.tarOff||[]).includes(String(t.id)));
+/* Una tarifa provisoria es un precio inventado: nunca le llega a un cliente. */
+const tarSeleccion = () => listaPrecios(S.tarFp||"", S.tarFt||"").filter(t=>!t.provisional && !(S.tarOff||[]).includes(String(t.id)));
 /* Texto del correo: solo el precio al cliente, nunca lo que se le paga al técnico. */
 function textoListaPrecios(ts){
   const porTipo={}; ts.forEach(t=>{ (porTipo[t.cat||"—"]=porTipo[t.cat||"—"]||[]).push(t); });
@@ -364,7 +365,8 @@ function textoListaPrecios(ts){
 }
 VIEWS.tarifario = () => {
   const fp=S.tarFp||"", ft=S.tarFt||"";
-  const base=listaPrecios(fp,""), ts=base.filter(t=>!ft||t.cat===ft), sel=ts.filter(t=>!(S.tarOff||[]).includes(String(t.id)));
+  const base=listaPrecios(fp,""), ts=base.filter(t=>!ft||t.cat===ft), sel=ts.filter(t=>!t.provisional && !(S.tarOff||[]).includes(String(t.id)));
+  const nProv=base.filter(t=>t.provisional).length;
   const nPorTipo={}; base.forEach(t=>{ nPorTipo[t.cat]=(nPorTipo[t.cat]||0)+1; });
   const props=S.propiedades.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre));
   const enviadas=(S.listasPrecio||[]).slice(0,6);
@@ -372,6 +374,7 @@ VIEWS.tarifario = () => {
   <div class="ph"><div><h2>Tarifario</h2>
     <p>${fp?`Lista de precios de <b>${esc(P(fp).nombre)}</b>: sus tarifas propias y las generales que no tiene negociadas.`:`Precios generales, de <code>Ingreso Fijo</code> — aplican a toda propiedad que no tenga una negociada aparte.`}</p></div>
     <div class="act"><button class="btn p" data-a="tarNueva">+ Nueva tarifa</button></div></div>
+  ${nProv?`<div class="note w" style="margin-bottom:10px"><b>${nProv} tarifa(s) provisoria(s).</b> Son precios de referencia cargados con el catálogo nuevo (Services.xlsx), que llegó sin precios: revísalos y corrígelos con <b>Editar</b>. Mientras sean provisorias no se envían en la lista de precios.</div>`:""}
   <div class="card" style="margin-bottom:10px"><div class="cp" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <span style="font-size:11px;color:var(--faint);font-weight:700;text-transform:uppercase">Propiedad</span>
     <select id="tarFp" data-a="tarFiltro"><option value="">Tarifario general</option>${props.map(p=>`<option value="${p.id}" ${fp===p.id?"selected":""}>${esc(p.nombre)}</option>`).join("")}</select>
@@ -385,12 +388,13 @@ VIEWS.tarifario = () => {
     <thead><tr><th style="width:30px"><input type="checkbox" data-a="tarMarcaTodos" title="Marcar o desmarcar todos los que se ven" ${ts.length&&sel.length===ts.length?"checked":""}></th><th>Tipo</th><th>Servicio</th><th>Detail</th><th>Piso</th><th>Baños</th><th>Description</th>${fp?"<th>Origen</th>":""}<th class="num">Price</th><th></th></tr></thead>
     <tbody>${ts.map(t=>{
       return `<tr class="${fl('tar:'+t.id)}">
-      <td><input type="checkbox" data-a="tarMarca" data-id="${t.id}" ${(S.tarOff||[]).includes(String(t.id))?"":"checked"}></td>
+      <td>${t.provisional?`<input type="checkbox" disabled title="Provisoria: edítala para poder enviarla">`
+        :`<input type="checkbox" data-a="tarMarca" data-id="${t.id}" ${(S.tarOff||[]).includes(String(t.id))?"":"checked"}>`}</td>
       <td>${esc(t.cat)||"—"}</td><td>${esc(t.serv)||"—"}</td><td>${esc(t.variante)||"—"}</td>
       <td>${t.pisos!=null?"Floor "+t.pisos:'<span class="pill g">cualquiera</span>'}</td>
       <td>${t.banos!=null?t.banos:'<span class="pill g">—</span>'}</td><td>${esc(t.desc)||"—"}</td>
       ${fp?`<td><span class="pill ${t.prop?"a":"g"}">${t.prop?"Propia":"General"}</span></td>`:""}
-      <td class="num mono">${money(t.precio)}</td>
+      <td class="num mono">${money(t.precio)}${t.provisional?` <span class="pill w" title="Precio de referencia: falta confirmarlo">Provisoria</span>`:""}</td>
       <td style="text-align:right"><button class="btn sm" data-a="tarNueva" data-id="${t.id}">Editar</button></td></tr>`;
     }).join("")||`<tr><td colspan="${fp?10:9}" class="empty">Sin tarifas con ese filtro</td></tr>`}</tbody></table></div>
   ${enviadas.length?`<div class="card" style="margin-top:12px"><div class="chd"><h3>Listas de precios enviadas</h3><span class="s">las últimas ${enviadas.length}</span></div>

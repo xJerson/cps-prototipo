@@ -90,30 +90,59 @@ let S = {
     {id:"TR1",prop:null,cat:"Clean",serv:"Full clean",variante:"1 bedroom",precio:110,pago:55},
     {id:"TR2",prop:null,cat:"Clean",serv:"Full clean",variante:"2 bedroom",precio:145,pago:70},
     {id:"TR3",prop:null,cat:"Clean",serv:"Full clean",variante:"3 bedroom",precio:185,pago:92},
-    {id:"TR4",prop:null,cat:"Clean",serv:"Deep clean",variante:"2 bedroom",precio:210,pago:105},
+    {id:"TR4",prop:null,cat:"Clean",serv:"Heavy clean",variante:"2 bedroom",precio:210,pago:105},
     {id:"TR5",prop:null,cat:"Paint",serv:"Full paint",variante:"1 bedroom",precio:520,pago:260},
     {id:"TR6",prop:null,cat:"Paint",serv:"Full paint",variante:"2 bedroom",precio:640,pago:320},
     {id:"TR7",prop:null,cat:"Paint",serv:"Full paint",variante:"3 bedroom",precio:790,pago:395},
     {id:"TR8",prop:null,cat:"Paint",serv:"Touch up paint",variante:"2 bedroom",precio:180,pago:90},
-    {id:"TR9",prop:null,cat:"Carpet",serv:"Carpet clean",variante:"2 bedroom",precio:120,pago:60},
-    {id:"TR10",prop:null,cat:"Resurface",serv:"Tub resurfacing",variante:"Tub only",precio:395,pago:190},
-    {id:"TR11",prop:null,cat:"Trash out",serv:"Trash out",variante:"Per trailer",precio:160,pago:80},
+    {id:"TR9",prop:null,cat:"Clean",serv:"Carpet clean",variante:"2 bedroom",precio:120,pago:60},
+    {id:"TR10",prop:null,cat:"Resurface",serv:"Tub resurfacing just tub",variante:"Tub only",precio:395,pago:190},
+    {id:"TR11",prop:null,cat:"Clean",serv:"Trash out",variante:"Per trailer",precio:160,pago:80},
     {id:"TR12",prop:"P1",cat:"Clean",serv:"Full clean",variante:"2 bedroom",precio:132,pago:70},
     {id:"TR13",prop:"P1",cat:"Paint",serv:"Full paint",variante:"2 bedroom",precio:600,pago:320},
     // De su Tabla Maestra del Tarifario: el precio SÍ cambia por pisos en unidades chicas
     {id:"TR14",prop:null,cat:"Clean",serv:"Full clean",variante:"Studio",pisos:1,precio:95,pago:65},
-    {id:"TR15",prop:null,cat:"Clean",serv:"Touch up clean",variante:"Studio",pisos:1,precio:55,pago:30}
+    {id:"TR15",prop:null,cat:"Clean",serv:"Touch up clean",variante:"Studio",pisos:1,precio:55,pago:30},
+    /* Services.xlsx llegó sin precios: una tarifa general PROVISORIA por cada servicio que no tenía ninguna,
+       para cualquier tamaño (variante vacía) y pago = 50% del precio. Son valores de referencia inventados:
+       no salen en «Enviar lista de precios» y dejan de ser provisorias cuando alguien las edita. */
+    ...[["Clean","Office and amenities",150],["Clean","Pressure washing",175],["Clean","Carpet - Pet treatment",60],
+      ["Paint","Color change",650],["Paint","Gloss finish change",300],["Paint","Full ceilings paint",250],
+      ["Paint","Partial ceilings paint",125],["Paint","Exterior door paint",75],["Paint","Bathroom cabinet paint",120],
+      ["Paint","Kitchen cabinet paint",350],["Paint","Exterior closet paint",60],["Paint","Color change ceilings paint",300],
+      ["Paint","Accent wall paint",120],
+      ["Resurface","Tub resurfacing with wall",595],["Resurface","Bathroom cabinet resurface",150],
+      ["Resurface","Kitchen cabinet resurface",450],["Resurface","Bathroom countertop resurface",175],
+      ["Resurface","Kitchen countertop resurface",325],["Resurface","Sink resurface",150],
+      ["Resurface","Kitchen countertop marble resurface",425],["Resurface","Bathroom countertop marble resurface",225],
+      ["Make Ready Checklist","Make Ready Checklist",85],["Flooring Services","Carpet tear out",200],
+      ["Repair","Sheetrock repair",120],["Repair","Tape repair",75],["Repair","Popcorn texture repair",110],
+      ["Repair","Texture repair",90],["Repair","Countertop repair",140],["Repair","Bath tub repair",160],
+      ["Repair","Tile repair",120],["Repair","Door repair",85],["Repair","Window repair",95],
+      ["Repair","Balcony repair",180],["Repair","Extra prep",75],
+      ["Installation","Tile installation",450],["Installation","Grab bar installation",85],
+      ["Installation","Bath tub installation",900],["Installation","Light fixture installation",90],
+      ["Installation","Blinds installation",45],["Installation","Dishwasher installation",150],
+      ["Installation","Kitchen installation",1200],["Installation","Interior door installation",175],
+      ["Installation","Exterior door installation",325],["Installation","2 doors interior closet installation",225],
+      ["Installation","4 doors interior closet installation",375],["Installation","Trim installation",150],
+      ["Installation","Baseboard installation",175],["Installation","Full cabinets installation",1500],
+      ["Installation","Full cabinets door installation",450],["Installation","Shower rod installation",45],
+      ["Installation","Cabinet handles installation",60],
+      ["Removal","Removal",150],["Estimate","Estimate",0],["Inspection","Inspection",0]
+    ].map(([cat,serv,precio],i)=>({id:"TRP"+(i+1),prop:null,cat,serv,nombre:serv,variante:"",pisos:null,
+      precio,pago:Math.round(precio/2),provisional:true}))
   ],
   /* Pago diferenciado por técnico: override OPCIONAL sobre la tarifa general
      (ver pagoTecnicoWO en helpers.js). Si no hay override acá, el pago sigue
      saliendo de `tarifas` como siempre — esto nunca reemplaza esa tabla. */
   pagosTecnico:[
-    {id:"PT1",tec:"T2",prop:null,cat:"Resurface",serv:"Tub resurfacing",variante:"Tub only",pisos:null,pago:230,
+    {id:"PT1",tec:"T2",prop:null,cat:"Resurface",serv:"Tub resurfacing just tub",variante:"Tub only",pisos:null,pago:230,
       motivo:"Especialista en resane de tinas — tarifa más alta por experiencia",quien:"Claudia",fecha:"2026-08-05"}
   ],
   estimados:[
     /* Ejemplo comentado — Comercial va a crear sus propios estimados de 0.
-    {id:"E2",num:"EST-2026-019",cliente:"CL2",prop:"P3",fecha:"2026-08-08",estado:"Enviado",lineas:[{unidad:"U6",cat:"Clean",serv:"Deep clean",precio:210,pago:105,nivel:"General"}],aprob:null}
+    {id:"E2",num:"EST-2026-019",cliente:"CL2",prop:"P3",fecha:"2026-08-08",estado:"Enviado",lineas:[{unidad:"U6",cat:"Clean",serv:"Heavy clean",precio:210,pago:105,nivel:"General"}],aprob:null}
     */
   ],
   wos:[
@@ -128,7 +157,7 @@ let S = {
 
     1040 Carpet·Carpet clean·T1·In progress — corroborado:true a propósito, así "Mientras trabajas"
     (botón "Compra de materiales") se ve directo sin pasar primero por "Sí, coincide — empezar".
-    {id:1040,prop:"P3",unidad:"U6",cat:"Carpet",serv:"Carpet clean",tec:"T1",estado:"In progress",semana:33,fecha:"2026-08-11",horaProg:"8:00",po:"",asistencia:true,evid:0,corroborado:true,mats:[],notas:"",notasTec:"",
+    {id:1040,prop:"P3",unidad:"U6",cat:"Clean",serv:"Carpet clean",tec:"T1",estado:"In progress",semana:33,fecha:"2026-08-11",horaProg:"8:00",po:"",asistencia:true,evid:0,corroborado:true,mats:[],notas:"",notasTec:"",
      hist:[["8:05","Creada","Thalia"],["8:06","Asignada a Diego Ramírez","Thalia"],["8:52","Llegó a la propiedad","Diego"],
            ["8:55","Sub-WO planificada creada: Sheetrock","Diego Ramírez"],
            ["9:15","Aprobada por el cliente vía Llamada","Claudia"],
@@ -137,7 +166,7 @@ let S = {
 
     1043 Repair·Drywall repair·T4·Confirmed — confirmCliente es solo de oficina, el técnico la ve
     en su agenda igual que cualquier otra. fotosPrevias = Work to Be Performed.
-    {id:1043,prop:"P3",unidad:"U7",cat:"Repair",serv:"Drywall repair",tec:"T4",estado:"Confirmed",semana:33,fecha:"2026-08-12",horaProg:"10:00",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",
+    {id:1043,prop:"P3",unidad:"U7",cat:"Repair",serv:"Sheetrock repair",tec:"T4",estado:"Confirmed",semana:33,fecha:"2026-08-12",horaProg:"10:00",po:"",asistencia:false,evid:0,mats:[],notas:"",notasTec:"",
      confirmCliente:{fecha:"2026-08-12",medio:"Llamada",contacto:"Property Manager",quien:"Thalia",hora:"8:40"},
      fotosPrevias:[{url:FOTO_SEED,quien:"Thalia",hora:"8:25"},{url:FOTO_SEED,quien:"Thalia",hora:"8:25"}],
      hist:[["8:25","Creada","Thalia"],["8:26","Asignada a Andrés Solís","Thalia"]]},
@@ -150,7 +179,7 @@ let S = {
 
     1047 Repair·Drywall repair·T4·Completed — circuito completo: aprobada, validada, pagada al
     técnico y facturada (S.facturas F601). También la WO de la nota de crédito (S.devoluciones).
-    {id:1047,prop:"P3",unidad:"U7",cat:"Repair",serv:"Drywall repair",tec:"T4",estado:"Completed",semana:33,fecha:"2026-08-08",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T4",hora:"11:20"}],supervisada:true,validada:true,pagadaTec:true,facturada:true,mats:[],notas:"",notasTec:"",hist:[["8:00","Creada","Thalia"],["8:02","Asignada a Andrés Solís","Thalia"],["9:05","Llegó a la propiedad","Andrés"],["11:20","Terminó · 1 evidencia","Andrés"],["11:40","Revisión operativa completada","Gustavo"],["14:00","Validada y pagada en nómina","Erika"],["15:00","Facturada — INV-2026-1041","Erika"]]},
+    {id:1047,prop:"P3",unidad:"U7",cat:"Repair",serv:"Sheetrock repair",tec:"T4",estado:"Completed",semana:33,fecha:"2026-08-08",horaProg:"9:00",po:"",asistencia:true,evid:1,evidFotos:[{url:FOTO_SEED,quien:"T4",hora:"11:20"}],supervisada:true,validada:true,pagadaTec:true,facturada:true,mats:[],notas:"",notasTec:"",hist:[["8:00","Creada","Thalia"],["8:02","Asignada a Andrés Solís","Thalia"],["9:05","Llegó a la propiedad","Andrés"],["11:20","Terminó · 1 evidencia","Andrés"],["11:40","Revisión operativa completada","Gustavo"],["14:00","Validada y pagada en nómina","Erika"],["15:00","Facturada — INV-2026-1041","Erika"]]},
 
     1049 Clean·Full clean·T1·In progress — SIN corroborar todavía, para ver la tarjeta "corrobora
     la unidad" antes de destrabar "Mientras trabajas".
@@ -159,7 +188,7 @@ let S = {
 
     1050 Repair·Drywall repair·T1·Esperando aprobación — frenada por un adicional, ya corroborada;
     trae los adicionales pendiente/rechazado/parcial. Base de DS-SEED3 y NM-SEED1.
-    {id:1050,prop:"P3",unidad:"U14",cat:"Repair",serv:"Drywall repair",tec:"T1",estado:"Esperando aprobación",semana:33,fecha:"2026-08-12",horaProg:"14:00",po:"",asistencia:true,evid:0,corroborado:true,mats:[],notas:"",notasTec:"",
+    {id:1050,prop:"P3",unidad:"U14",cat:"Repair",serv:"Sheetrock repair",tec:"T1",estado:"Esperando aprobación",semana:33,fecha:"2026-08-12",horaProg:"14:00",po:"",asistencia:true,evid:0,corroborado:true,mats:[],notas:"",notasTec:"",
      hist:[["13:40","Creada","Thalia"],["13:41","Asignada a Diego Ramírez","Thalia"],["14:05","Llegó a la propiedad","Diego"],
            ["14:10","Confirmó la unidad","Diego"],["14:30","Pidió aprobación de un adicional · Sheetrock","Diego"]]},
 
@@ -325,7 +354,7 @@ let S = {
   solicitudesComerciales:[],
   draftEst:[], estHdr:{cli:"CL1",prop:"P1",cat:"Clean"},
   diasCerrados:[],   // «una vez que ya tenemos cerrado nuestro agendamiento... ahora sí las empezamos a asignar»
-  bajas:{},   // valores de catálogo dados de baja — no se borran, dejan de ofrecerse
+  bajas:{categorias:["Carpet","Trash out","Pressure washing","Cabinet","Ceramica"]},   // valores de catálogo dados de baja — no se borran, dejan de ofrecerse
   // UC-02: lo que Lydia pasa a Thalia sin llamada ni reingreso de datos
   solicitudes:[],
   // UC-01b / UC-04b / UC-12b: visitas comerciales, inspecciones y supervisión.

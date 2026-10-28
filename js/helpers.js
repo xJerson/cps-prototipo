@@ -437,7 +437,10 @@ const CAP = 2; // UC-07: dos propiedades por jornada
    su propia etiqueta específica. Es una advertencia, no bloquea: igual que
    la zona, se puede asignar igual si hace falta. */
 const ESP_REQ = {Clean:"Housekeeper", Resurface:"Resurface", Carpet:"Carpeter"};
-const especialidadOk = (t,cat) => t.esp.includes(ESP_REQ[cat] || "Tecnico");
+/* Services.xlsx movió Carpet clean y Carpet - Pet treatment a Clean, y Carpet tear out a Flooring Services:
+   el servicio de alfombra sigue pidiendo Carpeter aunque su tipo ya no sea Carpet. */
+const espReqDe = (cat,serv) => /carpet/i.test(serv||"") ? "Carpeter" : (ESP_REQ[cat] || "Tecnico");
+const especialidadOk = (t,cat,serv) => t.esp.includes(espReqDe(cat,serv));
 function bloqueo(tecId,fecha){
   const d = S.disponibilidad.find(x=>x.tec===tecId && x.estado==="Aprobado" && fecha>=x.desde && fecha<=x.hasta);
   return d||null;
@@ -496,7 +499,7 @@ function candidatosTec(w){
       if(distinta) m = t.movimiento
         ? `${carga}/${CAP} el ${w.fecha.slice(5)} · ${t.zona} — se mueve de zona`
         : `${carga}/${CAP} el ${w.fecha.slice(5)} — vive en ${t.zona} y no se mueve de zona, la propiedad está en ${p.zona}`;
-      if(!zonaOk || !especialidadOk(t,w.cat)) est="warn";
+      if(!zonaOk || !especialidadOk(t,w.cat,w.serv)) est="warn";
       const cf=conflictoHorario(t.id,w);
       if(cf){ est="warn"; m+=` — ${cf}`; }
     }
