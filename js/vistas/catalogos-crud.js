@@ -591,7 +591,7 @@ function catVistaCO(){
   <div class="cat-cab"><div><h3>${esc(L.n)}</h3><p>${esc(L.d)} El técnico elige el tipo y el servicio igual que en una Work Order; aquí está lo que solo existe para change orders.</p>
     <div class="cat-uso">${L.cuenta()} opciones propias · además, cualquier servicio de <b>Tipos y servicios</b> salvo Estimate e Inspection</div></div></div>
   ${tipos.map(t=>{ const ss=servTodos(t).filter(s=>!s.baja);
-    return `<div class="cat-tipo-cab"><h3>${esc(t)}</h3><span class="cat-dim" style="font-size:12px">${t==="Surcharges"?"Recargos por espacio extra de la unidad":"Lo que no encaja en ningún servicio"}</span>
+    return `<div class="cat-tipo-cab"><h3>${esc(t)}</h3><span class="cat-dim" style="font-size:12px">${({Surcharges:"Recargos por espacio extra de la unidad",Materials:"Materiales que se cobran aparte del trabajo"})[t]||"Lo que no encaja en ningún servicio"}</span>
       <div class="cat-acc"><button class="btn sm" data-a="servAdd" data-t="${esc(t)}">Nuevo servicio</button></div></div>
     <table><tbody>${ss.map(filaServ).join("")||`<tr><td class="empty">Sin servicios.</td></tr>`}</tbody></table>`;}).join("")}
   ${pend.length?`<div class="cat-tipo-cab"><h3>Por definir con Erika</h3><span class="pill w">${pend.length} sin servicio</span></div>
