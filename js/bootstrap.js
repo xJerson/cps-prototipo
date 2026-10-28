@@ -411,6 +411,7 @@ function cargarEstado(){
     if(!g) return false;
     const datos=JSON.parse(g);
     Object.assign(S,datos);
+    unirCatalogo();
     return true;
   }catch(e){ return false; }
 }

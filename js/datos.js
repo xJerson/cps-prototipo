@@ -498,3 +498,11 @@ let S = {
 S.unidades.forEach(u=>{ if(!u.ocupacion) u.ocupacion="Occupied"; if(!u.ubicacionUnidad) u.ubicacionUnidad=""; });
 
 S.cat = CAT;   // los catálogos son datos del sistema, no constantes del código
+/* Todo el sistema lee y edita CAT, pero al abrir se carga el catálogo guardado (nube o navegador) en S.cat, un objeto
+   nuevo. Sin volver a unirlos, la pantalla mostraba el catálogo del código y lo que se editaba en Catálogos nunca se
+   guardaba. Lo guardado manda; una lista nueva del código que todavía no está guardada se conserva. */
+function unirCatalogo(){
+  if(!S.cat || S.cat===CAT) return;
+  Object.keys(S.cat).forEach(k=>{ CAT[k]=S.cat[k]; });
+  S.cat = CAT;
+}

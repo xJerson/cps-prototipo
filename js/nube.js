@@ -125,6 +125,7 @@ function _nubeAplicar(datos){
     if(f.k === "ID"){ Object.keys(f.data.v).forEach(c => { ID[c] = Math.max(ID[c] || 0, f.data.v[c]); }); }
     else if(NUBE_CONFIG.includes(f.k) && f.data.v !== undefined) S[f.k] = f.data.v;
   });
+  unirCatalogo();
 }
 
 /* ── subir solo lo que cambió ── */
