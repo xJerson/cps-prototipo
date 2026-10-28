@@ -629,6 +629,15 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
     toast("Quitado","El pago vuelve a salir de la tarifa general.","w"); render();
   },
 
+  /* Navegación del módulo: qué catálogo y qué tipo se miran. Es estado de pantalla, queda en este navegador. */
+  catVer: d => { S.catSel=d.v; render(); },
+  catVerSel: () => { S.catSel=val("catSel"); render(); },
+  catTipo: d => { S.catTipo=d.t; render(); },
+  /* Filtra las filas ya pintadas, sin repintar: así el cursor no salta mientras se escribe. */
+  catBuscar: () => {
+    const q=val("catBuscar").toLowerCase();
+    document.querySelectorAll(".cat-det tbody tr[data-q]").forEach(tr=>{ tr.style.display=!q||tr.dataset.q.includes(q)?"":"none"; });
+  },
   catAdd: d => modal(`<div class="mh"><h3>Agregar a ${esc(d.n)}</h3><p>Aparecerá de inmediato en todos los desplegables que usan esta lista.</p></div>
     <div class="mb"><div class="fld"><label>Valor nuevo <span class="req">*</span></label><input id="cv" autofocus></div>
     <div class="note">Ojo con las mayúsculas y los espacios: <b>«Navarre»</b> y <b>«navarre»</b> son dos valores distintos, y así es como hoy se rompen los conteos.</div></div>
@@ -644,6 +653,7 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
   },
   /* No borra: da de baja. El valor sigue existiendo para lo ya registrado. */
   catDel: d => {
+    cm();   // se da de baja desde el modal de Editar
     const v = String(CAT[d.k][+d.i]);
     S.bajas[d.k] = (S.bajas[d.k]||[]).concat([v]);
     const uso = d.k==="zonas" ? S.propiedades.filter(p=>p.zona===v).length : 0;
@@ -660,9 +670,9 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
      nombre, y todo lo que ya lo usaba lo sigue usando. */
   catRen: d => {
     const v = String(CAT[d.k][+d.i]);
-    const L = LISTAS.find(x=>x.k===d.k), usos = usosDe(d.k, v);
+    const usos = usosDe(d.k, v);
     const ojo = (OJO_LOGICA[d.k]||{})[v];
-    modal(`<div class="mh"><h3>Renombrar «${esc(v)}»</h3><p>${esc(L?L.n:d.k)}</p></div>
+    modal(`<div class="mh"><h3>Editar «${esc(v)}»</h3><p>${esc(catNombre(d.k))}</p></div>
     <div class="mb">
       <div class="fld"><label>Nombre nuevo <span class="req">*</span></label>
         <input id="cr" value="${esc(v)}" autofocus></div>
@@ -673,7 +683,8 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
         : `<div class="note">Todavía no lo usa ningún registro.</div>`}
       ${ojo?`<div class="note w" style="margin-top:10px"><b>Ojo:</b> ${esc(ojo)} Si lo renombras, hay que ajustar esa regla.</div>`:""}
     </div>
-    <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
+    <div class="mf"><button class="btn" data-a="catDel" data-k="${d.k}" data-i="${d.i}" style="margin-right:auto">Dar de baja</button>
+      <button class="btn" data-a="cm">Cancelar</button>
       <button class="btn p" data-a="catRenOK" data-k="${d.k}" data-i="${d.i}">Renombrar</button></div>`);
   },
   catRenOK: d => {
@@ -686,7 +697,7 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
     const tocados = renombrarCat(d.k, viejo, CAT[d.k][+d.i]); flash("cat:"+d.k+":"+CAT[d.k][+d.i]);
     S.bitacora.unshift({ n:++S.audSeq, fecha:"2026-08-11", hora:hora(),
       usuario:S.usuario, rol:ROLES[S.usuario].r, accion:"Renombró un valor de catálogo",
-      modulo:"Catálogos", ref:(LISTAS.find(x=>x.k===d.k)||{}).n||d.k,
+      modulo:"Catálogos", ref:catNombre(d.k),
       cambios:[{campo:"Nombre", de:viejo, a:nuevo}] });
     cm();
     toast("✓ Renombrado",`«${esc(viejo)}» ahora es <b>${esc(nuevo)}</b>`
@@ -697,7 +708,7 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
   servRen: d => {
     const s = CAT.servicios.find(x=>x.id===d.id); if(!s) return;
     const usos = usosDe("servicios", s.nombre);
-    modal(`<div class="mh"><h3>Renombrar «${esc(s.nombre)}»</h3><p>Servicio de ${esc(s.tipo)}</p></div>
+    modal(`<div class="mh"><h3>Editar «${esc(s.nombre)}»</h3><p>Servicio de ${esc(s.tipo)}</p></div>
     <div class="mb">
       <div class="fld"><label>Nombre nuevo <span class="req">*</span></label><input id="cr" value="${esc(s.nombre)}" autofocus></div>
       ${usos.length
@@ -705,7 +716,8 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
              Todos van a decir el nombre nuevo. La tarifa lo sigue encontrando: es el mismo servicio.</div>`
         : `<div class="note">Todavía no lo usa ningún registro.</div>`}
     </div>
-    <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
+    <div class="mf"><button class="btn" data-a="servDel" data-id="${s.id}" style="margin-right:auto">Dar de baja</button>
+      <button class="btn" data-a="cm">Cancelar</button>
       <button class="btn p" data-a="servRenOK" data-id="${s.id}">Renombrar</button></div>`);
   },
   servRenOK: d => {
@@ -725,10 +737,10 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
       + (tocados?`, y los <b>${tocados} registro(s)</b> que lo usaban ya lo dicen así.`:"."),"v");
     render();
   },
-  servAdd: () => modal(`<div class="mh"><h3>Nuevo servicio</h3><p>Cada servicio cuelga de un tipo. Así el desplegable se filtra solo al agendar.</p></div>
+  servAdd: d => modal(`<div class="mh"><h3>Nuevo servicio</h3><p>Cada servicio cuelga de un tipo. Así el desplegable se filtra solo al agendar.</p></div>
     <div class="mb">
       <div class="fld"><label>Tipo de servicio <span class="req">*</span></label>
-        <select id="sT">${activos("categorias").map(c=>`<option>${esc(c)}</option>`).join("")}</select></div>
+        <select id="sT">${activos("categorias").map(c=>`<option ${d&&d.t===c?"selected":""}>${esc(c)}</option>`).join("")}</select></div>
       <div class="fld"><label>Nombre del servicio <span class="req">*</span></label><input id="sN" placeholder="Full paint, Deep clean…"></div>
       <div class="note">Después hay que darle tarifa en el Tarifario, si no saldrá como «NA» y levantará una excepción.</div></div>
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="servSave">Agregar</button></div>`),
@@ -742,6 +754,7 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
     cm(); toast("✓ Servicio agregado",`${esc(n)} dentro de ${esc(t)}.`,"v"); render();
   },
   servDel: d => {
+    cm();   // se da de baja desde el modal de Editar
     const s = CAT.servicios.find(x=>x.id===d.id);
     if(!s) return;
     s.baja = true;

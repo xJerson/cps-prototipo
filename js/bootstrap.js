@@ -27,6 +27,7 @@ document.addEventListener("input", e=>{
   else if(el.id==="wUniTxt") ACC.woUniBuscar();
   else if(el.id==="gaBuscar"||el.id==="gaSoloMarc") ACC.gaFiltrar();
   else if(el.classList.contains("gaWO")) ACC.gaContar();
+  else if(el.id==="catBuscar") ACC.catBuscar();
 });
 document.addEventListener("change", e=>{
   const sel = e.target.closest("select[data-a], input[data-a], textarea[data-a]");

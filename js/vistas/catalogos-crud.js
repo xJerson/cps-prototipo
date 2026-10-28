@@ -484,85 +484,130 @@ const OJO_LOGICA = {
               Ceramica:"Los tipos que exigen ubicación dentro de la unidad están atados a este nombre."}
 };
 
+/* Cada catálogo tiene su propia vista: qué es, dónde aparece y en cuántos registros se usa.
+   El índice los agrupa por lo que describen, para que se entienda qué hay sin leerlo todo. */
 const LISTAS = [
-  {k:"zonas",        n:"Zonas (Area)",              col:"Schedule.Location", ojo:"Hoy NO tiene desplegable: se escribe libre. De ahí salen «Navarre» y «navarre»."},
-  {k:"categorias",   n:"Tipos de servicio",         col:"Catalogo!H → Kind of Service"},
-  {k:"adicionales",  n:"Conceptos de adicional",    col:"Catalogo!P → Aditional", ojo:"Es una lista distinta de los servicios: son trabajos extra, no servicios que se venden."},
-  {k:"ubicaciones",  n:"Ubicaciones (Where)",       col:"Catalogo!Q"},
-  {k:"rooms",        n:"Rooms",                     col:"Catalogo!F", ojo:"Define la tarifa junto con los pisos."},
-  {k:"pisos",        n:"Pisos",                     col:"Catalogo!G"},
-  {k:"especialidades",n:"Especialidades",           col:"Tecnicos.Specialist", ojo:"Hoy está escrita dentro de la validación, no en una tabla."},
-  {k:"folder",       n:"Estado de la carpeta",      col:"Catalogo!W → Final mail"},
-  {k:"tiendas",      n:"Tiendas / proveedores",     col:"Sheet13"}
+  {k:"adicionales",   n:"Change order items", d:"Lo que el técnico elige en el celular cuando encuentra un trabajo que no estaba en la Work Order. Oficina lo aprueba antes de cobrarlo."},
+  {k:"zonas",         n:"Zonas",              d:"El área de cada propiedad y de cada técnico. Sirve para sugerir quién queda más cerca."},
+  {k:"rooms",         n:"Rooms",              d:"El tamaño de la unidad. Junto con el piso, define qué tarifa se cobra."},
+  {k:"pisos",         n:"Pisos",              d:"Cuántos pisos tiene la unidad. Solo cambia el precio cuando la tarifa lo indica."},
+  {k:"ubicaciones",   n:"Ubicaciones",        d:"Dónde, dentro de la unidad, se hace el trabajo."},
+  {k:"especialidades",n:"Especialidades",     d:"Lo que sabe hacer cada técnico. Al asignar, avisa si el técnico no tiene la que pide el servicio."},
+  {k:"tiendas",       n:"Tiendas",            d:"Dónde compran material los técnicos."},
+  {k:"folder",        n:"Estado de carpeta",  d:"En qué quedó la carpeta de fotos de cada trabajo."}
 ];
+const CAT_VISTAS = {
+  tys:{n:"Tipos y servicios", d:"Lo que se elige al crear una Work Order o un estimado. Cada servicio pertenece a un tipo y tiene su precio en Tarifario.",
+       cuenta:()=>CAT.servicios.filter(s=>!s.baja).length},
+  estados:{n:"Estados", d:"Las etapas por las que pasa una Work Order, de agendada a terminada.", cuenta:()=>CAT.estados.length}
+};
+LISTAS.forEach(L=>{ CAT_VISTAS[L.k]={...L, cuenta:()=>activos(L.k).length}; });
+const CAT_INDICE = [
+  {g:"Servicios", ks:["tys","adicionales"]},
+  {g:"Propiedades y unidades", ks:["zonas","rooms","pisos","ubicaciones"]},
+  {g:"Equipo", ks:["especialidades"]},
+  {g:"Compras", ks:["tiendas"]},
+  {g:"Work Orders", ks:["estados","folder"]}
+];
+const catNombre = k => (CAT_VISTAS[k]||{}).n || ({categorias:"Tipos de servicio",servicios:"Servicios"})[k] || k;
+/* «Se usan en 4 Work Order(s), 69 tarifa(s)»: lo que hay que saber antes de renombrar o dar de baja. */
+const usoN = (k,v) => usosDe(k,v).reduce((a,u)=>a+u.c,0);
+function resumenUsos(k, valores){
+  const m={}; valores.forEach(v=>usosDe(k,v).forEach(u=>{ m[u.n]=(m[u.n]||0)+u.c; }));
+  const partes=Object.entries(m).map(([n,c])=>`<b>${c} ${esc(n)}</b>`);
+  return partes.length ? "Se usan en "+partes.join(", ") : "Todavía no las usa ningún registro";
+}
+/* Precio general del servicio: «desde» cuando hay varios tamaños; Provisoria si todos son de referencia. */
+function catPrecio(s){
+  const ts=S.tarifas.filter(t=>!t.prop && t.cat===s.tipo && t.serv===s.nombre);
+  if(!ts.length) return {html:'<span style="color:var(--faint)">Sin precio</span>', prov:null, falta:true};
+  const min=Math.min(...ts.map(t=>+t.precio||0)), prov=ts.every(t=>t.provisional)?ts[0]:null;
+  return {prov, falta:false, html:`<span class="mono" style="white-space:nowrap">${ts.length>1?'<span class="cat-dim">desde</span> ':""}${money(min)}${ts.length>1?` <span class="cat-dim">· ${ts.length} tamaños</span>`:""}</span>`
+    + (prov?' <span class="pill w" title="Precio de referencia: falta confirmarlo">Provisoria</span>':"")};
+}
+const catBuscador = (n,ph) => n>8 ? `<input class="cat-buscar" id="catBuscar" placeholder="${esc(ph)}" aria-label="${esc(ph)}">` : "";
+
+function catVistaTys(){
+  const tipos=activos("categorias");
+  const t=tipos.includes(S.catTipo) ? S.catTipo : tipos[0];
+  const ss=CAT.servicios.filter(s=>s.tipo===t), act=ss.filter(s=>!s.baja), baja=ss.filter(s=>s.baja);
+  const precios=new Map(act.map(s=>[s.id,catPrecio(s)])), nProv=act.filter(s=>precios.get(s.id).prov).length;
+  const iTipo=CAT.categorias.indexOf(t), tiposBaja=CAT.categorias.filter(c=>debaja("categorias",c));
+  return `
+  <div class="cat-cab"><div><h3>Tipos y servicios</h3><p>${esc(CAT_VISTAS.tys.d)}</p>
+    <div class="cat-uso">${tipos.length} tipos · ${CAT.servicios.filter(s=>!s.baja).length} servicios · ${resumenUsos("servicios",CAT.servicios.filter(s=>!s.baja).map(s=>s.nombre))}</div></div>
+    <div class="cat-acc"><button class="btn" data-a="catAdd" data-k="categorias" data-n="Tipos de servicio">Nuevo tipo</button></div></div>
+  <div class="cat-tys">
+    <div class="cat-tipos" role="tablist" aria-label="Tipos de servicio">${tipos.map(c=>
+      `<button class="cat-tipo ${c===t?"on":""}" role="tab" aria-selected="${c===t}" data-a="catTipo" data-t="${esc(c)}"><span>${esc(c)}</span><span class="n">${servDe(c).length}</span></button>`).join("")}</div>
+    <div class="cat-tys-det">
+      <div class="cat-tipo-cab"><h3>${esc(t)}</h3>${nProv?`<span class="pill w">${nProv} con precio provisorio</span>`:""}
+        <div class="cat-acc"><button class="btn sm" data-a="catRen" data-k="categorias" data-i="${iTipo}">Editar tipo</button>
+          <button class="btn sm p" data-a="servAdd" data-t="${esc(t)}">Nuevo servicio</button></div></div>
+      ${catBuscador(act.length,"Buscar en "+t)}
+      <table><thead><tr><th>Servicio</th><th>Precio al cliente</th><th class="num">En WO</th><th></th></tr></thead>
+      <tbody>${act.map(s=>{ const pr=precios.get(s.id), n=S.wos.filter(w=>w.serv===s.nombre).length;
+        return `<tr class="${fl("serv:"+s.id)}" data-q="${esc(s.nombre.toLowerCase())}"><td>${esc(s.nombre)}</td><td>${pr.html}</td>
+          <td class="num mono ${n?"":"cat-dim"}">${n}</td>
+          <td class="cat-fila-acc">${pr.prov?`<button class="cat-lnk" data-a="tarNueva" data-id="${pr.prov.id}">Corregir precio</button>`
+            :pr.falta?`<button class="cat-lnk" data-a="tarNueva">Agregar precio</button>`:""}
+            <button class="cat-lnk suave" data-a="servRen" data-id="${s.id}">Editar</button></td></tr>`;}).join("")
+        ||`<tr><td colspan="4" class="empty">Este tipo todavía no tiene servicios: agrega uno para poder agendarlo.</td></tr>`}</tbody></table>
+      ${baja.length?`<details class="cat-bajas"><summary>${baja.length} servicio(s) dado(s) de baja en ${esc(t)}</summary><table><tbody>
+        ${baja.map(s=>`<tr><td>${esc(s.nombre)}</td><td class="cat-fila-acc"><button class="cat-lnk" data-a="servAlta" data-id="${s.id}">Reactivar</button></td></tr>`).join("")}</tbody></table></details>`:""}
+    </div>
+  </div>
+  ${tiposBaja.length?`<details class="cat-bajas"><summary>${tiposBaja.length} tipo(s) dado(s) de baja</summary><table><tbody>
+    ${tiposBaja.map(c=>`<tr><td>${esc(c)}</td><td class="cat-fila-acc"><button class="cat-lnk" data-a="catAlta" data-k="categorias" data-i="${CAT.categorias.indexOf(c)}">Reactivar</button></td></tr>`).join("")}</tbody></table></details>`:""}`;
+}
+
+function catVistaLista(L){
+  const vals=CAT[L.k].map((v,i)=>({v,i})), act=vals.filter(x=>!debaja(L.k,x.v)), baja=vals.filter(x=>debaja(L.k,x.v));
+  return `
+  <div class="cat-cab"><div><h3>${esc(L.n)}</h3><p>${esc(L.d)}</p>
+    <div class="cat-uso">${act.length} opciones · ${resumenUsos(L.k,act.map(x=>x.v))}</div></div>
+    <div class="cat-acc"><button class="btn p" data-a="catAdd" data-k="${L.k}" data-n="${esc(L.n)}">Agregar opción</button></div></div>
+  ${catBuscador(act.length,"Buscar en "+L.n.toLowerCase())}
+  <table><thead><tr><th>Opción</th><th class="num">En uso</th><th></th></tr></thead>
+  <tbody>${act.map(({v,i})=>{ const n=usoN(L.k,v);
+    return `<tr class="${fl("cat:"+L.k+":"+v)}" data-q="${esc(String(v).toLowerCase())}"><td>${esc(v)}</td><td class="num mono ${n?"":"cat-dim"}">${n}</td>
+      <td class="cat-fila-acc"><button class="cat-lnk suave" data-a="catRen" data-k="${L.k}" data-i="${i}">Editar</button></td></tr>`;}).join("")
+    ||`<tr><td colspan="3" class="empty">Todavía no hay opciones: agrega la primera.</td></tr>`}</tbody></table>
+  ${baja.length?`<details class="cat-bajas"><summary>${baja.length} dada(s) de baja</summary><table><tbody>
+    ${baja.map(({v,i})=>`<tr><td>${esc(v)}</td><td class="cat-fila-acc"><button class="cat-lnk" data-a="catAlta" data-k="${L.k}" data-i="${i}">Reactivar</button></td></tr>`).join("")}</tbody></table></details>`:""}
+  <div class="cat-pie">Editar permite renombrar, y el nombre nuevo pasa a todos los registros que ya lo usan. Dar de baja lo saca de los formularios nuevos sin borrarlo de lo que ya existe.</div>`;
+}
+
+const EST_DESC = {"Scheduled":"Agendada, sin técnico todavía","Confirmed":"El cliente confirmó la fecha",
+  "In progress":"El técnico está en la propiedad","Esperando aprobación":"Frenada por un adicional sin decidir",
+  "Detenido":"Empezó pero está frenado por algo externo","Completed":"Trabajo terminado","Pending":"En espera de algo externo","Rescheduled":"Se movió de fecha",
+  "Returned":"Con return","Corrected":"Se corrigió un return","Canceled":"Cancelada","Inspeccion":"Visita de inspección, no es trabajo"};
+function catVistaEstados(){
+  return `
+  <div class="cat-cab"><div><h3>Estados</h3><p>${esc(CAT_VISTAS.estados.d)}</p>
+    <div class="cat-uso">${CAT.estados.length} estados · los usa el sistema por su nombre, por eso no se editan aquí</div></div></div>
+  <table><thead><tr><th>Estado</th><th>Qué significa</th><th class="num">En WO</th></tr></thead><tbody>
+  ${CAT.estados.map(e=>{ const n=S.wos.filter(w=>w.estado===e.n).length;
+    return `<tr><td><span class="pill ${e.p}"><span class="dot"></span>${esc(e.n)}</span></td>
+    <td style="color:var(--soft)">${esc(EST_DESC[e.n]||"")}</td><td class="num mono ${n?"":"cat-dim"}">${n}</td></tr>`;}).join("")}
+  </tbody></table>
+  <div class="cat-pie"><b>Facturado y pagado no son estados.</b> Van como marca aparte: así una Work Order puede estar Completed y facturada al mismo tiempo sin perder su estado real.</div>`;
+}
 
 VIEWS.catalogos = () => {
-  const t = S.tab || "listas";
+  const sel = CAT_VISTAS[S.catSel] ? S.catSel : "tys";
+  const det = sel==="tys" ? catVistaTys() : sel==="estados" ? catVistaEstados() : catVistaLista(CAT_VISTAS[sel]);
   return `
   <div class="ph"><div><h2>Catálogos</h2>
-    <p>Las listas que alimentan cada desplegable. Son datos del sistema: se agregan y se quitan aquí, sin tocar nada más.</p></div></div>
-  <div class="tabs">${[["listas","Listas simples"],["servicios","Servicios por tipo"],["estados","Estados de la Work Order"]]
-    .map(([k,n])=>`<button class="tab ${t===k?"on":""}" data-a="tab" data-t="${k}">${n}</button>`).join("")}</div>
-
-  ${t==="listas"?`<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:14px">
-    ${LISTAS.map(L=>{ const nBaja=(S.bajas[L.k]||[]).length; return `<div class="card" style="margin:0">
-      <div class="chd"><h3>${esc(L.n)}</h3><span class="r"><span class="pill g">${activos(L.k).length} activos</span>
-        ${nBaja?`<span class="pill w">${nBaja} de baja</span>`:""}
-        <button class="btn sm p" data-a="catAdd" data-k="${L.k}" data-n="${esc(L.n)}">+</button></span></div>
-      <div class="cp" style="display:flex;flex-wrap:wrap;gap:5px">
-        ${CAT[L.k].map((v,i)=>debaja(L.k,v)
-          ? `<span class="pill g" style="padding-right:4px;opacity:.5;text-decoration:line-through">${esc(v)}
-              <button data-a="catAlta" data-k="${L.k}" data-i="${i}" title="Reactivar"
-                style="background:none;border:none;color:var(--verde);padding:0 3px;font-size:12px;line-height:1;text-decoration:none">↺</button></span>`
-          : `<span class="pill g${fl("cat:"+L.k+":"+v)}" style="padding-right:4px">${esc(v)}
-              <button data-a="catRen" data-k="${L.k}" data-i="${i}" title="Renombrar"
-                style="background:none;border:none;color:var(--azul);padding:0 3px;font-size:11px;line-height:1">✎</button>
-              <button data-a="catDel" data-k="${L.k}" data-i="${i}" title="Dar de baja"
-                style="background:none;border:none;color:var(--faint);padding:0 3px;font-size:13px;line-height:1">×</button></span>`).join("")}
-      </div>
-      <div class="cp" style="border-top:1px solid var(--line);padding-top:8px">
-        <div style="font-size:10.5px;color:var(--faint)">Hoy en: <code style="font-family:Consolas,monospace">${esc(L.col)}</code></div>
-        ${L.ojo?`<div style="font-size:10.5px;color:var(--ambar);margin-top:3px">${esc(L.ojo)}</div>`:""}</div>
-    </div>`;}).join("")}</div>
-    <div class="note" style="margin-top:14px"><b>Aquí nada se borra.</b> Un valor dado de baja deja de ofrecerse para registros nuevos,
-      pero sigue mostrándose en todo lo que ya lo usaba — y se puede reactivar con <b>↺</b>. Así ningún registro queda huérfano.<br>
-      Y si el nombre está mal escrito, <b>✎</b> lo <b>renombra</b>: es el mismo valor con otra etiqueta, así que todo lo que ya lo usaba pasa a decir el nombre nuevo. No hay que dar de baja y volver a crear.</div>`:""}
-
-  ${t==="servicios"?`<div class="card"><div class="chd"><h3>Servicios, colgando de su tipo</h3>
-    <span class="s">hoy <code>Catalogo!I</code> es una lista plana; por eso <code>Paint_services</code> y <code>Repair_services</code> quedaron vacías</span>
-    <span class="r"><button class="btn sm p" data-a="servAdd">+ Nuevo servicio</button></span></div>
-    <table><thead><tr><th style="width:190px">Tipo de servicio</th><th>Servicios (subservicios)</th></tr></thead><tbody>
-    ${CAT.categorias.map(c=>{
-      const ss=servTodos(c);
-      return `<tr><td style="font-weight:650">${esc(c)}<div style="font-size:10.5px;color:var(--faint)">${ss.filter(s=>!s.baja).length} activo(s)${ss.some(s=>s.baja)?" · "+ss.filter(s=>s.baja).length+" de baja":""}</div></td>
-      <td style="padding:8px 12px"><div style="display:flex;flex-wrap:wrap;gap:5px">
-        ${ss.map(s=>s.baja
-          ? `<span class="pill g" style="padding-right:4px;opacity:.5;text-decoration:line-through">${esc(s.nombre)}
-              <button data-a="servAlta" data-id="${s.id}" title="Reactivar"
-                style="background:none;border:none;color:var(--verde);padding:0 3px;font-size:12px;line-height:1;text-decoration:none">↺</button></span>`
-          : `<span class="pill a${fl("serv:"+s.id)}" style="padding-right:4px">${esc(s.nombre)}
-              <button data-a="servRen" data-id="${s.id}" title="Renombrar"
-                style="background:none;border:none;color:inherit;opacity:.7;padding:0 3px;font-size:11px;line-height:1">✎</button>
-              <button data-a="servDel" data-id="${s.id}" title="Dar de baja"
-                style="background:none;border:none;color:inherit;opacity:.6;padding:0 3px;font-size:13px;line-height:1">×</button></span>`).join("")
-          ||'<span style="color:var(--faint);font-size:11.5px">sin servicios — no se puede agendar este tipo</span>'}</div></td></tr>`;
-    }).join("")}</tbody></table>
-    <div class="cp" style="border-top:1px solid var(--line)"><div class="tr" style="margin:0">Al elegir el tipo en una Work Order, el desplegable de servicio se filtra solo. Es lo que intentaron con las columnas <code>Clean_services</code> y compañía.</div></div></div>`:""}
-
-  ${t==="estados"?`<div class="card"><div class="chd"><h3>Completion Status</h3>
-    <span class="s">los 10 que ya usan, más el único que su Dashboard mide y no existe</span></div>
-    <table><thead><tr><th>Estado</th><th>Origen</th><th>Qué significa</th></tr></thead><tbody>
-    ${CAT.estados.map(e=>`<tr><td><span class="pill ${e.p}"><span class="dot"></span>${esc(e.n)}</span></td>
-      <td>${e.nuevo?'<span style="color:var(--ambar);font-size:11.5px">nuevo</span>':'<span style="color:var(--faint);font-size:11.5px">ya lo usan</span>'}</td>
-      <td style="font-size:11.5px;color:var(--soft)">${esc({
-        "Scheduled":"Agendada, sin técnico todavía","Confirmed":"Con técnico asignado y confirmado",
-        "In progress":"El técnico está en la propiedad","Esperando aprobación":"Frenada por un adicional sin decidir",
-        "Detenido":"Empezó pero está frenado por algo externo","Completed":"Trabajo terminado","Pending":"En espera de algo externo","Rescheduled":"Se movió de fecha",
-        "Returned":"Con return","Corrected":"Se corrigió un return","Canceled":"Cancelada",
-        "Inspeccion":"Visita de inspección, no es trabajo"}[e.n]||"")}</td></tr>`).join("")}
-    </tbody></table>
-    <div class="cp" style="border-top:1px solid var(--line)"><div class="note w" style="margin:0">
-      <b>Facturado y pagado no son estados.</b> Van como marca aparte, igual que las columnas <code>Invoice</code> y <code>Pagado</code> de su Payroll — así una Work Order puede estar <i>Completed</i> y facturada al mismo tiempo sin perder su estado real.</div></div></div>`:""}`;
+    <p>Las listas de opciones que aparecen en los formularios del sistema. Elige una para ver qué tiene y dónde se usa.</p></div></div>
+  <select class="cat-movil" id="catSel" data-a="catVerSel" aria-label="Elegir catálogo">${CAT_INDICE.map(g=>`<optgroup label="${esc(g.g)}">`
+    + g.ks.map(k=>`<option value="${k}" ${k===sel?"selected":""}>${esc(CAT_VISTAS[k].n)} (${CAT_VISTAS[k].cuenta()})</option>`).join("")+`</optgroup>`).join("")}</select>
+  <div class="cat-marco">
+    <nav class="cat-indice" aria-label="Catálogos">${CAT_INDICE.map(g=>`<div class="cat-grupo">${esc(g.g)}</div>`
+      + g.ks.map(k=>`<button class="cat-item ${k===sel?"on":""}" data-a="catVer" data-v="${k}" ${k===sel?'aria-current="page"':""}>
+          <span>${esc(CAT_VISTAS[k].n)}</span><span class="n">${CAT_VISTAS[k].cuenta()}</span></button>`).join("")).join("")}</nav>
+    <div class="card cat-det">${det}</div>
+  </div>`;
 };
 
 /* ── UC-06 ── Expediente de la propiedad: 9 campos que bloquean el paso a programación ── */
