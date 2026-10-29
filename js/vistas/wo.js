@@ -332,6 +332,7 @@ function fichaWO(id){
         if(x) return `<button class="btn" disabled>✓ Agenda enviada · ${esc(textoAvisoAgenda(x))}</button>`;
         return puedeAvisarAgenda(w)?`<button class="btn" data-a="agendaModal" data-prop="${esc(w.prop)}" data-fecha="${esc(w.fecha)}">✉ Enviar agenda</button>`:""; })()}
     </div></div>
+  ${typeof campoLogWOHtml==="function" ? campoLogWOHtml(w.id) : ""}
   <div style="display:grid;grid-template-columns:1fr 330px;gap:14px;align-items:start">
     <div>
       <div class="card"><div class="chd"><h3>Datos del trabajo</h3>

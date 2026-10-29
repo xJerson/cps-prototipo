@@ -37,6 +37,26 @@ const cSleep = ms => new Promise(r => setTimeout(r, ms));
 const cMuestra = (arr,n) => { const c=arr.slice(), o=[]; while(c.length && o.length<n) o.push(c.splice(Math.floor(Math.random()*c.length),1)[0]); return o; };
 const cModalAbierto = () => { const m=document.getElementById("mroot"); return !!(m && m.innerHTML.trim()); };
 const cMixto = () => CA().perfil === "mixto";
+
+/* ══════════ PASOS OBLIGATORIOS Y OPCIONALES + BITÁCORA ══════════
+   Obligatorios (siempre se hacen): llegar, corroborar la unidad, al menos 1 foto de evidencia y terminar.
+   Opcionales (se hacen u omiten al azar, decidido UNA vez en el plan de la WO): foto del antes, nota de
+   trabajo, fotos extra de evidencia, conformidad de nómina, disponibilidad y foto de initial finding de la Sub-WO.
+   Además, en «Mixto» un traspaso puede quedar SIN RESPONDER un rato (nómina, disponibilidad, info que pidió
+   oficina): se reintenta en las siguientes corridas o con «Responder ahora», así el motor nunca se atora.
+   Cada paso queda en S.campoLog (local del navegador: no está en NUBE_TABLAS ni NUBE_CONFIG). */
+const CAMPO_LOG_MAX = 300;
+const CAMPO_OMITE_EXTRA = {"Clean":0.10, "Repair":-0.10};        // Clean omite más notas; Repair, menos
+const cProbOmitir = extra => Math.max(0.05, Math.min(0.7, (cMixto() ? 0.40 : 0.15) + (extra||0)));
+function cLogArr(){ if(!Array.isArray(S.campoLog)) S.campoLog = []; return S.campoLog; }
+/* estado: "hecho" | "omitido" | "sin responder" | "problema" */
+function cLog(wo, tec, paso, estado, oblig, texto){
+  const L = cLogArr();
+  L.unshift({t:hora(), wo:wo||null, tec:tec ? tecN(tec) : "", paso, estado, oblig:!!oblig, texto});
+  if(L.length > CAMPO_LOG_MAX) L.length = CAMPO_LOG_MAX;
+}
+/* true solo la primera vez para esa marca (no repetir entradas del mismo paso omitido en cada corrida) */
+function cUna(mapa, marca){ if(mapa[marca]) return false; mapa[marca] = 1; return true; }
 const cTecOk = id => { const t=T(id); return !!t && t.activo!==false && !(t.esp||[]).includes("Supervisor"); };
 
 /* Foto de relleno: un SVG chiquito con color y etiqueta distintos cada vez */
@@ -174,9 +194,13 @@ function cNota(w, p){
 }
 function cPlan(w){
   if(!_campoPlanes.has(w.id)){
-    const p = cPaquete(w, w.tec);
-    _campoPlanes.set(w.id, {p, fotos:cRnd(p.fotos[0], p.fotos[1]), antes:cChance(0.5), nota:cChance(0.85),
-      dur:cRnd(p.dur[0], p.dur[1]), mismatch:cChance(cProbDatos(w, p.match)), tarde:cMixto() && cChance(0.15)});
+    const p = cPaquete(w, w.tec), om = cProbOmitir();
+    let fotos = Math.max(1, cRnd(p.fotos[0], p.fotos[1]));        // la primera foto de evidencia es obligatoria
+    const extrasOmitidas = fotos > 1 && cChance(om);               // las fotos extra son opcionales
+    if(extrasOmitidas) fotos = 1;
+    _campoPlanes.set(w.id, {p, fotos, extrasOmitidas, antes:cChance(0.5) && !cChance(om),
+      nota:cChance(0.85) && !cChance(cProbOmitir(CAMPO_OMITE_EXTRA[w.cat])),
+      dur:cRnd(p.dur[0], p.dur[1]), mismatch:cChance(cProbDatos(w, p.match)), tarde:cMixto() && cChance(0.15), l:{}});
   }
   return _campoPlanes.get(w.id);
 }
@@ -196,10 +220,10 @@ CAMPO_MANEJADORES.push({ id:"info",
       const n0 = w.evid||0;
       S.reloj += cRnd(3,8);
       cConTecnico(w.tec, ()=>cFoto(w, "evidencia pedida", ()=>ACC.fFoto({id})));
-      return (w.evid||0) > n0 ? `${cNombre(w.tec)} subió la foto que pidió oficina en WO-${w.id}` : null;
+      return (w.evid||0) > n0 ? {texto:`${cNombre(w.tec)} subió la foto que pidió oficina en WO-${w.id}`, paso:"info pedida", oblig:true} : null;
     }
     cConTecnico(w.tec, ()=>ACC.fCompletaInfo({id}));
-    return !W(w.id).infoPedida ? `${cNombre(w.tec)} completó lo que faltaba en WO-${w.id}` : null;
+    return !W(w.id).infoPedida ? {texto:`${cNombre(w.tec)} completó lo que faltaba en WO-${w.id}`, paso:"info pedida", oblig:true} : null;
   }});
 
 /* Llegada */
@@ -213,7 +237,7 @@ CAMPO_MANEJADORES.push({ id:"llegar",
     if(S.reloj + 23 < llega) S.reloj = llega - 23;
     S.reloj = Math.min(S.reloj, 20*60);
     cConTecnico(w.tec, ()=>ACC.fLlegue({id:String(w.id)}));
-    return asisDe(w.id) ? `${cNombre(w.tec)} llegó a WO-${w.id}` : null;
+    return asisDe(w.id) ? {texto:`${cNombre(w.tec)} llegó a WO-${w.id}`, paso:"llegada", oblig:true} : null;
   }});
 
 /* Corroborar la unidad antes de empezar (coincide o no coincide) */
@@ -235,10 +259,10 @@ CAMPO_MANEJADORES.push({ id:"corroborar",
       if(u.bedrooms!=null) campos.cnBed = {value: String(cambios.includes("bedrooms") ? Math.max(0, u.bedrooms + (cChance(0.5)?1:-1) || 1) : u.bedrooms)};
       if(u.bathrooms!=null) campos.cnBath = {value: String(cambios.includes("bathrooms") ? Math.max(0, u.bathrooms + (cChance(0.5)?1:-1) || 1) : u.bathrooms)};
       cConTecnico(w.tec, ()=>cConCampos(campos, ()=>ACC.woCorroboraNoOK({id})));
-      return W(w.id).corroborado ? `${cNombre(w.tec)} reportó que la unidad de WO-${w.id} no coincide` : null;
+      return W(w.id).corroborado ? {texto:`${cNombre(w.tec)} reportó que la unidad de WO-${w.id} no coincide (problema)`, paso:"corroborar unidad", estado:"problema", oblig:true} : null;
     }
     cConTecnico(w.tec, ()=>ACC.woCorrobora({id}));
-    return W(w.id).corroborado ? `${cNombre(w.tec)} corroboró la unidad de WO-${w.id}` : null;
+    return W(w.id).corroborado ? {texto:`${cNombre(w.tec)} corroboró la unidad de WO-${w.id}`, paso:"corroborar unidad", oblig:true} : null;
   }});
 
 /* Trabajo en sitio: foto del antes, evidencia, nota y cierre (también return fix y WO encadenadas) */
@@ -249,20 +273,26 @@ CAMPO_MANEJADORES.push({ id:"trabajo",
     const id = String(w.id), pl = cPlan(w), n = cNombre(w.tec);
     if(pl.antes && !(w.antesFotos||[]).length){
       cConTecnico(w.tec, ()=>cFoto(w, "antes", ()=>ACC.fFotoAntes({id})));
-      return (w.antesFotos||[]).length ? `${n} subió la foto del antes en WO-${w.id}` : null;
+      return (w.antesFotos||[]).length ? {texto:`${n} subió la foto del antes en WO-${w.id}`, paso:"foto del antes", oblig:false} : null;
     }
+    if(!pl.antes && !(w.antesFotos||[]).length && cUna(pl.l, "antes"))
+      cLog(w.id, w.tec, "foto del antes", "omitido", false, `${n} omitió la foto del antes (opcional)`);
     if((w.evid||0) < pl.fotos){
       const n0 = w.evid||0;
       cConTecnico(w.tec, ()=>cFoto(w, "después "+(n0+1)+"/"+pl.fotos, ()=>ACC.fFoto({id})));
-      return (w.evid||0) > n0 ? `${n} subió evidencia ${w.evid}/${pl.fotos} de WO-${w.id}` : null;
+      return (w.evid||0) > n0 ? {texto:`${n} subió evidencia ${w.evid}/${pl.fotos} de WO-${w.id}`, paso:n0 ? "foto extra de evidencia" : "foto de evidencia", oblig:n0===0} : null;
     }
+    if(pl.extrasOmitidas && cUna(pl.l, "extras"))
+      cLog(w.id, w.tec, "fotos extra", "omitido", false, `${n} subió solo la foto de evidencia necesaria y omitió las extras (opcional)`);
+    if(!pl.nota && !w.notas && cUna(pl.l, "nota"))
+      cLog(w.id, w.tec, "nota de trabajo", "omitido", false, `${n} no escribió nota de trabajo (opcional)`);
     if(pl.nota && !w.notas){
       const txt = cNota(w, pl.p);
       let ta = document.querySelector(`textarea[data-a="fNotaTrabajo"][data-id="${id}"]`), tmp = false;
       if(!ta){ ta = document.createElement("textarea"); ta.dataset.a = "fNotaTrabajo"; ta.dataset.id = id; ta.style.display = "none"; document.body.appendChild(ta); tmp = true; }
       ta.value = txt;
       try{ cConTecnico(w.tec, ()=>ACC.fNotaTrabajo({id})); } finally { if(tmp) ta.remove(); }
-      if(w.notas === txt){ cHist(w, "Nota de trabajo registrada"); return `${n} anotó qué hizo en WO-${w.id}`; }
+      if(w.notas === txt){ cHist(w, "Nota de trabajo registrada"); return {texto:`${n} anotó qué hizo en WO-${w.id}`, paso:"nota de trabajo", oblig:false}; }
       return null;
     }
     /* Terminar: el reloj avanza hasta que el tiempo en sitio coincida con la duración típica del servicio */
@@ -275,7 +305,7 @@ CAMPO_MANEJADORES.push({ id:"trabajo",
       if(!asisDe(w.id) && S.phSheet && S.phSheet.t==="llegada")
         cConCampos({plH:{value: w.horaProg||"9:00"}}, ()=>ACC.fLlegadaDecl({id}));
     });
-    return W(w.id).estado==="Completed" ? `${n} terminó WO-${w.id}${W(w.id).horas?` (${W(w.id).horas} h en sitio)`:""}` : null;
+    return W(w.id).estado==="Completed" ? {texto:`${n} terminó WO-${w.id}${W(w.id).horas?` (${W(w.id).horas} h en sitio)`:""}`, paso:"terminar", oblig:true} : null;
   }});
 
 /* Sub-WO planificada: iniciar → initial finding → evidencia → terminar */
@@ -286,25 +316,27 @@ CAMPO_MANEJADORES.push({ id:"subwo",
     const a = S.adicionales.find(x=>x.id===it.sub); if(!a) return null;
     const estado = a.estadoTrabajo||"Assigned", tec = tecSubWO(a), w = W(a.wo), id = String(a.id), n = cNombre(tec);
     const key = "s"+a.id;
-    if(!_campoPlanes.has(key)){ const p = cPaquete(w, tec); _campoPlanes.set(key, {p, fotos:cRnd(1,3), parcial:cChance(cProbParcial(p.match))}); }
+    if(!_campoPlanes.has(key)){ const p = cPaquete(w, tec); _campoPlanes.set(key, {p, fotos:cRnd(1,3), parcial:cChance(cProbParcial(p.match)), hallazgo:!cChance(cProbOmitir()), l:{}}); }
     const pl = _campoPlanes.get(key);
     if(estado==="Assigned"){
       cConTecnico(tec, ()=>ACC.fSubIniciar({id}));
-      return a.estadoTrabajo==="In progress" ? `${n} inició la Sub-WO "${a.concepto}" de WO-${a.wo}` : null;
+      return a.estadoTrabajo==="In progress" ? {texto:`${n} inició la Sub-WO "${a.concepto}" de WO-${a.wo}`, paso:"iniciar Sub-WO", oblig:true} : null;
     }
-    if(!a.hallazgoFoto){
+    if(!a.hallazgoFoto && pl.hallazgo){
       cConTecnico(tec, ()=>cFoto(w, "initial finding", ()=>ACC.fSubHallazgo({id})));
-      return a.hallazgoFoto ? `${n} subió el initial finding de la Sub-WO "${a.concepto}"` : null;
+      return a.hallazgoFoto ? {texto:`${n} subió el initial finding de la Sub-WO "${a.concepto}"`, paso:"initial finding", oblig:false} : null;
     }
+    if(!a.hallazgoFoto && !pl.hallazgo && cUna(pl.l, "hallazgo"))
+      cLog(a.wo, tec, "initial finding", "omitido", false, `${n} omitió la foto del initial finding de la Sub-WO "${a.concepto}" (opcional)`);
     if((a.fotosEvidArr||[]).length < pl.fotos){
       const n0 = (a.fotosEvidArr||[]).length;
       cConTecnico(tec, ()=>cFoto(w, "evidencia sub-WO", ()=>ACC.fSubFoto({id})));
-      return (a.fotosEvidArr||[]).length > n0 ? `${n} subió evidencia ${a.fotosEvidArr.length}/${pl.fotos} de la Sub-WO "${a.concepto}"` : null;
+      return (a.fotosEvidArr||[]).length > n0 ? {texto:`${n} subió evidencia ${a.fotosEvidArr.length}/${pl.fotos} de la Sub-WO "${a.concepto}"`, paso:n0 ? "foto extra de Sub-WO" : "foto de evidencia Sub-WO", oblig:n0===0} : null;
     }
     const total = Math.max(1, parseFloat(a.cant)||1), hechas = (pl.parcial && total>1) ? cRnd(1, total-1) : total;
     S.reloj = Math.min(S.reloj + cRnd(10,40), 21*60);
     cConTecnico(tec, ()=>cConCampos({subHechas:{value:String(hechas)}}, ()=>ACC.fSubTerminarGuardar({id})));
-    return a.estadoTrabajo==="Completed" ? `${n} terminó la Sub-WO "${a.concepto}" de WO-${a.wo} (${hechas}/${total})` : null;
+    return a.estadoTrabajo==="Completed" ? {texto:`${n} terminó la Sub-WO "${a.concepto}" de WO-${a.wo} (${hechas}/${total})`, paso:"terminar Sub-WO", estado:hechas<total ? "problema" : "hecho", oblig:true} : null;
   }});
 
 /* Conformidad de la nómina semanal */
@@ -316,10 +348,10 @@ CAMPO_MANEJADORES.push({ id:"nomina",
     if(cMixto() && cChance(0.2)){
       const txt = cPick(["Me falta pagar una WO de esta semana.","El monto de una WO no coincide con lo que acordamos.","No veo el pago de las horas extra del sábado."]);
       cConTecnico(it.tec, ()=>cConCampos({nomObsT:{value:txt}}, ()=>ACC.nomObs({tec:it.tec, sem:it.sem})));
-      return nomAprob(it.tec, it.sem).conf==="Observada" ? `${n} envió una observación a su pago de la semana ${it.sem}` : null;
+      return nomAprob(it.tec, it.sem).conf==="Observada" ? {texto:`${n} envió una observación a su pago de la semana ${it.sem} (problema)`, paso:"nómina semana "+it.sem, estado:"problema", oblig:false} : null;
     }
     cConTecnico(it.tec, ()=>ACC.nomConforme({tec:it.tec, sem:it.sem}));
-    return nomAprob(it.tec, it.sem).conf==="Conforme" ? `${n} quedó conforme con su pago de la semana ${it.sem}` : null;
+    return nomAprob(it.tec, it.sem).conf==="Conforme" ? {texto:`${n} quedó conforme con su pago de la semana ${it.sem}`, paso:"nómina semana "+it.sem, oblig:false} : null;
   }});
 
 /* Disponibilidad de la semana siguiente (después de «Recordar» en oficina) */
@@ -340,7 +372,7 @@ CAMPO_MANEJADORES.push({ id:"disp",
       campos["dpB"+i] = {value: disp ? cPick(["15:00","16:00","17:00","18:00"]) : ""};
     });
     cConTecnico(it.tec, ()=>cConCampos(campos, ()=>ACC.fDispOK({})));
-    return dispSemDe(it.tec) ? `${cNombre(it.tec)} envió su disponibilidad de la semana` : null;
+    return dispSemDe(it.tec) ? {texto:`${cNombre(it.tec)} envió su disponibilidad de la semana`, paso:"disponibilidad", oblig:false} : null;
   }});
 
 /* ══════════ MOTOR ══════════ */
@@ -350,10 +382,40 @@ function campoPendientes(woId){
   return woId==null ? L : L.filter(x=>x.wo===+woId);
 }
 /* Responde UN pendiente. Antes de actuar vuelve a confirmar que sigue pendiente (otro navegador pudo contestar). */
-function campoResponder(item){
+function campoResponder(item, forzar){
   const m = CAMPO_MANEJADORES.find(x=>x.id===item.h); if(!m) return null;
   if(!m.detect().some(x=>x.k===item.k)) return null;
-  return m.responder(item) || null;
+  if(cDecision(item, forzar)) return null;
+  const r = m.responder(item) || null;
+  if(r) _campoDec.delete(item.k);
+  return r;
+}
+/* Nómina y disponibilidad son opcionales: pueden omitirse del todo. Esas dos y la info que pidió oficina
+   pueden quedar «sin responder» unas corridas (solo «Mixto»). «Responder ahora» en una WO rompe el silencio. */
+const _campoDec = new Map();
+let _campoSilencios = 0;
+function cDecision(it, forzar){
+  if(!["nomina","disp","info"].includes(it.h)) return false;
+  let s = _campoDec.get(it.k);
+  if(!s){
+    const omite = it.h !== "info" && cChance(cProbOmitir());           // la info que pidió oficina nunca se omite
+    s = {omite, resta:(!omite && cMixto() && cChance(0.25)) ? cRnd(2,3) : 0, l:{}};
+    _campoDec.set(it.k, s);
+  }
+  const n = cNombre(it.tec);
+  const que = it.h==="nomina" ? `la conformidad de nómina de la semana ${it.sem}` : it.h==="disp" ? "su disponibilidad de la semana" : `lo que pidió oficina en WO-${it.wo}`;
+  const paso = it.h==="nomina" ? "nómina semana "+it.sem : it.h==="disp" ? "disponibilidad" : "info pedida";
+  if(s.omite){
+    if(cUna(s.l, "omite")) cLog(it.wo, it.tec, paso, "omitido", false, `${n} omitió ${que} (opcional)`);
+    return true;
+  }
+  if(forzar && it.wo) s.resta = 0;
+  if(s.resta > 0){
+    s.resta--; _campoSilencios++;
+    if(cUna(s.l, "calla")) cLog(it.wo, it.tec, paso, "sin responder", it.h==="info", `${n} aún no responde ${que} (se reintenta)`);
+    return true;
+  }
+  return false;
 }
 async function campoCorrer(op){
   op = op || {};
@@ -361,6 +423,7 @@ async function campoCorrer(op){
   _campoCorriendo = true; _campoEnMotor = true;
   const fallidas = new Set(), log = [];
   let pasos = 0, modal = false;
+  _campoSilencios = 0;
   try{
     while(pasos < CAMPO_MAX_PASOS){
       if(!op.forzar && !CA().on) break;
@@ -368,14 +431,17 @@ async function campoCorrer(op){
       const it = campoPendientes(op.wo).find(x=>!fallidas.has(x.k));
       if(!it) break;
       let txt = null;
-      try{ txt = campoResponder(it); } catch(e){ console.warn("Campo automático:", it.k, e); }
+      try{ txt = campoResponder(it, op.forzar); } catch(e){ console.warn("Campo automático:", it.k, e); }
       if(!txt){ fallidas.add(it.k); continue; }
-      pasos++; log.push(txt);
-      toast("Técnico (auto)", esc(txt), "v"); render();
+      if(typeof txt === "string") txt = {texto:txt};
+      cLog(it.wo, it.tec, txt.paso || it.h, txt.estado || "hecho", txt.oblig === true, txt.texto);
+      pasos++; log.push(txt.texto);
+      toast("Técnico (auto)", esc(txt.texto), "v"); render();
       if(!op.sinPausa && CA().pausa>0) await cSleep(CA().pausa*1000);
     }
   } finally { _campoCorriendo = false; _campoEnMotor = false; }
-  if(!op.forzar && (modal || _campoRepetir)){ _campoRepetir = false; campoProgramar(modal ? 4 : null); }
+  /* un traspaso en silencio se reintenta solo en unos segundos, para que no dependa de otra acción de oficina */
+  if(!op.forzar && (modal || _campoRepetir || _campoSilencios)){ const rep = _campoRepetir; _campoRepetir = false; campoProgramar(modal ? 4 : rep ? null : 12); }
   return {pasos, log};
 }
 function campoProgramar(seg){
@@ -385,7 +451,7 @@ function campoProgramar(seg){
 }
 /* Lo llama bootstrap.js al terminar cada acción (ya con guardado) */
 const CAMPO_NO_DISPARAN = new Set(["campoAutoToggle","campoAutoPerfil","campoResponderWO","ir","tab","cm","pop","pcl","campana",
-  "avLeidos","temaToggle","fView","fAbrir","fSubAbrir","fSheetNo","coachOff","coachOn","ayudaVistaToggle","gvTab","phTecPick","verTecnicoCel"]);
+  "campoLogVer","campoLogFiltro","campoLogLimpiar","avLeidos","temaToggle","fView","fAbrir","fSubAbrir","fSheetNo","coachOff","coachOn","ayudaVistaToggle","gvTab","phTecPick","verTecnicoCel"]);
 function campoAutoTrasAccion(k){
   try{
     if(CAMPO_NO_DISPARAN.has(k)) return;
@@ -404,14 +470,46 @@ Object.assign(ACC, {
   campoResponderWO: d => {
     if(_campoCorriendo){ toast("Campo automático","Ya hay una respuesta en curso.","w"); return; }
     campoCorrer({wo:+d.id, forzar:true}).then(r=>{ if(!r.pasos) toast("Campo automático","El técnico no tiene nada pendiente en esta WO.","w"); });
-  }
+  },
+  campoLogVer: () => { _campoLogFiltro = "todo"; campoLogModal(); },
+  campoLogFiltro: d => { _campoLogFiltro = d.f || "todo"; campoLogModal(); },
+  campoLogLimpiar: () => { S.campoLog = []; campoLogModal(); render(); }
 });
+
+/* ══════════ BITÁCORA VISIBLE («Qué pasó») ══════════ */
+let _campoLogFiltro = "todo";
+const CAMPO_LOG_PILL = {"hecho":["v","hecho"], "omitido":["g","omitido (opcional)"], "sin responder":["w","sin responder"], "problema":["r","problema"]};
+const cPillLog = e => { const p = CAMPO_LOG_PILL[e.estado] || ["g", e.estado]; return `<span class="pill ${p[0]}">${p[1]}</span>`; };
+function campoLogModal(){
+  const L = cLogArr(), f = _campoLogFiltro;
+  const sel = {todo:()=>true, omitidos:e=>e.estado==="omitido", sin:e=>e.estado==="sin responder", problemas:e=>e.estado==="problema"}[f] || (()=>true);
+  const R = L.filter(sel);
+  const btn = (k, tx) => `<button class="btn sm ${f===k?"p":""}" data-a="campoLogFiltro" data-f="${k}">${tx}</button>`;
+  modal(`<div class="mh"><h3>Qué pasó con el campo automático</h3><p>Lo más reciente primero. Los pasos «opcionales» pueden omitirse; los obligatorios siempre se hacen.</p></div>
+    <div class="mb">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${btn("todo","Todo")}${btn("omitidos","Omitidos")}${btn("sin","Sin responder")}${btn("problemas","Problemas")}</div>
+      ${R.length
+        ? `<table><thead><tr><th>Hora</th><th>WO</th><th>Técnico</th><th>Qué pasó</th><th>Estado</th></tr></thead><tbody>${R.map(e=>`<tr>
+            <td>${esc(e.t)}</td><td>${e.wo?"WO-"+e.wo:"—"}</td><td>${esc(e.tec||"—")}</td><td>${esc(e.texto)}</td><td>${cPillLog(e)}</td></tr>`).join("")}</tbody></table>`
+        : `<div class="empty"><div class="b">…</div>${L.length ? "No hay entradas con este filtro." : "Aquí se irá llenando lo que el campo automático haga: pasos hechos, omitidos, sin responder y problemas."}</div>`}
+    </div>
+    <div class="mf"><button class="btn" data-a="campoLogLimpiar">Limpiar</button><button class="btn" data-a="cm">Cerrar</button></div>`, true);
+}
+/* Tarjeta en el detalle de la WO: lo que hizo el campo, en orden cronológico */
+function campoLogWOHtml(id){
+  const L = cLogArr().filter(e=>e.wo===+id).reverse();
+  if(!L.length) return "";
+  return `<div class="card"><div class="chd"><h3>Lo que hizo el campo en esta WO</h3><span class="s">${L.length} paso${L.length===1?"":"s"}</span></div>
+    <div style="padding:8px 15px 10px">${L.map(e=>`<div style="display:flex;gap:9px;align-items:baseline;padding:3px 0;font-size:12px">
+      <span style="color:var(--faint);flex:none">${esc(e.t)}</span><span style="flex:1">${esc(e.texto)}</span>${cPillLog(e)}</div>`).join("")}</div></div>`;
+}
 let _campoHtml = "";
 function campoAutoPintar(){
   const box = document.getElementById("campoAutoBox"); if(!box) return;
   const c = CA();
   const h = `<button class="btn sm ${c.on?"v":""}" data-a="campoAutoToggle" title="Cuando está activo, el técnico responde solo después de cada acción de oficina">Campo automático: ${c.on?"activo":"apagado"}</button>`
-    + `<select class="usr" data-a="campoAutoPerfil" title="Todo bien: sin problemas. Mixto: a veces hay datos que no coinciden, avances parciales u observaciones."><option value="todo-bien" ${c.perfil==="todo-bien"?"selected":""}>Todo bien</option><option value="mixto" ${c.perfil==="mixto"?"selected":""}>Mixto</option></select>`;
+    + `<select class="usr" data-a="campoAutoPerfil" title="Todo bien: sin problemas. Mixto: a veces hay datos que no coinciden, avances parciales u observaciones."><option value="todo-bien" ${c.perfil==="todo-bien"?"selected":""}>Todo bien</option><option value="mixto" ${c.perfil==="mixto"?"selected":""}>Mixto</option></select>`
+    + `<button class="btn sm" data-a="campoLogVer" title="Lo que el campo automático hizo, omitió o dejó sin responder">Qué pasó${cLogArr().length?` (${cLogArr().length})`:""}</button>`;
   if(h !== _campoHtml){ _campoHtml = h; box.innerHTML = h; }
 }
 { const _render0 = render; render = function(){ _render0(); campoAutoPintar(); }; }
