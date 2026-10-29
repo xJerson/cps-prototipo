@@ -318,8 +318,10 @@ function fichaWO(id){
         ?`<button class="btn r" data-a="woCancelar" data-id="${w.id}">Cancelar WO</button>`:""}
       ${w.tec && !["Canceled","Invoiced","Paid","Completed"].includes(w.estado)
         ?`<button class="btn ${((esAgendada(w.estado)&&!asisDe(w.id))||w.infoPedida)?"pulso p":""}" data-a="verWoEnCel" data-id="${w.id}">📱 Ver en el celular de ${esc(T(w.tec)?T(w.tec).nombre:"el técnico")}</button>`:""}
+      ${w.tec && !["Canceled","Invoiced","Paid"].includes(w.estado)
+        ?`<button class="btn" data-a="campoResponderWO" data-id="${w.id}" title="Contesta por el técnico lo que esta WO tenga pendiente en campo">Responder ahora (campo automático)</button>`:""}
       ${["In progress","Esperando aprobación"].includes(w.estado)
-        ?`<button class="btn" data-a="woAvance" data-id="${w.id}">Registrar avance${w.avance?` (${w.avance}%)`:""}</button>`:""}
+        ?`<button class="btn" data-a="woAvance"data-id="${w.id}">Registrar avance${w.avance?` (${w.avance}%)`:""}</button>`:""}
       ${["In progress","Esperando aprobación"].includes(w.estado)
         ?`<button class="btn" data-a="woDetener" data-id="${w.id}">Detener trabajo</button>`:""}
       ${w.estado==="Detenido"

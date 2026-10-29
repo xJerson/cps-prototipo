@@ -429,3 +429,4 @@
     .cat-tipo{width:auto;white-space:nowrap}
     .cat-acc{margin-left:0}
   }
+.campo-auto{display:flex;align-items:center;gap:6px}

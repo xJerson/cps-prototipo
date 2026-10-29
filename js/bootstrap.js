@@ -421,7 +421,7 @@ cargarEstado();
    envoltorio de Bitácora más arriba. */
 Object.keys(ACC).forEach(k=>{
   const orig=ACC[k];
-  ACC[k] = d => { const r=orig(d); guardarEstado(); return r; };
+  ACC[k] = d => { const r=orig(d); guardarEstado(); if(typeof campoAutoTrasAccion==="function") campoAutoTrasAccion(k); return r; };
 });
 
 /* Primero se traen (o se siembran) los datos de la nube y recién ahí se dibuja;
