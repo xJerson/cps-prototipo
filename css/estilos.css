@@ -383,16 +383,15 @@
   .flag{position:fixed;top:0;left:50%;transform:translateX(-50%);background:var(--ambar);color:#fff;font-size:9px;font-weight:800;letter-spacing:.09em;text-transform:uppercase;padding:2px 11px 3px;border-radius:0 0 6px 6px;z-index:100}
   @media(max-width:1150px){.side{width:56px;padding:10px 6px}.nav .lb,.slbl{display:none}.nav{justify-content:center}}
 
-  /* ── Catálogos: índice a la izquierda y una vista por catálogo ── */
-  .cat-marco{display:grid;grid-template-columns:232px minmax(0,1fr);gap:14px;align-items:start}
-  .cat-indice{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:8px;box-shadow:var(--sh);position:sticky;top:0}
-  .cat-grupo{font-size:11.5px;font-weight:650;color:var(--faint);margin:12px 9px 3px}
-  .cat-grupo:first-child{margin-top:4px}
-  .cat-item{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;border:0;background:none;color:var(--ink);text-align:left;padding:7px 10px;border-radius:8px;font-size:13px}
-  .cat-item:hover{background:var(--surface-2)}
-  .cat-item.on{background:var(--azul-cl);color:var(--azul);font-weight:650}
-  .cat-item .n,.cat-tipo .n{font-size:11.5px;color:var(--faint);font-variant-numeric:tabular-nums}
-  .cat-item.on .n{color:var(--azul)}
+  /* ── Catálogos: submenú en la barra lateral y una vista por catálogo ── */
+  .subnav{margin:2px 0 6px 16px;padding-left:8px;border-left:1px solid var(--line)}
+  .sgrp{font-size:11px;font-weight:650;color:var(--faint);padding:8px 8px 2px}
+  .sub{display:flex;justify-content:space-between;align-items:center;gap:8px;width:100%;border:0;background:none;color:var(--soft);text-align:left;padding:5px 8px;border-radius:7px;font-size:12.5px;font-weight:600}
+  .sub:hover{background:var(--surface-3);color:var(--ink)}
+  .sub.on{background:var(--azul-cl);color:var(--azul-s);font-weight:700}
+  .sub .n,.cat-tipo .n{font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+  .sub.on .n{color:var(--azul-s)}
+  .sub:focus-visible{outline:2px solid var(--azul);outline-offset:2px}
   .cat-movil{display:none;width:100%;margin-bottom:12px;font-family:inherit;font-size:13px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:9px}
   .cat-det{margin:0;overflow:hidden}
   .cat-cab{display:flex;gap:14px;align-items:flex-start;flex-wrap:wrap;padding:16px 18px 13px;border-bottom:1px solid var(--line)}
@@ -409,7 +408,7 @@
   .cat-lnk:hover{background:var(--azul-cl)}
   .cat-lnk.suave{color:var(--soft)}
   .cat-lnk.suave:hover{background:var(--surface-3);color:var(--ink)}
-  .cat-item:focus-visible,.cat-tipo:focus-visible,.cat-lnk:focus-visible,.cat-buscar:focus-visible,.cat-movil:focus-visible{outline:2px solid var(--azul);outline-offset:2px}
+  .cat-tipo:focus-visible,.cat-lnk:focus-visible,.cat-buscar:focus-visible,.cat-movil:focus-visible{outline:2px solid var(--azul);outline-offset:2px}
   .cat-tys{display:grid;grid-template-columns:200px minmax(0,1fr);min-height:380px}
   .cat-tipos{border-right:1px solid var(--line);background:var(--surface-2);padding:7px}
   .cat-tipo{display:flex;justify-content:space-between;gap:8px;width:100%;border:0;background:none;color:var(--ink);text-align:left;padding:8px 10px;border-radius:8px;font-size:13px}
@@ -422,10 +421,9 @@
   .cat-bajas summary{padding:11px 18px;cursor:pointer;color:var(--soft);font-size:12.5px}
   .cat-bajas td{color:var(--soft)}
   .cat-pie{padding:11px 18px;font-size:12px;color:var(--soft);background:var(--surface-2);border-top:1px solid var(--line)}
+  /* Con la barra lateral reducida a íconos no hay dónde mostrar el submenú: el selector toma su lugar. */
+  @media(max-width:1150px){ .subnav{display:none} .cat-movil{display:block} }
   @media(max-width:900px){
-    .cat-marco{grid-template-columns:1fr}
-    .cat-indice{display:none}
-    .cat-movil{display:block}
     .cat-tys{grid-template-columns:1fr}
     .cat-tipos{border-right:0;border-bottom:1px solid var(--line);display:flex;gap:4px;overflow-x:auto}
     .cat-tipo{width:auto;white-space:nowrap}

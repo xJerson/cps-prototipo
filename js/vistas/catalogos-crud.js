@@ -619,6 +619,14 @@ function catVistaEstados(){
   <div class="cat-pie"><b>Facturado y pagado no son estados.</b> Van como marca aparte: así una Work Order puede estar Completed y facturada al mismo tiempo sin perder su estado real.</div>`;
 }
 
+/* Submenú de Catálogos en la barra lateral: se abre cuando estás dentro del módulo. */
+function subnavCatalogos(){
+  const sel = CAT_VISTAS[S.catSel] ? S.catSel : "tys";
+  return `<div class="subnav" role="group" aria-label="Catálogos">${CAT_INDICE.map(g=>`<div class="sgrp">${esc(g.g)}</div>`
+    + g.ks.map(k=>`<button class="sub ${k===sel?"on":""}" data-a="catVer" data-v="${k}" ${k===sel?'aria-current="page"':""}>
+        <span class="lb">${esc(CAT_VISTAS[k].n)}</span><span class="n">${CAT_VISTAS[k].cuenta()}</span></button>`).join("")).join("")}</div>`;
+}
+
 VIEWS.catalogos = () => {
   const sel = CAT_VISTAS[S.catSel] ? S.catSel : "tys";
   const det = sel==="tys" ? catVistaTys() : sel==="estados" ? catVistaEstados() : sel==="adicionales" ? catVistaCO() : catVistaLista(CAT_VISTAS[sel]);
@@ -627,12 +635,7 @@ VIEWS.catalogos = () => {
     <p>Las listas de opciones que aparecen en los formularios del sistema. Elige una para ver qué tiene y dónde se usa.</p></div></div>
   <select class="cat-movil" id="catSel" data-a="catVerSel" aria-label="Elegir catálogo">${CAT_INDICE.map(g=>`<optgroup label="${esc(g.g)}">`
     + g.ks.map(k=>`<option value="${k}" ${k===sel?"selected":""}>${esc(CAT_VISTAS[k].n)} (${CAT_VISTAS[k].cuenta()})</option>`).join("")+`</optgroup>`).join("")}</select>
-  <div class="cat-marco">
-    <nav class="cat-indice" aria-label="Catálogos">${CAT_INDICE.map(g=>`<div class="cat-grupo">${esc(g.g)}</div>`
-      + g.ks.map(k=>`<button class="cat-item ${k===sel?"on":""}" data-a="catVer" data-v="${k}" ${k===sel?'aria-current="page"':""}>
-          <span>${esc(CAT_VISTAS[k].n)}</span><span class="n">${CAT_VISTAS[k].cuenta()}</span></button>`).join("")).join("")}</nav>
-    <div class="card cat-det">${det}</div>
-  </div>`;
+  <div class="card cat-det">${det}</div>`;
 };
 
 /* ── UC-06 ── Expediente de la propiedad: 9 campos que bloquean el paso a programación ── */

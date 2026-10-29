@@ -15,7 +15,7 @@ function render(){
     const c = m.id==="alertas" ? nA : m.id==="excepciones" ? excPend().length : m.id==="devoluciones" ? devAbiertas().length : 0;
     return `<button class="nav ${S.mod===m.id?"on":""}" data-a="ir" data-m="${m.id}">
       <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${m.ic}</svg>
-      <span class="lb">${m.n}</span>${c?`<span class="n">${c}</span>`:""}</button>`;
+      <span class="lb">${m.n}</span>${c?`<span class="n">${c}</span>`:""}</button>` + (m.id==="catalogos" && S.mod==="catalogos" ? subnavCatalogos() : "");
   }).join("");
   /* Manual interactivo de la operación (guia.html): oculto del menú hasta revisarlo.
   + `<div class="slbl">Ayuda</div><a class="nav" href="guia.html" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">
