@@ -58,8 +58,6 @@ const CAT = {
     {id:"S25",tipo:"Inspection",nombre:"Inspection"},
     {id:"S26",tipo:"Ceramica",nombre:"Ceramica",baja:true},
     // Solo para change orders (ver tiposCO): no se agendan como Work Order. El precio lo pone oficina al aprobar.
-    {id:"S67",tipo:"Surcharges",nombre:"Studio surcharge"},{id:"S68",tipo:"Surcharges",nombre:"Garage surcharge"},
-    {id:"S70",tipo:"Surcharges",nombre:"Balcony surcharge"},{id:"S71",tipo:"Surcharges",nombre:"Living room surcharge"},
     {id:"S72",tipo:"Materials",nombre:"Joint compound"},{id:"S73",tipo:"Materials",nombre:"Primer"},
     {id:"S74",tipo:"Materials",nombre:"Caulking"},
     {id:"S69",tipo:"Miscellaneous",nombre:"Other"}
@@ -67,7 +65,7 @@ const CAT = {
   /* Un change order es un servicio del catálogo pedido desde el campo: el técnico elige tipo y servicio, y el precio
      sale de su tarifa. Estos tipos existen solo para change orders (recargos por espacio extra, materiales que se
      cobran aparte y lo imprevisto), por eso no están en «categorias» ni aparecen al crear una Work Order. */
-  tiposCO:["Surcharges","Materials","Miscellaneous"],
+  tiposCO:["Materials","Miscellaneous"],
   /* Change order items: la lista suelta de antes (Catalogo!P + flujograma del técnico). Toda quedó de baja
      (S.bajas.adicionales): Services.xlsx es el catálogo, y lo que no está ahí no se usa. Se conserva para que los
      registros viejos sigan mostrando su concepto. */

@@ -500,7 +500,7 @@ const CAT_VISTAS = {
   estados:{n:"Estados", d:"Las etapas por las que pasa una Work Order, de agendada a terminada.", cuenta:()=>CAT.estados.length}
 };
 LISTAS.forEach(L=>{ CAT_VISTAS[L.k]={...L, cuenta:()=>activos(L.k).length}; });
-// Change order items cuenta también los servicios de Surcharges y Miscellaneous, que solo existen para change orders.
+// Change order items cuenta también los servicios de Materials y Miscellaneous, que solo existen para change orders.
 CAT_VISTAS.adicionales.cuenta = () => (CAT.tiposCO||[]).reduce((n,t)=>n+servDe(t).length,0) + activos("adicionales").length;
 const CAT_INDICE = [
   {g:"Servicios", ks:["tys","adicionales"]},
@@ -578,7 +578,7 @@ function catVistaLista(L){
 }
 
 /* Change orders: el técnico elige cualquier servicio de Tipos y servicios. Aquí está solo lo que existe nada más
-   para change orders (Surcharges, Miscellaneous) y los change order items que todavía no tienen servicio. */
+   para change orders (Materials, Miscellaneous) y los change order items que todavía no tienen servicio. */
 function catVistaCO(){
   const L=CAT_VISTAS.adicionales, tipos=CAT.tiposCO||[];
   const pend=CAT.adicionales.map((v,i)=>({v,i})).filter(x=>!debaja("adicionales",x.v));
@@ -588,7 +588,7 @@ function catVistaCO(){
   <div class="cat-cab"><div><h3>${esc(L.n)}</h3><p>${esc(L.d)} El técnico elige el tipo y el servicio igual que en una Work Order; aquí está lo que solo existe para change orders.</p>
     <div class="cat-uso">${L.cuenta()} opciones propias · además, cualquier servicio de <b>Tipos y servicios</b> salvo Estimate e Inspection</div></div></div>
   ${tipos.map(t=>{ const ss=servTodos(t).filter(s=>!s.baja);
-    return `<div class="cat-tipo-cab"><h3>${esc(t)}</h3><span class="cat-dim" style="font-size:12px">${({Surcharges:"Recargos por espacio extra de la unidad",Materials:"Materiales que se cobran aparte del trabajo"})[t]||"Lo que no encaja en ningún servicio"}</span>
+    return `<div class="cat-tipo-cab"><h3>${esc(t)}</h3><span class="cat-dim" style="font-size:12px">${({Materials:"Materiales que se cobran aparte del trabajo"})[t]||"Lo que no encaja en ningún servicio"}</span>
       <div class="cat-acc"><button class="btn sm" data-a="servAdd" data-t="${esc(t)}">Nuevo servicio</button></div></div>
     <table><tbody>${ss.map(filaServ).join("")||`<tr><td class="empty">Sin servicios.</td></tr>`}</tbody></table>`;}).join("")}
   ${pend.length?`<div class="cat-tipo-cab"><h3>Por definir con Erika</h3><span class="pill w">${pend.length} sin servicio</span></div>

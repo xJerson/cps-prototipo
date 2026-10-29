@@ -311,7 +311,7 @@ Object.assign(ACC, {
     S.reloj+=8;
     // Un solo envío para el técnico; N líneas para el sistema, unidas por `sol`.
     const sol="SOL"+Date.now(), lista=sh.filas.map(f=>f.c).join(", "), u=U(w.unidad);
-    /* El precio sale de la tarifa del servicio para esta unidad. Sin tarifa (Surcharges, Other o un servicio sin
+    /* El precio sale de la tarifa del servicio para esta unidad. Sin tarifa (Materials, Other o un servicio sin
        precio cargado) entra como manual y oficina lo define al aprobar. Un change order item pendiente conserva su
        precio fijo si lo tiene. */
     sh.filas.forEach(f=>{ const item=f.t===CO_PEND, cat=item?adicionalCatalogo(f.c):null,
