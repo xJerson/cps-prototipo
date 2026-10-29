@@ -14,19 +14,26 @@
 
    Para agregar una respuesta nueva (fase 2: Gustavo, eventos que inicia el
    técnico) basta con empujar un objeto a CAMPO_MANEJADORES:
-     {id, detect(): [{k, h:id, wo?, tec?}], responder(item): texto | null}
+     {id, detect(), proponer(item), responder(item, datos, prop)} (ver «MANEJADORES»)
    Todo lo que se guarda en S.campoAuto es local del navegador (no está en
    NUBE_TABLAS ni NUBE_CONFIG). */
 
 /* ── Estado ── */
-const CAMPO_DEFECTO = {on:false, perfil:"todo-bien", demora:2, pausa:0.8, dispPedida:false};
+/* modo: "auto" (contesta solo) | "preguntar" (oficina revisa y edita cada respuesta) | "apagado".
+   `on` se deriva del modo (activo = cualquiera que no sea apagado) para no romper el código que lo lee. */
+const CAMPO_DEFECTO = {modo:"apagado", on:false, perfil:"todo-bien", demora:2, pausa:0.8, dispPedida:false};
+const CAMPO_MODOS = ["auto","preguntar","apagado"];
 let _campoInicio = false, _campoCorriendo = false, _campoEnMotor = false, _campoTimer = null, _campoRepetir = false;
-const CAMPO_MAX_PASOS = 40;
+const CAMPO_MAX_PASOS = 60;
+const CAMPO_REINTENTO = 30;           // segundos antes de volver a preguntar algo que oficina dejó «para después»
 const _campoPlanes = new Map();      // plan al azar por WO / Sub-WO (en memoria)
 function CA(){
   S.campoAuto = Object.assign({}, CAMPO_DEFECTO, S.campoAuto || {});
-  if(!_campoInicio){ _campoInicio = true; S.campoAuto.on = false; }   // cada vez que se abre la página arranca apagado
-  return S.campoAuto;
+  const c = S.campoAuto;
+  if(!_campoInicio){ _campoInicio = true; c.modo = "apagado"; }   // cada vez que se abre la página arranca apagado
+  if(!CAMPO_MODOS.includes(c.modo)) c.modo = c.on ? "auto" : "apagado";
+  c.on = c.modo !== "apagado";
+  return c;
 }
 
 /* ── Utilidades ── */
@@ -37,6 +44,12 @@ const cSleep = ms => new Promise(r => setTimeout(r, ms));
 const cMuestra = (arr,n) => { const c=arr.slice(), o=[]; while(c.length && o.length<n) o.push(c.splice(Math.floor(Math.random()*c.length),1)[0]); return o; };
 const cModalAbierto = () => { const m=document.getElementById("mroot"); return !!(m && m.innerHTML.trim()); };
 const cMixto = () => CA().perfil === "mixto";
+const cPreg = () => CA().modo === "preguntar";
+const cHM = m => { m = Math.max(0, Math.round(m)); return String(Math.floor(m/60)).padStart(2,"0") + ":" + String(m%60).padStart(2,"0"); };
+const cSi = v => v === true || v === "si";
+const cSiNo = b => b ? "si" : "no";
+/* De una propuesta saca los valores por id: {hacer:"si", fotos:2, ...} */
+const cDatos = prop => { const o = {}; ((prop && prop.campos) || []).forEach(c=>{ o[c.id] = c.valor; }); return o; };
 
 /* ══════════ PASOS OBLIGATORIOS Y OPCIONALES + BITÁCORA ══════════
    Obligatorios (siempre se hacen): llegar, corroborar la unidad, al menos 1 foto de evidencia y terminar.
@@ -46,13 +59,16 @@ const cMixto = () => CA().perfil === "mixto";
    oficina): se reintenta en las siguientes corridas o con «Responder ahora», así el motor nunca se atora.
    Cada paso queda en S.campoLog (local del navegador: no está en NUBE_TABLAS ni NUBE_CONFIG). */
 const CAMPO_LOG_MAX = 300;
+let _campoPor = "auto";               // quién está contestando ahora: "auto" o "oficina" (modo Preguntar)
 const CAMPO_OMITE_EXTRA = {"Clean":0.10, "Repair":-0.10};        // Clean omite más notas; Repair, menos
 const cProbOmitir = extra => Math.max(0.05, Math.min(0.7, (cMixto() ? 0.40 : 0.15) + (extra||0)));
 function cLogArr(){ if(!Array.isArray(S.campoLog)) S.campoLog = []; return S.campoLog; }
 /* estado: "hecho" | "omitido" | "sin responder" | "problema" */
-function cLog(wo, tec, paso, estado, oblig, texto){
+function cLog(wo, tec, paso, estado, oblig, texto, por){
   const L = cLogArr();
-  L.unshift({t:hora(), wo:wo||null, tec:tec ? tecN(tec) : "", paso, estado, oblig:!!oblig, texto});
+  por = por || _campoPor;
+  if(por === "oficina") texto += " (respondió oficina por el técnico)";
+  L.unshift({t:hora(), wo:wo||null, tec:tec ? tecN(tec) : "", paso, estado, oblig:!!oblig, texto, por});
   if(L.length > CAMPO_LOG_MAX) L.length = CAMPO_LOG_MAX;
 }
 /* true solo la primera vez para esa marca (no repetir entradas del mismo paso omitido en cada corrida) */
@@ -205,22 +221,43 @@ function cPlan(w){
   return _campoPlanes.get(w.id);
 }
 
-/* ══════════ MANEJADORES (uno por traspaso oficina → técnico) ══════════ */
+/* ══════════ MANEJADORES (uno por traspaso oficina → técnico) ══════════
+   Cada manejador tiene:
+     detect()            → los pendientes que hay ahora
+     proponer(it)        → qué haría el técnico en el SIGUIENTE paso, ya con los valores generados:
+                           {paso, oblig, titulo, desc?, step?, campos:[{id,label,tipo,valor,opciones?,min?,max?,largo?,sec?,fila?,ayuda?}]}
+                           tipo: "texto" | "numero" | "si-no" | "opciones" | "hora". null si no hay nada que hacer.
+     responder(it, datos, prop) → ejecuta las acciones reales del celular con esos datos (editados o no)
+   Automático = responder(it, cDatos(proponer(it))). Preguntar = oficina ve la propuesta, la edita y registra. */
 const cNombre = id => tecN(id);
-const cHist = (w, txt) => w.hist.push([hora(), "(Campo automático) "+txt, "Campo automático"]);
+const cHist = (w, txt) => w.hist.push([hora(), (_campoPor==="oficina" ? "(Oficina por el técnico) " : "(Campo automático) ")+txt, _campoPor==="oficina" ? "Oficina" : "Campo automático"]);
 const CAMPO_MANEJADORES = [];
+const cOmitido = (n, que, paso, wo) => ({texto:`${n} omitió ${que} (opcional)`, paso, estado:"omitido", oblig:false});
+const cHacer = (label, b) => ({id:"hacer", label, tipo:"si-no", valor:cSiNo(b)});
+/* Sube n fotos con el gancho de pruebas; devuelve cuántas se subieron */
+function cSubirFotos(tec, w, etiqueta, n, accion, contar){
+  const n0 = contar();
+  for(let i=0; i<n; i++) cConTecnico(tec, ()=>cFoto(w, etiqueta+(n>1 ? ` ${i+1}/${n}` : ""), accion));
+  return contar() - n0;
+}
 
 /* Oficina pidió información (pedirInfo) → el técnico la completa */
 CAMPO_MANEJADORES.push({ id:"info",
   detect:() => S.wos.filter(w=>w.tec && cTecOk(w.tec) && w.infoPedida).map(w=>({k:"info:"+w.id, h:"info", wo:w.id, tec:w.tec})),
-  responder:it => {
+  proponer:it => {
+    const w = W(it.wo); if(!w || !w.infoPedida) return null;
+    const falta = w.infoPedida.falta||[], que = falta.length ? "Oficina pidió: "+falta.join(", ")+"." : "Oficina pidió más información.";
+    if(falta.includes("evidencia") && !w.evid)
+      return {paso:"info pedida", oblig:true, titulo:"Subir la foto que pidió oficina", desc:que, campos:[{id:"fotos", label:"Fotos que sube", tipo:"numero", valor:1, min:1, max:5}]};
+    return {paso:"info pedida", oblig:true, titulo:"Completar lo que pidió oficina", desc:que+" El técnico lo marca como completado.", campos:[]};
+  },
+  responder:(it, d) => {
     const w = W(it.wo); if(!w || !w.infoPedida) return null;
     const id = String(w.id);
     if((w.infoPedida.falta||[]).includes("evidencia") && !w.evid){
-      const n0 = w.evid||0;
       S.reloj += cRnd(3,8);
-      cConTecnico(w.tec, ()=>cFoto(w, "evidencia pedida", ()=>ACC.fFoto({id})));
-      return (w.evid||0) > n0 ? {texto:`${cNombre(w.tec)} subió la foto que pidió oficina en WO-${w.id}`, paso:"info pedida", oblig:true} : null;
+      const n = cSubirFotos(w.tec, w, "evidencia pedida", Math.max(1, Math.round(d.fotos)||1), ()=>ACC.fFoto({id}), ()=>W(w.id).evid||0);
+      return n > 0 ? {texto:`${cNombre(w.tec)} subió la foto que pidió oficina en WO-${w.id}`, paso:"info pedida", oblig:true} : null;
     }
     cConTecnico(w.tec, ()=>ACC.fCompletaInfo({id}));
     return !W(w.id).infoPedida ? {texto:`${cNombre(w.tec)} completó lo que faltaba en WO-${w.id}`, paso:"info pedida", oblig:true} : null;
@@ -229,11 +266,17 @@ CAMPO_MANEJADORES.push({ id:"info",
 /* Llegada */
 CAMPO_MANEJADORES.push({ id:"llegar",
   detect:() => S.wos.filter(w=>w.tec && cTecOk(w.tec) && esAgendada(w.estado) && !asisDe(w.id) && !woEspera(w)).map(w=>({k:"llegar:"+w.id, h:"llegar", wo:w.id, tec:w.tec})),
-  responder:it => {
+  proponer:it => {
     const w = W(it.wo); if(!w || asisDe(w.id) || woEspera(w)) return null;
-    /* fLlegue suma 23 min al reloj: se acomoda para llegar cerca de la hora programada (el reloj nunca retrocede) */
     const pl = cPlan(w), prog = cMinHora(w.horaProg||"9:00");
-    const llega = prog + (pl.tarde ? cRnd(15,30) : cRnd(-5,6));
+    if(pl.llega == null) pl.llega = prog + (pl.tarde ? cRnd(15,30) : cRnd(-5,6));
+    return {paso:"llegada", oblig:true, titulo:"Llegada al sitio", desc:`Hora programada: ${w.horaProg||"9:00"}.`,
+      campos:[{id:"hora", label:"Hora a la que llegó", tipo:"hora", valor:cHM(pl.llega)}]};
+  },
+  responder:(it, d) => {
+    const w = W(it.wo); if(!w || asisDe(w.id) || woEspera(w)) return null;
+    /* fLlegue suma 23 min al reloj: se acomoda para llegar cerca de la hora indicada (el reloj nunca retrocede) */
+    const llega = /^\d{1,2}:\d{2}$/.test(String(d.hora||"")) ? cMinHora(d.hora) : cMinHora(w.horaProg||"9:00");
     if(S.reloj + 23 < llega) S.reloj = llega - 23;
     S.reloj = Math.min(S.reloj, 20*60);
     cConTecnico(w.tec, ()=>ACC.fLlegue({id:String(w.id)}));
@@ -243,21 +286,40 @@ CAMPO_MANEJADORES.push({ id:"llegar",
 /* Corroborar la unidad antes de empezar (coincide o no coincide) */
 CAMPO_MANEJADORES.push({ id:"corroborar",
   detect:() => S.wos.filter(w=>w.tec && cTecOk(w.tec) && ["In progress","Esperando aprobación"].includes(w.estado) && !w.corroborado && !w.infoPedida).map(w=>({k:"corroborar:"+w.id, h:"corroborar", wo:w.id, tec:w.tec})),
-  responder:it => {
+  proponer:it => {
     const w = W(it.wo); if(!w || w.corroborado) return null;
-    const id = String(w.id), pl = cPlan(w), u = U(w.unidad);
-    if(pl.mismatch){
-      /* Un dato distinto de lo que dice el sistema, o dos */
-      const ocup = u.ocupacion || "Occupied";
-      const cambios = cMuestra(["num","pisos","ocupacion"].concat(u.bedrooms!=null?["bedrooms"]:[], u.bathrooms!=null?["bathrooms"]:[]), cChance(0.3)?2:1);
-      const campos = {
-        cnNum:{value: cambios.includes("num") ? (cChance(0.5) ? "B"+u.num : String(u.num).replace(/\d(?!.*\d)/, d=>String((+d+1)%10))) : String(u.num)},
-        cnPisos:{value: String(cambios.includes("pisos") ? cPick([1,2,3].filter(x=>x!==u.pisos)) : (u.pisos||1))},
-        cnOcup:{value: cambios.includes("ocupacion") ? (ocup==="Vacant"?"Occupied":"Vacant") : ocup},
-        cnTxt:{tag:"textarea", value: cPick(["La unidad no coincide con lo que dice la orden.","Revisé al llegar y los datos son distintos.","Lo que veo en sitio no es lo que tienen registrado."])}
-      };
-      if(u.bedrooms!=null) campos.cnBed = {value: String(cambios.includes("bedrooms") ? Math.max(0, u.bedrooms + (cChance(0.5)?1:-1) || 1) : u.bedrooms)};
-      if(u.bathrooms!=null) campos.cnBath = {value: String(cambios.includes("bathrooms") ? Math.max(0, u.bathrooms + (cChance(0.5)?1:-1) || 1) : u.bathrooms)};
+    const pl = cPlan(w), u = U(w.unidad), ocup = u.ocupacion || "Occupied";
+    if(!pl.corr){
+      /* Valores que el técnico encontraría: los de la unidad, o uno/dos distintos si la plan marca «no coincide» */
+      const c = {num:String(u.num), pisos:u.pisos||1, ocup, bed:u.bedrooms, bath:u.bathrooms,
+        txt:cPick(["La unidad no coincide con lo que dice la orden.","Revisé al llegar y los datos son distintos.","Lo que veo en sitio no es lo que tienen registrado."])};
+      if(pl.mismatch){
+        const cambios = cMuestra(["num","pisos","ocupacion"].concat(u.bedrooms!=null?["bedrooms"]:[], u.bathrooms!=null?["bathrooms"]:[]), cChance(0.3)?2:1);
+        if(cambios.includes("num")) c.num = cChance(0.5) ? "B"+u.num : String(u.num).replace(/\d(?!.*\d)/, x=>String((+x+1)%10));
+        if(cambios.includes("pisos")) c.pisos = cPick([1,2,3].filter(x=>x!==u.pisos));
+        if(cambios.includes("ocupacion")) c.ocup = ocup==="Vacant" ? "Occupied" : "Vacant";
+        if(cambios.includes("bedrooms")) c.bed = Math.max(0, u.bedrooms + (cChance(0.5)?1:-1) || 1);
+        if(cambios.includes("bathrooms")) c.bath = Math.max(0, u.bathrooms + (cChance(0.5)?1:-1) || 1);
+      }
+      pl.corr = c;
+    }
+    const c = pl.corr, sec = "Solo si no coincide: lo que encontró en sitio";
+    const campos = [{id:"coincide", label:"¿La unidad coincide con la orden?", tipo:"si-no", valor:cSiNo(!pl.mismatch)},
+      {id:"cnNum", label:"Número de unidad", tipo:"texto", valor:c.num, sec},
+      {id:"cnPisos", label:"Pisos", tipo:"numero", valor:c.pisos, min:1, max:9},
+      {id:"cnOcup", label:"Ocupación", tipo:"opciones", valor:c.ocup, opciones:["Occupied","Vacant"]}];
+    if(u.bedrooms!=null) campos.push({id:"cnBed", label:"Recámaras", tipo:"numero", valor:c.bed, min:0, max:9});
+    if(u.bathrooms!=null) campos.push({id:"cnBath", label:"Baños", tipo:"numero", valor:c.bath, min:0, max:9});
+    campos.push({id:"cnTxt", label:"Comentario del técnico", tipo:"texto", largo:true, valor:c.txt});
+    return {paso:"corroborar unidad", oblig:true, titulo:"Corroborar la unidad", desc:`Unidad ${u.num} registrada en el sistema.`, campos};
+  },
+  responder:(it, d) => {
+    const w = W(it.wo); if(!w || w.corroborado) return null;
+    const id = String(w.id);
+    if(!cSi(d.coincide)){
+      const campos = {cnNum:{value:String(d.cnNum)}, cnPisos:{value:String(d.cnPisos)}, cnOcup:{value:String(d.cnOcup)}, cnTxt:{tag:"textarea", value:String(d.cnTxt||"")}};
+      if(d.cnBed!=null) campos.cnBed = {value:String(d.cnBed)};
+      if(d.cnBath!=null) campos.cnBath = {value:String(d.cnBath)};
       cConTecnico(w.tec, ()=>cConCampos(campos, ()=>ACC.woCorroboraNoOK({id})));
       return W(w.id).corroborado ? {texto:`${cNombre(w.tec)} reportó que la unidad de WO-${w.id} no coincide (problema)`, paso:"corroborar unidad", estado:"problema", oblig:true} : null;
     }
@@ -265,39 +327,60 @@ CAMPO_MANEJADORES.push({ id:"corroborar",
     return W(w.id).corroborado ? {texto:`${cNombre(w.tec)} corroboró la unidad de WO-${w.id}`, paso:"corroborar unidad", oblig:true} : null;
   }});
 
-/* Trabajo en sitio: foto del antes, evidencia, nota y cierre (también return fix y WO encadenadas) */
+/* Trabajo en sitio: foto del antes, evidencia, nota y cierre (también return fix y WO encadenadas).
+   Orden: antes (opcional) → evidencia (obligatoria, ≥1) → nota (opcional) → terminar (obligatorio).
+   pl.dec marca los pasos opcionales ya decididos (hechos u omitidos). */
 CAMPO_MANEJADORES.push({ id:"trabajo",
   detect:() => S.wos.filter(w=>w.tec && cTecOk(w.tec) && w.estado==="In progress" && w.corroborado && !woEspera(w)).map(w=>({k:"trabajo:"+w.id, h:"trabajo", wo:w.id, tec:w.tec})),
-  responder:it => {
+  proponer:it => {
     const w = W(it.wo); if(!w || w.estado!=="In progress") return null;
-    const id = String(w.id), pl = cPlan(w), n = cNombre(w.tec);
-    if(pl.antes && !(w.antesFotos||[]).length){
-      cConTecnico(w.tec, ()=>cFoto(w, "antes", ()=>ACC.fFotoAntes({id})));
-      return (w.antesFotos||[]).length ? {texto:`${n} subió la foto del antes en WO-${w.id}`, paso:"foto del antes", oblig:false} : null;
+    const pl = cPlan(w); pl.dec = pl.dec || {};
+    if(!(w.antesFotos||[]).length && !pl.dec.antes)
+      return {step:"antes", paso:"foto del antes", oblig:false, titulo:"Foto del antes", campos:[cHacer("¿Sube la foto del antes?", pl.antes)]};
+    if(!pl.dec.evid && (w.evid||0) < pl.fotos)
+      return {step:"evid", paso:"foto de evidencia", oblig:true, titulo:"Fotos de evidencia", desc:"La primera foto es obligatoria; las demás son opcionales.",
+        campos:[{id:"fotos", label:"Número de fotos de evidencia", tipo:"numero", valor:pl.fotos, min:1, max:6}]};
+    if(!w.notas && !pl.dec.nota){
+      if(pl.notaTxt == null) pl.notaTxt = cNota(w, pl.p);
+      return {step:"nota", paso:"nota de trabajo", oblig:false, titulo:"Nota de trabajo",
+        campos:[cHacer("¿Escribe una nota de trabajo?", pl.nota), {id:"nota", label:"Qué hizo", tipo:"texto", largo:true, valor:pl.notaTxt}]};
     }
-    if(!pl.antes && !(w.antesFotos||[]).length && cUna(pl.l, "antes"))
-      cLog(w.id, w.tec, "foto del antes", "omitido", false, `${n} omitió la foto del antes (opcional)`);
-    if((w.evid||0) < pl.fotos){
-      const n0 = w.evid||0;
-      cConTecnico(w.tec, ()=>cFoto(w, "después "+(n0+1)+"/"+pl.fotos, ()=>ACC.fFoto({id})));
-      return (w.evid||0) > n0 ? {texto:`${n} subió evidencia ${w.evid}/${pl.fotos} de WO-${w.id}`, paso:n0 ? "foto extra de evidencia" : "foto de evidencia", oblig:n0===0} : null;
+    return {step:"fin", paso:"terminar", oblig:true, titulo:"Terminar el trabajo", desc:"Al registrar, el tiempo en sitio se ajusta a esta duración.",
+      campos:[{id:"dur", label:"Tiempo en sitio (minutos)", tipo:"numero", valor:pl.dur, min:10, max:600}]};
+  },
+  responder:(it, d, prop) => {
+    const w = W(it.wo); if(!w || w.estado!=="In progress") return null;
+    const id = String(w.id), pl = cPlan(w), n = cNombre(w.tec); pl.dec = pl.dec || {};
+    const step = prop && prop.step;
+    if(step==="antes"){
+      pl.dec.antes = 1;
+      if(!cSi(d.hacer)) return cOmitido(n, "la foto del antes", "foto del antes");
+      const k = cSubirFotos(w.tec, w, "antes", 1, ()=>ACC.fFotoAntes({id}), ()=>(W(w.id).antesFotos||[]).length);
+      return k > 0 ? {texto:`${n} subió la foto del antes en WO-${w.id}`, paso:"foto del antes", oblig:false} : null;
     }
-    if(pl.extrasOmitidas && cUna(pl.l, "extras"))
-      cLog(w.id, w.tec, "fotos extra", "omitido", false, `${n} subió solo la foto de evidencia necesaria y omitió las extras (opcional)`);
-    if(!pl.nota && !w.notas && cUna(pl.l, "nota"))
-      cLog(w.id, w.tec, "nota de trabajo", "omitido", false, `${n} no escribió nota de trabajo (opcional)`);
-    if(pl.nota && !w.notas){
-      const txt = cNota(w, pl.p);
+    if(step==="evid"){
+      const meta = Math.max(1, Math.min(6, Math.round(d.fotos)||1)), n0 = w.evid||0;
+      pl.dec.evid = 1;
+      if(meta <= n0) return {texto:`${n} ya había subido evidencia en WO-${w.id}`, paso:"foto de evidencia", oblig:true};
+      const k = cSubirFotos(w.tec, w, "después", meta - n0, ()=>ACC.fFoto({id}), ()=>W(w.id).evid||0);
+      if(k > 0 && meta === 1 && pl.p.fotos[1] > 1)
+        cLog(w.id, w.tec, "fotos extra", "omitido", false, `${n} subió solo la foto de evidencia necesaria y omitió las extras (opcional)`);
+      return k > 0 ? {texto:`${n} subió evidencia ${W(w.id).evid}/${meta} de WO-${w.id}`, paso:n0 ? "foto extra de evidencia" : "foto de evidencia", oblig:true} : null;
+    }
+    if(step==="nota"){
+      pl.dec.nota = 1;
+      const txt = String(d.nota||"").trim();
+      if(!cSi(d.hacer) || !txt) return cOmitido(n, "la nota de trabajo", "nota de trabajo");
       let ta = document.querySelector(`textarea[data-a="fNotaTrabajo"][data-id="${id}"]`), tmp = false;
       if(!ta){ ta = document.createElement("textarea"); ta.dataset.a = "fNotaTrabajo"; ta.dataset.id = id; ta.style.display = "none"; document.body.appendChild(ta); tmp = true; }
       ta.value = txt;
       try{ cConTecnico(w.tec, ()=>ACC.fNotaTrabajo({id})); } finally { if(tmp) ta.remove(); }
-      if(w.notas === txt){ cHist(w, "Nota de trabajo registrada"); return {texto:`${n} anotó qué hizo en WO-${w.id}`, paso:"nota de trabajo", oblig:false}; }
+      if(W(w.id).notas === txt){ cHist(W(w.id), "Nota de trabajo registrada"); return {texto:`${n} anotó qué hizo en WO-${w.id}`, paso:"nota de trabajo", oblig:false}; }
       return null;
     }
-    /* Terminar: el reloj avanza hasta que el tiempo en sitio coincida con la duración típica del servicio */
-    const a = asisDe(w.id);
-    if(a){ const trans = S.reloj - cMinHora(a.horaReal), extra = pl.dur - trans - 28; if(extra > 0) S.reloj += extra; }
+    /* Terminar: el reloj avanza hasta que el tiempo en sitio coincida con la duración indicada */
+    const dur = Math.max(10, Math.round(d.dur)||pl.dur), a = asisDe(w.id);
+    if(a){ const trans = S.reloj - cMinHora(a.horaReal), extra = dur - trans - 28; if(extra > 0) S.reloj += extra; }
     S.reloj = Math.min(S.reloj, 21*60);
     cConTecnico(w.tec, ()=>{
       ACC.fTermine({id});
@@ -309,52 +392,83 @@ CAMPO_MANEJADORES.push({ id:"trabajo",
   }});
 
 /* Sub-WO planificada: iniciar → initial finding → evidencia → terminar */
+function cPlanSub(a, w, tec){
+  const key = "s"+a.id;
+  if(!_campoPlanes.has(key)){
+    const p = cPaquete(w, tec), total = Math.max(1, parseFloat(a.cant)||1), parcial = cChance(cProbParcial(p.match));
+    _campoPlanes.set(key, {p, fotos:cRnd(1,3), parcial, hallazgo:!cChance(cProbOmitir()), hechas:(parcial && total>1) ? cRnd(1, Math.max(1,Math.ceil(total)-1)) : total, dec:{}, l:{}});
+  }
+  return _campoPlanes.get(key);
+}
 CAMPO_MANEJADORES.push({ id:"subwo",
   detect:() => subWOsOperativas().filter(a=>{ const t=tecSubWO(a); return t && cTecOk(t) && W(a.wo) && ["Assigned","In progress"].includes(a.estadoTrabajo||"Assigned"); })
     .map(a=>({k:"subwo:"+a.id, h:"subwo", sub:a.id, wo:a.wo, tec:tecSubWO(a)})),
-  responder:it => {
+  proponer:it => {
     const a = S.adicionales.find(x=>x.id===it.sub); if(!a) return null;
-    const estado = a.estadoTrabajo||"Assigned", tec = tecSubWO(a), w = W(a.wo), id = String(a.id), n = cNombre(tec);
-    const key = "s"+a.id;
-    if(!_campoPlanes.has(key)){ const p = cPaquete(w, tec); _campoPlanes.set(key, {p, fotos:cRnd(1,3), parcial:cChance(cProbParcial(p.match)), hallazgo:!cChance(cProbOmitir()), l:{}}); }
-    const pl = _campoPlanes.get(key);
-    if(estado==="Assigned"){
+    const tec = tecSubWO(a), w = W(a.wo), pl = cPlanSub(a, w, tec), c = a.concepto;
+    if((a.estadoTrabajo||"Assigned")==="Assigned")
+      return {step:"iniciar", paso:"iniciar Sub-WO", oblig:true, titulo:`Iniciar la Sub-WO «${c}»`, campos:[]};
+    if(!a.hallazgoFoto && !pl.dec.hallazgo)
+      return {step:"hallazgo", paso:"initial finding", oblig:false, titulo:"Foto del initial finding", campos:[cHacer("¿Sube la foto del initial finding?", pl.hallazgo)]};
+    if(!pl.dec.evid && (a.fotosEvidArr||[]).length < pl.fotos)
+      return {step:"evid", paso:"foto de evidencia Sub-WO", oblig:true, titulo:"Fotos de evidencia de la Sub-WO",
+        campos:[{id:"fotos", label:"Número de fotos de evidencia", tipo:"numero", valor:pl.fotos, min:1, max:6}]};
+    const total = Math.max(1, parseFloat(a.cant)||1);
+    return {step:"fin", paso:"terminar Sub-WO", oblig:true, titulo:"Terminar la Sub-WO", desc:`Cantidad pedida: ${total}.`,
+      campos:[{id:"hechas", label:`Cantidad terminada (de ${total})`, tipo:"numero", valor:Math.min(pl.hechas, total), min:1, max:total}]};
+  },
+  responder:(it, d, prop) => {
+    const a = S.adicionales.find(x=>x.id===it.sub); if(!a) return null;
+    const tec = tecSubWO(a), w = W(a.wo), id = String(a.id), n = cNombre(tec), pl = cPlanSub(a, w, tec), step = prop && prop.step;
+    if(step==="iniciar"){
       cConTecnico(tec, ()=>ACC.fSubIniciar({id}));
       return a.estadoTrabajo==="In progress" ? {texto:`${n} inició la Sub-WO "${a.concepto}" de WO-${a.wo}`, paso:"iniciar Sub-WO", oblig:true} : null;
     }
-    if(!a.hallazgoFoto && pl.hallazgo){
-      cConTecnico(tec, ()=>cFoto(w, "initial finding", ()=>ACC.fSubHallazgo({id})));
-      return a.hallazgoFoto ? {texto:`${n} subió el initial finding de la Sub-WO "${a.concepto}"`, paso:"initial finding", oblig:false} : null;
+    if(step==="hallazgo"){
+      pl.dec.hallazgo = 1;
+      if(!cSi(d.hacer)) return cOmitido(n, `la foto del initial finding de la Sub-WO "${a.concepto}"`, "initial finding");
+      const k = cSubirFotos(tec, w, "initial finding", 1, ()=>ACC.fSubHallazgo({id}), ()=>a.hallazgoFoto ? 1 : 0);
+      return k > 0 ? {texto:`${n} subió el initial finding de la Sub-WO "${a.concepto}"`, paso:"initial finding", oblig:false} : null;
     }
-    if(!a.hallazgoFoto && !pl.hallazgo && cUna(pl.l, "hallazgo"))
-      cLog(a.wo, tec, "initial finding", "omitido", false, `${n} omitió la foto del initial finding de la Sub-WO "${a.concepto}" (opcional)`);
-    if((a.fotosEvidArr||[]).length < pl.fotos){
-      const n0 = (a.fotosEvidArr||[]).length;
-      cConTecnico(tec, ()=>cFoto(w, "evidencia sub-WO", ()=>ACC.fSubFoto({id})));
-      return (a.fotosEvidArr||[]).length > n0 ? {texto:`${n} subió evidencia ${a.fotosEvidArr.length}/${pl.fotos} de la Sub-WO "${a.concepto}"`, paso:n0 ? "foto extra de Sub-WO" : "foto de evidencia Sub-WO", oblig:n0===0} : null;
+    if(step==="evid"){
+      const meta = Math.max(1, Math.min(6, Math.round(d.fotos)||1)), n0 = (a.fotosEvidArr||[]).length;
+      pl.dec.evid = 1;
+      if(meta <= n0) return {texto:`${n} ya había subido evidencia de la Sub-WO "${a.concepto}"`, paso:"foto de evidencia Sub-WO", oblig:true};
+      const k = cSubirFotos(tec, w, "evidencia sub-WO", meta - n0, ()=>ACC.fSubFoto({id}), ()=>(a.fotosEvidArr||[]).length);
+      return k > 0 ? {texto:`${n} subió evidencia ${a.fotosEvidArr.length}/${meta} de la Sub-WO "${a.concepto}"`, paso:n0 ? "foto extra de Sub-WO" : "foto de evidencia Sub-WO", oblig:true} : null;
     }
-    const total = Math.max(1, parseFloat(a.cant)||1), hechas = (pl.parcial && total>1) ? cRnd(1, total-1) : total;
+    const total = Math.max(1, parseFloat(a.cant)||1), hechas = Math.max(1, Math.min(total, Number(d.hechas)||total));
     S.reloj = Math.min(S.reloj + cRnd(10,40), 21*60);
     cConTecnico(tec, ()=>cConCampos({subHechas:{value:String(hechas)}}, ()=>ACC.fSubTerminarGuardar({id})));
     return a.estadoTrabajo==="Completed" ? {texto:`${n} terminó la Sub-WO "${a.concepto}" de WO-${a.wo} (${hechas}/${total})`, paso:"terminar Sub-WO", estado:hechas<total ? "problema" : "hecho", oblig:true} : null;
   }});
 
-/* Conformidad de la nómina semanal */
+/* Conformidad de la nómina semanal (opcional) */
 CAMPO_MANEJADORES.push({ id:"nomina",
   detect:() => Object.keys(S.nomAprob||{}).filter(k=>(S.nomAprob[k]||{}).conf==="Pendiente").map(k=>{ const [tec,sem]=k.split("|"); return {k:"nomina:"+k, h:"nomina", tec, sem}; }).filter(x=>cTecOk(x.tec)),
-  responder:it => {
+  proponer:it => {
     const a = nomAprob(it.tec, it.sem); if(!a || a.conf!=="Pendiente") return null;
-    const n = cNombre(it.tec);
-    if(cMixto() && cChance(0.2)){
-      const txt = cPick(["Me falta pagar una WO de esta semana.","El monto de una WO no coincide con lo que acordamos.","No veo el pago de las horas extra del sábado."]);
+    const s = cDecEstado(it);
+    if(s.obs === undefined){ s.obs = cMixto() && cChance(0.2); s.obsTxt = cPick(["Me falta pagar una WO de esta semana.","El monto de una WO no coincide con lo que acordamos.","No veo el pago de las horas extra del sábado."]); }
+    return {paso:"nómina semana "+it.sem, oblig:false, titulo:`Conformidad del pago de la semana ${it.sem}`,
+      campos:[cHacer("¿Responde sobre su pago?", !s.omite),
+        {id:"resp", label:"Respuesta", tipo:"opciones", valor:s.obs ? "Con observación" : "Conforme", opciones:["Conforme","Con observación"]},
+        {id:"obs", label:"Observación (solo si es «Con observación»)", tipo:"texto", largo:true, valor:s.obsTxt}]};
+  },
+  responder:(it, d) => {
+    const a = nomAprob(it.tec, it.sem); if(!a || a.conf!=="Pendiente") return null;
+    const n = cNombre(it.tec), paso = "nómina semana "+it.sem;
+    if(!cSi(d.hacer)){ const s = cDecEstado(it); s.omite = true; s.decidido = true; return cOmitido(n, `la conformidad de nómina de la semana ${it.sem}`, paso); }
+    const txt = String(d.obs||"").trim();
+    if(d.resp==="Con observación" && txt){
       cConTecnico(it.tec, ()=>cConCampos({nomObsT:{value:txt}}, ()=>ACC.nomObs({tec:it.tec, sem:it.sem})));
-      return nomAprob(it.tec, it.sem).conf==="Observada" ? {texto:`${n} envió una observación a su pago de la semana ${it.sem} (problema)`, paso:"nómina semana "+it.sem, estado:"problema", oblig:false} : null;
+      return nomAprob(it.tec, it.sem).conf==="Observada" ? {texto:`${n} envió una observación a su pago de la semana ${it.sem} (problema)`, paso, estado:"problema", oblig:false} : null;
     }
     cConTecnico(it.tec, ()=>ACC.nomConforme({tec:it.tec, sem:it.sem}));
-    return nomAprob(it.tec, it.sem).conf==="Conforme" ? {texto:`${n} quedó conforme con su pago de la semana ${it.sem}`, paso:"nómina semana "+it.sem, oblig:false} : null;
+    return nomAprob(it.tec, it.sem).conf==="Conforme" ? {texto:`${n} quedó conforme con su pago de la semana ${it.sem}`, paso, oblig:false} : null;
   }});
 
-/* Disponibilidad de la semana siguiente (después de «Recordar» en oficina) */
+/* Disponibilidad de la semana siguiente (después de «Recordar» en oficina; opcional) */
 CAMPO_MANEJADORES.push({ id:"disp",
   detect:() => {
     if(!CA().dispPedida) return [];
@@ -362,17 +476,32 @@ CAMPO_MANEJADORES.push({ id:"disp",
     if(!L.length) CA().dispPedida = false;
     return L;
   },
-  responder:it => {
+  proponer:it => {
     if(dispSemDe(it.tec)) return null;
+    const s = cDecEstado(it);
+    if(!s.dias) s.dias = semSigDias().map((f,i)=>{ const disp = cChance(i===5 ? 0.4 : 0.85);
+      return {disp, a:disp ? cPick(["07:00","08:00","09:00"]) : "", b:disp ? cPick(["15:00","16:00","17:00","18:00"]) : ""}; });
+    const campos = [cHacer("¿Envía su disponibilidad?", !s.omite)];
+    s.dias.forEach((x,i)=>{
+      campos.push({id:"d"+i, label:(DIAS_SEM[i]||"Día "+(i+1))+" · ¿disponible?", tipo:"si-no", valor:cSiNo(x.disp), fila:i});
+      campos.push({id:"a"+i, label:"A partir de", tipo:"hora", valor:x.a, fila:i});
+      campos.push({id:"b"+i, label:"Hasta", tipo:"hora", valor:x.b, fila:i});
+    });
+    return {paso:"disponibilidad", oblig:false, titulo:"Disponibilidad de la semana siguiente", campos};
+  },
+  responder:(it, d) => {
+    if(dispSemDe(it.tec)) return null;
+    const n = cNombre(it.tec);
+    if(!cSi(d.hacer)){ const s = cDecEstado(it); s.omite = true; s.decidido = true; return cOmitido(n, "su disponibilidad de la semana", "disponibilidad"); }
     const campos = {};
     semSigDias().forEach((f,i)=>{
-      const disp = cChance(i===5 ? 0.4 : 0.85);
+      const disp = cSi(d["d"+i]);
       campos["dpD"+i] = {type:"checkbox", checked:disp};
-      campos["dpA"+i] = {value: disp ? cPick(["07:00","08:00","09:00"]) : ""};
-      campos["dpB"+i] = {value: disp ? cPick(["15:00","16:00","17:00","18:00"]) : ""};
+      campos["dpA"+i] = {value: disp ? String(d["a"+i]||"") : ""};
+      campos["dpB"+i] = {value: disp ? String(d["b"+i]||"") : ""};
     });
     cConTecnico(it.tec, ()=>cConCampos(campos, ()=>ACC.fDispOK({})));
-    return dispSemDe(it.tec) ? {texto:`${cNombre(it.tec)} envió su disponibilidad de la semana`, paso:"disponibilidad", oblig:false} : null;
+    return dispSemDe(it.tec) ? {texto:`${n} envió su disponibilidad de la semana`, paso:"disponibilidad", oblig:false} : null;
   }});
 
 /* ══════════ MOTOR ══════════ */
@@ -381,68 +510,182 @@ function campoPendientes(woId){
   CAMPO_MANEJADORES.forEach(m=>{ try{ L.push(...m.detect()); }catch(e){ console.warn("Campo automático: detect", m.id, e); } });
   return woId==null ? L : L.filter(x=>x.wo===+woId);
 }
-/* Responde UN pendiente. Antes de actuar vuelve a confirmar que sigue pendiente (otro navegador pudo contestar). */
+/* Modo Automático: responde UN pendiente con los valores generados. Antes de actuar vuelve a confirmar
+   que sigue pendiente (otro navegador pudo contestar). */
 function campoResponder(item, forzar){
   const m = CAMPO_MANEJADORES.find(x=>x.id===item.h); if(!m) return null;
   if(!m.detect().some(x=>x.k===item.k)) return null;
   if(cDecision(item, forzar)) return null;
-  const r = m.responder(item) || null;
-  if(r) _campoDec.delete(item.k);
+  const prop = m.proponer(item); if(!prop) return null;
+  _campoPor = "auto";
+  const r = m.responder(item, cDatos(prop), prop) || null;
+  if(r && r.estado!=="omitido") _campoDec.delete(item.k);
   return r;
 }
 /* Nómina y disponibilidad son opcionales: pueden omitirse del todo. Esas dos y la info que pidió oficina
-   pueden quedar «sin responder» unas corridas (solo «Mixto»). «Responder ahora» en una WO rompe el silencio. */
+   pueden quedar «sin responder» unas corridas (solo «Mixto»). «Responder ahora» en una WO rompe el silencio.
+   En modo Preguntar no hay silencio: oficina decide; la omisión generada solo prellena «¿responde?». */
 const _campoDec = new Map();
 let _campoSilencios = 0;
-function cDecision(it, forzar){
-  if(!["nomina","disp","info"].includes(it.h)) return false;
+function cDecEstado(it){
   let s = _campoDec.get(it.k);
   if(!s){
     const omite = it.h !== "info" && cChance(cProbOmitir());           // la info que pidió oficina nunca se omite
     s = {omite, resta:(!omite && cMixto() && cChance(0.25)) ? cRnd(2,3) : 0, l:{}};
     _campoDec.set(it.k, s);
   }
+  return s;
+}
+function cDecision(it, forzar){
+  if(!["nomina","disp","info"].includes(it.h)) return false;
+  const s = cDecEstado(it);
   const n = cNombre(it.tec);
   const que = it.h==="nomina" ? `la conformidad de nómina de la semana ${it.sem}` : it.h==="disp" ? "su disponibilidad de la semana" : `lo que pidió oficina en WO-${it.wo}`;
   const paso = it.h==="nomina" ? "nómina semana "+it.sem : it.h==="disp" ? "disponibilidad" : "info pedida";
   if(s.omite){
-    if(cUna(s.l, "omite")) cLog(it.wo, it.tec, paso, "omitido", false, `${n} omitió ${que} (opcional)`);
+    if(cUna(s.l, "omite")) cLog(it.wo, it.tec, paso, "omitido", false, `${n} omitió ${que} (opcional)`, "auto");
     return true;
   }
   if(forzar && it.wo) s.resta = 0;
   if(s.resta > 0){
     s.resta--; _campoSilencios++;
-    if(cUna(s.l, "calla")) cLog(it.wo, it.tec, paso, "sin responder", it.h==="info", `${n} aún no responde ${que} (se reintenta)`);
+    if(cUna(s.l, "calla")) cLog(it.wo, it.tec, paso, "sin responder", it.h==="info", `${n} aún no responde ${que} (se reintenta)`, "auto");
     return true;
   }
   return false;
 }
+
+/* ── Modo Preguntar ── */
+let _campoPreg = null;                 // la pregunta abierta: {it, prop, op}
+const _campoOmitidos = new Map();      // clave del pendiente → cuándo oficina lo dejó «para después»
+const cOmitidoAhora = k => (Date.now() - (_campoOmitidos.get(k)||0)) < CAMPO_REINTENTO*1000;
+const cHayOmitidos = () => Array.from(_campoOmitidos.keys()).some(cOmitidoAhora);
+function cQuien(it){
+  const t = T(it.tec) || {}, w = it.wo ? W(it.wo) : null, a = it.sub ? S.adicionales.find(x=>x.id===it.sub) : null;
+  const oficio = (t.esp||[]).filter(e=>e!=="Supervisor").join(" / ") || "sin oficio";
+  const donde = w ? ` en WO-${w.id}${w.serv ? " · "+w.serv : ""}${a ? " · Sub-WO «"+a.concepto+"»" : ""}`
+    : it.h==="nomina" ? ` · pago de la semana ${it.sem}` : it.h==="disp" ? " · disponibilidad de la semana siguiente" : "";
+  return `${cNombre(it.tec)} (${oficio}) responde${donde}`;
+}
+function cCampoHtml(c){
+  const id = "cp_"+c.id, v = c.valor == null ? "" : c.valor;
+  let ctl;
+  if(c.tipo==="si-no") ctl = `<select id="${id}"><option value="si" ${cSi(v)?"selected":""}>Sí</option><option value="no" ${cSi(v)?"":"selected"}>No</option></select>`;
+  else if(c.tipo==="opciones") ctl = `<select id="${id}">${c.opciones.map(o=>`<option value="${esc(o)}" ${o===v?"selected":""}>${esc(o)}</option>`).join("")}</select>`;
+  else if(c.tipo==="numero") ctl = `<input id="${id}" type="number" step="1" ${c.min!=null?`min="${c.min}"`:""} ${c.max!=null?`max="${c.max}"`:""} value="${esc(String(v))}">`;
+  else if(c.tipo==="hora") ctl = `<input id="${id}" type="time" value="${esc(String(v))}">`;
+  else if(c.largo) ctl = `<textarea id="${id}">${esc(String(v))}</textarea>`;
+  else ctl = `<input id="${id}" type="text" value="${esc(String(v))}">`;
+  return `<div class="fld"><label for="${id}">${esc(c.label)}</label>${ctl}</div>`;
+}
+function campoPregModal(){
+  const {it, prop} = _campoPreg, cs = prop.campos || [];
+  let h = "", i = 0;
+  while(i < cs.length){
+    const c = cs[i];
+    if(c.sec) h += `<div style="font-size:11px;font-weight:700;color:var(--soft);margin:8px 0 6px;text-transform:uppercase">${esc(c.sec)}</div>`;
+    if(c.fila != null){
+      const g = []; while(i < cs.length && cs[i].fila === c.fila) g.push(cs[i++]);
+      h += `<div class="fg c3">${g.map(cCampoHtml).join("")}</div>`;
+    } else { h += cCampoHtml(c); i++; }
+  }
+  modal(`<div class="mh"><h3>${esc(prop.titulo)}</h3><p>${esc(cQuien(it))}</p></div>
+    <div class="mb" id="campoPregBox">
+      <p style="margin:0 0 10px;font-size:12px"><span class="pill ${prop.oblig?"g":"w"}">${prop.oblig?"paso obligatorio":"paso opcional"}</span> ${prop.desc ? esc(prop.desc)+" " : ""}Esto es lo que haría el técnico; puedes cambiarlo antes de registrar.</p>
+      ${h || `<div class="empty">No hay datos que editar en este paso.</div>`}
+    </div>
+    <div class="mf"><button class="btn sm" data-a="campoPregModo" data-m="auto" title="Cierra esta pregunta y el técnico contesta solo">Pasar a Automático</button>
+      <button class="btn sm" data-a="campoPregModo" data-m="apagado">Apagar</button>
+      <span style="flex:1"></span>
+      <button class="btn" data-a="campoPregOmitir" title="Lo deja sin responder; se vuelve a preguntar en unos segundos o con «Responder ahora»">Omitir por ahora</button>
+      <button class="btn p" data-a="campoPregRegistrar">Registrar</button></div>`, true);
+}
+/* Abre la pregunta del pendiente. false si el paso ya no existe. */
+function campoPreguntar(it, op){
+  const m = CAMPO_MANEJADORES.find(x=>x.id===it.h); if(!m) return false;
+  if(!m.detect().some(x=>x.k===it.k)) return false;
+  const prop = m.proponer(it); if(!prop) return false;
+  _campoPreg = {it, prop, op};
+  campoPregModal();
+  return true;
+}
+function cLeeCampos(prop){
+  const d = {};
+  (prop.campos||[]).forEach(c=>{
+    const e = document.getElementById("cp_"+c.id); let v = e ? e.value : c.valor;
+    if(c.tipo==="numero"){ v = parseFloat(v); if(!isFinite(v)) v = c.valor; if(c.min!=null) v = Math.max(c.min, v); if(c.max!=null) v = Math.min(c.max, v); }
+    d[c.id] = v;
+  });
+  return d;
+}
+const campoSeguir = op => { clearTimeout(_campoTimer); _campoTimer = setTimeout(()=>campoCorrer(op||{}), 400); };
+/* Oficina registró: ejecuta las acciones reales con los datos (editados o no) */
+function campoAplicar(P, d){
+  const it = P.it, m = CAMPO_MANEJADORES.find(x=>x.id===it.h);
+  if(!m.detect().some(x=>x.k===it.k)){ toast("Campo automático","Ese paso ya estaba respondido.","w"); render(); campoSeguir(P.op); return; }
+  let r = null;
+  _campoEnMotor = true; _campoPor = "oficina";
+  try{ r = m.responder(it, d, P.prop) || null; } catch(e){ console.warn("Campo automático:", it.k, e); }
+  finally { _campoEnMotor = false; }
+  if(r){
+    if(r.estado!=="omitido") _campoDec.delete(it.k);
+    _campoOmitidos.delete(it.k);
+    cLog(it.wo, it.tec, r.paso || it.h, r.estado || "hecho", r.oblig === true, r.texto, "oficina");
+    toast("Oficina por el técnico", esc(r.texto), "v");
+  } else {
+    _campoOmitidos.set(it.k, Date.now());
+    toast("Campo automático","No se pudo registrar ese paso con esos datos; se vuelve a preguntar más tarde.","w");
+  }
+  _campoPor = "auto";
+  render(); campoSeguir(P.op);
+}
+/* Oficina dejó la pregunta sin responder (botón o cerrando la ventana) */
+function campoPregOmitida(P){
+  const it = P.it;
+  _campoOmitidos.set(it.k, Date.now());
+  cLog(it.wo, it.tec, P.prop.paso || it.h, "sin responder", P.prop.oblig, `${cNombre(it.tec)} aún no responde «${P.prop.titulo}» (se vuelve a preguntar)`, "oficina");
+}
+
 async function campoCorrer(op){
   op = op || {};
+  if(_campoPreg){
+    if(document.getElementById("campoPregBox")) return {pasos:0, ocupado:true};   // ya hay una pregunta esperando a oficina
+    const P = _campoPreg; _campoPreg = null; campoPregOmitida(P);                  // cerraron la ventana sin elegir
+  }
   if(_campoCorriendo) return {pasos:0, ocupado:true};
   _campoCorriendo = true; _campoEnMotor = true;
   const fallidas = new Set(), log = [];
-  let pasos = 0, modal = false;
+  let pasos = 0, modal = false, pregunto = false;
   _campoSilencios = 0;
+  if(op.forzar) _campoOmitidos.clear();
   try{
     while(pasos < CAMPO_MAX_PASOS){
       if(!op.forzar && !CA().on) break;
       if(cModalAbierto()){ modal = true; break; }      // no pisar un formulario que la persona tiene abierto
-      const it = campoPendientes(op.wo).find(x=>!fallidas.has(x.k));
+      const preg = cPreg();
+      const it = campoPendientes(op.wo).find(x=>!fallidas.has(x.k) && !(preg && (cOmitidoAhora(x.k) || (_campoDec.get(x.k)||{}).decidido)));
       if(!it) break;
+      if(preg){
+        let abierta = false;
+        try{ abierta = campoPreguntar(it, op); } catch(e){ console.warn("Campo automático:", it.k, e); }
+        if(abierta){ pregunto = true; break; }          // espera a oficina; Registrar / Omitir siguen la cadena
+        fallidas.add(it.k); continue;
+      }
       let txt = null;
       try{ txt = campoResponder(it, op.forzar); } catch(e){ console.warn("Campo automático:", it.k, e); }
       if(!txt){ fallidas.add(it.k); continue; }
       if(typeof txt === "string") txt = {texto:txt};
-      cLog(it.wo, it.tec, txt.paso || it.h, txt.estado || "hecho", txt.oblig === true, txt.texto);
+      cLog(it.wo, it.tec, txt.paso || it.h, txt.estado || "hecho", txt.oblig === true, txt.texto, "auto");
       pasos++; log.push(txt.texto);
+      if(txt.estado === "omitido"){ render(); continue; }
       toast("Técnico (auto)", esc(txt.texto), "v"); render();
       if(!op.sinPausa && CA().pausa>0) await cSleep(CA().pausa*1000);
     }
   } finally { _campoCorriendo = false; _campoEnMotor = false; }
   /* un traspaso en silencio se reintenta solo en unos segundos, para que no dependa de otra acción de oficina */
   if(!op.forzar && (modal || _campoRepetir || _campoSilencios)){ const rep = _campoRepetir; _campoRepetir = false; campoProgramar(modal ? 4 : rep ? null : 12); }
-  return {pasos, log};
+  else if(!pregunto && CA().on && cPreg() && cHayOmitidos()) campoProgramar(CAMPO_REINTENTO);   // lo que oficina dejó para después
+  return {pasos, log, pregunto};
 }
 function campoProgramar(seg){
   if(window.__R) return;                                  // no durante las pruebas automáticas
@@ -450,7 +693,7 @@ function campoProgramar(seg){
   _campoTimer = setTimeout(()=>campoCorrer({}), (seg!=null ? seg : CA().demora)*1000);
 }
 /* Lo llama bootstrap.js al terminar cada acción (ya con guardado) */
-const CAMPO_NO_DISPARAN = new Set(["campoAutoToggle","campoAutoPerfil","campoResponderWO","ir","tab","cm","pop","pcl","campana",
+const CAMPO_NO_DISPARAN = new Set(["campoAutoModo","campoAutoPerfil","campoResponderWO","campoPregRegistrar","campoPregOmitir","campoPregModo","ir","tab","cm","pop","pcl","campana",
   "campoLogVer","campoLogFiltro","campoLogLimpiar","avLeidos","temaToggle","fView","fAbrir","fSubAbrir","fSheetNo","coachOff","coachOn","ayudaVistaToggle","gvTab","phTecPick","verTecnicoCel"]);
 function campoAutoTrasAccion(k){
   try{
@@ -463,14 +706,30 @@ function campoAutoTrasAccion(k){
 }
 
 /* ══════════ INTERFAZ ══════════ */
+const CAMPO_MODO_TXT = {
+  "auto":"Automático: el técnico responde solo después de cada acción de oficina.",
+  "preguntar":"Preguntar: antes de cada respuesta se abre una ventana con lo que haría el técnico, para que la revises y la registres.",
+  "apagado":"Apagado."};
+function campoCambiarModo(m){
+  const c = CA();
+  if(!CAMPO_MODOS.includes(m)) return;
+  c.modo = m; c.on = m !== "apagado";
+  if(_campoPreg){ _campoPreg = null; if(document.getElementById("campoPregBox")) cm(); }   // la pregunta abierta se cierra sin registrar
+  clearTimeout(_campoTimer);
+  if(c.on) campoProgramar(m==="preguntar" ? 0.3 : null);
+  toast("Campo automático", CAMPO_MODO_TXT[m], c.on ? "v" : "");
+  render();
+}
 Object.assign(ACC, {
-  campoAutoToggle: () => { const c = CA(); c.on = !c.on; if(c.on) campoProgramar(); else clearTimeout(_campoTimer);
-    toast("Campo automático", c.on ? "Activo: después de cada acción de oficina el técnico responde solo." : "Apagado.", c.on?"v":""); render(); },
-  campoAutoPerfil: () => { const s = document.querySelector("#campoAutoBox select"); if(s) CA().perfil = s.value; render(); },
+  campoAutoModo: d => { const s = document.querySelector('#campoAutoBox select[data-a="campoAutoModo"]'); campoCambiarModo((d && d.m) || (s && s.value)); },
+  campoAutoPerfil: () => { const s = document.querySelector('#campoAutoBox select[data-a="campoAutoPerfil"]'); if(s) CA().perfil = s.value; render(); },
   campoResponderWO: d => {
-    if(_campoCorriendo){ toast("Campo automático","Ya hay una respuesta en curso.","w"); return; }
-    campoCorrer({wo:+d.id, forzar:true}).then(r=>{ if(!r.pasos) toast("Campo automático","El técnico no tiene nada pendiente en esta WO.","w"); });
+    if(_campoCorriendo || _campoPreg){ toast("Campo automático", _campoPreg ? "Ya hay una pregunta abierta." : "Ya hay una respuesta en curso.","w"); return; }
+    campoCorrer({wo:+d.id, forzar:true}).then(r=>{ if(!r.pasos && !r.pregunto && !r.ocupado) toast("Campo automático","El técnico no tiene nada pendiente en esta WO.","w"); });
   },
+  campoPregRegistrar: () => { const P = _campoPreg; if(!P) return; const d = cLeeCampos(P.prop); _campoPreg = null; cm(); campoAplicar(P, d); },
+  campoPregOmitir: () => { const P = _campoPreg; if(!P) return; _campoPreg = null; cm(); campoPregOmitida(P); render(); campoSeguir(P.op); },
+  campoPregModo: d => campoCambiarModo(d.m),
   campoLogVer: () => { _campoLogFiltro = "todo"; campoLogModal(); },
   campoLogFiltro: d => { _campoLogFiltro = d.f || "todo"; campoLogModal(); },
   campoLogLimpiar: () => { S.campoLog = []; campoLogModal(); render(); }
@@ -489,8 +748,8 @@ function campoLogModal(){
     <div class="mb">
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${btn("todo","Todo")}${btn("omitidos","Omitidos")}${btn("sin","Sin responder")}${btn("problemas","Problemas")}</div>
       ${R.length
-        ? `<table><thead><tr><th>Hora</th><th>WO</th><th>Técnico</th><th>Qué pasó</th><th>Estado</th></tr></thead><tbody>${R.map(e=>`<tr>
-            <td>${esc(e.t)}</td><td>${e.wo?"WO-"+e.wo:"—"}</td><td>${esc(e.tec||"—")}</td><td>${esc(e.texto)}</td><td>${cPillLog(e)}</td></tr>`).join("")}</tbody></table>`
+        ? `<table><thead><tr><th>Hora</th><th>WO</th><th>Técnico</th><th>Qué pasó</th><th>Quién</th><th>Estado</th></tr></thead><tbody>${R.map(e=>`<tr>
+            <td>${esc(e.t)}</td><td>${e.wo?"WO-"+e.wo:"—"}</td><td>${esc(e.tec||"—")}</td><td>${esc(e.texto)}</td><td>${e.por==="oficina"?"Oficina":"Automático"}</td><td>${cPillLog(e)}</td></tr>`).join("")}</tbody></table>`
         : `<div class="empty"><div class="b">…</div>${L.length ? "No hay entradas con este filtro." : "Aquí se irá llenando lo que el campo automático haga: pasos hechos, omitidos, sin responder y problemas."}</div>`}
     </div>
     <div class="mf"><button class="btn" data-a="campoLogLimpiar">Limpiar</button><button class="btn" data-a="cm">Cerrar</button></div>`, true);
@@ -506,8 +765,8 @@ function campoLogWOHtml(id){
 let _campoHtml = "";
 function campoAutoPintar(){
   const box = document.getElementById("campoAutoBox"); if(!box) return;
-  const c = CA();
-  const h = `<button class="btn sm ${c.on?"v":""}" data-a="campoAutoToggle" title="Cuando está activo, el técnico responde solo después de cada acción de oficina">Campo automático: ${c.on?"activo":"apagado"}</button>`
+  const c = CA(), op = (v, tx) => `<option value="${v}" ${c.modo===v?"selected":""}>${tx}</option>`;
+  const h = `<select class="usr" data-a="campoAutoModo" title="Automático: el técnico responde solo. Preguntar: antes de cada respuesta te muestra lo que haría para que lo revises. Apagado: no hace nada.">${op("auto","Campo: automático")}${op("preguntar","Campo: preguntar")}${op("apagado","Campo: apagado")}</select>`
     + `<select class="usr" data-a="campoAutoPerfil" title="Todo bien: sin problemas. Mixto: a veces hay datos que no coinciden, avances parciales u observaciones."><option value="todo-bien" ${c.perfil==="todo-bien"?"selected":""}>Todo bien</option><option value="mixto" ${c.perfil==="mixto"?"selected":""}>Mixto</option></select>`
     + `<button class="btn sm" data-a="campoLogVer" title="Lo que el campo automático hizo, omitió o dejó sin responder">Qué pasó${cLogArr().length?` (${cLogArr().length})`:""}</button>`;
   if(h !== _campoHtml){ _campoHtml = h; box.innerHTML = h; }
