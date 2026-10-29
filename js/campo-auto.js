@@ -216,7 +216,7 @@ function cPlan(w){
     if(extrasOmitidas) fotos = 1;
     _campoPlanes.set(w.id, {p, fotos, extrasOmitidas, antes:cChance(0.5) && !cChance(om),
       nota:cChance(0.85) && !cChance(cProbOmitir(CAMPO_OMITE_EXTRA[w.cat])),
-      dur:cRnd(p.dur[0], p.dur[1]), mismatch:cChance(cProbDatos(w, p.match)), tarde:cMixto() && cChance(0.15), l:{}});
+      dur:cRnd(p.dur[0], p.dur[1]), mismatch:cChance(cProbDatos(w, p.match)), tarde:cMixto() && cChance(0.15), ev:cEventosPlan(w, p), l:{}});
   }
   return _campoPlanes.get(w.id);
 }
@@ -345,6 +345,7 @@ CAMPO_MANEJADORES.push({ id:"trabajo",
       return {step:"nota", paso:"nota de trabajo", oblig:false, titulo:"Nota de trabajo",
         campos:[cHacer("¿Escribe una nota de trabajo?", pl.nota), {id:"nota", label:"Qué hizo", tipo:"texto", largo:true, valor:pl.notaTxt}]};
     }
+    if(cEvRetiene(w, pl)) return null;      // un pedido suyo sigue sin enviarse o esperando a oficina
     return {step:"fin", paso:"terminar", oblig:true, titulo:"Terminar el trabajo", desc:"Al registrar, el tiempo en sitio se ajusta a esta duración.",
       campos:[{id:"dur", label:"Tiempo en sitio (minutos)", tipo:"numero", valor:pl.dur, min:10, max:600}]};
   },
@@ -379,6 +380,7 @@ CAMPO_MANEJADORES.push({ id:"trabajo",
       return null;
     }
     /* Terminar: el reloj avanza hasta que el tiempo en sitio coincida con la duración indicada */
+    if(cEvRetiene(w, pl)) return null;
     const dur = Math.max(10, Math.round(d.dur)||pl.dur), a = asisDe(w.id);
     if(a){ const trans = S.reloj - cMinHora(a.horaReal), extra = dur - trans - 28; if(extra > 0) S.reloj += extra; }
     S.reloj = Math.min(S.reloj, 21*60);
@@ -389,6 +391,280 @@ CAMPO_MANEJADORES.push({ id:"trabajo",
         cConCampos({plH:{value: w.horaProg||"9:00"}}, ()=>ACC.fLlegadaDecl({id}));
     });
     return W(w.id).estado==="Completed" ? {texto:`${n} terminó WO-${w.id}${W(w.id).horas?` (${W(w.id).horas} h en sitio)`:""}`, paso:"terminar", oblig:true} : null;
+  }});
+
+/* ══════════ EVENTOS QUE INICIA EL TÉCNICO (solo perfil «Mixto») ══════════
+   Aquí el campo MANDA cosas a oficina mientras trabaja una WO «In progress», para que oficina pruebe su lado sin
+   que nadie teclee como el técnico: change order (fAdic/fAdicOK), ayuda en sitio, compra de materiales y permiso.
+   NO se resuelven solos: oficina aprueba, rechaza o atiende con sus acciones reales.
+   Se decide UNA vez por WO, en cPlan (pl.ev): como mucho 2, un tipo una sola vez, según el servicio y el oficio.
+   El pedido sale después de la evidencia y antes de terminar. Si es un adicional o una ayuda, «terminar» espera a
+   que oficina decida (aprobada o rechazada, da igual) y el motor sigue solo. La app real NO frena el cierre por un
+   adicional pendiente (solo frena pago y factura de la WO): la espera es a propósito, para poder probar a oficina.
+   Compra y permiso quedan «esperando a oficina» pero no frenan al técnico. */
+const CAMPO_EV_RETIENE = ["adic","ayuda"];
+const CAMPO_EV_INFO = {
+  adic:{paso:"change order a oficina", que:ev=>`pedir a oficina el change order «${ev.datos.c}»`},
+  ayuda:{paso:"ayuda en sitio", que:()=>"pedir ayuda en sitio a oficina"},
+  compra:{paso:"compra de materiales", que:()=>"registrar una compra de materiales"},
+  permiso:{paso:"permiso", que:()=>"pedir un permiso a oficina"}
+};
+/* Probabilidad por categoría de servicio (se multiplica por 1.4 si el oficio no cubre el servicio) */
+const CAMPO_EV_PROB = {
+  adic:{"Paint":0.28, "Repair":0.30, "Installation":0.24, "Clean":0.20, "Resurface":0.22, "Flooring Services":0.18, "Make Ready Checklist":0.15, "Removal":0.15},
+  ayuda:{"Clean":0.12, "Paint":0.10, "Repair":0.10, "Installation":0.10},
+  compra:{"Paint":0.16, "Repair":0.18, "Installation":0.16, "Resurface":0.10, "Clean":0.08}
+};
+const CAMPO_EV_BASE = {adic:0.12, ayuda:0.08, compra:0.06, permiso:0.04};
+const cFamilia = w => ["Paint","Resurface"].includes(w.cat) ? "pintura" : ["Clean","Make Ready Checklist"].includes(w.cat) ? "limpieza" : "reparacion";
+/* [tipo, servicio, descripciones]: solo se usan los que existen hoy en el catálogo (tiposCO / opcionesCO) */
+const CAMPO_EV_ADIC = {
+  pintura:[
+    ["Repair","Sheetrock repair",["Al lijar apareció un hueco en el sheetrock que no estaba en la orden; hay que repararlo antes de pintar.","Detrás del mueble había un parche roto en el sheetrock. Así no se puede pintar."]],
+    ["Repair","Tape repair",["La cinta de las juntas está levantada y se ve la grieta; hay que volver a cintear y resanar."]],
+    ["Repair","Texture repair",["Hay un parche viejo sin textura que se nota aunque se pinte; pido reparar la textura."]],
+    ["Repair","Extra prep",["Las paredes tienen muchos clavos y daños; necesitan preparación extra antes de pintar.","El acabado anterior se está despegando y hay que raspar y preparar más de lo previsto."]],
+    ["Materials","Primer",["Las manchas de humedad traspasan la pintura; necesito primer extra para sellarlas.","La pared quedó con manchas de humo; hace falta más primer del que traje."]],
+    ["Materials","Joint compound",["Hay más resanes de los previstos y se acabó el compuesto para juntas."]],
+    ["Materials","Caulking",["Los marcos tienen rendijas; hace falta sellador antes de pintar."]],
+    ["Paint","Touch up paint",["Hay un retoque en el pasillo que no venía en la orden y conviene hacerlo ahora que está el material."]]],
+  limpieza:[
+    ["Clean","Carpet clean",["La alfombra está muy manchada y no entraba en la orden; hace falta lavarla.","Las recámaras tienen la alfombra sucia de lado a lado; con el aspirado no sale."]],
+    ["Clean","Trash out",["El inquilino anterior dejó bolsas y muebles; hay que sacarlos antes de limpiar.","Hay mucha basura en el closet y la cochera; no se puede limpiar con eso adentro."]],
+    ["Clean","Heavy clean",["La cocina y los baños tienen grasa y sarro acumulado; no alcanza con una limpieza normal."]],
+    ["Clean","Carpet - Pet treatment",["Hay olor y manchas de mascota en la alfombra; pido tratamiento especial."]],
+    ["Clean","Pressure washing",["El balcón está muy sucio y necesita lavado a presión."]],
+    ["Miscellaneous","Other",["Hay trabajo extra que no encaja en un servicio del catálogo: limpiar la bodega de la unidad."]]],
+  reparacion:[
+    ["Repair","Door repair",["La puerta roza y la bisagra está floja; se puede arreglar en sitio.","El marco de la puerta está dañado y no cierra; hay que repararlo."]],
+    ["Repair","Window repair",["La ventana no cierra bien y el marco está dañado."]],
+    ["Repair","Tile repair",["Hay losetas sueltas detrás del lavabo; hay que reponerlas."]],
+    ["Repair","Countertop repair",["La cubierta tiene una desportilladura grande que no estaba en la orden."]],
+    ["Repair","Sheetrock repair",["Detrás del panel hay un hueco más grande de lo previsto; falta reparar el sheetrock."]],
+    ["Installation","Cabinet handles installation",["Faltan jaladeras en varios gabinetes y no estaba en la orden."]],
+    ["Installation","Baseboard installation",["Faltan tramos de zócalo en la sala; hay que instalarlos."]],
+    ["Installation","Interior door installation",["La puerta del cuarto está rota y no se puede reparar; hay que poner una nueva."]],
+    ["Materials","Caulking",["Hace falta sellador en el marco y el lavabo, no alcanza el que traje."]],
+    ["Miscellaneous","Other",["Hay un pendiente que no encaja en un servicio del catálogo y oficina debería ver."]]]
+};
+/* [opción de «Necesito ayuda», detalle] */
+const CAMPO_EV_AYUDA = {
+  pintura:[["Falta pintura","Se acabó la pintura de la segunda mano y faltan dos paredes."],["Falta material","Me faltan rodillos y cinta de pintor."],["Unidad sin luz, agua u otro servicio","No hay luz y no puedo trabajar con poca claridad."]],
+  limpieza:[["Unidad sin luz, agua u otro servicio","No hay agua en la unidad y no puedo trapear ni limpiar baños."],["Falta material","Me falta desinfectante y bolsas grandes."],["Otro","Es demasiada basura para una sola persona; necesito otra persona de apoyo."]],
+  reparacion:[["Falta material","Me falta una pieza que no traje."],["Sin acceso al shop","Necesito entrar al shop por una herramienta."],["Otro","Necesito a alguien que sostenga el panel mientras lo fijo."]]
+};
+/* [producto, unidad] — las unidades salen de UNIDADES_COMPRA; nunca se inventa un precio */
+const CAMPO_EV_COMPRA = {
+  pintura:[["Primer","galón"],["Compuesto para juntas","galón"],["Cinta de pintor","unidad"],["Rodillos de felpa","unidad"]],
+  limpieza:[["Bolsas de basura industriales","caja"],["Desengrasante","galón"],["Esponjas","caja"]],
+  reparacion:[["Bisagras","caja"],["Tornillos para panel","caja"],["Sellador de silicón","unidad"],["Malla de parche","unidad"]]
+};
+const CAMPO_EV_PERMISO = ["Cita médica","Trámite personal","Asunto familiar","Cita en la escuela de mis hijos"];
+const cIso = (base, n) => { const d = new Date(base+"T12:00:00Z"); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); };
+
+function cEvAdic(fam){
+  const pool = CAMPO_EV_ADIC[fam].filter(([t,c]) => tiposCO().includes(t) && opcionesCO(t).includes(c));
+  if(!pool.length) return null;
+  const [t,c,descs] = cPick(pool), ub = activos("ubicaciones");
+  return {t, c, q:cRnd(1,3), desc:cPick(descs), ubic:ub.length ? cPick(ub) : ""};
+}
+function cEvAyuda(fam, p){
+  const opts = CAMPO_EV_AYUDA[fam].slice();
+  if(!p.match) opts.push(["Otro","Este servicio no es de mi especialidad y necesito apoyo para terminarlo bien."]);
+  const [opc, txt] = cPick(opts.filter(o=>AYUDA_OPC.includes(o[0])));
+  return {opc, txt:(opc==="Otro" || cChance(0.6)) ? txt : "", foto:cChance(0.4)};
+}
+function cEvCompra(fam){
+  const lineas = cMuestra(CAMPO_EV_COMPRA[fam], cChance(0.35) ? 2 : 1).map(([n,um]) => ({n, c:cRnd(1,3), um:UNIDADES_COMPRA.includes(um) ? um : "unidad"}));
+  return {tienda:cPick(CAT.tiendas), lineas, foto:cChance(0.6)};
+}
+function cEvPermiso(){
+  const d0 = cRnd(3,10), desde = cIso(HOY_SUP, d0);
+  return {motivo:cPick(CAMPO_EV_PERMISO), desde, hasta:cIso(HOY_SUP, d0 + cRnd(0,1))};
+}
+/* Qué eventos manda el técnico en esta WO. Si la bitácora ya dice que mandó uno de este tipo (la página se recargó
+   y el plan en memoria se perdió), no se repite. */
+function cEventosPlan(w, p){
+  if(!cMixto()) return [];
+  const fam = cFamilia(w), k = p.match ? 1 : 1.4, L = [];
+  const hechos = new Set(cLogArr().filter(e=>e.wo===w.id).map(e=>e.paso));
+  const gen = {adic:()=>cEvAdic(fam), ayuda:()=>cEvAyuda(fam, p), compra:()=>cEvCompra(fam), permiso:()=>cEvPermiso()};
+  Object.keys(gen).sort(()=>Math.random()-0.5).forEach(tipo=>{
+    if(L.length >= 2 || hechos.has(CAMPO_EV_INFO[tipo].paso)) return;
+    if(!cChance(Math.min(0.6, ((CAMPO_EV_PROB[tipo]||{})[w.cat] ?? CAMPO_EV_BASE[tipo]) * k))) return;
+    const datos = gen[tipo]();
+    if(datos) L.push({id:tipo, tipo, datos, estado:"pendiente", fallos:0});
+  });
+  return L;
+}
+/* ¿Oficina ya contestó? {esp:true} = sigue esperando; si no, {esp:false, res} con el resultado */
+function cEvEstado(w, ev){
+  if(ev.tipo==="adic"){
+    const L = S.adicionales.filter(a=>(ev.ids||[]).includes(a.id));
+    if(L.some(a=>a.estado==="Pendiente")) return {esp:true};
+    const ok = L.filter(a=>a.estado==="Aprobado").length;
+    return {esp:false, res: !L.length ? "resuelto" : ok===L.length ? "aprobado" : ok===0 ? "rechazado" : "parcial"};
+  }
+  if(ev.tipo==="ayuda"){
+    const x = S.excepciones.find(y=>y.id===ev.xid);
+    if(x && x.estado==="Pendiente") return {esp:true};
+    return {esp:false, res: !x || x.estado==="Resuelta" || x.estado==="Aprobada" ? "resuelto" : "rechazado"};
+  }
+  if(ev.tipo==="compra"){
+    const pend = S.movs.some(m=>(ev.movs||[]).includes(m.id) && m.costoPend);
+    return pend ? {esp:true} : {esp:false, res:"resuelto"};
+  }
+  const p = S.disponibilidad.find(y=>y.id===ev.pid);
+  if(p && p.estado==="Pendiente") return {esp:true};
+  return {esp:false, res: !p || p.estado==="Aprobado" ? "aprobado" : "rechazado"};
+}
+/* El cierre del trabajo espera mientras un adicional o una ayuda suyos sigan sin enviarse o sin respuesta */
+function cEvRetiene(w, pl){
+  return (pl.ev||[]).some(ev => CAMPO_EV_RETIENE.includes(ev.tipo)
+    && ((ev.estado==="pendiente" && cMixto()) || (ev.estado==="enviado" && cEvEstado(w, ev).esp)));
+}
+/* Cuando oficina contesta un pedido enviado, queda en la bitácora una sola vez (el motor sigue solo) */
+function cEvRevisar(){
+  _campoPlanes.forEach((pl, k)=>{
+    const w = typeof k === "number" ? W(k) : null; if(!w || !pl.ev) return;
+    pl.ev.forEach(ev=>{
+      if(ev.estado !== "enviado") return;
+      const r = cEvEstado(w, ev); if(r.esp) return;
+      ev.estado = "cerrado";
+      const n = cNombre(w.tec), E = CAMPO_EV_INFO[ev.tipo], no = r.res === "rechazado";
+      const sigue = CAMPO_EV_RETIENE.includes(ev.tipo) ? `; ${n} continúa con la WO` : "";
+      const txt = ev.tipo==="adic" ? `Oficina ${r.res==="aprobado" ? "aprobó" : no ? "rechazó" : "resolvió"} el change order «${ev.datos.c}» de WO-${w.id}${r.res==="parcial" ? " (aprobó solo una parte)" : ""}${no ? `; ${n} sigue con lo original` : sigue}`
+        : ev.tipo==="ayuda" ? `Oficina ${no ? "no atendió" : "atendió"} la ayuda en sitio de WO-${w.id}${sigue}`
+        : ev.tipo==="compra" ? `Oficina cargó el costo del ticket de la compra de materiales de WO-${w.id}`
+        : `Oficina ${no ? "rechazó" : "aprobó"} el permiso que pidió ${n}`;
+      cLog(w.id, w.tec, E.paso, no ? "problema" : "hecho", false, txt, "auto");
+    });
+  });
+}
+
+/* Cada tipo: arma los campos de «Preguntar» (ya con lo generado) y envía con las acciones reales del celular */
+const CAMPO_EV_CAMPOS = {
+  adic:(w, ev) => { const d = ev.datos;
+    return {titulo:"Pedir a oficina un change order", desc:"El técnico encontró algo que no estaba en la orden. El precio sale de la tarifa o lo define oficina.",
+      campos:[cHacer("¿Envía el pedido a oficina?", true),
+        {id:"tipo", label:"Tipo", tipo:"opciones", valor:d.t, opciones:tiposCO()},
+        {id:"servicio", label:"Servicio (si no es del tipo elegido se usa el tipo del servicio)", tipo:"opciones", valor:d.c, opciones:Array.from(new Set(tiposCO().flatMap(opcionesCO)))},
+        {id:"cant", label:"Cantidad", tipo:"numero", valor:d.q, min:1, max:9},
+        {id:"ubic", label:"¿Dónde?", tipo:"opciones", valor:d.ubic, opciones:activos("ubicaciones")},
+        {id:"desc", label:"¿Qué encontró?", tipo:"texto", largo:true, valor:d.desc}]}; },
+  ayuda:(w, ev) => { const d = ev.datos;
+    return {titulo:"Pedir ayuda en sitio", desc:"Entra a Requests como «Ayuda en sitio»; oficina la atiende.",
+      campos:[cHacer("¿Pide la ayuda?", true),
+        {id:"opc", label:"¿Qué pasa?", tipo:"opciones", valor:d.opc, opciones:AYUDA_OPC},
+        {id:"txt", label:"Detalle (obligatorio con «Otro»)", tipo:"texto", largo:true, valor:d.txt}]}; },
+  compra:(w, ev) => { const d = ev.datos, a = d.lineas[0], b = d.lineas[1] || {n:"", c:1, um:"unidad"};
+    return {titulo:"Registrar una compra de materiales", desc:"Se registra sin monto: oficina carga el costo con el ticket.",
+      campos:[cHacer("¿Registra la compra?", true),
+        {id:"tienda", label:"Tienda", tipo:"opciones", valor:d.tienda, opciones:CAT.tiendas},
+        {id:"n0", label:"Producto", tipo:"texto", valor:a.n, fila:0}, {id:"c0", label:"Cantidad", tipo:"numero", valor:a.c, min:1, max:9, fila:0},
+        {id:"m0", label:"Unidad", tipo:"opciones", valor:a.um, opciones:UNIDADES_COMPRA, fila:0},
+        {id:"n1", label:"Otro producto (opcional)", tipo:"texto", valor:b.n, fila:1}, {id:"c1", label:"Cantidad", tipo:"numero", valor:b.c, min:1, max:9, fila:1},
+        {id:"m1", label:"Unidad", tipo:"opciones", valor:b.um, opciones:UNIDADES_COMPRA, fila:1},
+        {id:"foto", label:"¿Sube la foto del ticket?", tipo:"si-no", valor:cSiNo(d.foto)}]}; },
+  permiso:(w, ev) => { const d = ev.datos;
+    return {titulo:"Pedir un permiso", desc:"Le queda a Gustavo en Disponibilidad para aprobar. No frena la WO.",
+      campos:[cHacer("¿Pide el permiso?", true),
+        {id:"motivo", label:"Motivo", tipo:"texto", valor:d.motivo},
+        {id:"desde", label:"Desde (AAAA-MM-DD)", tipo:"texto", valor:d.desde, fila:0}, {id:"hasta", label:"Hasta (AAAA-MM-DD)", tipo:"texto", valor:d.hasta, fila:0}]}; }
+};
+const cNum = (v, a, b) => Math.max(a, Math.min(b, Math.round(+v) || a));
+const CAMPO_EV_ENVIAR = {
+  adic:(w, ev, d, n) => {
+    const id = String(w.id), tipos = tiposCO();
+    let t = tipos.includes(d.tipo) ? d.tipo : ev.datos.t, c = String(d.servicio||"");
+    if(!opcionesCO(t).includes(c)){ const x = tipos.find(y=>opcionesCO(y).includes(c)); if(x) t = x; else c = opcionesCO(t)[0] || ""; }
+    if(!c) return null;
+    const q = cNum(d.cant, 1, 9), ub = activos("ubicaciones"), ubic = ub.includes(d.ubic) ? d.ubic : (ub[0]||"");
+    const antes = new Set(S.adicionales.map(a=>a.id));
+    cConTecnico(w.tec, ()=>{
+      ACC.fAdic({id});
+      const sh = S.phSheet; if(!sh || sh.t!=="adic") return;
+      Object.assign(sh, {desc:String(d.desc||"").trim() || ev.datos.desc, ubic}); sh.filas = [{t, c, q:String(q)}];
+      render(); ACC.fAdicOK({id});
+    });
+    const nuevos = S.adicionales.filter(a=>!antes.has(a.id) && a.wo===w.id);
+    if(!nuevos.length) return null;
+    ev.estado = "enviado"; ev.ids = nuevos.map(a=>a.id); ev.datos.c = c;
+    const pr = nuevos[0].precio != null ? `tarifa ${money(nuevos[0].precio)}` : "precio en oficina";
+    return {texto:`${n} pidió a oficina un change order en WO-${w.id}: ${c} ×${q} (${t}) en ${ubic}, ${pr} — sin responder, esperando a oficina`, paso:CAMPO_EV_INFO.adic.paso, estado:"sin responder", oblig:false};
+  },
+  ayuda:(w, ev, d, n) => {
+    const id = String(w.id), opc = AYUDA_OPC.includes(d.opc) ? d.opc : ev.datos.opc;
+    let txt = String(d.txt||"").trim(); if(opc==="Otro" && !txt) txt = ev.datos.txt || "Necesito apoyo en sitio.";
+    const antes = new Set(S.excepciones.map(x=>x.id));
+    cConTecnico(w.tec, ()=>{
+      ACC.fAyuda({id});
+      const sh = S.phSheet; if(!sh || sh.t!=="ayuda") return;
+      sh.opc = opc; sh.txt = txt; render();
+      if(ev.datos.foto) cFoto(w, "ayuda", ()=>ACC.fAyudaFoto());
+      ACC.fAyudaOK({id});
+    });
+    const x = S.excepciones.find(y=>!antes.has(y.id) && y.tipo==="Ayuda en sitio" && y.wo===w.id);
+    if(!x) return null;
+    ev.estado = "enviado"; ev.xid = x.id;
+    return {texto:`${n} pidió ayuda en sitio en WO-${w.id}: ${opc}${txt ? " — "+txt : ""} — sin responder, esperando a oficina`, paso:CAMPO_EV_INFO.ayuda.paso, estado:"sin responder", oblig:false};
+  },
+  compra:(w, ev, d, n) => {
+    const id = String(w.id);
+    const lineas = [0,1].map(i=>({n:String(d["n"+i]||"").trim(), c:cNum(d["c"+i], 1, 9), um:UNIDADES_COMPRA.includes(d["m"+i]) ? d["m"+i] : "unidad"})).filter(l=>l.n);
+    if(!lineas.length) return null;
+    const tienda = CAT.tiendas.includes(d.tienda) ? d.tienda : CAT.tiendas[0], antes = new Set(S.movs.map(m=>m.id));
+    cConTecnico(w.tec, ()=>{
+      ACC.fCompraMaterial({id});
+      const sh = S.phSheet; if(!sh || sh.t!=="compra") return;
+      sh.tienda = tienda; sh.filas = lineas.map(l=>({nombre:l.n, cant:String(l.c), um:l.um, uso:"todo", usado:"", pago:""}));
+      render();
+      if(cSi(d.foto)) cFoto(w, "ticket", ()=>ACC.fCompraFoto());
+      ACC.fCompraOK({id});
+    });
+    const nuevas = S.movs.filter(m=>!antes.has(m.id) && m.tipo==="entrada" && m.compraWo===w.id);
+    if(!nuevas.length) return null;
+    ev.estado = "enviado"; ev.movs = nuevas.map(m=>m.id);
+    return {texto:`${n} registró una compra de materiales en WO-${w.id} (${tienda}): ${lineas.map(l=>`${l.n} ×${l.c}`).join(", ")} — sin responder, falta que oficina cargue el costo del ticket`, paso:CAMPO_EV_INFO.compra.paso, estado:"sin responder", oblig:false};
+  },
+  permiso:(w, ev, d, n) => {
+    const motivo = String(d.motivo||"").trim(), re = /^\d{4}-\d{2}-\d{2}$/;
+    if(!motivo) return null;
+    const desde = re.test(String(d.desde)) ? String(d.desde) : ev.datos.desde, hasta = re.test(String(d.hasta)) && String(d.hasta) >= desde ? String(d.hasta) : desde;
+    const antes = new Set(S.disponibilidad.map(x=>x.id));
+    cConTecnico(w.tec, ()=>{
+      ACC.fPermiso();
+      cConCampos({ppM:{value:motivo}, ppD:{value:desde}, ppH:{value:hasta}}, ()=>ACC.fPermisoOK());
+    });
+    const p = S.disponibilidad.find(x=>!antes.has(x.id) && x.tec===w.tec);
+    if(!p) return null;
+    ev.estado = "enviado"; ev.pid = p.id;
+    return {texto:`${n} pidió un permiso (${motivo}) del ${desde} al ${hasta} — sin responder, esperando a Gustavo en Disponibilidad`, paso:CAMPO_EV_INFO.permiso.paso, estado:"sin responder", oblig:false};
+  }
+};
+/* El pendiente de un evento: el siguiente de la WO que aún no se envía. Antes de eso el técnico ya subió su evidencia. */
+CAMPO_MANEJADORES.push({ id:"evento",
+  detect:() => !cMixto() ? [] : S.wos.filter(w=>w.tec && cTecOk(w.tec) && w.estado==="In progress" && w.corroborado && !woEspera(w)).map(w=>{
+    const pl = cPlan(w), ev = (pl.ev||[]).find(e=>e.estado==="pendiente");
+    return ev && ((pl.dec||{}).evid || (w.evid||0) >= pl.fotos) ? {k:"evento:"+w.id+":"+ev.id, h:"evento", wo:w.id, tec:w.tec, ev:ev.id} : null;
+  }).filter(Boolean),
+  proponer:it => {
+    const w = W(it.wo); if(!w || w.estado!=="In progress") return null;
+    const ev = cPlan(w).ev.find(e=>e.id===it.ev && e.estado==="pendiente"); if(!ev) return null;
+    const c = CAMPO_EV_CAMPOS[ev.tipo](w, ev);
+    return {paso:CAMPO_EV_INFO[ev.tipo].paso, oblig:false, titulo:c.titulo, desc:c.desc, campos:c.campos};
+  },
+  responder:(it, d) => {
+    const w = W(it.wo); if(!w || w.estado!=="In progress") return null;
+    const ev = cPlan(w).ev.find(e=>e.id===it.ev && e.estado==="pendiente"); if(!ev) return null;
+    const n = cNombre(w.tec), E = CAMPO_EV_INFO[ev.tipo];
+    if(!cSi(d.hacer)){ ev.estado = "omitido"; return cOmitido(n, E.que(ev), E.paso); }
+    let r = null;
+    try{ r = CAMPO_EV_ENVIAR[ev.tipo](w, ev, d, n); } catch(e){ console.warn("Campo automático: evento", ev.tipo, e); }
+    if(r) return r;
+    /* no pudo enviarse: a la segunda se deja (es opcional) para no atorar el cierre de la WO */
+    if(++ev.fallos >= 2){ ev.estado = "omitido"; return {texto:`${n} no pudo enviar ${E.que(ev)} y lo dejó (opcional)`, paso:E.paso, estado:"omitido", oblig:false}; }
+    return null;
   }});
 
 /* Sub-WO planificada: iniciar → initial finding → evidencia → terminar */
@@ -658,6 +934,7 @@ async function campoCorrer(op){
   let pasos = 0, modal = false, pregunto = false;
   _campoSilencios = 0;
   if(op.forzar) _campoOmitidos.clear();
+  try{ cEvRevisar(); } catch(e){ console.warn("Campo automático: revisar pedidos", e); }
   try{
     while(pasos < CAMPO_MAX_PASOS){
       if(!op.forzar && !CA().on) break;
