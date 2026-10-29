@@ -621,7 +621,7 @@ function catVistaEstados(){
 
 /* Submenú de Catálogos en la barra lateral: se abre cuando estás dentro del módulo. */
 function subnavCatalogos(){
-  const sel = CAT_VISTAS[S.catSel] ? S.catSel : "tys";
+  const sel = S.mod==="catalogos" ? (CAT_VISTAS[S.catSel] ? S.catSel : "tys") : null;
   return `<div class="subnav" role="group" aria-label="Catálogos">${CAT_INDICE.map(g=>`<div class="sgrp">${esc(g.g)}</div>`
     + g.ks.map(k=>`<button class="sub ${k===sel?"on":""}" data-a="catVer" data-v="${k}" ${k===sel?'aria-current="page"':""}>
         <span class="lb">${esc(CAT_VISTAS[k].n)}</span><span class="n">${CAT_VISTAS[k].cuenta()}</span></button>`).join("")).join("")}</div>`;

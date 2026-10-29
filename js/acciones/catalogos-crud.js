@@ -630,7 +630,7 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
   },
 
   /* Navegación del módulo: qué catálogo y qué tipo se miran. Es estado de pantalla, queda en este navegador. */
-  catVer: d => { S.catSel=d.v; render(); },
+  catVer: d => { S.catSel=d.v; S.mod="catalogos"; S.sub=null; S.tab=null; render(); },
   catVerSel: () => { S.catSel=val("catSel"); render(); },
   catTipo: d => { S.catTipo=d.t; render(); },
   /* Filtra las filas ya pintadas, sin repintar: así el cursor no salta mientras se escribe. */
