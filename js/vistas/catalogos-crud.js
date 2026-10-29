@@ -467,6 +467,7 @@ function renombrarCat(k, viejo, nuevo){
     else if(String(o[r.c])===String(viejo)){ o[r.c]=nuevo; tocados++; }
   }));
   if(S.bajas[k]) S.bajas[k]=S.bajas[k].map(x=>x===viejo?nuevo:x);
+  const m=(CAT.meta||{})[k]; if(m && m[String(viejo)]){ m[String(nuevo)]=m[String(viejo)]; delete m[String(viejo)]; }
   return tocados;
 }
 /* Hay valores que el propio sistema usa por su nombre para decidir. Renombrarlos
@@ -565,11 +566,12 @@ function catVistaLista(L){
     <div class="cat-uso">${act.length} opciones · ${resumenUsos(L.k,act.map(x=>x.v))}</div></div>
     <div class="cat-acc"><button class="btn p" data-a="catAdd" data-k="${L.k}" data-n="${esc(L.n)}">Agregar opción</button></div></div>
   ${catBuscador(act.length,"Buscar en "+L.n.toLowerCase())}
-  <table><thead><tr><th>Opción</th><th class="num">En uso</th><th></th></tr></thead>
-  <tbody>${act.map(({v,i})=>{ const n=usoN(L.k,v);
-    return `<tr class="${fl("cat:"+L.k+":"+v)}" data-q="${esc(String(v).toLowerCase())}"><td>${esc(v)}</td><td class="num mono ${n?"":"cat-dim"}">${n}</td>
+  <table><thead><tr><th>Opción</th><th>Registrada por</th><th>Fecha</th><th></th></tr></thead>
+  <tbody>${act.map(({v,i})=>{ const mt=((CAT.meta||{})[L.k]||{})[String(v)];
+    return `<tr class="${fl("cat:"+L.k+":"+v)}" data-q="${esc(String(v).toLowerCase())}"><td>${esc(v)}</td>
+      <td class="${mt?"":"cat-dim"}">${mt?esc(mt.por):"—"}</td><td class="mono ${mt?"":"cat-dim"}">${mt?esc(mt.fecha):"—"}</td>
       <td class="cat-fila-acc"><button class="cat-lnk suave" data-a="catRen" data-k="${L.k}" data-i="${i}">Editar</button></td></tr>`;}).join("")
-    ||`<tr><td colspan="3" class="empty">Todavía no hay opciones: agrega la primera.</td></tr>`}</tbody></table>
+    ||`<tr><td colspan="4" class="empty">Todavía no hay opciones: agrega la primera.</td></tr>`}</tbody></table>
   ${baja.length?`<details class="cat-bajas"><summary>${baja.length} dada(s) de baja</summary><table><tbody>
     ${baja.map(({v,i})=>`<tr><td>${esc(v)}</td><td class="cat-fila-acc"><button class="cat-lnk" data-a="catAlta" data-k="${L.k}" data-i="${i}">Reactivar</button></td></tr>`).join("")}</tbody></table></details>`:""}
   <div class="cat-pie">Editar permite renombrar, y el nombre nuevo pasa a todos los registros que ya lo usan. Dar de baja lo saca de los formularios nuevos sin borrarlo de lo que ya existe.</div>`;

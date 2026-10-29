@@ -646,7 +646,10 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
     const lista = CAT[d.k];
     const yaEsta = lista.some(x=>String(x).toLowerCase().trim()===v.toLowerCase());
     if(yaEsta){ toast("⚠ Ya existe",`«${esc(v)}» ya está en la lista (o una variante con otras mayúsculas). No lo duplico.`,"w"); return; }
-    lista.push(d.k==="pisos" ? (parseInt(v)||v) : v); flash("cat:"+d.k+":"+v);
+    const nuevoV = d.k==="pisos" ? (parseInt(v)||v) : v;
+    lista.push(nuevoV); flash("cat:"+d.k+":"+v);
+    /* Quién la registró y cuándo: los valores son texto simple, así que va en un mapa aparte. */
+    CAT.meta = CAT.meta||{}; (CAT.meta[d.k] = CAT.meta[d.k]||{})[String(nuevoV)] = {por:S.usuario, fecha:HOY_SUP};
     cm(); toast("✓ Agregado",`«${esc(v)}» ya aparece en los desplegables.`,"v"); render();
   },
   /* No borra: da de baja. El valor sigue existiendo para lo ya registrado. */
