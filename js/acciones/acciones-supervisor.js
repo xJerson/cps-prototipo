@@ -1,4 +1,20 @@
 "use strict";
+/* Crea la parada en la ruta de Gustavo. Devuelve null (sin crear nada) si esa propiedad ya tiene otra parada ese día.
+   Es función suelta (no ACC.*) porque las acciones de ACC solo reciben un argumento. */
+function agSupCrear(pid, f, motivo, nota, extra){
+  if(S.agendaSup.some(a=>a.prop===pid && a.fecha===f)) return null;
+  const a=Object.assign({id:"AS"+Date.now(), fecha:f, prop:pid, motivo, nota,
+           estado:"Pendiente", hora:null, quien:S.usuario}, extra||{});
+  S.agendaSup.push(a); flash("ags:"+a.id);
+  return a;
+}
+/* Marca la WO original como devuelta (contador del indicador de calidad + revisión de calidad), igual que devolverOK. */
+function devMarcarWO(woId, motivo, quien){
+  const w = woId && W(woId); if(!w) return;
+  w.devuelta=(w.devuelta||0)+1; w.motivoDev=motivo;
+  w.revisionCalidad={estado:"Return creado",fecha:HOY_SUP,hora:hora(),quien,motivo};
+  w.hist.push([hora(),`Return registrado: ${motivo}`,quien]);
+}
 Object.assign(ACC, {
 
 
@@ -21,11 +37,9 @@ Object.assign(ACC, {
       <button class="btn p" data-a="agSupOK">Agregar a su ruta</button></div>`),
   agSupOK: () => {
     const pid=val("asP"), f=val("asF")||HOY_SUP, hoy=f===HOY_SUP;
-    if(S.agendaSup.some(a=>a.prop===pid && a.fecha===f)){
+    const a=agSupCrear(pid, f, val("asM"), val("asN"));
+    if(!a){
       toast("Ya está en su ruta",`<b>${esc(P(pid).nombre)}</b> ya figura ${hoy?"hoy":"el "+esc(f)}. Si cambió el motivo, quita la parada y vuelve a agregarla.`,"w"); return; }
-    const a={id:"AS"+Date.now(), fecha:f, prop:pid, motivo:val("asM"), nota:val("asN"),
-             estado:"Pendiente", hora:null, quien:S.usuario};
-    S.agendaSup.push(a); flash("ags:"+a.id);
     cm();
     toast("✓ Agregada a su ruta",`<b>${esc(P(pid).nombre)}</b> · ${esc(a.motivo)}. ${hoy?"Le aparece en el celular al instante.":"Quedó agendada para el "+esc(f)+"."}`,"v");
     if(hoy) noti("Nueva parada en tu ruta", `${P(pid).nombre} — ${a.motivo}${a.nota?": "+a.nota:""}`);
@@ -97,6 +111,9 @@ Object.assign(ACC, {
     const a=by(S.agendaSup,d.id);
     S.reloj += 18;
     a.estado="Visitada"; a.hora=hora();
+    /* Si la parada salió de una solicitud de visita (supAgendar), esa solicitud pasa de «Agendada» a «Visitada». */
+    const sv = a.solicitud && by(S.solicitudesSup,a.solicitud);
+    if(sv && sv.estado==="Agendada"){ sv.estado="Visitada"; (sv.hist=sv.hist||[]).push([a.hora,"Visitada por Gustavo",tecN(GUSTAVO)]); }
     /* Entra solo al reporte del día: es un dato que el sistema ya tiene. */
     anotarDia("llegada", `Llegu\u00e9 a ${esc(P(a.prop).nombre)} — ${esc(a.motivo)}`, a.id, {prop:a.prop});
     flash("ags:"+a.id);
@@ -277,6 +294,7 @@ Object.assign(ACC, {
       urgente:!!g.urgente,
       hist:[[hora(),"Return creado en campo",tecN(GUSTAVO)]]};
     S.devoluciones.push(d);
+    devMarcarWO(d.wo, d.desc, tecN(GUSTAVO));
     anotarDia("devolucion",
       `${esc(P(d.prop).nombre)} ${U(d.unidad)?esc(U(d.unidad).num):""} — ${esc(devAreasTxt(d))}: ${d.desc.slice(0,60)}`,
       d.id, {prop:d.prop, unidad:d.unidad, fotos:d.lotesAntes.reduce((t,l)=>t+(l.fotosArr||[]).length,0)});
@@ -327,6 +345,7 @@ Object.assign(ACC, {
   gDevUrg: () => { leerDev(); if(S.gDev){ S.gDev.urgente=!S.gDev.urgente; render(); } },
   gDevCerrar: d => {
     const dv = DV(d.id);
+    if(!dv || dv.estado!=="Corregida") return;      // solo se cierra un return ya verificado con fotos del después
     S.reloj += 3;
     dv.estado = "Cerrada";
     dv.verifica = GUSTAVO;

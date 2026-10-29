@@ -784,8 +784,8 @@ CAMPO_MANEJADORES.push({ id:"disp",
 /* ══════════ GUSTAVO (supervisor de campo) ══════════
    Lo que oficina le manda a Gustavo también se contesta solo, con las MISMAS acciones de su celular (ACC.g*):
      · paradas de su ruta (agSupOK / supAgendar): sale (opcional), llega o, en «Mixto» a veces, «no pude completarla»
-     · inspección para estimado (solComInspeccion): oficina la asigna pero el sistema NO crea la parada; aquí se crea igual
-       que lo hace Claudia (agSupOK, motivo «Inspección para estimado») y luego Gustavo llega y entrega el relevamiento
+     · inspección para estimado (solComInspeccion): la app ya crea la parada (solicitudCom); aquí solo se crea si la app no pudo
+       (p. ej. otra parada de la misma propiedad ese día), igual que lo hace Claudia (agSupOK, motivo «Inspección para estimado»), y luego Gustavo llega y entrega el relevamiento
        (fotos, unidad y servicios del catálogo con hallazgos). Eso deja la solicitud «Lista para estimado» y avisa a Claudia.
      · parada «Supervisar»: reporte de revisión (opcional)
      · returns: verificar con fotos (obligatorio si ya venció o llegó el día límite y nadie lo está corrigiendo) y cerrar (opcional)
@@ -819,7 +819,7 @@ CAMPO_MANEJADORES.push({ id:"ginsp",
     if(S.agendaSup.some(a=>a.prop===s.prop && a.fecha===HOY_SUP)) return null;      // agSupOK no deja dos paradas de la misma propiedad el mismo día
     const alc = String(s.alcance||"").trim();
     return {paso:"parada de inspección", oblig:true, titulo:"Poner la inspección en la ruta de Gustavo",
-      desc:`Oficina asignó la inspección de ${P(s.prop).nombre}, pero el sistema no crea la parada. Se agrega como lo hace Claudia: motivo «Inspección para estimado».`,
+      desc:`Oficina asignó la inspección de ${P(s.prop).nombre} y todavía no tiene parada en la ruta. Se agrega como lo hace Claudia: motivo «Inspección para estimado».`,
       campos:[{id:"fecha", label:"Día de la visita (AAAA-MM-DD)", tipo:"texto", valor:HOY_SUP},
         {id:"nota", label:"Nota para Gustavo", tipo:"texto", largo:true,
           valor:`Inspección para el estimado de la solicitud ${s.id}.${s.contacto ? " Contacto: "+s.contacto+"." : ""}${alc ? " Alcance pedido: "+alc.slice(0,140) : ""}`}]};

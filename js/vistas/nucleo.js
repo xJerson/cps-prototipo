@@ -184,7 +184,7 @@ function modal(html,wide){ $("#mroot").innerHTML=`<div class="scrim" data-a="cm"
    / woGuardar). Cerrar CUALQUIER modal — cancelado o no — apaga esa marca:
    así, si el usuario abre otra cosa sin guardar, no queda una Solicitud
    vieja esperando pegarse a una Work Order que no tiene nada que ver. */
-function cm(){ $("#mroot").innerHTML=""; S.progSolId=null; S._aprobFoto=null; S._dvFoto=null; S._recibo=null; if(typeof renderCoach==="function") renderCoach(); }
+function cm(){ $("#mroot").innerHTML=""; S.progSolId=null; S.repWOId=null; S._aprobFoto=null; S._dvFoto=null; S._recibo=null; if(typeof renderCoach==="function") renderCoach(); }
 const val = id => { const e=document.getElementById(id); return e? e.value.trim() : ""; };
 const chk = id => { const e=document.getElementById(id); return e? e.checked : false; };
 function marcaFalta(ids){ let bad=false; ids.forEach(i=>{ const e=document.getElementById(i);

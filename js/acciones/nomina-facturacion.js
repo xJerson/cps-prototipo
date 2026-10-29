@@ -120,6 +120,15 @@ Object.assign(ACC, {
     toast("✓ Ayuda resuelta","Le avisamos al técnico en su celular.","v"); render();
   },
   excUnidadRevisar: d => modalCorregirUnidad(d.id),
+  /* Rechazar el pedido de corrección: los datos de la unidad quedan como estaban. */
+  excUnidadRechazar: d => {
+    const x=by(S.excepciones,d.id); if(!x || x.estado!=="Pendiente") return;
+    x.estado="Rechazada"; x.resol={quien:S.usuario,hora:hora()}; x.accion="Unit data not changed";
+    registrarHistorialApproval(x,"Rejected",x.accion);
+    const w=W(x.wo); if(w) w.hist.push([hora(),"Unit data mismatch rejected — unit data not changed",S.usuario]);
+    cm(); flash("exc:"+x.id);
+    toast("Excepción rechazada","Los datos de la unidad no se cambiaron. Queda registrado que no se autorizó.","w"); render();
+  },
   /* Generalizado: aplica cada campo que el técnico reportó distinto
      (datos.cambios), uno por uno, validando según su tipo. */
   excUnidadAplicar: d => {
@@ -163,6 +172,7 @@ Object.assign(ACC, {
   excAprob: d => {
     const x = by(S.excepciones,d.id);
     if(x){ x.estado="Aprobada"; x.resol={quien:S.usuario,hora:hora()}; registrarHistorialApproval(x,"Approved"); flash("exc:"+x.id);
+      if(x.tipo==="Cierre sin evidencia"){ const w=W(x.wo); if(w) w.evidExcusada=true; }
       toast("✓ Excepción aprobada",`${esc(x.tipo)} — autorizada por ${S.usuario}. Queda registrado quién y cuándo.`,"v");
       render(); return; }
     const sa = solTodas().find(z=>"AUTO-A"+z.sol===d.id);
@@ -316,10 +326,12 @@ Object.assign(ACC, {
     S._audNom=tecN(d.tec)+" · "+periodoTexto(S.periodo);
     noti("Tu pago de la semana está listo","Revísalo en «Mi pago» y responde Conforme o envía una observación.");
     toast("✓ Nómina aprobada",`${esc(tecN(d.tec))} ya la ve en su celular. El pago no depende de su respuesta.`,"v"); render(); },
-  nomConforme: d => { const a=nomAprob(d.tec,d.sem); if(!a) return;
+  /* Conformidad / observación: solo desde «Pendiente» o «Respondida» (el técnico puede contestar la respuesta de administración).
+     Si ya quedó Conforme u Observada (esperando respuesta) no se repite — así no se duplican avisos ni hilo. */
+  nomConforme: d => { const a=nomAprob(d.tec,d.sem); if(!a || !["Pendiente","Respondida"].includes(a.conf)) return;
     a.conf="Conforme"; a.confHora=hora(); S._audNom=tecN(d.tec)+" · semana "+d.sem;
     toast("✓ Conforme","Quedó registrada tu conformidad con el pago de la semana.","v"); render(); },
-  nomObs: d => { const a=nomAprob(d.tec,d.sem); if(!a) return;
+  nomObs: d => { const a=nomAprob(d.tec,d.sem); if(!a || !["Pendiente","Respondida"].includes(a.conf)) return;
     const t=val("nomObsT"); if(!t){ S.audOmitir=true; marcaFalta(["nomObsT"]); toast("Falta la observación","Escribe qué está mal o qué falta en tu pago.","r"); return; }
     a.conf="Observada"; a.obs=t; a.confHora=hora(); (a.hilo=a.hilo||[]).push({de:"Técnico",t,hora:hora()}); S._audNom=tecN(d.tec)+" · semana "+d.sem;
     avisar("Erika","Observación del técnico en su pago",`${tecN(d.tec)} · semana ${d.sem}: ${t}`,"w");

@@ -173,7 +173,8 @@ VIEWS.excepciones = () => {
           : x.tipo==="Ayuda en sitio"
           ? `<button class="btn sm v" data-a="excAyudaResolver" data-id="${x.id}">Resolver</button>`
           : x.tipo==="Unit data mismatch"
-          ? `<button class="btn sm p" data-a="excUnidadRevisar" data-id="${x.id}">Review correction</button>`
+          ? `<button class="btn sm" data-a="excUnidadRechazar" data-id="${x.id}">Rechazar</button>
+             <button class="btn sm p" data-a="excUnidadRevisar" data-id="${x.id}">Review correction</button>`
           : x.tipo==="Tarifa no encontrada"
           ? `<button class="btn sm p" data-a="excTarifa" data-id="${x.id}" data-wo="${x.wo}">Definir tarifa</button>`
           : x.tipo==="Definir precio del adicional"

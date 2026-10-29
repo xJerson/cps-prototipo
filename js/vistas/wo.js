@@ -736,8 +736,8 @@ VIEWS.despacho = () => {
     <span class="s">un técnico con permiso aprobado baja el cupo del equipo esos días y no aparece al asignar</span></div>
     ${S.disponibilidad.length?`<table><thead><tr><th>Técnico</th><th>Desde</th><th>Hasta</th><th>Motivo</th><th>Estado</th><th></th></tr></thead><tbody>
     ${S.disponibilidad.map(d=>`<tr class="${fl("dis:"+d.id)}"><td style="font-weight:650">${esc(tecN(d.tec))}</td><td class="mono">${d.desde}</td><td class="mono">${d.hasta}</td>
-      <td>${esc(d.motivo)}</td><td><span class="pill ${d.estado==="Aprobado"?"v":"w"}">${d.estado}</span></td>
-      <td style="text-align:right">${d.estado==="Pendiente"?`<button class="btn sm v" data-a="apruebaPermiso" data-id="${d.id}">Aprobar</button>`:""}</td></tr>`).join("")}
+      <td>${esc(d.motivo)}</td><td><span class="pill ${d.estado==="Aprobado"?"v":d.estado==="Rechazado"?"r":"w"}">${d.estado}</span></td>
+      <td style="text-align:right">${d.estado==="Pendiente"?`<button class="btn sm" data-a="rechazaPermiso" data-id="${d.id}">Rechazar</button> <button class="btn sm v" data-a="apruebaPermiso" data-id="${d.id}">Aprobar</button>`:""}</td></tr>`).join("")}
     </tbody></table>`:`<div class="empty">Sin permisos registrados. «+ Registrar permiso» arriba a la derecha.</div>`}
   </div>`;
 };

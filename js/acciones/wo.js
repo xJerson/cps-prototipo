@@ -322,6 +322,11 @@ Object.assign(ACC, {
         if(s){ s.estado="Programada"; nueva.origen={tipo:"Solicitud", id:s.id}; }
         S.progSolId = null;
       }
+      if(S.repWOId){
+        const rp = by(S.reportes, S.repWOId);
+        if(rp){ rp.estado="Procesado"; rp.accion="Se creó una Work Order desde este reporte"; flash("rep:"+rp.id); }
+        S.repWOId = null;
+      }
       cm();
       const t = tarifa(pid,cat,serv,uNueva.rooms,uNueva.pisos);
       toast("✓ Work Order creada", `<b>WO-${id}</b> · ${esc(P(pid).nombre)} ${esc(uNueva.num)}. ${t?"Ingreso "+money(t.precio)+" ya calculado.":"Sin tarifa: quedará como NA."}${esNueva?" Unidad "+esc(uNueva.num)+" agregada al catálogo.":""}`,"v");
@@ -566,6 +571,14 @@ Object.assign(ACC, {
     render();
   },
 
+  /* Rechazar un permiso: queda «Rechazado» y no bloquea la asignación (solo «Aprobado» la bloquea). */
+  rechazaPermiso: d => {
+    const p = by(S.disponibilidad,d.id); if(!p || p.estado!=="Pendiente") return;
+    p.estado="Rechazado"; flash("dis:"+p.id);
+    toast("Permiso rechazado",`${esc(tecN(p.tec))} sigue disponible del ${p.desde} al ${p.hasta}.`,"w");
+    render();
+  },
+
   /* «Crear return (Fotos + observaciones) → Enviar reporte a THALIA»
      Esta era la mitad del hueco H-10: solo pedía el motivo y nunca creaba
      el registro real en S.devoluciones — así que el descuento en la nómina,
@@ -674,6 +687,11 @@ Object.assign(ACC, {
     const ambs=["Sala","Bano","Cocina","Room"].map((a,i)=>chk("ia"+i)?{amb:a,med:val("im"+i),nota:val("in"+i)}:null).filter(Boolean);
     if(!ambs.length){ toast("Marca al menos un ambiente","","r"); return; }
     v.ambientes=ambs; v.estado="Cerrada"; v.cierre=hora();
+    /* Si había una solicitud esperando esta inspección, queda lista (igual que cuando Gustavo entrega su relevamiento). */
+    S.solicitudesComerciales.filter(sc=>sc.inspeccion && sc.prop===v.prop && sc.estado==="Esperando inspección" && solInspeccionLista(sc)).forEach(sc=>{
+      sc.estado="Lista para estimado";
+      avisar("Claudia","Inspección entregada — ya se puede armar el estimado",`${P(sc.prop).nombre}: la inspección quedó cerrada. Toca «Crear estimado» en Solicitudes.`,"v");
+    });
     cm();
     toast("✓ Inspección cerrada",`${ambs.length} ambiente(s) con medidas y fotos, guardados contra <b>${esc(P(v.prop).nombre)}</b>. Claudia ya puede cotizar.`,"v");
     render();
@@ -794,8 +812,7 @@ Object.assign(ACC, {
       ${ult?`<div class="hint">Última WO de la unidad: WO-${ult.id} (${esc(ult.serv)}) de ${esc(tecN(ult.tec))}.</div>`:`<div class="hint">Esta unidad no tiene WO con técnico: elige quién hizo el trabajo.</div>`}</div>
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="devRegistrarOK">Registrar</button></div>`); },
   devRegCambio: () => { ACC.devRegistrar({keep:true}); },
-  /* PRODUCCIÓN: igual que devolverOK, debe pasar la WO original a Returned
-     (hoy ni siquiera suma w.devuelta, así que no cuenta en el indicador de calidad). */
+  /* PRODUCCIÓN: igual que devolverOK, debe pasar la WO original a Returned. */
   devRegistrarOK: () => {
     const pid=val("rgP"), uid=val("rgU"), m=val("rgM").trim(), areas=leerCheckUbicacion("rgA"), causa=val("rgC"), tec=val("rgT");
     if(!uid||!m||!tec||!areas.length){ S.audOmitir=true; marcaFalta([!uid?"rgU":"",!m?"rgM":"",!tec?"rgT":""].filter(Boolean)); toast("Falta información",!areas.length?"Elige al menos un área a corregir.":"Elige la unidad, quién hizo el trabajo y escribe qué está mal.","r"); return; }
@@ -806,6 +823,7 @@ Object.assign(ACC, {
       lotesAntes:[], lotesDespues:[], verifica:null, quien:S.usuario, origen:val("rgO"), urgente:!!(document.getElementById("rgUrg")&&document.getElementById("rgUrg").checked),
       hist:[[hora(),`Return registrado por ${S.usuario} (pedida por: ${val("rgO")})`,S.usuario]]};
     S.devoluciones.push(dv); S._audDev=P(pid).nombre+" · "+(U(uid)?U(uid).num:"")+" — "+areas.join(", "); flash("dv:"+dv.id);
+    devMarcarWO(woDe, m, S.usuario);
     cm(); toast("Return registrado",`<b>${esc(P(pid).nombre)} ${U(uid)?esc(U(uid).num):""}</b> · ${esc(areas.join(", "))}. Ahora puedes crear el return fix y ver quién está cerca.`,"w"); render(); },
 
   /* ── TOUCH-UP ───────────────────────────────────────

@@ -41,6 +41,11 @@ Object.assign(ACC, {
     r.estado="Procesado"; r.accion="Se generó un estimado con estas fotos";
     const csRep = contactosDe(r.prop);
     S.estHdr={prop:r.prop, contactos:csRep.length?[csRep[0].id]:[]};
+    /* Si hay UNA sola solicitud con inspección esperando este reporte (misma propiedad, sin estimado), el estimado la cierra al guardarse.
+       Con cero o varias candidatas no se adivina: el reporte no trae la solicitud de origen. */
+    const cand = r.tipo==="relevamiento" ? S.solicitudesComerciales.filter(sc=>sc.inspeccion && sc.prop===r.prop && !sc.estimadoId
+      && (sc.estado==="Lista para estimado"||sc.estado==="Esperando inspección") && r.fecha>=sc.fecha) : [];
+    if(cand.length===1) S.estHdr.solicitudId = cand[0].id;
     /* Aqui esta el pago del formulario 2: cada servicio que Gustavo escribio
        en campo baja como linea del estimado, con su tarifa ya resuelta.
        Nadie vuelve a teclear lo que ya se escribio parado en la unidad. */
@@ -62,8 +67,9 @@ Object.assign(ACC, {
           + (sinTarifa?` <b>${sinTarifa}</b> sin tarifa: hay que definirla antes de enviar.`:"")
         : ""), "v");
     modalEst(); render(); },
+  /* El reporte pasa a «Procesado» recién cuando la WO se guarda (ver woGuardar); si se cancela el modal, sigue «Nuevo». */
   repWO: d => { const r=by(S.reportes,d.id);
-    r.estado="Procesado"; r.accion="Se creó una Work Order desde este reporte";
+    S.repWOId = r.id;
     flash("rep:"+r.id);
     toast("Work Order en preparación",`Se abre con <b>${esc(P(r.prop).nombre)} · ${esc(U(r.unidad).num)}</b> ya puestas.`,"v");
     modalWO(); setTimeout(()=>{ const e=document.getElementById("wProp"); if(e){ e.value=r.prop; refWO();

@@ -138,7 +138,9 @@ const NOTA_ESTIMADO_DEFAULT = "Please note that cleaning services requiring extr
    de esa propiedad, creado el mismo dia de la solicitud o despues. */
 /* La inspección para estimado que entrega Gustavo es el reporte de tipo «relevamiento» (antes solo se miraba «previo»,
    y la solicitud nunca quedaba lista aunque él ya hubiera entregado todo). */
-const solInspeccionLista = s => !!s.prop && S.reportes.some(r=>(r.tipo==="relevamiento"||r.tipo==="previo") && r.prop===s.prop && r.fecha>=s.fecha);
+/* Cuenta el reporte de campo de Gustavo (relevamiento/previo) o una visita «Inspección» ya cerrada de la misma propiedad (inspPedir → inspOK). */
+const solInspeccionLista = s => !!s.prop && (S.reportes.some(r=>(r.tipo==="relevamiento"||r.tipo==="previo") && r.prop===s.prop && r.fecha>=s.fecha)
+  || S.visitas.some(v=>v.tipo==="Inspección" && v.estado==="Cerrada" && v.prop===s.prop && (v.fecha||"")>=(s.fecha||"")));
 /* Tipo de estimado: «Tarifario» arma los precios con el tarifario; «Proyecto especial» lleva precios especiales por proyecto
    (conceptos libres). Los estimados anteriores sin tipo se deducen de sus líneas. */
 const TIPOS_EST = ["Tarifario","Proyecto especial"];

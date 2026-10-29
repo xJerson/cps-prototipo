@@ -104,6 +104,7 @@ const AUD = {
   medioOK:{a:"Decidió un adicional", m:"Excepciones"},
   excAprob:{a:"Aprobó una excepción", m:"Excepciones"},
   excRech:{a:"Rechazó una excepción", m:"Excepciones"},
+  excUnidadRechazar:{a:"Rechazó una corrección de datos de unidad", m:"Excepciones"},
   adicRechazar:{a:"Rechazó un adicional desde la Work Order", m:"Work Orders"},
   editarRevision:{a:"Reabrió la revisión de una Work Order", m:"Nómina"},
   excGuardar:{a:"Levantó una excepción", m:"Excepciones"},
@@ -206,7 +207,8 @@ const AUD = {
   materialGuardar:{a:"Agregó un material a una Work Order", m:"Work Orders"},
   materialRecibo:{a:"Adjuntó comprobante de un material", m:"Work Orders"},
   permisoGuardar:{a:"Registró un permiso", m:"Disponibilidad"},
-  apruebaPermiso:{a:"Aprobó un permiso", m:"Disponibilidad"}
+  apruebaPermiso:{a:"Aprobó un permiso", m:"Disponibilidad"},
+  rechazaPermiso:{a:"Rechazó un permiso", m:"Disponibilidad"}
 };
 /* En las altas el identificador nace dentro de la acción: se lee después */
 /* El descuento recién decidido (lo fija la acción en acciones/nomina-facturacion.js). */

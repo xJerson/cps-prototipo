@@ -338,7 +338,7 @@ function vCalGustavo(){
             <button class="btn sm p" data-a="supAgendar" data-id="${s.id}">Agendar</button></div>`
           :`<div style="margin-top:6px"><span class="pill g">${esc(s.estado)}</span></div>`}
         </div>`).join("") || `<div style="font-size:11.5px;color:var(--faint)">Nada pendiente.</div>`}
-        ${hechas.length?`<div style="font-size:11px;color:var(--faint);margin:6px 0 4px">Ya agendadas</div>
+        ${hechas.length?`<div style="font-size:11px;color:var(--faint);margin:6px 0 4px">Ya agendadas o visitadas</div>
           ${hechas.map(s=>`<div style="font-size:11.5px;margin-bottom:3px">${esc(P(s.prop).nombre)} · ${esc(s.tipo)} → <b>${esc(s.agendadaPara||"")}</b> <span class="pill v">${esc(s.estado)}</span></div>`).join("")}`:""}
       </div>
     </div>

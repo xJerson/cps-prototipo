@@ -108,7 +108,23 @@ Object.assign(ACC, {
   solComInspeccion: d => {
     const s = by(S.solicitudesComerciales,d.id);
     s.inspAsignada = true; solResponder(s,"Inspección");
-    toast("Inspección asignada a Gustavo",`Cuando Gustavo entregue su reporte de campo de esta propiedad, la solicitud queda lista para armar el estimado.`,"v");
+    /* La parada nace aquí mismo (mismo motivo y forma que agSupOK), ligada a la solicitud por solicitudCom. */
+    const yaHay = S.agendaSup.some(a=>a.solicitudCom===s.id || (a.prop===s.prop && a.motivo==="Inspección para estimado" && a.fecha>=(s.fecha||HOY_SUP)));
+    const nombre = s.prop ? esc(P(s.prop).nombre) : "";
+    if(!s.prop){
+      toast("Inspección asignada a Gustavo","Falta registrar la propiedad para poder ponerla en su ruta.","w");
+    } else if(yaHay){
+      toast("Inspección asignada a Gustavo",`<b>${nombre}</b> ya tiene una parada de inspección en su ruta. Cuando entregue el reporte, la solicitud queda lista para armar el estimado.`,"v");
+    } else {
+      const a = agSupCrear(s.prop, HOY_SUP, "Inspección para estimado",
+        `Inspección para el estimado de la solicitud ${s.id}.${s.contacto ? " Contacto: "+s.contacto+"." : ""}`, {solicitudCom:s.id});
+      if(a){
+        noti("Nueva parada en tu ruta", `${P(s.prop).nombre} — Inspección para estimado`);
+        toast("Inspección asignada a Gustavo",`Se agregó <b>${nombre}</b> a su ruta de hoy. Claudia puede moverla a otro día. Cuando entregue su reporte, la solicitud queda lista para armar el estimado.`,"v");
+      } else {
+        toast("Inspección asignada, sin parada",`<b>${nombre}</b> ya tiene otra parada hoy en la ruta de Gustavo. Claudia puede agregar la inspección en otro día.`,"w");
+      }
+    }
     render();
   },
   solComDescartar: d => { const s=by(S.solicitudesComerciales,d.id); s.estado="Descartada"; solResponder(s,"Descartada"); toast("Solicitud descartada","","w"); render(); },
