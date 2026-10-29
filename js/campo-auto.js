@@ -12,8 +12,9 @@
    Si el oficio no cubre el servicio (una housekeeper en una pintura) se usa un
    paquete genérico y, solo en el perfil «Mixto», sube la probabilidad de problemas.
 
-   Para agregar una respuesta nueva (fase 2: Gustavo, eventos que inicia el
-   técnico) basta con empujar un objeto a CAMPO_MANEJADORES:
+   Gustavo (supervisor de campo) también contesta solo: paradas de su ruta, inspección para estimado, returns y
+   reporte del día (ver «GUSTAVO»).
+   Para agregar una respuesta nueva basta con empujar un objeto a CAMPO_MANEJADORES:
      {id, detect(), proponer(item), responder(item, datos, prop)} (ver «MANEJADORES»)
    Todo lo que se guarda en S.campoAuto es local del navegador (no está en
    NUBE_TABLAS ni NUBE_CONFIG). */
@@ -67,7 +68,7 @@ function cLogArr(){ if(!Array.isArray(S.campoLog)) S.campoLog = []; return S.cam
 function cLog(wo, tec, paso, estado, oblig, texto, por){
   const L = cLogArr();
   por = por || _campoPor;
-  if(por === "oficina") texto += " (respondió oficina por el técnico)";
+  if(por === "oficina") texto += tec === GUSTAVO ? " (respondió oficina por Gustavo)" : " (respondió oficina por el técnico)";
   L.unshift({t:hora(), wo:wo||null, tec:tec ? tecN(tec) : "", paso, estado, oblig:!!oblig, texto, por});
   if(L.length > CAMPO_LOG_MAX) L.length = CAMPO_LOG_MAX;
 }
@@ -80,7 +81,7 @@ function cFotoURL(w, etiqueta){
   const c = cPick(["#8fa8b8","#b8a98f","#9bb89f","#b89fa8","#a8a8b8","#c4b48a"]);
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='320' height='240'><rect width='320' height='240' fill='${c}'/>`
     + `<rect x='20' y='20' width='280' height='200' fill='none' stroke='#fff' stroke-width='3' stroke-dasharray='10 6'/>`
-    + `<text x='160' y='110' font-family='sans-serif' font-size='24' font-weight='700' text-anchor='middle' fill='#fff'>WO-${w.id}</text>`
+    + `<text x='160' y='110' font-family='sans-serif' font-size='24' font-weight='700' text-anchor='middle' fill='#fff'>${w.id != null ? "WO-"+w.id : (w.rotulo || "Campo")}</text>`
     + `<text x='160' y='146' font-family='sans-serif' font-size='16' text-anchor='middle' fill='#fff'>${etiqueta} · simulada</text></svg>`;
   return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
 }
@@ -780,6 +781,461 @@ CAMPO_MANEJADORES.push({ id:"disp",
     return dispSemDe(it.tec) ? {texto:`${n} envió su disponibilidad de la semana`, paso:"disponibilidad", oblig:false} : null;
   }});
 
+/* ══════════ GUSTAVO (supervisor de campo) ══════════
+   Lo que oficina le manda a Gustavo también se contesta solo, con las MISMAS acciones de su celular (ACC.g*):
+     · paradas de su ruta (agSupOK / supAgendar): sale (opcional), llega o, en «Mixto» a veces, «no pude completarla»
+     · inspección para estimado (solComInspeccion): oficina la asigna pero el sistema NO crea la parada; aquí se crea igual
+       que lo hace Claudia (agSupOK, motivo «Inspección para estimado») y luego Gustavo llega y entrega el relevamiento
+       (fotos, unidad y servicios del catálogo con hallazgos). Eso deja la solicitud «Lista para estimado» y avisa a Claudia.
+     · parada «Supervisar»: reporte de revisión (opcional)
+     · returns: verificar con fotos (obligatorio si ya venció o llegó el día límite y nadie lo está corrigiendo) y cerrar (opcional)
+     · reporte del día: abrirlo (opcional), actividades que el sistema no sabe (opcionales) y cerrarlo (opcional)
+   Sus acciones leen datos del DOM (leerSup/leerDev/leerDia): se arma S.gRep/S.gDev/S.gDia, se repinta para que el DOM
+   coincida y se llama la acción. Si la persona tiene una hoja de Gustavo abierta (S.gRep/gDev/gDia) no se toca nada. */
+const cGusOk = () => { const t = T(GUSTAVO); return !!t && t.activo !== false; };
+const cGusLibre = () => !S.gRep && !S.gDev && !S.gDia;
+const cPlanG = (key, ini) => { const k = "g:"+key; if(!_campoPlanes.has(k)) _campoPlanes.set(k, Object.assign({dec:{}}, ini())); return _campoPlanes.get(k); };
+/* El celular de Gustavo, restaurando lo que la persona tenía abierto */
+function cConGustavo(fn){
+  const g = {phTec:S.phTec, phRol:S.phRol, phWO:S.phWO, phSub:S.phSub, phView:S.phView, phSheet:S.phSheet, phDev:S.phDev, phDiaId:S.phDiaId, phone:S.phone, gRep:S.gRep, gDev:S.gDev, gDia:S.gDia};
+  S.phTec = GUSTAVO; S.phRol = "supervisor";
+  try{ return fn(); } finally { Object.assign(S, g); }
+}
+const cFotoG = (etiqueta, fn) => cFoto({rotulo:"Gustavo"}, etiqueta, fn);
+const cRepHoy = pid => S.reportes.some(r=>r.prop===pid && r.fecha===HOY_SUP);
+const cParadasResueltas = () => { const ag = agendaHoy(); return ag.length > 0 && ag.every(a=>["Visitada","No completada"].includes(a.estado)); };
+const cInspSinReporte = () => agendaHoy().some(a=>a.estado==="Visitada" && a.motivo==="Inspección para estimado" && !cRepHoy(a.prop));
+const cUniLabel = u => `${u.num} — ${u.rooms}`;
+const cDormitorios = u => { const m = /(\d)\s*bedroom/i.exec((u && u.rooms) || ""); return m ? +m[1] : 0; };
+const cClampG = () => { S.reloj = Math.min(S.reloj, 21*60); };
+
+/* Parada de inspección que oficina asignó desde Solicitudes (inspAsignada) y todavía no está en su ruta */
+const cInspCubierta = s => S.agendaSup.some(a=>a.solicitudCom===s.id || (a.prop===s.prop && a.motivo==="Inspección para estimado" && a.fecha>=(s.fecha||HOY_SUP)));
+CAMPO_MANEJADORES.push({ id:"ginsp",
+  detect:() => !cGusOk() ? [] : S.solicitudesComerciales.filter(s=>s.inspeccion && s.inspAsignada && s.prop && s.estado==="Esperando inspección" && !solInspeccionLista(s) && !cInspCubierta(s))
+    .map(s=>({k:"ginsp:"+s.id, h:"ginsp", tec:GUSTAVO, sol:s.id, donde:` · inspección para estimado en ${P(s.prop).nombre}`})),
+  proponer:it => {
+    const s = S.solicitudesComerciales.find(x=>x.id===it.sol); if(!s) return null;
+    if(S.agendaSup.some(a=>a.prop===s.prop && a.fecha===HOY_SUP)) return null;      // agSupOK no deja dos paradas de la misma propiedad el mismo día
+    const alc = String(s.alcance||"").trim();
+    return {paso:"parada de inspección", oblig:true, titulo:"Poner la inspección en la ruta de Gustavo",
+      desc:`Oficina asignó la inspección de ${P(s.prop).nombre}, pero el sistema no crea la parada. Se agrega como lo hace Claudia: motivo «Inspección para estimado».`,
+      campos:[{id:"fecha", label:"Día de la visita (AAAA-MM-DD)", tipo:"texto", valor:HOY_SUP},
+        {id:"nota", label:"Nota para Gustavo", tipo:"texto", largo:true,
+          valor:`Inspección para el estimado de la solicitud ${s.id}.${s.contacto ? " Contacto: "+s.contacto+"." : ""}${alc ? " Alcance pedido: "+alc.slice(0,140) : ""}`}]};
+  },
+  responder:(it, d) => {
+    const s = S.solicitudesComerciales.find(x=>x.id===it.sol); if(!s || s.estado!=="Esperando inspección" || cInspCubierta(s)) return null;
+    const fecha = /^\d{4}-\d{2}-\d{2}$/.test(String(d.fecha||"")) ? String(d.fecha) : HOY_SUP;
+    if(S.agendaSup.some(a=>a.prop===s.prop && a.fecha===fecha)) return null;
+    const antes = new Set(S.agendaSup.map(a=>a.id));
+    cConCampos({asP:{value:s.prop}, asF:{value:fecha}, asM:{value:"Inspección para estimado"}, asN:{value:String(d.nota||"")}}, ()=>ACC.agSupOK());
+    const a = S.agendaSup.find(x=>!antes.has(x.id)); if(!a) return null;
+    a.solicitudCom = s.id;
+    return {texto:`Se puso la inspección de ${P(s.prop).nombre} en la ruta de Gustavo (${fecha}, solicitud ${s.id})`, paso:"parada de inspección", oblig:true};
+  }});
+
+/* Paradas de su ruta de hoy: salir (opcional) y llegar / no pude completarla */
+const CAMPO_NC = {
+  "Inspección para estimado":[["No había quien abriera","El manager no estaba y nadie tenía la llave de la unidad."],["La unidad estaba ocupada","El inquilino no me dejó pasar a medir; pidió que regrese con aviso."],["Problema en la propiedad","Había una fuga en el edificio y cerraron el acceso a las unidades."]],
+  "Supervisar":[["No llegó el técnico","Llegué y el técnico no estaba en la unidad; no había nada que supervisar."],["Falta de tiempo en la ruta","La parada anterior se alargó y no alcancé a llegar con tiempo."],["La unidad estaba ocupada","El inquilino estaba en casa y no quiso que entráramos hoy."]],
+  "_":[["Falta de tiempo en la ruta","El tráfico y las paradas anteriores me quitaron el tiempo; no llegué."],["Otro","Surgió un imprevisto y no pude ir a esta parada."]]
+};
+const CAMPO_NC_OPC = ["No había quien abriera","La unidad estaba ocupada","No llegó el técnico","Falta de tiempo en la ruta","Problema en la propiedad","Otro"];
+CAMPO_MANEJADORES.push({ id:"gparada",
+  detect:() => !cGusOk() ? [] : agendaHoy().filter(a=>["Pendiente","En camino"].includes(a.estado))
+    .map(a=>({k:"gparada:"+a.id, h:"gparada", tec:GUSTAVO, stop:a.id, que:`la llegada a ${P(a.prop).nombre}`, pasoLog:"llegada a la parada", donde:` · ${P(a.prop).nombre} · ${a.motivo}`})),
+  proponer:it => {
+    const a = by(S.agendaSup, it.stop); if(!a || !["Pendiente","En camino"].includes(a.estado)) return null;
+    const pl = cPlanG("p"+a.id, ()=>{ const m = cPick(CAMPO_NC[a.motivo] || CAMPO_NC._); return {camino:cChance(0.5), nc:cMixto() && cChance(0.18), mot:m[0], det:m[1]}; });
+    if(a.estado==="Pendiente" && !pl.dec.camino)
+      return {step:"camino", paso:"voy en camino", oblig:false, titulo:"Salir hacia la parada", desc:`${P(a.prop).nombre} · ${a.motivo}.`, campos:[cHacer("¿Marca «Voy en camino»?", pl.camino)]};
+    return {step:"llegar", paso:"llegada a la parada", oblig:true, titulo:"Llegada a la parada", desc:`${P(a.prop).nombre} · ${a.motivo}${a.nota ? " · «"+a.nota+"»" : ""}.`,
+      campos:[{id:"res", label:"¿Pudo completar la visita?", tipo:"opciones", valor:pl.nc ? "No pude completarla" : "Llegué", opciones:["Llegué","No pude completarla"]},
+        {id:"motivo", label:"¿Qué pasó?", tipo:"opciones", valor:pl.mot, opciones:CAMPO_NC_OPC, sec:"Solo si no pudo completarla"},
+        {id:"detalle", label:"Detalle para Claudia", tipo:"texto", largo:true, valor:pl.det}]};
+  },
+  responder:(it, d, prop) => {
+    const a = by(S.agendaSup, it.stop); if(!a || !["Pendiente","En camino"].includes(a.estado) || !cGusLibre()) return null;
+    const pl = cPlanG("p"+a.id, ()=>({})), n = cNombre(GUSTAVO), id = String(a.id), pn = P(a.prop).nombre;
+    if(prop && prop.step==="camino"){
+      pl.dec.camino = 1;
+      if(!cSi(d.hacer)) return cOmitido(n, "avisar que iba en camino", "voy en camino");
+      cConGustavo(()=>ACC.gEnCamino({id}));
+      return a.estado==="En camino" ? {texto:`${n} marcó que va en camino a ${pn}`, paso:"voy en camino", oblig:false} : null;
+    }
+    if(d.res === "No pude completarla"){
+      const mot = String(d.motivo||"Otro"), det = String(d.detalle||"").trim();
+      cConGustavo(()=>{
+        ACC.gNoCompleta({id});
+        try{
+          const sel = document.getElementById("ncM"), inp = document.getElementById("ncD");
+          if(sel) sel.value = Array.from(sel.options).some(o=>o.value===mot) ? mot : "Otro";
+          if(inp) inp.value = det;
+          ACC.gNoCompletaOK({id});
+        } finally { if(document.getElementById("ncM")) cm(); }
+      });
+      cClampG();
+      return a.estado==="No completada" ? {texto:`${n} no pudo completar la parada de ${pn} (${a.motivoNo}) — problema`, paso:"llegada a la parada", estado:"problema", oblig:true} : null;
+    }
+    cConGustavo(()=>ACC.gLlegue({id}));
+    cClampG();
+    return a.estado==="Visitada" ? {texto:`${n} llegó a ${pn} (${a.motivo}) a las ${a.hora}`, paso:"llegada a la parada", oblig:true} : null;
+  }});
+
+/* ── Relevamiento (inspección para estimado) ──
+   Servicios del catálogo por categoría, con hallazgos por área y cantidades según el tamaño de la unidad. */
+const CAMPO_SURVEY = {
+  "Paint":[
+    {u:["Sala","Comedor","Room"], pref:/full paint|color change$/i, q:[1,1], med:"pared", mat:"pintura, primer y cinta de pintor",
+      f:["Paredes con marcas de muebles y huecos de clavos; hacen falta dos manos de pintura.","Pintura amarillada y manchada; conviene repintar todo el espacio.","Zócalos y marcos con golpes; repintar paredes completas."]},
+    {u:["Bano"], pref:/full paint|touch up/i, q:[1,1], med:"pared", mat:"primer antimoho",
+      f:["Humedad leve junto a la regadera; sellar con primer antes de pintar.","Pintura descascarada cerca del lavabo y del techo."]},
+    {u:["Sala","Room","Comedor"], pref:/ceilings/i, q:[1,1], med:"m2", mat:"pintura para techo",
+      f:["Manchas de humo y humedad en el techo.","Techo amarillento con marcas del rodillo anterior."]},
+    {u:["Closet","Pantry"], pref:/touch up|closet/i, q:[1,2], med:"", mat:"", f:["Paredes con roces; basta un retoque."]},
+    {u:["Exterior"], pref:/exterior/i, q:[1,1], med:"", mat:"pintura exterior", f:["La puerta exterior tiene la pintura levantada por el sol."]}],
+  "Clean":[
+    {u:["Sala","Comedor","Room"], pref:/full clean/i, q:[1,1], med:"", mat:"",
+      f:["Polvo y huellas en todas las superficies; limpieza completa antes de entregar.","Ventanas y persianas muy sucias por dentro."]},
+    {u:["Bano"], pref:/heavy clean|full clean/i, q:[1,1], med:"", mat:"desincrustante",
+      f:["Sarro acumulado en regadera y llaves; hace falta una limpieza profunda.","Moho leve en las juntas de la regadera."]},
+    {u:["Sala","Room"], pref:/carpet clean/i, q:[1,2], med:"m2", mat:"", f:["La alfombra tiene manchas viejas; pedir lavado.","Alfombra con olor; conviene un lavado profundo."]},
+    {u:["Exterior","Otro"], pref:/trash out/i, q:[1,1], med:"", mat:"bolsas industriales", f:["El inquilino anterior dejó muebles y bolsas; hay que sacarlos antes de limpiar."]}],
+  "Repair":[
+    {u:["Sala","Comedor","Room"], pref:/sheetrock|texture|tape/i, q:[1,3], med:"", mat:"compuesto para juntas y malla",
+      f:["Huecos en el sheetrock por golpes de puerta; reparar y texturizar.","Grieta en la junta del panel; resanar y pintar encima."]},
+    {u:["Bano"], pref:/tile|countertop|bath tub/i, q:[1,2], med:"", mat:"loseta y sellador",
+      f:["Losetas sueltas detrás del lavabo; hay que reponerlas.","Cubierta con una desportilladura grande junto a la llave."]},
+    {u:["Room","Closet","Sala"], pref:/door/i, q:[1,2], med:"", mat:"bisagras", f:["La puerta roza el marco y la bisagra está floja.","Marco de la puerta dañado; no cierra bien."]},
+    {u:["Exterior","Sala"], pref:/window|balcony/i, q:[1,1], med:"", mat:"", f:["La ventana no cierra bien y el marco está dañado.","Barandal del balcón flojo; revisar antes de rentar."]}],
+  "Installation":[
+    {u:["Pantry","Otro","Sala"], pref:/handles|cabinet/i, q:[4,12], med:"", mat:"jaladeras", f:["Faltan jaladeras en varios gabinetes."]},
+    {u:["Room","Sala","Comedor"], pref:/baseboard|trim/i, q:[1,1], med:"ml", mat:"zócalo y clavos de acabado", f:["Faltan tramos de zócalo; hay que instalarlos y pintarlos."]},
+    {u:["Bano"], pref:/light|grab|shower/i, q:[1,2], med:"", mat:"", f:["Falta la barra de regadera y una lámpara del baño no funciona."]},
+    {u:["Room","Closet"], pref:/closet|interior door/i, q:[1,2], med:"", mat:"puertas y herrajes", f:["Puerta del closet rota; no se puede reparar, hay que poner una nueva."]}],
+  "Flooring Services":[
+    {u:["Sala","Room","Comedor"], pref:/carpet tear out/i, q:[1,1], med:"m2", mat:"",
+      f:["Alfombra manchada; retirarla antes de instalar el piso nuevo.","Alfombra con humedad en la base; sacarla y revisar el piso."]}],
+  "Resurface":[
+    {u:["Bano"], pref:/tub|sink/i, q:[1,1], med:"", mat:"kit de resurface", f:["Tina desportillada y con óxido en el drenaje; hacer resurface.","Lavabo manchado y con el acabado despegado."]},
+    {u:["Pantry","Bano"], pref:/countertop/i, q:[1,1], med:"m2", mat:"", f:["Cubierta con quemaduras y marcas; resurface de la cubierta."]}],
+  "Removal":[
+    {u:["Closet","Exterior","Otro"], pref:/removal/i, q:[1,1], med:"", mat:"bolsas de escombro", f:["Muebles y escombro del inquilino anterior para retirar.","Cosas viejas en el closet y en la cochera que hay que desalojar."]}]
+};
+const CAMPO_SURVEY_REC = ["Conviene hacer la limpieza después de la pintura.","Programar primero las reparaciones de sheetrock y luego pintar.","Si hay inquilino nuevo pronto, agendar pintura y limpieza en días seguidos.","Revisar con el manager si la alfombra se cambia en este mismo trabajo."];
+function cMedida(t, dorm){
+  if(t==="pared") return `pared ${(cRnd(28,46)/10*(1+dorm*0.12)).toFixed(1)} × ${(cRnd(23,27)/10).toFixed(1)} m`;
+  if(t==="m2") return `${Math.round(cRnd(9,16)*(1+dorm*0.35))} m²`;
+  if(t==="ml") return `${Math.round(cRnd(6,12)*(1+dorm*0.3))} m lineales`;
+  return "";
+}
+function cItemsSurvey(prop, u){
+  const dorm = cDormitorios(u), n = Math.max(2, Math.min(6, 2 + dorm + cRnd(0,1))), act = activos("categorias"), ubi = activos("ubicaciones");
+  const cats = ["Paint","Paint","Clean","Repair","Repair","Installation","Flooring Services","Resurface","Removal"].filter(c=>act.includes(c) && CAMPO_SURVEY[c]);
+  const usadas = {}, vistos = new Set(), items = [];
+  for(let g=0; items.length<n && g<60 && cats.length; g++){
+    const cat = cPick(cats); if((usadas[cat]||0) >= 2) continue;
+    const t = cPick(CAMPO_SURVEY[cat]), ubs = t.u.filter(x=>ubi.includes(x)); if(!ubs.length) continue;
+    const ub = cPick(ubs), key = cat+"|"+ub+"|"+t.pref; if(vistos.has(key)) continue;
+    vistos.add(key); usadas[cat] = (usadas[cat]||0) + 1;
+    const todos = CAT.servicios.filter(s=>s.tipo===cat && !s.baja).map(s=>s.nombre);
+    let ok = []; try{ ok = serviciosConTarifa(prop, cat, u.id).filter(x=>todos.includes(x)); } catch(e){}
+    const cand = ok.length ? ok : todos, serv = cand.find(s=>t.pref.test(s)) || (cand.length ? cPick(cand) : cat);
+    const mat = !!t.mat && cChance(0.6);
+    items.push({cat, trabajo:serv, ubic:ub, cant:String(cRnd(t.q[0], t.q[1])), medidas:cMedida(t.med, dorm), mat, materiales:mat ? t.mat : "", coment:cPick(t.f), nf:cChance(0.6) ? cRnd(1,2) : 0});
+  }
+  return items;
+}
+function cPlanInsp(a){
+  return cPlanG("r"+a.id, ()=>{
+    const us = S.unidades.filter(u=>u.prop===a.prop), u = us.length ? cPick(us) : null;
+    if(!u) return {u:null, items:[]};
+    const items = cItemsSurvey(a.prop, u), ambs = Array.from(new Set(items.map(x=>x.ubic)));
+    return {u:u.id, items, fotos:Math.min(12, Math.max(2, ambs.length + cRnd(0,2))), cond:(u.ocupacion||"Occupied")==="Vacant" ? "Desocupada" : "Ocupada",
+      cg:items.length >= 5 ? cPick(["Regular","Mala"]) : cPick(["Buena","Regular","Regular"]), recom:cChance(0.7) ? cPick(CAMPO_SURVEY_REC) : "",
+      nota:cPick(["Entré con la llave que dejó el manager.","Me abrió el manager y recorrimos la unidad juntos.","Hice el recorrido solo; tomé medidas de los ambientes principales."]), thalia:cChance(0.25)};
+  });
+}
+const cUnidadDeLabel = (pid, lbl) => S.unidades.find(u=>u.prop===pid && cUniLabel(u)===lbl) || null;
+const ROWS_SURVEY = 6;
+/* Una línea del relevamiento en la ventana de «Preguntar»: dos filas de 3 campos */
+function cCamposItem(i, x){
+  return [{id:"ic"+i, label:`Servicio ${i+1} · categoría`, tipo:"opciones", valor:x.cat, opciones:activos("categorias"), fila:10+2*i},
+    {id:"it"+i, label:"Qué trabajo hace falta", tipo:"texto", valor:x.trabajo, fila:10+2*i}, {id:"iq"+i, label:"Cantidad", tipo:"numero", valor:+x.cant||1, min:1, max:99, fila:10+2*i},
+    {id:"iu"+i, label:"Dónde", tipo:"opciones", valor:x.ubic, opciones:activos("ubicaciones"), fila:11+2*i},
+    {id:"im"+i, label:"Medidas", tipo:"texto", valor:x.medidas, fila:11+2*i}, {id:"ix"+i, label:"Hallazgo", tipo:"texto", valor:x.coment, fila:11+2*i}];
+}
+CAMPO_MANEJADORES.push({ id:"greporte",
+  detect:() => !cGusOk() ? [] : agendaHoy().filter(a=>a.estado==="Visitada" && a.motivo==="Inspección para estimado" && !cRepHoy(a.prop))
+    .map(a=>({k:"greporte:"+a.id, h:"greporte", tec:GUSTAVO, stop:a.id, que:`el reporte de inspección de ${P(a.prop).nombre}`, pasoLog:"relevamiento (inspección)", donde:` · reporte de inspección en ${P(a.prop).nombre}`})),
+  proponer:it => {
+    const a = by(S.agendaSup, it.stop); if(!a || a.estado!=="Visitada" || cRepHoy(a.prop)) return null;
+    const pl = cPlanInsp(a), us = S.unidades.filter(u=>u.prop===a.prop), u = by(S.unidades, pl.u); if(!u) return null;
+    const items = pl.items.slice(0, ROWS_SURVEY);
+    while(items.length < Math.min(ROWS_SURVEY, pl.items.length + 1)) items.push({cat:activos("categorias")[0], trabajo:"", ubic:activos("ubicaciones")[0], cant:"1", medidas:"", coment:""});
+    const campos = [{id:"unidad", label:"Unidad", tipo:"opciones", valor:cUniLabel(u), opciones:us.map(cUniLabel)},
+      {id:"cond", label:"Condición de la unidad", tipo:"opciones", valor:pl.cond, opciones:["Desocupada","Ocupada"], fila:0},
+      {id:"cg", label:"Condición general", tipo:"opciones", valor:pl.cg, opciones:COND_GENERAL, fila:0},
+      {id:"fotos", label:"Fotos generales", tipo:"numero", valor:pl.fotos, min:1, max:12, fila:0}];
+    items.forEach((x,i)=>campos.push(...cCamposItem(i, x)));
+    campos.push({id:"recom", label:"Recomendaciones adicionales", tipo:"texto", largo:true, valor:pl.recom}, {id:"nota", label:"Nota para Claudia", tipo:"texto", largo:true, valor:pl.nota});
+    return {paso:"relevamiento (inspección)", oblig:true, titulo:"Reporte de inspección para estimado",
+      desc:`${P(a.prop).nombre}: el reporte pide fotos, unidad y al menos un servicio con el trabajo que hace falta. Al enviarlo, la solicitud queda lista para armar el estimado.`, campos};
+  },
+  responder:(it, d) => {
+    const a = by(S.agendaSup, it.stop); if(!a || a.estado!=="Visitada" || cRepHoy(a.prop) || !cGusLibre()) return null;
+    const pl = cPlanInsp(a), uni = cUnidadDeLabel(a.prop, d.unidad) || by(S.unidades, pl.u); if(!uni) return null;
+    const cats = activos("categorias"), ubi = activos("ubicaciones"), items = [];
+    for(let i=0; i<ROWS_SURVEY; i++){
+      const trabajo = String(d["it"+i]||"").trim(); if(!trabajo) continue;
+      const base = pl.items[i] || {};
+      items.push(Object.assign(itemVacio(), {cat:cats.includes(d["ic"+i]) ? d["ic"+i] : cats[0], trabajo, ubic:ubi.includes(d["iu"+i]) ? d["iu"+i] : ubi[0],
+        cant:String(cNum(d["iq"+i], 1, 99)), medidas:String(d["im"+i]||""), coment:String(d["ix"+i]||""), mat:!!base.mat, materiales:base.mat ? base.materiales : "", nf:base.nf||0}));
+    }
+    if(!items.length) return null;
+    const ambs = Array.from(new Set(items.map(x=>x.ubic))), total = cNum(d.fotos, 1, 12), n0 = S.reportes.length, n = cNombre(GUSTAVO);
+    cConGustavo(()=>{
+      ACC.gRepPro({prop:a.prop});
+      const g = S.gRep; if(!g) return;
+      g.tipo = "relevamiento"; g.unidad = uni.id; g.condUnidad = d.cond==="Ocupada" ? "Ocupada" : "Desocupada";
+      g.condGeneral = COND_GENERAL.includes(d.cg) ? d.cg : COND_GENERAL[1]; g.recom = String(d.recom||""); g.nota = String(d.nota||"");
+      g.copiaThalia = !!pl.thalia;
+      g.items = items.map(x=>{ const o = Object.assign({}, x); delete o.nf; return o; });
+      render();
+      items.forEach((x,i)=>{ for(let k=0; k<(x.nf||0); k++) ACC.gRepItemFoto({i:String(i)}); });
+      for(let k=0; k<total; k++){
+        const amb = ambs[k % ambs.length];
+        ACC.gRepAmb({u:amb});
+        cFotoG(`inspección · ${amb}`, ()=>ACC.gRepFoto());
+      }
+      if(!S.gRep) return;
+      S.gRep.lotes.forEach(l=>{ const x = items.find(y=>y.ubic===l.amb); l.desc = x ? x.coment : ""; });
+      render();
+      ACC.gRepOK();
+    });
+    cClampG();
+    if(S.reportes.length <= n0) return null;
+    const r = S.reportes[S.reportes.length-1], lista = S.solicitudesComerciales.filter(sc=>sc.prop===a.prop && sc.inspeccion && sc.estado==="Lista para estimado");
+    return {texto:`${n} entregó el reporte de inspección de ${P(a.prop).nombre} ${uni.num}: ${r.items.length} servicio(s), ${fotosDe(r)} foto(s)${lista.length ? " — la solicitud quedó lista para estimado y Claudia recibió el aviso" : ""}`, paso:"relevamiento (inspección)", oblig:true};
+  }});
+
+/* Parada «Supervisar»: reporte de revisión (opcional; sin «requiere corrección», que abriría un return) */
+const CAMPO_REV_PROB = ["Quedaron salpicaduras de pintura en el piso y en los interruptores.","El zócalo del baño no está bien sellado.","Faltó limpiar adentro del horno y los gabinetes."];
+CAMPO_MANEJADORES.push({ id:"grevision",
+  detect:() => !cGusOk() ? [] : agendaHoy().filter(a=>a.estado==="Visitada" && a.motivo==="Supervisar" && !cRepHoy(a.prop))
+    .map(a=>({k:"grevision:"+a.id, h:"grevision", tec:GUSTAVO, stop:a.id, que:`el reporte de revisión de ${P(a.prop).nombre}`, pasoLog:"reporte de revisión", donde:` · reporte de revisión en ${P(a.prop).nombre}`})),
+  proponer:it => {
+    const a = by(S.agendaSup, it.stop); if(!a || a.estado!=="Visitada" || cRepHoy(a.prop)) return null;
+    const us = S.unidades.filter(u=>u.prop===a.prop); if(!us.length) return null;
+    const s = cDecEstado(it);
+    const pl = cPlanG("v"+a.id, ()=>{
+      const conWO = us.filter(u=>S.wos.some(w=>w.unidad===u.id && w.estado!=="Canceled")), u = cPick(conWO.length ? conWO : us);
+      const w = S.wos.filter(x=>x.unidad===u.id && x.estado!=="Canceled" && !x.touchup).slice(-1)[0];
+      const est = w ? (w.estado==="Completed" ? "Terminado" : ["In progress","Esperando aprobación","Detenido"].includes(w.estado) ? "En proceso" : "No iniciado") : "En proceso";
+      const sv = w && activos("servicios").some(x=>x.nombre===w.serv) ? w.serv : activos("servicios")[0].nombre;
+      return {u:u.id, est, sv, prob:(est!=="No iniciado" && cMixto() && cChance(0.3)) ? cPick(CAMPO_REV_PROB) : "", fotos:cRnd(2,4), tv:cPick(TIPO_VISITA)};
+    });
+    const u = by(S.unidades, pl.u) || us[0];
+    return {paso:"reporte de revisión", oblig:false, titulo:"Reporte de revisión (supervisión)", desc:`${P(a.prop).nombre}. Es opcional; al enviarlo le llega a Claudia.`,
+      campos:[cHacer("¿Entrega el reporte de revisión?", !s.omite),
+        {id:"unidad", label:"Unidad", tipo:"opciones", valor:cUniLabel(u), opciones:us.map(cUniLabel)},
+        {id:"tv", label:"Tipo de visita", tipo:"opciones", valor:pl.tv, opciones:TIPO_VISITA, fila:0},
+        {id:"est", label:"Estado del trabajo", tipo:"opciones", valor:pl.est, opciones:["No iniciado","En proceso","Terminado"], fila:0},
+        {id:"fotos", label:"Fotos", tipo:"numero", valor:pl.fotos, min:1, max:10, fila:0},
+        {id:"sv", label:"Servicio supervisado", tipo:"opciones", valor:pl.sv, opciones:activos("servicios").map(x=>x.nombre)},
+        {id:"prob", label:"Problemas encontrados", tipo:"texto", largo:true, valor:pl.prob},
+        {id:"nota", label:"Comentarios generales", tipo:"texto", largo:true, valor:pl.prob ? "Se avisó al técnico para que lo corrija." : "Sin novedades; todo conforme con el estándar."}]};
+  },
+  responder:(it, d) => {
+    const a = by(S.agendaSup, it.stop); if(!a || a.estado!=="Visitada" || cRepHoy(a.prop) || !cGusLibre()) return null;
+    const n = cNombre(GUSTAVO);
+    if(!cSi(d.hacer)){ const s = cDecEstado(it); s.omite = true; s.decidido = true; return cOmitido(n, `el reporte de revisión de ${P(a.prop).nombre}`, "reporte de revisión"); }
+    const uni = cUnidadDeLabel(a.prop, d.unidad) || S.unidades.find(u=>u.prop===a.prop); if(!uni) return null;
+    const n0 = S.reportes.length, total = cNum(d.fotos, 1, 10);
+    cConGustavo(()=>{
+      ACC.gRepPro({prop:a.prop});
+      const g = S.gRep; if(!g) return;
+      g.tipo = "revision"; g.unidad = uni.id; g.tipoVisita = TIPO_VISITA.includes(d.tv) ? d.tv : TIPO_VISITA[1];
+      g.estadoTrabajo = ["No iniciado","En proceso","Terminado"].includes(d.est) ? d.est : "En proceso";
+      g.servSup = String(d.sv||""); g.problemas = String(d.prob||""); g.nota = String(d.nota||"");
+      render();
+      const ub = activos("ubicaciones");
+      for(let k=0; k<total; k++){
+        ACC.gRepAmb({u:ub[k % Math.min(3, ub.length)]});
+        cFotoG("revisión", ()=>ACC.gRepFoto());
+      }
+      if(!S.gRep) return;
+      render();
+      ACC.gRepOK();
+    });
+    cClampG();
+    return S.reportes.length > n0 ? {texto:`${n} entregó el reporte de revisión de ${P(a.prop).nombre} ${uni.num} (${S.reportes[S.reportes.length-1].estadoTrabajo})`, paso:"reporte de revisión", oblig:false} : null;
+  }});
+
+/* Returns: verificar con fotos (si ya toca y nadie lo está corrigiendo) y cerrar */
+const cTuActivo = dv => { const tu = touchupDe(dv.id); return !!tu && !["Completed","Canceled"].includes(tu.estado); };
+const CAMPO_DEV_NOTAS = ["Se retocó la zona y quedó parejo con el resto; todo conforme.","Revisé el área corregida: sin marcas ni huecos. Queda bien.","Quedó corregido; se nota el trabajo y ya no se ve el problema.","Lo corrigieron como se pidió. Dejé fotos del después."];
+CAMPO_MANEJADORES.push({ id:"gdevverif",
+  detect:() => !cGusOk() ? [] : devAbiertas().filter(dv=>dv.estado==="Abierta" && dv.fechaLimite<=HOY_SUP && !cTuActivo(dv))
+    .map(dv=>({k:"gdevverif:"+dv.id, h:"gdevverif", tec:GUSTAVO, dev:dv.id, que:`la verificación del return de ${P(dv.prop).nombre} ${U(dv.unidad).num}`, pasoLog:"verificar return", donde:` · return de ${P(dv.prop).nombre} ${U(dv.unidad).num}`})),
+  proponer:it => {
+    const dv = DV(it.dev); if(!dv || dv.estado!=="Abierta") return null;
+    const pl = cPlanG("d"+dv.id, ()=>({fotos:Math.min(4, Math.max(1, (dv.areas||[]).length) + cRnd(0,1)), nota:cPick(CAMPO_DEV_NOTAS)}));
+    return {paso:"verificar return", oblig:true, titulo:"Verificar el return fix", desc:`${P(dv.prop).nombre} ${U(dv.unidad).num} · ${devAreasTxt(dv)}. Estaba mal: ${dv.desc}`,
+      campos:[{id:"fotos", label:"Fotos del después (mínimo 1)", tipo:"numero", valor:pl.fotos, min:1, max:8}, {id:"nota", label:"¿Quedó bien?", tipo:"texto", largo:true, valor:pl.nota}]};
+  },
+  responder:(it, d) => {
+    const dv = DV(it.dev); if(!dv || dv.estado!=="Abierta" || !cGusLibre()) return null;
+    const areas = (dv.areas && dv.areas.length) ? dv.areas : [activos("ubicaciones")[0]], total = cNum(d.fotos, 1, 8);
+    cConGustavo(()=>{
+      ACC.gDevVerif({id:dv.id});
+      for(let k=0; k<total; k++){
+        ACC.gDevAmb({u:areas[k % areas.length]});
+        cFotoG("después", ()=>ACC.gDevFoto());
+      }
+      if(!S.gDev) return;
+      S.gDev.nota = String(d.nota||"");
+      render();
+      ACC.gDevVerifOK();
+    });
+    cClampG();
+    return dv.estado==="Corregida" ? {texto:`${cNombre(GUSTAVO)} verificó el return de ${P(dv.prop).nombre} ${U(dv.unidad).num} (${devAreasTxt(dv)}) con ${total} foto(s) del después`, paso:"verificar return", oblig:true} : null;
+  }});
+CAMPO_MANEJADORES.push({ id:"gdevcerrar",
+  detect:() => !cGusOk() ? [] : S.devoluciones.filter(dv=>dv.estado==="Corregida" && (dv.hist||[]).some(h=>/Verificada en campo/.test(h[1])))
+    .map(dv=>({k:"gdevcerrar:"+dv.id, h:"gdevcerrar", tec:GUSTAVO, dev:dv.id, que:`cerrar el return de ${P(dv.prop).nombre} ${U(dv.unidad).num}`, pasoLog:"cerrar return", donde:` · return de ${P(dv.prop).nombre} ${U(dv.unidad).num}`})),
+  proponer:it => {
+    const dv = DV(it.dev); if(!dv || dv.estado!=="Corregida") return null;
+    const s = cDecEstado(it);
+    return {paso:"cerrar return", oblig:false, titulo:"Cerrar el return", desc:`${P(dv.prop).nombre} ${U(dv.unidad).num} · ${devAreasTxt(dv)}. Si no lo cierra Gustavo, queda «Corregida» para que oficina lo cierre.`,
+      campos:[cHacer("¿Cierra el return?", !s.omite)]};
+  },
+  responder:(it, d) => {
+    const dv = DV(it.dev); if(!dv || dv.estado!=="Corregida") return null;
+    const n = cNombre(GUSTAVO);
+    if(!cSi(d.hacer)){ const s = cDecEstado(it); s.omite = true; s.decidido = true; return cOmitido(n, `cerrar el return de ${P(dv.prop).nombre} ${U(dv.unidad).num} (lo deja a oficina)`, "cerrar return"); }
+    cConGustavo(()=>ACC.gDevCerrar({id:dv.id}));
+    cClampG();
+    return dv.estado==="Cerrada" ? {texto:`${n} cerró el return de ${P(dv.prop).nombre} ${U(dv.unidad).num} (${devAreasTxt(dv)})`, paso:"cerrar return", oblig:false} : null;
+  }});
+
+/* ── Reporte del día ── */
+const CAMPO_DIA_TXT = {
+  coord:(p,u)=>cPick([`Hablé con el manager de ${p}: entrega la siguiente unidad el jueves.`,`Quedé con mantenimiento de ${p} en que me dejan la llave ${u ? "de la unidad "+u : "de la bodega"} por la mañana.`,`Coordiné con el manager de ${p} el acceso a las unidades para mañana.`]),
+  problema:(p,u)=>cPick([`En ${p} ${u ? "la unidad "+u+" tenía" : "había"} una fuga pequeña y el técnico no pudo trabajar hasta que la repararan.`,`No había agua en el edificio de ${p}; avisé al manager.`,`El acceso a ${p} estuvo cerrado un rato por una mudanza.`]),
+  pendiente:(p,u)=>cPick([`Volver a ${p} ${u ? "(unidad "+u+") " : ""}el viernes a verificar el zócalo.`,`Falta confirmar con el manager de ${p} las medidas de ${u ? "la unidad "+u : "las unidades"}.`,`Regresar a ${p} cuando terminen la limpieza para revisar.`]),
+  seguimiento:(p,u)=>cPick([`Seguimiento del reclamo en ${p}: quedó de mandar fotos el manager.`,`Hablar con Claudia sobre lo que encontré en ${p} ${u ? "unidad "+u : ""}.`]),
+  entrega:(p,u)=>cPick([`Le dejé 4 galones de pintura al encargado de ${p}${u ? " en la unidad "+u : ""}.`,`Entregué rodillos y cinta al técnico que está en ${p}.`]),
+  compra:(p,u)=>cPick([`Compré 2 galones de pintura y cinta de pintor para ${p}.`,`Compré bolsas y limpiadores para la unidad ${u || "de "+p}.`])
+};
+const CAMPO_DIA_COM = ["Ruta completada sin novedades mayores.","Día tranquilo; quedó todo reportado.","Mañana hay que dar seguimiento a los pendientes anotados."];
+/* El plan del día se arma cuando ya llegó a todas sus paradas (con lo que pasó en ellas) */
+function cPlanDia(){
+  return cPlanG("dia:"+HOY_SUP, ()=>{
+    const r = diarioHoy(), ya = r ? r.entradas.filter(e=>!e.auto).length : 0;
+    const ag = agendaHoy(), vis = ag.filter(a=>a.estado==="Visitada"), nc = ag.filter(a=>a.estado==="No completada"), om = cProbOmitir(), pref = [];
+    nc.forEach(a=>pref.push(["problema", a.prop]));
+    ag.forEach(a=>{
+      if(a.motivo===MOTIVOS_SUP[2]) pref.push(["coord", a.prop]);
+      if(a.motivo===MOTIVOS_SUP[3]) pref.push(["seguimiento", a.prop]);
+      if(a.motivo==="Inspección para estimado" && a.estado==="Visitada") pref.push(["pendiente", a.prop]);
+    });
+    const n = ya ? 0 : (cMixto() ? cRnd(0,3) : cRnd(1,2)), ents = [];
+    for(let i=0; i<n; i++){
+      const par = pref.length ? pref.shift() : [cPick(["coord","pendiente","entrega","compra","seguimiento","problema"]), (vis[0] || ag[0]).prop];
+      const us = S.unidades.filter(u=>u.prop===par[1]), u = (par[0]!=="coord" && par[0]!=="compra" && us.length && cChance(0.5)) ? cPick(us) : null;
+      ents.push({tipo:par[0], prop:par[1], unidad:u ? u.id : null, texto:CAMPO_DIA_TXT[par[0]](P(par[1]).nombre, u ? u.num : ""), omit:cChance(om), fallos:0});
+    }
+    return {ents, i:0, abre:!cChance(om), insiste:!cMixto() || cChance(0.6),
+      coment:(nc.length ? `Quedó sin completar ${nc.map(a=>P(a.prop).nombre).join(", ")}; Claudia decide si se reagenda. ` : "") + cPick(CAMPO_DIA_COM)};
+  });
+}
+const cDiaListo = () => { const r = diarioHoy(); return !!r && r.estado==="En progreso" && cParadasResueltas() && !cInspSinReporte(); };
+const CAMPO_DIA_TIPOS = Object.keys(ENTRADAS_DIA).filter(k=>!ENTRADAS_DIA[k].auto);
+/* Abrir el reporte (opcional: si no lo abre, la primera llegada lo abre sola) */
+CAMPO_MANEJADORES.push({ id:"gdiaabrir",
+  detect:() => {
+    if(!cGusOk() || !agendaHoy().length || diarioHoy()) return [];
+    const pl = cPlanG("dia0:"+HOY_SUP, ()=>({abre:!cChance(cProbOmitir())}));
+    return pl.dec.abrir ? [] : [{k:"gdiaabrir:"+HOY_SUP, h:"gdiaabrir", tec:GUSTAVO, donde:" · abrir su reporte del día"}];
+  },
+  proponer:() => {
+    const pl = cPlanG("dia0:"+HOY_SUP, ()=>({abre:true}));
+    return {paso:"abrir reporte del día", oblig:false, titulo:"Abrir el reporte del día", desc:"Registra la hora de inicio. Si no lo abre, se abre solo con su primera llegada.", campos:[cHacer("¿Abre su reporte de hoy?", pl.abre)]};
+  },
+  responder:(it, d) => {
+    if(diarioHoy()) return null;
+    const pl = cPlanG("dia0:"+HOY_SUP, ()=>({})), n = cNombre(GUSTAVO);
+    pl.dec.abrir = 1;
+    if(!cSi(d.hacer)) return cOmitido(n, "abrir su reporte del día", "abrir reporte del día");
+    cConGustavo(()=>ACC.gDiaAbrir());
+    return diarioHoy() ? {texto:`${n} abrió su reporte del día (${diarioHoy().horaInicio})`, paso:"abrir reporte del día", oblig:false} : null;
+  }});
+/* Actividades que el sistema no sabe (opcionales): una por pendiente */
+CAMPO_MANEJADORES.push({ id:"gdiaent",
+  detect:() => {
+    if(!cGusOk() || !cDiaListo()) return [];
+    const pl = cPlanDia();
+    return pl.i < pl.ents.length ? [{k:"gdiaent:"+HOY_SUP+":"+pl.i, h:"gdiaent", tec:GUSTAVO, donde:" · actividad en su reporte del día"}] : [];
+  },
+  proponer:() => {
+    const pl = cPlanDia(), e = pl.ents[pl.i]; if(!e) return null;
+    const props = S.propiedades.filter(p=>p.activa).map(p=>p.nombre);
+    return {paso:"actividad del día", oblig:false, titulo:"Agregar una actividad al reporte del día", desc:"Lo que el sistema no puede saber: compras, coordinaciones, problemas y pendientes.",
+      campos:[cHacer("¿Agrega esta actividad?", !e.omit),
+        {id:"tipo", label:"Tipo", tipo:"opciones", valor:ENTRADAS_DIA[e.tipo].n, opciones:CAMPO_DIA_TIPOS.map(k=>ENTRADAS_DIA[k].n), fila:0},
+        {id:"prop", label:"Propiedad", tipo:"opciones", valor:P(e.prop).nombre, opciones:props, fila:0},
+        {id:"texto", label:"Qué pasó", tipo:"texto", largo:true, valor:e.texto}]};
+  },
+  responder:(it, d) => {
+    const pl = cPlanDia(), e = pl.ents[pl.i], r = diarioHoy(); if(!e || !r || r.estado!=="En progreso" || !cGusLibre()) return null;
+    const n = cNombre(GUSTAVO), tipo = CAMPO_DIA_TIPOS.find(k=>ENTRADAS_DIA[k].n===d.tipo) || e.tipo, txt = String(d.texto||"").trim();
+    const prop = (S.propiedades.find(p=>p.activa && p.nombre===d.prop) || P(e.prop)).id || e.prop;
+    if(!cSi(d.hacer) || !txt){ pl.i++; return cOmitido(n, `una actividad (${ENTRADAS_DIA[tipo].n}) en su reporte del día`, "actividad del día"); }
+    const n0 = r.entradas.length;
+    cConGustavo(()=>{
+      ACC.gDiaNueva({t:tipo});
+      if(!S.gDia) return;
+      S.gDia.prop = prop; S.gDia.unidad = (e.prop===prop) ? e.unidad : null; S.gDia.texto = txt;
+      render();
+      if(tipo==="compra") ACC.gDiaFoto();
+      ACC.gDiaOK();
+    });
+    cClampG();
+    if(r.entradas.length > n0){ pl.i++; return {texto:`${n} agregó a su reporte del día: ${ENTRADAS_DIA[tipo].n} — ${txt.slice(0,70)}${txt.length>70 ? "…" : ""}`, paso:"actividad del día", oblig:false}; }
+    if(++e.fallos >= 2){ pl.i++; return {texto:`${n} no pudo agregar una actividad al reporte del día y la dejó (opcional)`, paso:"actividad del día", estado:"omitido", oblig:false}; }
+    return null;
+  }});
+/* Cerrar y enviar el reporte del día: opcional. Si quedan paradas sin visitar o returns vencidos, la app pide tocar «Finalizar» dos veces */
+CAMPO_MANEJADORES.push({ id:"gdiafin",
+  detect:() => {
+    if(!cGusOk() || !cDiaListo() || !diarioHoy().entradas.length) return [];
+    const pl = cPlanDia();
+    return (pl.i < pl.ents.length || pl.dec.noCierra) ? [] : [{k:"gdiafin:"+HOY_SUP, h:"gdiafin", tec:GUSTAVO, que:"el cierre de su reporte del día", pasoLog:"cierre del día", donde:" · cerrar su reporte del día"}];
+  },
+  proponer:it => {
+    const pl = cPlanDia(), s = cDecEstado(it), r = diarioHoy(); if(!r) return null;
+    const avisos = devAbiertas().filter(devVencida).length;
+    return {paso:"cierre del día", oblig:false, titulo:"Cerrar y enviar el reporte del día", desc:`${r.entradas.length} actividad(es) hoy. Una vez enviado ya no se edita.${avisos ? " Hay "+avisos+" return(s) vencido(s): la app pide tocar «Finalizar» dos veces." : ""}`,
+      campos:[cHacer("¿Cierra y envía el reporte?", !s.omite),
+        {id:"insiste", label:"Si la app avisa de pendientes, ¿cierra igual?", tipo:"si-no", valor:cSiNo(pl.insiste)},
+        {id:"coment", label:"Comentarios finales del día", tipo:"texto", largo:true, valor:pl.coment}]};
+  },
+  responder:(it, d) => {
+    const r = diarioHoy(); if(!r || r.estado!=="En progreso" || !r.entradas.length) return null;
+    const n = cNombre(GUSTAVO), pl = cPlanDia();
+    if(!cSi(d.hacer)){ const s = cDecEstado(it); s.omite = true; s.decidido = true; pl.dec.noCierra = 1; return cOmitido(n, "cerrar y enviar su reporte del día", "cierre del día"); }
+    cConGustavo(()=>cConCampos({dnCF:{tag:"textarea", value:String(d.coment||"")}}, ()=>{
+      ACC.gDiaFin();
+      if(r.estado!=="Completado" && r.avisado && cSi(d.insiste)) ACC.gDiaFin();      // la app avisó (paradas sin visitar o returns vencidos): toca de nuevo
+    }));
+    cClampG();
+    if(r.estado==="Completado") return {texto:`${n} cerró y envió su reporte del día (${r.entradas.length} actividad(es), de ${r.horaInicio} a ${r.horaFin})`, paso:"cierre del día", oblig:false};
+    if(r.avisado){ pl.dec.noCierra = 1; return {texto:`${n} vio el aviso antes de cerrar su reporte del día y lo dejó abierto por ahora`, paso:"cierre del día", estado:"sin responder", oblig:false}; }
+    return null;
+  }});
+
 /* ══════════ MOTOR ══════════ */
 function campoPendientes(woId){
   const L = [];
@@ -806,18 +1262,22 @@ let _campoSilencios = 0;
 function cDecEstado(it){
   let s = _campoDec.get(it.k);
   if(!s){
-    const omite = it.h !== "info" && cChance(cProbOmitir());           // la info que pidió oficina nunca se omite
+    const omite = !CAMPO_NUNCA_OMITE.includes(it.h) && cChance(cProbOmitir());           // la info que pidió oficina y los pasos obligatorios nunca se omiten
     s = {omite, resta:(!omite && cMixto() && cChance(0.25)) ? cRnd(2,3) : 0, l:{}};
     _campoDec.set(it.k, s);
   }
   return s;
 }
+/* Pasos con silencio en «Mixto». Los de CAMPO_NUNCA_OMITE son obligatorios: solo pueden tardar, nunca omitirse.
+   Los de Gustavo traen su propio texto (it.que / it.pasoLog). */
+const CAMPO_DECIDE = ["nomina","disp","info","gparada","greporte","grevision","gdevverif","gdevcerrar","gdiafin"];
+const CAMPO_NUNCA_OMITE = ["info","gparada","greporte","gdevverif"];
 function cDecision(it, forzar){
-  if(!["nomina","disp","info"].includes(it.h)) return false;
+  if(!CAMPO_DECIDE.includes(it.h)) return false;
   const s = cDecEstado(it);
   const n = cNombre(it.tec);
-  const que = it.h==="nomina" ? `la conformidad de nómina de la semana ${it.sem}` : it.h==="disp" ? "su disponibilidad de la semana" : `lo que pidió oficina en WO-${it.wo}`;
-  const paso = it.h==="nomina" ? "nómina semana "+it.sem : it.h==="disp" ? "disponibilidad" : "info pedida";
+  const que = it.que || (it.h==="nomina" ? `la conformidad de nómina de la semana ${it.sem}` : it.h==="disp" ? "su disponibilidad de la semana" : `lo que pidió oficina en WO-${it.wo}`);
+  const paso = it.pasoLog || (it.h==="nomina" ? "nómina semana "+it.sem : it.h==="disp" ? "disponibilidad" : "info pedida");
   if(s.omite){
     if(cUna(s.l, "omite")) cLog(it.wo, it.tec, paso, "omitido", false, `${n} omitió ${que} (opcional)`, "auto");
     return true;
@@ -825,7 +1285,7 @@ function cDecision(it, forzar){
   if(forzar && it.wo) s.resta = 0;
   if(s.resta > 0){
     s.resta--; _campoSilencios++;
-    if(cUna(s.l, "calla")) cLog(it.wo, it.tec, paso, "sin responder", it.h==="info", `${n} aún no responde ${que} (se reintenta)`, "auto");
+    if(cUna(s.l, "calla")) cLog(it.wo, it.tec, paso, "sin responder", CAMPO_NUNCA_OMITE.includes(it.h), `${n} aún no responde ${que} (se reintenta)`, "auto");
     return true;
   }
   return false;
@@ -838,8 +1298,8 @@ const cOmitidoAhora = k => (Date.now() - (_campoOmitidos.get(k)||0)) < CAMPO_REI
 const cHayOmitidos = () => Array.from(_campoOmitidos.keys()).some(cOmitidoAhora);
 function cQuien(it){
   const t = T(it.tec) || {}, w = it.wo ? W(it.wo) : null, a = it.sub ? S.adicionales.find(x=>x.id===it.sub) : null;
-  const oficio = (t.esp||[]).filter(e=>e!=="Supervisor").join(" / ") || "sin oficio";
-  const donde = w ? ` en WO-${w.id}${w.serv ? " · "+w.serv : ""}${a ? " · Sub-WO «"+a.concepto+"»" : ""}`
+  const oficio = it.tec===GUSTAVO ? "supervisor de campo" : ((t.esp||[]).filter(e=>e!=="Supervisor").join(" / ") || "sin oficio");
+  const donde = it.donde ? it.donde : w ?` en WO-${w.id}${w.serv ? " · "+w.serv : ""}${a ? " · Sub-WO «"+a.concepto+"»" : ""}`
     : it.h==="nomina" ? ` · pago de la semana ${it.sem}` : it.h==="disp" ? " · disponibilidad de la semana siguiente" : "";
   return `${cNombre(it.tec)} (${oficio}) responde${donde}`;
 }
