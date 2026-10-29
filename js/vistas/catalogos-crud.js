@@ -356,7 +356,7 @@ function listaPrecios(prop, tipo){
 }
 /* Lo que se va a enviar: los precios del filtro actual, menos los que se desmarcaron. */
 /* Una tarifa provisoria es un precio inventado: nunca le llega a un cliente. */
-const tarSeleccion = () => listaPrecios(S.tarFp||"", S.tarFt||"").filter(t=>!t.provisional && !(S.tarOff||[]).includes(String(t.id)));
+const tarSeleccion = () => listaPrecios(S.tarFp||"", S.tarFt||"").filter(t=>!(S.tarOff||[]).includes(String(t.id)));
 /* Texto del correo: solo el precio al cliente, nunca lo que se le paga al técnico. */
 function textoListaPrecios(ts){
   const porTipo={}; ts.forEach(t=>{ (porTipo[t.cat||"—"]=porTipo[t.cat||"—"]||[]).push(t); });
@@ -365,8 +365,7 @@ function textoListaPrecios(ts){
 }
 VIEWS.tarifario = () => {
   const fp=S.tarFp||"", ft=S.tarFt||"";
-  const base=listaPrecios(fp,""), ts=base.filter(t=>!ft||t.cat===ft), sel=ts.filter(t=>!t.provisional && !(S.tarOff||[]).includes(String(t.id)));
-  const nProv=base.filter(t=>t.provisional).length;
+  const base=listaPrecios(fp,""), ts=base.filter(t=>!ft||t.cat===ft), sel=ts.filter(t=>!(S.tarOff||[]).includes(String(t.id)));
   const nPorTipo={}; base.forEach(t=>{ nPorTipo[t.cat]=(nPorTipo[t.cat]||0)+1; });
   const props=S.propiedades.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre));
   const enviadas=(S.listasPrecio||[]).slice(0,6);
@@ -374,7 +373,6 @@ VIEWS.tarifario = () => {
   <div class="ph"><div><h2>Tarifario</h2>
     <p>${fp?`Lista de precios de <b>${esc(P(fp).nombre)}</b>: sus tarifas propias y las generales que no tiene negociadas.`:`Precios generales, de <code>Ingreso Fijo</code> — aplican a toda propiedad que no tenga una negociada aparte.`}</p></div>
     <div class="act"><button class="btn p" data-a="tarNueva">+ Nueva tarifa</button></div></div>
-  ${nProv?`<div class="note w" style="margin-bottom:10px"><b>${nProv} tarifa(s) provisoria(s).</b> Son precios de referencia cargados con el catálogo nuevo (Services.xlsx), que llegó sin precios: revísalos y corrígelos con <b>Editar</b>. Mientras sean provisorias no se envían en la lista de precios.</div>`:""}
   <div class="card" style="margin-bottom:10px"><div class="cp" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <span style="font-size:11px;color:var(--faint);font-weight:700;text-transform:uppercase">Propiedad</span>
     <select id="tarFp" data-a="tarFiltro"><option value="">Tarifario general</option>${props.map(p=>`<option value="${p.id}" ${fp===p.id?"selected":""}>${esc(p.nombre)}</option>`).join("")}</select>
@@ -388,13 +386,12 @@ VIEWS.tarifario = () => {
     <thead><tr><th style="width:30px"><input type="checkbox" data-a="tarMarcaTodos" title="Marcar o desmarcar todos los que se ven" ${ts.length&&sel.length===ts.length?"checked":""}></th><th>Tipo</th><th>Servicio</th><th>Detail</th><th>Piso</th><th>Baños</th><th>Description</th>${fp?"<th>Origen</th>":""}<th class="num">Price</th><th></th></tr></thead>
     <tbody>${ts.map(t=>{
       return `<tr class="${fl('tar:'+t.id)}">
-      <td>${t.provisional?`<input type="checkbox" disabled title="Provisoria: edítala para poder enviarla">`
-        :`<input type="checkbox" data-a="tarMarca" data-id="${t.id}" ${(S.tarOff||[]).includes(String(t.id))?"":"checked"}>`}</td>
+      <td><input type="checkbox" data-a="tarMarca" data-id="${t.id}" ${(S.tarOff||[]).includes(String(t.id))?"":"checked"}></td>
       <td>${esc(t.cat)||"—"}</td><td>${esc(t.serv)||"—"}</td><td>${esc(t.variante)||"—"}</td>
       <td>${t.pisos!=null?"Floor "+t.pisos:'<span class="pill g">cualquiera</span>'}</td>
       <td>${t.banos!=null?t.banos:'<span class="pill g">—</span>'}</td><td>${esc(t.desc)||"—"}</td>
       ${fp?`<td><span class="pill ${t.prop?"a":"g"}">${t.prop?"Propia":"General"}</span></td>`:""}
-      <td class="num mono">${money(t.precio)}${t.provisional?` <span class="pill w" title="Precio de referencia: falta confirmarlo">Provisoria</span>`:""}</td>
+      <td class="num mono">${money(t.precio)}</td>
       <td style="text-align:right"><button class="btn sm" data-a="tarNueva" data-id="${t.id}">Editar</button></td></tr>`;
     }).join("")||`<tr><td colspan="${fp?10:9}" class="empty">Sin tarifas con ese filtro</td></tr>`}</tbody></table></div>
   ${enviadas.length?`<div class="card" style="margin-top:12px"><div class="chd"><h3>Listas de precios enviadas</h3><span class="s">las últimas ${enviadas.length}</span></div>
@@ -519,13 +516,12 @@ function resumenUsos(k, valores){
   const partes=Object.entries(m).map(([n,c])=>`<b>${c} ${esc(n)}</b>`);
   return partes.length ? "Se usan en "+partes.join(", ") : "Todavía no las usa ningún registro";
 }
-/* Precio general del servicio: «desde» cuando hay varios tamaños; Provisoria si todos son de referencia. */
+/* Precio general del servicio: «desde» cuando hay varios tamaños. */
 function catPrecio(s){
   const ts=S.tarifas.filter(t=>!t.prop && t.cat===s.tipo && t.serv===s.nombre);
-  if(!ts.length) return {html:'<span style="color:var(--faint)">Sin precio</span>', prov:null, falta:true};
-  const min=Math.min(...ts.map(t=>+t.precio||0)), prov=ts.every(t=>t.provisional)?ts[0]:null;
-  return {prov, falta:false, html:`<span class="mono" style="white-space:nowrap">${ts.length>1?'<span class="cat-dim">desde</span> ':""}${money(min)}${ts.length>1?` <span class="cat-dim">· ${ts.length} tamaños</span>`:""}</span>`
-    + (prov?' <span class="pill w" title="Precio de referencia: falta confirmarlo">Provisoria</span>':"")};
+  if(!ts.length) return {html:'<span style="color:var(--faint)">Sin precio</span>', t:null, falta:true};
+  const min=Math.min(...ts.map(t=>+t.precio||0));
+  return {t:ts[0], falta:false, html:`<span class="mono" style="white-space:nowrap">${ts.length>1?'<span class="cat-dim">desde</span> ':""}${money(min)}${ts.length>1?` <span class="cat-dim">· ${ts.length} tamaños</span>`:""}</span>`};
 }
 const catBuscador = (n,ph) => n>8 ? `<input class="cat-buscar" id="catBuscar" placeholder="${esc(ph)}" aria-label="${esc(ph)}">` : "";
 
@@ -533,7 +529,7 @@ function catVistaTys(){
   const tipos=activos("categorias");
   const t=tipos.includes(S.catTipo) ? S.catTipo : tipos[0];
   const ss=CAT.servicios.filter(s=>s.tipo===t), act=ss.filter(s=>!s.baja), baja=ss.filter(s=>s.baja);
-  const precios=new Map(act.map(s=>[s.id,catPrecio(s)])), nProv=act.filter(s=>precios.get(s.id).prov).length;
+  const precios=new Map(act.map(s=>[s.id,catPrecio(s)]));
   const iTipo=CAT.categorias.indexOf(t), tiposBaja=CAT.categorias.filter(c=>debaja("categorias",c));
   return `
   <div class="cat-cab"><div><h3>Tipos y servicios</h3><p>${esc(CAT_VISTAS.tys.d)}</p>
@@ -543,7 +539,7 @@ function catVistaTys(){
     <div class="cat-tipos" role="tablist" aria-label="Tipos de servicio">${tipos.map(c=>
       `<button class="cat-tipo ${c===t?"on":""}" role="tab" aria-selected="${c===t}" data-a="catTipo" data-t="${esc(c)}"><span>${esc(c)}</span><span class="n">${servDe(c).length}</span></button>`).join("")}</div>
     <div class="cat-tys-det">
-      <div class="cat-tipo-cab"><h3>${esc(t)}</h3>${nProv?`<span class="pill w">${nProv} con precio provisorio</span>`:""}
+      <div class="cat-tipo-cab"><h3>${esc(t)}</h3>
         <div class="cat-acc"><button class="btn sm" data-a="catRen" data-k="categorias" data-i="${iTipo}">Editar tipo</button>
           <button class="btn sm p" data-a="servAdd" data-t="${esc(t)}">Nuevo servicio</button></div></div>
       ${catBuscador(act.length,"Buscar en "+t)}
@@ -551,7 +547,7 @@ function catVistaTys(){
       <tbody>${act.map(s=>{ const pr=precios.get(s.id), n=S.wos.filter(w=>w.serv===s.nombre).length;
         return `<tr class="${fl("serv:"+s.id)}" data-q="${esc(s.nombre.toLowerCase())}"><td>${esc(s.nombre)}</td><td>${pr.html}</td>
           <td class="num mono ${n?"":"cat-dim"}">${n}</td>
-          <td class="cat-fila-acc">${pr.prov?`<button class="cat-lnk" data-a="tarNueva" data-id="${pr.prov.id}">Corregir precio</button>`
+          <td class="cat-fila-acc">${pr.t?`<button class="cat-lnk" data-a="tarNueva" data-id="${pr.t.id}">Editar precio</button>`
             :pr.falta?`<button class="cat-lnk" data-a="tarNueva">Agregar precio</button>`:""}
             <button class="cat-lnk suave" data-a="servRen" data-id="${s.id}">Editar</button></td></tr>`;}).join("")
         ||`<tr><td colspan="4" class="empty">Este tipo todavía no tiene servicios: agrega uno para poder agendarlo.</td></tr>`}</tbody></table>

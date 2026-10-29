@@ -328,7 +328,7 @@ const CAMPOS = {
   num:"Número de unidad", rooms:"Rooms", pisos:"Floor", detalle:"Detail",
   esp:"Especialidad", movimiento:"Se mueve de zona",
   prop:"Propiedad", cat:"Tipo de servicio", serv:"Servicio", variante:"Rooms",
-  precio:"Se cobra al cliente", pago:"Se paga al técnico", provisional:"Tarifa provisoria",
+  precio:"Se cobra al cliente", pago:"Se paga al técnico",
   desc:"Description", tax:"Tax", descuento:"Total Discount", cantidad:"Quantity",
   unidad:"Unidad", fecha:"Fecha", horaProg:"Hora", semana:"Semana",
   cant:"Cantidad", po:"PO", notasTec:"Notas al técnico", notasOficina:"Notas internas de oficina",

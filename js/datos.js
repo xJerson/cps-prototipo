@@ -131,7 +131,7 @@ let S = {
       ["Installation","Cabinet handles installation",60],
       ["Removal","Removal",150],["Estimate","Estimate",0],["Inspection","Inspection",0]
     ].map(([cat,serv,precio],i)=>({id:"TRP"+(i+1),prop:null,cat,serv,nombre:serv,variante:"",pisos:null,
-      precio,pago:Math.round(precio/2),provisional:true}))
+      precio,pago:Math.round(precio/2)}))
   ],
   /* Pago diferenciado por técnico: override OPCIONAL sobre la tarifa general
      (ver pagoTecnicoWO en helpers.js). Si no hay override acá, el pago sigue

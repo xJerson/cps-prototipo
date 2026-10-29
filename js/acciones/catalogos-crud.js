@@ -582,8 +582,6 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
       banos: val("rBanos") ? parseInt(val("rBanos")) : null,
       precio:parseFloat(val("rP")),pago:parseFloat(val("rG"))||0,
       desc:val("rD"),tax:val("rTax"),descuento:val("rDesc"),descuentoTipo:val("rDescTipo"),cantidad:parseInt(val("rCant"))||1};
-    // Guardarla con Editar es confirmar el precio: deja de ser provisoria.
-    if(yo && yo.provisional) datos.provisional=false;
     if(yo) return guardarEdicion(yo, datos, "Tarifario", `${yo.nombre}${yo.prop?" · "+P(yo.prop).nombre:" · general"}`, null, "tar:"+yo.id);
     const nr = {id:"TR"+Date.now(), ...datos};
     S.tarifas.push(nr); flash("tar:"+nr.id);
