@@ -581,7 +581,7 @@ function catVistaLista(L){
    para change orders (Surcharges, Miscellaneous) y los change order items que todavía no tienen servicio. */
 function catVistaCO(){
   const L=CAT_VISTAS.adicionales, tipos=CAT.tiposCO||[];
-  const pend=CAT.adicionales.map((v,i)=>({v,i})).filter(x=>!debaja("adicionales",x.v)), baja=CAT.adicionales.map((v,i)=>({v,i})).filter(x=>debaja("adicionales",x.v));
+  const pend=CAT.adicionales.map((v,i)=>({v,i})).filter(x=>!debaja("adicionales",x.v));
   const filaServ = s => `<tr class="${fl("serv:"+s.id)}"><td>${esc(s.nombre)}</td><td style="color:var(--soft)">Lo define oficina al aprobar</td>
     <td class="cat-fila-acc"><button class="cat-lnk suave" data-a="servRen" data-id="${s.id}">Editar</button></td></tr>`;
   return `
@@ -595,8 +595,6 @@ function catVistaCO(){
   <table><tbody>${pend.map(({v,i})=>{ const c=adicionalCatalogo(v);
     return `<tr class="${fl("cat:adicionales:"+v)}"><td>${esc(v)}</td><td style="color:var(--soft)">${c?`Precio fijo ${money(c.precio)}`:"Lo define oficina al aprobar"}</td>
       <td class="cat-fila-acc"><button class="cat-lnk suave" data-a="catRen" data-k="adicionales" data-i="${i}">Editar</button></td></tr>`;}).join("")}</tbody></table>`:""}
-  ${baja.length?`<details class="cat-bajas"><summary>${baja.length} change order item(s) reemplazado(s) por un servicio</summary><table><tbody>
-    ${baja.map(({v,i})=>`<tr><td>${esc(v)}</td><td class="cat-fila-acc"><button class="cat-lnk" data-a="catAlta" data-k="adicionales" data-i="${i}">Reactivar</button></td></tr>`).join("")}</tbody></table></details>`:""}
   <div class="cat-pie">Si el servicio tiene tarifa, el precio del change order sale de ahí. Si no, oficina lo define al aprobar.</div>`;
 }
 
