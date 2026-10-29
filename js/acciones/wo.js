@@ -261,6 +261,8 @@ Object.assign(ACC, {
          la Unidad no es un bloqueo, se va llenando sola con el uso). */
       let uNueva = u;
       let cambiosUnidad=[];
+      const llaveTarifa = w => { const x=U(w.unidad); return [w.prop,w.cat,w.serv,x.rooms,x.pisos].join("|"); };
+      const llaveAntes = yo ? llaveTarifa(yo) : null;
       if(esNueva){
         const bld=val("wUniBld"), uNumR=val("wUniNum");
         uNueva = {id:"U"+nid("u"), prop:pid, building:bld, unidadNum:uNumR, num:uNumComp(bld,uNumR),
@@ -285,6 +287,7 @@ Object.assign(ACC, {
           "Work Orders", "WO-"+yo.id,
           (o,cambios)=>{
             flash("wo:"+o.id);
+            if(llaveTarifa(o)!==llaveAntes){ delete o.tarifaCongelada; const tc=tarifaWO(o); if(tc) o.tarifaCongelada=tc; }   // cambió lo que se cobra: toma la tarifa de hoy
             o.hist.push([hora(), "Datos corregidos: "+cambios.map(c=>c.campo).join(", "), S.usuario]);
             // Si ya hay técnico, el cambio le llega: si no, se entera al llegar
             if(o.tec) noti("Tu trabajo cambió",
@@ -308,6 +311,7 @@ Object.assign(ACC, {
         nueva.hist.push([hora(),`Creada aunque ya existe WO-${di.orig} · ${di.motivo}`,S.usuario]);
         if(orig) orig.hist.push([hora(),`Se creó WO-${id} igual (mismo servicio y unidad) · ${di.motivo}`,S.usuario]);
       }
+      const tc=tarifaWO(nueva); if(tc) nueva.tarifaCongelada=tc;
       S.wos.push(nueva);
       S.woFotosPreviasDraft=[];
       /* Si esta WO nace de "Programar" en una Solicitud, recién AHORA que de

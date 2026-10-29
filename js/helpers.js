@@ -306,7 +306,8 @@ function sugerenciasHTML(inputId, prop, cat, serv, rooms, clic){
         : `<button type="button" class="gchip" data-a="sugPick" data-i="${esc(inputId)}" data-v="${x.precio}">${t}</button>`;
     }).join("")}</div>`;
 }
-function tarifaWO(w){ const u=U(w.unidad); return tarifa(w.prop,w.cat,w.serv,u.rooms,u.pisos); }
+/* La WO se queda con la tarifa del día que se creó: un precio nuevo en el Tarifario solo rige para las WO que se creen después. */
+function tarifaWO(w){ if(w.tarifaCongelada) return {...w.tarifaCongelada}; const u=U(w.unidad); return tarifa(w.prop,w.cat,w.serv,u.rooms,u.pisos); }
 /* Override OPCIONAL del pago a UN técnico específico (ej. un especialista cobra
    más por el mismo servicio) — mismo esquema de fallback que tarifa(): propiedad
    exacta primero, después general; piso exacto primero, después cualquiera.
