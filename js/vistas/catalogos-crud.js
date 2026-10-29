@@ -543,14 +543,13 @@ function catVistaTys(){
         <div class="cat-acc"><button class="btn sm" data-a="catRen" data-k="categorias" data-i="${iTipo}">Editar tipo</button>
           <button class="btn sm p" data-a="servAdd" data-t="${esc(t)}">Nuevo servicio</button></div></div>
       ${catBuscador(act.length,"Buscar en "+t)}
-      <table><thead><tr><th>Servicio</th><th>Precio al cliente</th><th class="num">En WO</th><th></th></tr></thead>
-      <tbody>${act.map(s=>{ const pr=precios.get(s.id), n=S.wos.filter(w=>w.serv===s.nombre).length;
+      <table><thead><tr><th>Servicio</th><th>Precio al cliente</th><th></th></tr></thead>
+      <tbody>${act.map(s=>{ const pr=precios.get(s.id);
         return `<tr class="${fl("serv:"+s.id)}" data-q="${esc(s.nombre.toLowerCase())}"><td>${esc(s.nombre)}</td><td>${pr.html}</td>
-          <td class="num mono ${n?"":"cat-dim"}">${n}</td>
           <td class="cat-fila-acc">${pr.t?`<button class="cat-lnk" data-a="tarNueva" data-id="${pr.t.id}">Editar precio</button>`
             :pr.falta?`<button class="cat-lnk" data-a="tarNueva">Agregar precio</button>`:""}
             <button class="cat-lnk suave" data-a="servRen" data-id="${s.id}">Editar</button></td></tr>`;}).join("")
-        ||`<tr><td colspan="4" class="empty">Este tipo todavía no tiene servicios: agrega uno para poder agendarlo.</td></tr>`}</tbody></table>
+        ||`<tr><td colspan="3" class="empty">Este tipo todavía no tiene servicios: agrega uno para poder agendarlo.</td></tr>`}</tbody></table>
       ${baja.length?`<details class="cat-bajas"><summary>${baja.length} servicio(s) dado(s) de baja en ${esc(t)}</summary><table><tbody>
         ${baja.map(s=>`<tr><td>${esc(s.nombre)}</td><td class="cat-fila-acc"><button class="cat-lnk" data-a="servAlta" data-id="${s.id}">Reactivar</button></td></tr>`).join("")}</tbody></table></details>`:""}
     </div>
