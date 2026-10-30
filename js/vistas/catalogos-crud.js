@@ -517,12 +517,17 @@ function resumenUsos(k, valores){
   const partes=Object.entries(m).map(([n,c])=>`<b>${c} ${esc(n)}</b>`);
   return partes.length ? "Se usan en "+partes.join(", ") : "Todavía no las usa ningún registro";
 }
-/* Precio general del servicio: «desde» cuando hay varios tamaños. */
+/* Precio general del servicio en Tipos y servicios.
+   PENDIENTE (lunes): un servicio con varias tarifas generales (una por tamaño de unidad, p. ej. Full clean: Studio,
+   1, 2 y 3 bedroom) ya no muestra el texto «desde $X · N tamaños»: ese resumen lo inventamos y no está respaldado por
+   ninguna convención documentada. Hoy esa celda queda con un guion. Decidir con Erika cómo mostrarlo; la propuesta es
+   quitar la columna y poner un enlace «Ver precios» al Tarifario filtrado por ese servicio. Con una sola tarifa se
+   sigue mostrando el precio. «Editar precio» abre solo la primera de las tarifas (t:ts[0]), no deja elegir cuál. */
 function catPrecio(s){
   const ts=S.tarifas.filter(t=>!t.prop && t.cat===s.tipo && t.serv===s.nombre);
   if(!ts.length) return {html:'<span style="color:var(--faint)">Sin precio</span>', t:null, falta:true};
-  const min=Math.min(...ts.map(t=>+t.precio||0));
-  return {t:ts[0], falta:false, html:`<span class="mono" style="white-space:nowrap">${ts.length>1?'<span class="cat-dim">desde</span> ':""}${money(min)}${ts.length>1?` <span class="cat-dim">· ${ts.length} tamaños</span>`:""}</span>`};
+  if(ts.length>1) return {t:ts[0], falta:false, html:'<span class="cat-dim" title="Tiene un precio por tamaño: se ven en el Tarifario">—</span>'};
+  return {t:ts[0], falta:false, html:`<span class="mono" style="white-space:nowrap">${money(+ts[0].precio||0)}</span>`};
 }
 const catBuscador = (n,ph) => n>8 ? `<input class="cat-buscar" id="catBuscar" placeholder="${esc(ph)}" aria-label="${esc(ph)}">` : "";
 
