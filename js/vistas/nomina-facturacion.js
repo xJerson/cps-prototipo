@@ -496,10 +496,13 @@ function modalDefinirPrecio(id){
     ${l.ubic?`<div class="note" style="margin-bottom:10px"><b>Ubicación:</b> ${esc(l.ubic)}</div>`:""}
     ${l.aprob?`<div class="note v" style="margin-bottom:10px"><b>Ya aprobado por ${esc((l.aprob.medio||"—").toLowerCase())}:</b> ${esc(l.aprob.quien)} · ${esc(l.aprob.hora)}. Solo falta el precio.</div>`:""}
     ${l.hallazgoFoto?`<div class="note" style="margin-bottom:10px"><img src="${l.hallazgoFoto.url}" style="width:100%;max-height:130px;object-fit:cover;border-radius:9px;display:block"></div>`:""}
-    <div class="fld"><label>Precio al cliente <span class="req">*</span></label><input id="dpP" class="mono" placeholder="0.00"></div>
+    <div class="fg c2">
+      <div class="fld"><label>Precio al cliente <span class="req">*</span></label><input id="dpP" class="mono" placeholder="0.00" value="${l.precio!=null?esc(l.precio):""}"></div>
+      <div class="fld"><label>Pago al técnico</label><input id="dpG" class="mono" placeholder="0.00" value="${l.pago!=null?esc(l.pago):""}"></div>
+    </div>
     <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-weight:500">
       <input type="checkbox" id="dpCobra" style="width:16px;height:16px"> Cobrar esto al cliente (además de pagárselo al técnico)</label>
-    <div class="hint" style="margin-top:8px">Este es el mismo precio que se le paga al técnico — igual que cuando se aprueba con precio desde el inicio.</div>
+    <div class="hint" style="margin-top:8px">Define por separado lo que se cobra al cliente y lo que se paga al técnico (si dejas el pago vacío, usa la tarifa o el mismo monto).</div>
   </div>
   <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="precioDefGuardar" data-id="${id}">Guardar precio</button></div>`);
 }

@@ -120,7 +120,8 @@ Object.assign(ACC, {
     const credTxt = val("nCred").trim(), cred = credTxt==="" ? 30 : Number(credTxt);
     if(!Number.isInteger(cred)||cred<0){ document.getElementById("nCred").parentElement.classList.add("bad"); toast("Crédito inválido","Los días de crédito deben ser un número entero, 0 o más.","r"); return; }
     const yo = d&&d.id ? P(d.id) : null;
-    if(yo) return guardarEdicion(yo, {...(yo.diasCredito!=null||cred!==diasCreditoProp(yo.id)?{diasCredito:cred}:{}),nombre:val("nP"),zona:val("nZ"),cliente:val("nC"),dir:val("nD"),
+    const cliVal = document.getElementById("nC") ? val("nC") : (yo ? (yo.cliente||"") : "");
+    if(yo) return guardarEdicion(yo, {...(yo.diasCredito!=null||cred!==diasCreditoProp(yo.id)?{diasCredito:cred}:{}),nombre:val("nP"),zona:val("nZ"),cliente:cliVal,dir:val("nD"),
       ciudad:val("nCiudad"),estadoUS:val("nEstadoUS"),zip:val("nZip"),tel:val("nTel"),
       estado:val("nEst"),origen:val("nOrig"),
       door:val("nDC"),pref:val("nPR"),aprob:val("nAP"),
@@ -353,12 +354,13 @@ Object.assign(ACC, {
     cm(); toast("✓ Técnico dado de alta",`${esc(nt.nombre)} ${esc(nt.apellido)} — ${esc(esp.join(", "))}. Ya aparece al asignar.`,"v"); render();
   },
 
-  tarFiltro: () => { S.tarFp=val("tarFp"); S.tarFt=val("tarFt"); S.tarOff=[]; render(); },
-  tarFiltroQuitar: () => { S.tarFp=""; S.tarFt=""; S.tarOff=[]; render(); },
+  tarFiltro: () => { S.tarFp=val("tarFp"); S.tarFt=val("tarFt"); S.tarFs=""; S.tarOff=[]; render(); },
+  tarFiltroQuitar: () => { S.tarFp=""; S.tarFt=""; S.tarFs=""; S.tarOff=[]; render(); },
+  tarVerServ: d => { S.mod="tarifario"; S.sub=null; S.tab=null; S.tarFp=""; S.tarFt=d.c||d.cat||""; S.tarFs=d.s||d.serv||""; S.tarOff=[]; render(); },
   /* Casillas: por defecto va todo lo filtrado; se desmarca lo que no se quiere mandar. */
   tarMarca: d => { const off=S.tarOff||(S.tarOff=[]), id=String(d.id), i=off.indexOf(id); if(i>-1) off.splice(i,1); else off.push(id); render(); },
   tarMarcaTodos: () => {
-    const ts=listaPrecios(S.tarFp||"",S.tarFt||""), todos=ts.every(t=>!(S.tarOff||[]).includes(String(t.id)));
+    const ts=listaPrecios(S.tarFp||"",S.tarFt||"").filter(t=>!S.tarFs||t.serv===S.tarFs), todos=ts.every(t=>!(S.tarOff||[]).includes(String(t.id)));
     S.tarOff = todos ? (S.tarOff||[]).concat(ts.map(t=>String(t.id))) : (S.tarOff||[]).filter(id=>!ts.some(t=>String(t.id)===id));
     render(); },
   /* Enviar al cliente la lista de precios que se está viendo (la de su propiedad, con el tipo elegido). */
@@ -420,11 +422,13 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
     /* Si venimos de "+ Add new tax", se recupera lo que ya se había escrito
        en vez de perderlo — igual que con las pólizas del COI. */
     const dr = d&&(d.fromTax||d.fromtax) ? S.tarDraft : null;
-    const v = k => dr ? dr[k] : (t ? t[k] : "");
+    const v = k => dr ? dr[k] : (t ? t[k] : (d&&d[k]!=null ? d[k] : ""));
     /* El contexto (general o de una propiedad puntual) lo decide de dónde se abre
        el formulario — desde Tarifario (general) o desde el Price List de una
        propiedad (esa propiedad) — ya no se elige con un selector. */
     const propId = dr ? dr.prop : (t ? t.prop : (d&&d.prop ? d.prop : null));
+    const catIni = v("cat")||activos("categorias")[0]||"Clean";
+    const servIni = v("serv")||(servDe(catIni)[0]||"");
     modal(`<div class="mh"><h3>${t?"Editar precio":"Add Item"}</h3>
       <p>${t?"Un precio mal tecleado se arrastra a cada Work Order. Corrígelo aquí; el cambio queda en la Bitácora.":"Los mismos campos con los que ella registra un precio."}</p></div>
     <div class="mb">
@@ -436,13 +440,13 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
         </select>
         <div id="rUnidadDetalle"></div></div>`:""}
       <div class="fld"><label>Name <span class="req">*</span> <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— se arma solo abajo</span></label>
-        <input id="rNom" readonly style="background:var(--surface-2)" value="${esc(v("nombre")||(propId?`${P(propId).nombre} - `:"")+((v("serv")||"")+" "+(v("variante")||"")).trim())}">
+        <input id="rNom" readonly style="background:var(--surface-2)" value="${esc(v("nombre")||(propId?`${P(propId).nombre} - `:"")+(servIni+" "+(v("variante")||"")).trim())}">
         <label style="display:flex;align-items:center;gap:6px;margin:6px 0 0;text-transform:none;font-weight:500;font-size:11.5px;color:var(--soft)">
           <input type="checkbox" id="rNomEdit" data-a="tarNomLock" style="width:auto"> Editar el Name a mano</label></div>
       <div class="fld"><label>Description <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><input id="rD" value="${esc(v("desc")||"")}"></div>
       <div class="fg c2">
-        <div class="fld"><label>Tipo de servicio <span class="req">*</span></label><select id="rC" data-a="tarCat">${op(activos("categorias"), v("cat"))}</select></div>
-        <div class="fld"><label>Servicio <span class="req">*</span></label><select id="rS" data-a="tarNomBuild">${op(servDe(v("cat")||"Clean"), v("serv"))}</select></div></div>
+        <div class="fld"><label>Tipo de servicio <span class="req">*</span></label><select id="rC" data-a="tarCat">${op(activos("categorias"), catIni)}</select></div>
+        <div class="fld"><label>Servicio <span class="req">*</span></label><select id="rS" data-a="tarNomBuild">${op(servDe(catIni), servIni)}</select></div></div>
       <div class="fld"><label>Detail <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— ej. «2 bedroom», o «Per trailer» si no aplica por tamaño</span></label>
         <input id="rDet" data-a="tarNomBuild" list="rDetList" value="${esc(v("variante")||"")}">
         <datalist id="rDetList">${activos("rooms").map(r=>`<option value="${esc(r)}">`).join("")}</datalist>
@@ -456,8 +460,9 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
         <div class="fld"><label>Baños <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional, de referencia</span></label>
           <input id="rBanos" type="number" min="0" class="mono" placeholder="ej. 2" value="${esc(v("banos")??"")}">
           <div class="hint">Solo para verlo aquí y en el Detail de la unidad — hoy el precio no cambia por baños, solo por Rooms/Piso.</div></div></div>
-      <div class="fg c2">
+      <div class="fg c3">
         <div class="fld"><label>Price (excl. tax) <span class="req">*</span></label><input id="rP" class="mono" placeholder="0.00" value="${esc(v("precio")??"")}"></div>
+        <div class="fld"><label>Pago al técnico</label><input id="rG" class="mono" placeholder="0.00" value="${esc(v("pago")??"")}"></div>
         <div class="fld"><label>Tax</label><select id="rTax">
           <option value="">— no tax —</option>
           ${S.impuestos.map(x=>`<option value="${x.id}" ${v("tax")===x.id?"selected":""}>${esc(x.nombre)} (${x.tasa}%)</option>`).join("")}
@@ -577,14 +582,30 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
   tarGuardar: d => {
     if(marcaFalta(["rNom","rP"])){ toast("Faltan datos","Name y Price son obligatorios.","r"); return; }
     const yo = d&&d.id ? by(S.tarifas,d.id) : null;
+    const elG = document.getElementById("rG");
+    const pagoVal = elG && elG.value !== "" ? (parseFloat(elG.value)||0) : (yo ? (yo.pago||0) : 0);
     const datos = {prop:d.prop||null,nombre:val("rNom"),cat:val("rC"),serv:val("rS"),variante:val("rDet"),
       pisos: val("rPiso") ? parseInt(val("rPiso")) : null,
       banos: val("rBanos") ? parseInt(val("rBanos")) : null,
-      precio:parseFloat(val("rP")),pago:parseFloat(val("rG"))||0,
+      precio:parseFloat(val("rP")),pago:pagoVal,
       desc:val("rD"),tax:val("rTax"),descuento:val("rDesc"),descuentoTipo:val("rDescTipo"),cantidad:parseInt(val("rCant"))||1};
-    if(yo) return guardarEdicion(yo, datos, "Tarifario", `${yo.nombre}${yo.prop?" · "+P(yo.prop).nombre:" · general"}`, null, "tar:"+yo.id);
-    const nr = {id:"TR"+Date.now(), ...datos};
+    const resolverReturnsPendientes = () => {
+      (S.devoluciones||[]).forEach(dv=>{
+        if(!dv.touchup) return;
+        const wFix = W(dv.touchup);
+        if(wFix && egresoWO(wFix)!==null){
+          aplicarDescuento(dv, wFix);
+          (S.excepciones||[]).filter(x=>x.tipo==="Return fix sin tarifa" && x.wo===wFix.id && x.estado==="Pendiente")
+            .forEach(x=>{ x.estado="Aprobada"; x.resol={accion:"Tarifa cargada",quien:S.usuario,hora:hora()}; });
+        }
+      });
+    };
+    if(yo) return guardarEdicion(yo, datos, "Tarifario", `${yo.nombre}${yo.prop?" · "+P(yo.prop).nombre:" · general"}`, resolverReturnsPendientes, "tar:"+yo.id);
+    let trNum = Date.now();
+    while(S.tarifas.some(x=>x.id==="TR"+trNum)) trNum++;
+    const nr = {id:"TR"+trNum, ...datos};
     S.tarifas.push(nr); flash("tar:"+nr.id);
+    resolverReturnsPendientes();
     cm(); toast("✓ Item agregado",`${esc(nr.nombre)} — ${nr.prop?"solo para "+esc(P(nr.prop).nombre):"general"}.`,"v"); render();
   },
 

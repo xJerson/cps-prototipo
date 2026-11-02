@@ -356,7 +356,7 @@ function listaPrecios(prop, tipo){
 }
 /* Lo que se va a enviar: los precios del filtro actual, menos los que se desmarcaron. */
 /* Una tarifa provisoria es un precio inventado: nunca le llega a un cliente. */
-const tarSeleccion = () => listaPrecios(S.tarFp||"", S.tarFt||"").filter(t=>!(S.tarOff||[]).includes(String(t.id)));
+const tarSeleccion = () => listaPrecios(S.tarFp||"", S.tarFt||"").filter(t=>!S.tarFs||t.serv===S.tarFs).filter(t=>!(S.tarOff||[]).includes(String(t.id)));
 /* Texto del correo: solo el precio al cliente, nunca lo que se le paga al técnico. */
 function textoListaPrecios(ts){
   const porTipo={}; ts.forEach(t=>{ (porTipo[t.cat||"—"]=porTipo[t.cat||"—"]||[]).push(t); });
@@ -364,8 +364,8 @@ function textoListaPrecios(ts){
     `• ${t.serv||cat}${t.variante?" ("+t.variante+")":""}${t.pisos!=null?" · Floor "+t.pisos:""}${t.desc?" — "+t.desc:""}: ${money(t.precio)}`).join("\n")).join("\n\n");
 }
 VIEWS.tarifario = () => {
-  const fp=S.tarFp||"", ft=S.tarFt||"";
-  const base=listaPrecios(fp,""), ts=base.filter(t=>!ft||t.cat===ft), sel=ts.filter(t=>!(S.tarOff||[]).includes(String(t.id)));
+  const fp=S.tarFp||"", ft=S.tarFt||"", fs=S.tarFs||"";
+  const base=listaPrecios(fp,""), ts=base.filter(t=>(!ft||t.cat===ft)&&(!fs||t.serv===fs)), sel=ts.filter(t=>!(S.tarOff||[]).includes(String(t.id)));
   const nPorTipo={}; base.forEach(t=>{ nPorTipo[t.cat]=(nPorTipo[t.cat]||0)+1; });
   const props=S.propiedades.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre));
   const enviadas=(S.listasPrecio||[]).slice(0,6);
@@ -378,7 +378,8 @@ VIEWS.tarifario = () => {
     <select id="tarFp" data-a="tarFiltro"><option value="">Tarifario general</option>${props.map(p=>`<option value="${p.id}" ${fp===p.id?"selected":""}>${esc(p.nombre)}</option>`).join("")}</select>
     <span style="font-size:11px;color:var(--faint);font-weight:700;text-transform:uppercase;margin-left:6px">Tipo</span>
     <select id="tarFt" data-a="tarFiltro"><option value="">Todos los tipos (${base.length})</option>${activos("categorias").filter(c=>nPorTipo[c]).map(c=>`<option value="${esc(c)}" ${ft===c?"selected":""}>${esc(c)} (${nPorTipo[c]})</option>`).join("")}</select>
-    ${fp||ft?`<button class="btn sm" data-a="tarFiltroQuitar">Quitar filtros</button>`:""}
+    ${fs?`<span class="pill a">Servicio: ${esc(fs)}</span>`:""}
+    ${fp||ft||fs?`<button class="btn sm" data-a="tarFiltroQuitar">Quitar filtros</button>`:""}
     <span style="margin-left:auto;font-size:12px;color:var(--soft)">${sel.length} de ${ts.length} precio(s) marcados</span>
     <button class="btn p" data-a="tarEnviar" ${sel.length?"":"disabled"}>Enviar lista de precios${sel.length?` (${sel.length})`:""}</button>
   </div></div>
@@ -518,16 +519,13 @@ function resumenUsos(k, valores){
   return partes.length ? "Se usan en "+partes.join(", ") : "Todavía no las usa ningún registro";
 }
 /* Precio general del servicio en Tipos y servicios.
-   PENDIENTE (lunes): un servicio con varias tarifas generales (una por tamaño de unidad, p. ej. Full clean: Studio,
-   1, 2 y 3 bedroom) ya no muestra el texto «desde $X · N tamaños»: ese resumen lo inventamos y no está respaldado por
-   ninguna convención documentada. Hoy esa celda queda con un guion. Decidir con Erika cómo mostrarlo; la propuesta es
-   quitar la columna y poner un enlace «Ver precios» al Tarifario filtrado por ese servicio. Con una sola tarifa se
-   sigue mostrando el precio. «Editar precio» abre solo la primera de las tarifas (t:ts[0]), no deja elegir cuál. */
+   Con una sola tarifa general se muestra el precio directo; cuando hay varias tarifas (una por tamaño/piso),
+   el enlace «Ver precios» abre el Tarifario filtrado por ese servicio. */
 function catPrecio(s){
   const ts=S.tarifas.filter(t=>!t.prop && t.cat===s.tipo && t.serv===s.nombre);
-  if(!ts.length) return {html:'<span style="color:var(--faint)">Sin precio</span>', t:null, falta:true};
-  if(ts.length>1) return {t:ts[0], falta:false, html:'<span class="cat-dim" title="Tiene un precio por tamaño: se ven en el Tarifario">—</span>'};
-  return {t:ts[0], falta:false, html:`<span class="mono" style="white-space:nowrap">${money(+ts[0].precio||0)}</span>`};
+  if(!ts.length) return {html:'<span style="color:var(--faint)">Sin precio</span>', t:null, multi:0, falta:true};
+  if(ts.length>1) return {t:null, multi:ts.length, falta:false, html:`<button class="cat-lnk" data-a="tarVerServ" data-c="${esc(s.tipo)}" data-s="${esc(s.nombre)}">Ver precios (${ts.length})</button>`};
+  return {t:ts[0], multi:1, falta:false, html:`<span class="mono" style="white-space:nowrap">${money(+ts[0].precio||0)}</span>`};
 }
 const catBuscador = (n,ph) => n>8 ? `<input class="cat-buscar" id="catBuscar" placeholder="${esc(ph)}" aria-label="${esc(ph)}">` : "";
 
@@ -553,7 +551,8 @@ function catVistaTys(){
       <tbody>${act.map(s=>{ const pr=precios.get(s.id);
         return `<tr class="${fl("serv:"+s.id)}" data-q="${esc(s.nombre.toLowerCase())}"><td>${esc(s.nombre)}</td><td>${pr.html}</td>
           <td class="cat-fila-acc">${pr.t?`<button class="cat-lnk" data-a="tarNueva" data-id="${pr.t.id}">Editar precio</button>`
-            :pr.falta?`<button class="cat-lnk" data-a="tarNueva">Agregar precio</button>`:""}
+            :pr.multi>1?`<button class="cat-lnk" data-a="tarVerServ" data-c="${esc(s.tipo)}" data-s="${esc(s.nombre)}">Ver precios</button>`
+            :pr.falta?`<button class="cat-lnk" data-a="tarNueva" data-cat="${esc(s.tipo)}" data-serv="${esc(s.nombre)}">Agregar precio</button>`:""}
             <button class="cat-lnk suave" data-a="servRen" data-id="${s.id}">Editar</button></td></tr>`;}).join("")
         ||`<tr><td colspan="3" class="empty">Este tipo todavía no tiene servicios: agrega uno para poder agendarlo.</td></tr>`}</tbody></table>
       ${baja.length?`<details class="cat-bajas"><summary>${baja.length} servicio(s) dado(s) de baja en ${esc(t)}</summary><table><tbody>

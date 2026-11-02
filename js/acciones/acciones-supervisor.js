@@ -165,6 +165,10 @@ Object.assign(ACC, {
   gDiaFin: () => {
     const r = diarioHoy();
     if(!r) return;
+    if(r.estado==="Completado"){
+      toast("Ya est\u00e1 cerrado","El reporte del d\u00eda ya fue finalizado y enviado.","w");
+      return;
+    }
     if(!r.entradas.length){
       toast("El reporte est\u00e1 vac\u00edo","No registraste ninguna actividad hoy. Agrega al menos una antes de enviarlo.","r");
       return;
@@ -318,11 +322,17 @@ Object.assign(ACC, {
   gDevVerifOK: () => {
     leerDev(); const g=S.gDev, d=DV(g.id);
     if(!g.lotes.length){ toast("Faltan las fotos del despu\u00e9s","Sin ellas no se puede dar por corregida.","r"); return; }
+    if(d.touchup && W(d.touchup) && W(d.touchup).estado!=="Completed" && W(d.touchup).estado!=="Canceled"){
+      toast("Return fix en curso",`La WO-${d.touchup} de return fix sigue ${W(d.touchup).estado}. Term\u00ednala o canc\u00e9lala antes de verificar el return.`,"w"); return; }
     S.reloj += 12;
     d.lotesDespues = g.lotes.slice();
     d.estado = "Corregida";
     d.notaVerif = g.nota||"";
     d.hist.push([hora(),"Verificada en campo — fotos del despu\u00e9s cargadas",tecN(GUSTAVO)]);
+    const wOrig = d.wo ? W(d.wo) : null;
+    if(wOrig && wOrig.revisionCalidad && wOrig.revisionCalidad.estado==="Return creado"){
+      wOrig.revisionCalidad.estado = "Return corregido";
+    }
     anotarDia("devolucion",
       `Verificado el return fix en ${esc(P(d.prop).nombre)} ${U(d.unidad)?esc(U(d.unidad).num):""} — ${esc(devAreasTxt(d))}`,
       d.id, {prop:d.prop, unidad:d.unidad, fotos:g.lotes.reduce((t,l)=>t+(l.fotosArr||[]).length,0)});
@@ -334,8 +344,14 @@ Object.assign(ACC, {
   /* Cierre desde la oficina: cualquiera con el módulo Returns, con la evidencia que mandó el técnico en la WO de return fix. */
   devCerrar: d => {
     const dv=DV(d.id); if(!dv||dv.estado!=="Corregida"||!puede("devoluciones")) return;
+    if(dv.touchup && W(dv.touchup) && W(dv.touchup).estado!=="Completed" && W(dv.touchup).estado!=="Canceled"){
+      toast("Return fix pendiente",`La WO-${dv.touchup} de return fix a\u00fan est\u00e1 en estado ${W(dv.touchup).estado}.`,"r"); return; }
     dv.estado="Cerrada"; dv.fechaCierre=HOY_SUP; dv.cerro={quien:S.usuario,fecha:HOY_SUP,hora:hora()};
     dv.hist.push([hora(),"Cerrada por la oficina",S.usuario]);
+    const wOrig = dv.wo ? W(dv.wo) : null;
+    if(wOrig && wOrig.revisionCalidad && wOrig.revisionCalidad.estado==="Return creado"){
+      wOrig.revisionCalidad.estado = "Return corregido";
+    }
     S._audDev=P(dv.prop).nombre+" · "+(U(dv.unidad)?U(dv.unidad).num:"")+" — "+devAreasTxt(dv);
     const c=causaDe(dv.causa); flash("dv:"+dv.id);
     toast("Return cerrado",`Quedó el historial completo. Por la causa registrada, el return fix <b>${c.paga?"sí":"no"}</b> se le paga a ${esc(tecN(dv.responsable))}.`,"v");
@@ -346,11 +362,17 @@ Object.assign(ACC, {
   gDevCerrar: d => {
     const dv = DV(d.id);
     if(!dv || dv.estado!=="Corregida") return;      // solo se cierra un return ya verificado con fotos del después
+    if(dv.touchup && W(dv.touchup) && W(dv.touchup).estado!=="Completed" && W(dv.touchup).estado!=="Canceled"){
+      toast("Return fix pendiente",`La WO-${dv.touchup} de return fix a\u00fan est\u00e1 en estado ${W(dv.touchup).estado}.`,"r"); return; }
     S.reloj += 3;
     dv.estado = "Cerrada";
     dv.verifica = GUSTAVO;
     dv.fechaCierre = HOY_SUP;
     dv.hist.push([hora(),"Cerrada por el supervisor",tecN(GUSTAVO)]);
+    const wOrig = dv.wo ? W(dv.wo) : null;
+    if(wOrig && wOrig.revisionCalidad && wOrig.revisionCalidad.estado==="Return creado"){
+      wOrig.revisionCalidad.estado = "Return corregido";
+    }
     const c = causaDe(dv.causa);
     flash("dv:"+dv.id);
     toast("Return cerrado",
@@ -517,14 +539,14 @@ Object.assign(ACC, {
     /* El estado previo no espera decisión de nadie: se archiva en la unidad */
     if(g.tipo==="previo"){ r.estado="Archivado"; r.accion="Archivado en la unidad"; }
     /* El informe se engancha solo al reporte del día */
+    const et = (REP[r.tipo]||{n:r.tipo}).n;
     anotarDia(g.tipo==="relevamiento"?"estimado":"supervision",
-      `${REP[r.tipo].n}: ${esc(P(r.prop).nombre)} ${esc(U(r.unidad).num)}`
+      `${et}: ${esc(P(r.prop).nombre)} ${esc(U(r.unidad).num)}`
       + (g.estadoTrabajo?` — ${esc(g.estadoTrabajo)}`:""),
       r.id, {prop:r.prop, unidad:r.unidad, fotos:n});
     r.tipoVisita = g.tipoVisita||""; r.estadoTrabajo = g.estadoTrabajo||"";
     const pideDev = g.tipo==="revision" && g.estadoTrabajo==="Requiere correcci\u00f3n";
     S.gRep=null; S.phView=pideDev?S.phView:"dia"; S.reloj+=4;
-    const et = REP[r.tipo].n;
     toast(`📷 ${et} enviado`,
       `${esc(P(r.prop).nombre)} · ${esc(U(r.unidad).num)} — <b>${n} foto(s)</b> en ${r.lotes.length} ambiente(s).`
       + (g.tipo==="previo"

@@ -794,7 +794,11 @@ function modalSubWO(woId){
    definidas, no se agrega nada (el campo Notas alcanza). */
 function refSubWO(){
   const caja=document.getElementById("swSpecs"); if(!caja) return;
-  const campos = SUBWO_SPECS[val("swTipo")] || [];
+  const w=W(+val("swWo")), u=w&&U(w.unidad), cat=val("swCat"), tipo=val("swTipo");
+  const ref = w && u ? (cat===CO_PEND ? adicionalCatalogo(tipo) : tarifa(w.prop, cat, tipo, u.rooms, u.pisos)) : null;
+  const inpP = document.getElementById("swPrecio");
+  if(inpP) inpP.value = ref && ref.precio!=null ? ref.precio : "";
+  const campos = SUBWO_SPECS[tipo] || [];
   caja.innerHTML = campos.length ? `<div class="fg c${Math.min(campos.length,3)}" style="margin:-4px 0 12px">
     ${campos.map((c,i)=>`<div class="fld" style="margin-bottom:0"><label>${esc(c)}</label>
       <input id="swSpec${i}" data-spec="${esc(c)}" placeholder="${esc(c)}"></div>`).join("")}

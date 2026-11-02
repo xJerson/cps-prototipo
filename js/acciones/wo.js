@@ -631,12 +631,13 @@ Object.assign(ACC, {
     if(!areas.length){ toast("Falta el área","Elige al menos un área a corregir.","r"); return; }
     w.devuelta=(w.devuelta||0)+1; w.motivoDev=m;
     w.revisionCalidad={estado:"Return creado",fecha:HOY_SUP,hora:hora(),quien:S.usuario,motivo:m};
-    (w.evidFotos=w.evidFotos||[]).push(fotoNueva(S._dvFoto||null, S.usuario));
-    w.evid=w.evidFotos.length; S._dvFoto=null; flash("wo:"+w.id);
+    S._dvFoto=null; flash("wo:"+w.id);
     w.hist.push([hora(),`Return por supervisión: ${m}`,S.usuario]);
     // El registro real — el mismo que crea gDevOK desde el celular — para que
     // el descuento, el bloqueo de facturación y el touch-up sí se disparen.
-    const dv = {id:"DV"+Date.now(), prop:w.prop, unidad:w.unidad, wo:w.id, areas,
+    let dvNum = Date.now();
+    while(S.devoluciones.some(x=>x.id==="DV"+dvNum)) dvNum++;
+    const dv = {id:"DV"+dvNum, prop:w.prop, unidad:w.unidad, wo:w.id, areas,
       desc:m, causa, responsable:w.tec, prioridad:val("dvP")||"Alta",
       fechaRep:HOY_SUP, fechaLimite:val("dvL")||"2026-08-14", horaLimite:val("dvLH")||"17:00", estado:"Abierta",
       lotesAntes:areas.map((a,i)=>({amb:a, fotosArr: i===0 && fotoObs ? [fotoNueva(fotoObs, S.usuario)] : []})), lotesDespues:[], verifica:null, quien:S.usuario,
@@ -818,7 +819,9 @@ Object.assign(ACC, {
     if(!uid||!m||!tec||!areas.length){ S.audOmitir=true; marcaFalta([!uid?"rgU":"",!m?"rgM":"",!tec?"rgT":""].filter(Boolean)); toast("Falta información",!areas.length?"Elige al menos un área a corregir.":"Elige la unidad, quién hizo el trabajo y escribe qué está mal.","r"); return; }
     const ult=S.wos.filter(w=>w.unidad===uid&&w.estado!=="Canceled"&&!w.touchup).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""))[0];
     const woDe=S._rgWO&&W(S._rgWO)&&W(S._rgWO).unidad===uid?S._rgWO:(ult?ult.id:null); S._rgWO=null;
-    const dv={id:"DV"+Date.now(), prop:pid, unidad:uid, wo:woDe, areas, desc:m, causa, responsable:tec,
+    let dvNum = Date.now();
+    while(S.devoluciones.some(x=>x.id==="DV"+dvNum)) dvNum++;
+    const dv={id:"DV"+dvNum, prop:pid, unidad:uid, wo:woDe, areas, desc:m, causa, responsable:tec,
       prioridad:val("rgR")||"Alta", fechaRep:HOY_SUP, fechaLimite:val("rgL")||HOY_SUP, horaLimite:val("rgLH")||"17:00", estado:"Abierta",
       lotesAntes:[], lotesDespues:[], verifica:null, quien:S.usuario, origen:val("rgO"), urgente:!!(document.getElementById("rgUrg")&&document.getElementById("rgUrg").checked),
       hist:[[hora(),`Return registrado por ${S.usuario} (pedida por: ${val("rgO")})`,S.usuario]]};
@@ -983,7 +986,10 @@ Object.assign(ACC, {
     const com = (S.comunicacionesWO||[]).filter(c=>c.wo===w.id && c.estado!=="Closed");
     com.forEach(c=>{ c.estado="Closed"; c.cierre={...cierre, motivo:"WO cancelada"}; });
     const adic = S.adicionales.filter(a=>a.wo===w.id && a.estado==="Pendiente");
-    adic.forEach(a=>{ a.estado="Rechazado"; a.aprob={medio:"Sistema", ...cierre, nota:"WO cancelada"}; });
+    adic.forEach(a=>{
+      a.estado="Rechazado"; a.aprob={medio:"Sistema", ...cierre, nota:"WO cancelada"};
+      if(a.origen==="Planificada") a.estadoTrabajo="Canceled";
+    });
     S.adicionales.filter(a=>a.wo===w.id && a.origen==="Planificada" && a.estado==="Aprobado" && a.estadoTrabajo!=="Completed")
       .forEach(a=>{ a.estadoTrabajo="Canceled"; });
     const exc = (S.excepciones||[]).filter(x=>x.wo===w.id && x.estado==="Pendiente");
@@ -1071,8 +1077,22 @@ Object.assign(ACC, {
       precio:parseFloat(val("tP")), pago:parseFloat(val("tG")),
       precioFijado:sellarPrecio()};   // quién definió esta tarifa (ver sellarPrecio en helpers.js)
     S.tarifas.push(ntr); flash("tar:"+ntr.id);
-    /* Las WO ya completas que solo esperaban esta tarifa se validan solas (igual que al terminar la WO). */
-    S.wos.forEach(x=>{ if(x.cat===ntr.cat && x.serv===ntr.serv && !x.validada && !x.clienteCorreccion && x.estado==="Completed" && x.evid>0 && ingresoWO(x)!==null && !subWOsPendientesDeWO(x.id).length){ x.validada=true; x.hist.push([hora(),"Validada automáticamente: ya tiene tarifa","Sistema"]); } });
+    /* Si algún return fix esperaba esta tarifa, calcula su descuento y resuelve la excepción. */
+    (S.devoluciones||[]).forEach(dv=>{
+      if(!dv.touchup) return;
+      const wFix = W(dv.touchup);
+      if(wFix && egresoWO(wFix)!==null){
+        aplicarDescuento(dv, wFix);
+        (S.excepciones||[]).filter(x=>x.tipo==="Return fix sin tarifa" && x.wo===wFix.id && x.estado==="Pendiente")
+          .forEach(x=>{ x.estado="Aprobada"; x.resol={accion:"Tarifa cargada",quien:S.usuario,hora:hora()}; });
+      }
+    });
+    S.wos.forEach(x=>{
+      if(x.cat===ntr.cat && x.serv===ntr.serv && x.estado==="Completed" && x.evid>0 && ingresoWO(x)!==null && !subWOsPendientesDeWO(x.id).length && !clienteRevisionPendienteDeWO(x.id)){
+        if(aprobPagoOK(x) && aprobFacturaOK(x)) x.validada=true;
+        x.hist.push([hora(),"Tarifa definida: lista para validar","Sistema"]);
+      }
+    });
     cm();
     toast("✓ Tarifa creada",`${esc(w.serv)} · ${esc(u.rooms)} ya tiene precio. Las Work Orders que decían «NA» se recalcularon solas.`,"v");
     render();
@@ -1103,7 +1123,13 @@ Object.assign(ACC, {
     }));
     const parentPost=(w.evidFotos||[]).slice();
     if(!items.some(x=>x.post.length) && !parentPost.length){ toast("Falta evidencia post-work","Carga al menos una foto final del trabajo principal o de una Sub-WO.","r"); return; }
-    const r={id:"CR"+Date.now(),wo:w.id,prop:w.propiedad||w.prop,propiedad:p.nombre,unidad:U(w.unidad).num,correo:mail,mensaje:val("crMsg"),items,parentPost,estado:"Enviado",canalEnvio:"Correo electrónico",creado:HOY_SUP,enviado:HOY_SUP,hora:hora(),respondido:null};
+    /* Si ya había un expediente enviado o con corrección solicitada, queda reemplazado por este nuevo envío. */
+    (S.revisionesCliente||[]).filter(x=>x.wo===w.id && ["Enviado","Corrección solicitada"].includes(x.estado))
+      .forEach(x=>{ x.estado="Reemplazado"; });
+    w.clienteCorreccion=null;
+    let crNum = Date.now();
+    while((S.revisionesCliente||[]).some(x=>x.id==="CR"+crNum)) crNum++;
+    const r={id:"CR"+crNum,wo:w.id,prop:w.propiedad||w.prop,propiedad:p.nombre,unidad:U(w.unidad).num,correo:mail,mensaje:val("crMsg"),items,parentPost,estado:"Enviado",canalEnvio:"Correo electrónico",creado:HOY_SUP,enviado:HOY_SUP,hora:hora(),respondido:null};
     S.revisionesCliente.unshift(r); guardarRevisionesCliente(); desvalidar(w);
     w.clienteRevisionId=r.id; w.hist.push([hora(),`Expediente post-work enviado a ${mail}`,S.usuario]);
     cm();
@@ -1117,7 +1143,11 @@ Object.assign(ACC, {
     r.estado=confirmada?"Confirmado":"Corrección solicitada";
     r.respondido={quien:S.usuario,canal,fecha:HOY_SUP,hora:hora(),nota}; guardarRevisionesCliente();
     const w=W(r.wo); if(w){
-      if(confirmada){ w.clienteConfirmado=r.respondido; w.clienteCorreccion=null; w.hist.push([hora(),`Cliente aprobó el expediente post-work por ${canal}`,S.usuario]); if(w.estado==="Completed"&&w.evid>0&&ingresoWO(w)!==null&&!subWOsPendientesDeWO(w.id).length) w.validada=true; }
+      if(confirmada){
+        w.clienteConfirmado=r.respondido; w.clienteCorreccion=null;
+        w.hist.push([hora(),`Cliente aprobó el expediente post-work por ${canal}`,S.usuario]);
+        w.validada = aprobPagoOK(w) && aprobFacturaOK(w);
+      }
       else { w.clienteCorreccion={fecha:HOY_SUP,hora:hora(),nota,canal}; desvalidar(w); w.hist.push([hora(),`Cliente solicitó corrección por ${canal}: ${nota}`,S.usuario]); avisar("Erika","Cliente solicitó una corrección",`WO-${w.id}: ${nota}`,"r"); }
     }
     cm(); toast(confirmada?"✓ Aprobación registrada":"Corrección registrada",`Respuesta guardada por canal <b>${esc(canal)}</b>, con fecha y hora.`,confirmada?"v":"w"); render();
@@ -1125,7 +1155,11 @@ Object.assign(ACC, {
   clienteConfirmar: d => {
     const r=by(S.revisionesCliente,d.id); if(!r||r.estado!=="Enviado") return;
     r.estado="Confirmado"; r.respondido={quien:"Cliente",fecha:HOY_SUP,hora:hora(),nota:"Finalización confirmada"}; guardarRevisionesCliente();
-    const w=W(r.wo); if(w){ w.clienteConfirmado=r.respondido; w.hist.push([hora(),"Cliente confirmó la finalización del expediente post-work","Cliente"]); if(w.estado==="Completed"&&w.evid>0&&ingresoWO(w)!==null&&!subWOsPendientesDeWO(w.id).length) w.validada=true; }
+    const w=W(r.wo); if(w){
+      w.clienteConfirmado=r.respondido; w.clienteCorreccion=null;
+      w.hist.push([hora(),"Cliente confirmó la finalización del expediente post-work","Cliente"]);
+      w.validada = aprobPagoOK(w) && aprobFacturaOK(w);
+    }
     toast("✓ Finalización confirmada","La respuesta quedó registrada. Oficina ya puede continuar con el cierre.","v"); cm(); render();
   },
   clienteCorreccion: d => { const r=by(S.revisionesCliente,d.id); if(r&&r.estado==="Enviado") modalClienteCorreccion(r); },
@@ -1136,8 +1170,12 @@ Object.assign(ACC, {
     toast("Solicitud enviada","Oficina recibió el detalle de la corrección.","w"); cm(); render();
   },
   clienteRevisionExcepcion: d => {
+    if(!puedeValidar()){ S.audOmitir=true; toast("Sin permiso","Solo Claudia o Erika pueden autorizar cerrar sin confirmación del cliente.","r"); return; }
     const r=by(S.revisionesCliente,d.id), w=r&&W(r.wo); if(!r||!w) return;
-    r.estado="Excepción registrada"; r.respondido={quien:S.usuario,fecha:HOY_SUP,hora:hora(),nota:"Oficina autorizó cerrar sin nueva confirmación"}; w.clienteReviewOverride=true; if(w.estado==="Completed"&&w.evid>0&&ingresoWO(w)!==null&&!subWOsPendientesDeWO(w.id).length) w.validada=true; w.hist.push([hora(),"Oficina registró excepción a la confirmación del cliente",S.usuario]); guardarRevisionesCliente();
+    r.estado="Excepción registrada"; r.respondido={quien:S.usuario,fecha:HOY_SUP,hora:hora(),nota:"Oficina autorizó cerrar sin nueva confirmación"};
+    w.clienteReviewOverride=true; w.clienteCorreccion=null;
+    w.validada = aprobPagoOK(w) && aprobFacturaOK(w);
+    w.hist.push([hora(),"Oficina registró excepción a la confirmación del cliente",S.usuario]); guardarRevisionesCliente();
     toast("Excepción registrada","La revisión del cliente queda documentada y oficina puede continuar.","v"); render();
   },
   subwoGestionGuardar: d => {
@@ -1152,7 +1190,7 @@ Object.assign(ACC, {
     }
     a.tec=tec; a.fecha=fecha; a.estadoTrabajo=estado;
     if(estado!=="Canceled" && estado!=="Completed") desvalidar(w);
-    if(w.estado==="Completed" && w.evid>0 && ingresoWO(w)!==null && !subWOsPendientesDeWO(w.id).length) w.validada=true;
+    w.validada = aprobPagoOK(w) && aprobFacturaOK(w);
     const despues=tecSubWO(a);
     a.hist.push([hora(),`Gestión actualizada · ${estado} · ${despues?tecN(despues):"sin técnico"}`,S.usuario]);
     w.hist.push([hora(),`Sub-Work Order ${a.concepto}: ${estado}${despues?" · "+tecN(despues):""}`,S.usuario]);
@@ -1164,9 +1202,14 @@ Object.assign(ACC, {
   },
   subwoGuardar: d => {
     if(marcaFalta(["swTipo","swUbic","swCant"])){ toast("Faltan datos","Elige el tipo, la ubicación y la cantidad.","r"); return; }
-    const w=W(+val("swWo"));
-    const tipo=val("swTipo"), ubic=val("swUbic"), cant=parseFloat(val("swCant"))||1,
-      precio=parseFloat(val("swPrecio"))||null, notas=val("swNotas")||"";
+    const w=W(+val("swWo")), u=U(w.unidad);
+    const tipo=val("swTipo"), ubic=val("swUbic"), cant=parseFloat(val("swCant"))||1, notas=val("swNotas")||"";
+    const catSW=val("swCat"), item=catSW===CO_PEND;
+    const ref = u ? (item ? adicionalCatalogo(tipo) : tarifa(w.prop, catSW, tipo, u.rooms, u.pisos)) : null;
+    const rawP = val("swPrecio").trim();
+    const precio = rawP!=="" ? (parseFloat(rawP)||null) : (ref ? ref.precio : null);
+    const pago = ref && ref.pago!=null ? ref.pago : precio;
+    const precioOrigen = rawP!=="" && (!ref || parseFloat(rawP)!==ref.precio) ? "manual" : (ref ? (item ? "catalogo" : "tarifa") : null);
     const specsDef = SUBWO_SPECS[tipo]||[];
     const specs={};
     specsDef.forEach((c,i)=>{ const v=val("swSpec"+i); if(v && v.trim()) specs[c]=v.trim(); });
@@ -1180,9 +1223,8 @@ Object.assign(ACC, {
        Excepciones y se aprueba con el mismo modal de "¿cómo aprobó el
        cliente?" (medioOK), que ahí mismo decide nómina y si se factura.
        Sin costo no hay nada que aprobar, queda directo como antes. */
-    const catSW=val("swCat"), item=catSW===CO_PEND;
     const na={id:nid("ad"), sol:"SOL"+Date.now(), wo:w.id, desc:notas, ubic, concepto:tipo, cat:item?null:catSW, serv:item?null:tipo,
-      cant, precio, estado: monto>0 ? "Pendiente" : "Aprobado",
+      cant, precio, pago, precioOrigen, estado: monto>0 ? "Pendiente" : "Aprobado",
       aprob: monto>0 ? null : {medio:"Directo",quien:S.usuario,fecha:hora()},
       origen:"Planificada", fotosRefArr:[], fotosEvidArr:[], specs,
       tec:tecOverride, fecha:fechaOverride, facturable:false,

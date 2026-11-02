@@ -205,7 +205,8 @@ Object.assign(ACC, {
     if(!(monto>0)){ S.audOmitir=true; toast("Falta el monto","Escribe cuánto fue.","r"); return; }
     if(!sh.foto){ S.audOmitir=true; toast("Falta la foto","Sin foto del recibo no se puede guardar.","r"); return; }
     const tipo=TIPOS_VEH[sh.tipo]||sh.tipo;
-    S.gastosCompartidos.unshift({id:"GC"+(S.gastosCompartidos.length+1),tipo,concepto:tipo==="Fuel"?"Fuel loaded by Gustavo":tipo,monto,fecha:sh.fecha||HOY_SUP,
+    const gcId="GC"+(S.gastosCompartidos.reduce((m,x)=>Math.max(m,parseInt(String(x.id).replace(/^GC/,""),10)||0),0)+1);
+    S.gastosCompartidos.unshift({id:gcId,tipo,concepto:tipo==="Fuel"?"Fuel loaded by Gustavo":tipo,monto,fecha:sh.fecha||HOY_SUP,
       vehiculo:sh.veh,evidencia:true,foto:sh.foto,notas:sh.nota||"",asignaciones:[],quien:"Gustavo"});
     S.phSheet=null; toast("✓ Guardado",`${esc(sh.tipo)} · ${money(monto)}. Ya está en Finanzas.`,"v"); render(); },
   fCompraMaterial: d => { S.phSheet={t:"compra", wo:+d.id, tienda:CAT.tiendas[0], filas:[filaCompra()], total:"", foto:null}; render(); },
@@ -350,6 +351,8 @@ Object.assign(ACC, {
        excepción en vivo que arma excAuto() (ver woBloqueada), así que no
        hace falta bloquear también el cierre del trabajo en sí. */
     if(!asisDe(w.id)){ S.phSheet={t:"llegada",wo:w.id}; render(); return; }
+    if(!w.corroborado){
+      toast("🚫 Primero corrobora la unidad","Confirma si los datos de la unidad coinciden antes de terminar el trabajo.","r"); return; }
     if(!w.evid){
       toast("🚫 Falta la evidencia","Claudia: «no hay ni un registro, no me consta lo que me estás diciendo». Toma al menos una foto.","r"); return; }
     S.reloj+=28; w.estado="Completed";

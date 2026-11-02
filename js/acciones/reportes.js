@@ -39,13 +39,12 @@ Object.assign(ACC, {
     render(); },
   repEstimado: d => { const r=by(S.reportes,d.id);
     r.estado="Procesado"; r.accion="Se generó un estimado con estas fotos";
-    const csRep = contactosDe(r.prop);
-    S.estHdr={prop:r.prop, contactos:csRep.length?[csRep[0].id]:[]};
     /* Si hay UNA sola solicitud con inspección esperando este reporte (misma propiedad, sin estimado), el estimado la cierra al guardarse.
        Con cero o varias candidatas no se adivina: el reporte no trae la solicitud de origen. */
     const cand = r.tipo==="relevamiento" ? S.solicitudesComerciales.filter(sc=>sc.inspeccion && sc.prop===r.prop && !sc.estimadoId
       && (sc.estado==="Lista para estimado"||sc.estado==="Esperando inspección") && r.fecha>=sc.fecha) : [];
-    if(cand.length===1) S.estHdr.solicitudId = cand[0].id;
+    estInicializarBorrador(r.prop, cand.length===1 ? cand[0].id : null, false);
+    S.estHdr.origen = {tipo:"Reporte", id:r.id};
     /* Aqui esta el pago del formulario 2: cada servicio que Gustavo escribio
        en campo baja como linea del estimado, con su tarifa ya resuelta.
        Nadie vuelve a teclear lo que ya se escribio parado en la unidad. */
@@ -53,11 +52,14 @@ Object.assign(ACC, {
     let sinTarifa = 0;
     (r.items||[]).forEach(it=>{
       const u = U(r.unidad); if(!u) return;
-      const sv = serviciosConTarifa(r.prop, it.cat, r.unidad)[0];
+      const trab = (it.trabajo||"").trim();
+      const catServs = servDe(it.cat);
+      const matchCat = trab ? catServs.find(s=>uNorm(s)===uNorm(trab)) : null;
+      const sv = matchCat || trab || serviciosConTarifa(r.prop, it.cat, r.unidad)[0] || catServs[0] || it.cat;
       const t  = sv ? tarifa(r.prop, it.cat, sv, u.rooms, u.pisos) : null;
       if(!t) sinTarifa++;
-      S.draftEst.push({unidad:r.unidad, cat:it.cat, serv:sv||it.trabajo,
-        precio:t?t.precio:null, pago:t?t.pago:null, nivel:t?t.nivel:null});
+      S.draftEst.push({unidad:r.unidad, cat:it.cat, serv:sv,
+        precio:t?t.precio:null, pago:t?(t.pago||0):0, nivel:t?t.nivel:null});
     });
     flash("rep:"+r.id);
     toast("Estimado en preparación",

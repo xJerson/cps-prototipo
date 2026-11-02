@@ -783,7 +783,9 @@ function estCrearEst(){
     toast("✓ Propuesta modificada",`<b>${esc(e.num)}</b> queda lista — dale <b>Enviar</b> desde la lista para mandarla de nuevo.`,"v"); render();
     return;
   }
-  const e={id:"E"+Date.now(),...datos,estado:"Borrador",aprob:null,correoTexto:"",token:"ap-"+Math.random().toString(36).slice(2,10)};
+  let eNum = Date.now();
+  while(S.estimados.some(x=>x.id==="E"+eNum)) eNum++;
+  const e={id:"E"+eNum,...datos,estado:"Borrador",aprob:null,correoTexto:"",token:"ap-"+Math.random().toString(36).slice(2,10)};
   S.estimados.unshift(e); S.draftEst=[]; flash("est:"+e.id);
   /* Cierra el ciclo con la Solicitud Comercial que le dio origen (paso 1 del
      flujograma) — sin esto, el sistema seguia arrancando desde la mitad. */

@@ -62,7 +62,7 @@ function renderFonSup(){
    El orden importa: primero la unidad, después la cámara. Al revés,
    Gustavo termina con 60 fotos sin saber a qué unidad pertenecen.      */
 function hojaSup(g){
-  const r = REP[g.tipo];
+  const r = REP[g.tipo] || {n:g.tipo, d:"", c:"#8a5a00"};
   const us = S.unidades.filter(u=>u.prop===g.prop);
   const total = g.lotes.reduce((t,l)=>t+(l.fotosArr||[]).length,0);
   return `<div class="fscrim" data-a="gRepNo"><div class="fsheet" data-stop>

@@ -40,22 +40,34 @@ function registrarHistorialApproval(x, evento, detalle){
    tanto la aprobación normal (medioOK) como el resolver "Definir precio del
    adicional" (precioDefGuardar), para no duplicar la regla en dos lados. */
 function aplicarPagoFacturaAdicional(l, w, s, cobrar){
-  const monto = (l.precio||0)*(l.cant||1);
-  if(!(monto>0)) return {pagoTec:0, cobroCliente:0};
+  const cant = l.cant||1;
+  const u = w ? U(w.unidad) : null;
+  const tf = u && l.cat && l.concepto ? tarifa(w.prop, l.cat, l.concepto, u.rooms, u.pisos) : null;
+  const pagoUnit = l.pago!=null ? l.pago : (tf && tf.pago!=null ? tf.pago : (l.precio||0));
+  const montoPago = pagoUnit * cant;
+  const montoCobro = (l.precio||0) * cant;
+  if(!(montoPago>0) && !(cobrar && montoCobro>0)) return {pagoTec:0, cobroCliente:0};
   const quienPidio = s.origen==="Planificada" ? "Oficina" : tecN(w.tec);
   const tecnicoPago = tecSubWO(l)||w.tec;
-  S.excepciones.push({id:"X"+Date.now()+"_"+l.id, tipo:"Pago adicional al técnico", wo:w.id, subwo:l.id, tec:tecnicoPago,
-    motivo:`Sub-Work Order aprobada · ${l.concepto}${l.ubic?" · "+l.ubic:""}`, monto,
-    pide:quienPidio, aprueba:S.usuario, estado:"Aprobada",
-    fecha:w.fecha, creada:{quien:quienPidio,hora:hora()}, resol:{quien:S.usuario,hora:hora()}});
-  let cobroCliente = 0;
-  if(cobrar){
-    cobroCliente = monto;
-    l.facturable=true; l.montoFactura=monto;
-    w.extraFacturable = (w.extraFacturable||0) + monto;
-    (l.hist=l.hist||[]).push([hora(), `Se suma ${money(monto)} a lo que se le factura a la propiedad`, S.usuario]);
+  if(montoPago>0){
+    S.excepciones.push({id:"X"+Date.now()+"_"+l.id, tipo:"Pago adicional al técnico", wo:w.id, subwo:l.id, tec:tecnicoPago,
+      motivo:`Sub-Work Order aprobada · ${l.concepto}${l.ubic?" · "+l.ubic:""}`, monto:montoPago,
+      pide:quienPidio, aprueba:S.usuario, estado:"Aprobada",
+      fecha:w.fecha, creada:{quien:quienPidio,hora:hora()}, resol:{quien:S.usuario,hora:hora()}});
   }
-  return {pagoTec:monto, cobroCliente};
+  let cobroCliente = 0;
+  if(cobrar && montoCobro>0){
+    cobroCliente = montoCobro;
+    l.facturable=true; l.montoFactura=montoCobro;
+    w.extraFacturable = (w.extraFacturable||0) + montoCobro;
+    (l.hist=l.hist||[]).push([hora(), `Se suma ${money(montoCobro)} a lo que se le factura a la propiedad`, S.usuario]);
+  }
+  return {pagoTec:montoPago, cobroCliente};
+}
+function puedeResolverExc(ex){
+  if(!ex || S.usuario==="Claudia") return true;
+  const resp = ex.assignedTo || ex.aprueba;
+  return !resp || resp===S.usuario;
 }
 /* Rechazo de uno o varios conceptos de un aviso: lo usa el Request (todo el aviso) y la tarjeta de la WO (un concepto). */
 function rechazarAdicional(sa, pend){
@@ -141,6 +153,8 @@ Object.assign(ACC, {
       if(c.campo==="num"){
         const v=val(iid).trim();
         if(!v){ toast("Falta el dato","Indica el unit number aprobado.","r"); return; }
+        const dup=S.unidades.find(o=>o.id!==u.id && o.prop===u.prop && uNorm(o.num)===uNorm(v));
+        if(dup){ marcaFalta([iid]); toast("Unidad duplicada",`Ya existe la unidad <b>${esc(dup.num)}</b> en ${esc(P(u.prop).nombre)}.`,"r"); return; }
         aplicados.push({campo:c.campo, anterior:u.num, nuevo:v});
       } else if(c.campo==="ocupacion"){
         const v=val(iid);
@@ -153,6 +167,7 @@ Object.assign(ACC, {
     }
     aplicados.forEach(c=>{
       u[c.campo]=c.nuevo;
+      if(c.campo==="bedrooms") u.rooms=roomsDesde(u.tipo||"Residencial",c.nuevo);
       (u.cambios||=([])).push({campo:c.campo,anterior:c.anterior,nuevo:c.nuevo,quien:S.usuario,hora:hora(),wo:w.id,origen:"Request"});
     });
     const resumen = aplicados.map(c=>`${ETQ_CAMPO_UNIDAD[c.campo]} ${c.anterior} → ${c.nuevo}`).join(" · ");
@@ -170,14 +185,24 @@ Object.assign(ACC, {
     if(!puedeDecidirAdicional() && s.aprobador && s.aprobador!==S.usuario){ toast("Aprobación delegada",`Esta solicitud debe decidirla <b>${esc(s.aprobador)}</b>.`,"w"); return; }
     rechazarAdicional(s, s.lineas.filter(l=>l.estado==="Pendiente" && l.id===+d.lid)); },
   excAprob: d => {
+    if(String(d.id).startsWith("AUTO-T")){ modalTarifaExc(+String(d.id).slice(6), d.id); return; }
+    if(String(d.id).startsWith("AUTO-P")){ modalDefinirPrecio(d.id); return; }
+    const sa = solTodas().find(z=>"AUTO-A"+z.sol===d.id);
+    if(sa){ modalMedio(sa.sol); return; }         // el adicional pregunta CÓMO aprobó el cliente
     const x = by(S.excepciones,d.id);
+    const a = !x ? excAuto().find(y=>y.id===d.id) : null;
+    const obj = x || a;
+    if(!obj) return;
+    if(obj.tipo==="Tarifa no encontrada" && obj.wo){ modalTarifaExc(obj.wo, obj.id); return; }
+    if(!puedeResolverExc(obj)){
+      S.audOmitir=true;
+      toast("Sin permiso",`Esta solicitud está asignada a <b>${esc(obj.assignedTo||obj.aprueba)}</b>.`,"r");
+      return;
+    }
     if(x){ x.estado="Aprobada"; x.resol={quien:S.usuario,hora:hora()}; registrarHistorialApproval(x,"Approved"); flash("exc:"+x.id);
       if(x.tipo==="Cierre sin evidencia"){ const w=W(x.wo); if(w) w.evidExcusada=true; }
       toast("✓ Excepción aprobada",`${esc(x.tipo)} — autorizada por ${S.usuario}. Queda registrado quién y cuándo.`,"v");
       render(); return; }
-    const sa = solTodas().find(z=>"AUTO-A"+z.sol===d.id);
-    if(sa){ modalMedio(sa.sol); return; }         // el adicional pregunta CÓMO aprobó el cliente
-    const a = excAuto().find(y=>y.id===d.id);
     if(a){
       const nx={...a, id:"X"+Date.now(), auto:false, estado:"Aprobada", resol:{quien:S.usuario,hora:hora()}};
       registrarHistorialApproval(nx,"Approved"); S.excepciones.push(nx);
@@ -285,14 +310,17 @@ Object.assign(ACC, {
     if(marcaFalta(["dpP"])){ toast("Falta el precio","Escribe cuánto se le cobra al cliente.","r"); return; }
     const precio = parseFloat(val("dpP"));
     if(!(precio>=0)){ toast("Precio inválido","Tiene que ser 0 o más.","r"); return; }
+    const elG = document.getElementById("dpG"), rawG = elG ? elG.value.trim() : "";
+    const pago = rawG!=="" ? parseFloat(rawG) : (l.pago!=null ? l.pago : precio);
+    if(!(pago>=0)){ marcaFalta(["dpG"]); toast("Pago inválido","El pago al técnico tiene que ser 0 o más.","r"); return; }
     const chkCobra = document.getElementById("dpCobra"), cobrar = !!(chkCobra&&chkCobra.checked);
-    l.precio = precio; l.precioOrigen="manual-resuelto"; l.precioFijado=sellarPrecio(); delete l.precioPend;
-    (l.hist=l.hist||[]).push([hora(), `Precio definido por ${S.usuario}`, S.usuario]);
+    l.precio = precio; l.pago = pago; l.precioOrigen="manual-resuelto"; l.precioFijado=sellarPrecio(); delete l.precioPend;
+    (l.hist=l.hist||[]).push([hora(), `Precio definido por ${S.usuario} (cobro ${money(precio)}, pago ${money(pago)})`, S.usuario]);
     const r = aplicarPagoFacturaAdicional(l, w, s, cobrar);
     cm(); flash("wo:"+w.id);
     toast("✓ Precio definido",
-      `${esc(l.concepto)} · ${money(precio)}. Entra a la nómina del técnico`
-      + (r.cobroCliente>0 ? ` y se le agrega ${money(r.cobroCliente)} a lo que se le factura a la propiedad.` : "; no se le factura nada a la propiedad por esto."),
+      `${esc(l.concepto)} · cobro ${money(precio)} · pago técnico ${money(pago)}.`
+      + (r.cobroCliente>0 ? ` Se le agrega ${money(r.cobroCliente)} a lo que se le factura a la propiedad.` : " No se le factura nada a la propiedad por esto."),
       "v");
     render();
   },
@@ -308,14 +336,46 @@ Object.assign(ACC, {
     });
   },
   excRech: d => {
-    const x = by(S.excepciones,d.id);
-    if(x){ x.estado="Rechazada"; x.resol={quien:S.usuario,hora:hora()}; registrarHistorialApproval(x,"Rejected"); flash("exc:"+x.id);
-      toast("Excepción rechazada","Queda registrado que no se autorizó.","w"); render(); return; }
     const sa = solTodas().find(z=>"AUTO-A"+z.sol===d.id);
-    if(sa){ rechazarAdicional(sa, sa.lineas.filter(l=>l.estado==="Pendiente")); return; }
-    const a=excAuto().find(y=>y.id===d.id);
-    if(a){ const nx={...a,id:"X"+Date.now(),auto:false,estado:"Rechazada",resol:{quien:S.usuario,hora:hora()}};
-      registrarHistorialApproval(nx,"Rejected"); S.excepciones.push(nx); }
+    if(sa){
+      if(!puedeDecidirAdicional() && sa.aprobador && sa.aprobador!==S.usuario){
+        S.audOmitir=true; toast("Aprobación delegada",`Esta solicitud debe decidirla <b>${esc(sa.aprobador)}</b>.`,"w"); return;
+      }
+      rechazarAdicional(sa, sa.lineas.filter(l=>l.estado==="Pendiente")); return;
+    }
+    if(String(d.id).startsWith("AUTO-T") || String(d.id).startsWith("AUTO-P")){
+      S.audOmitir=true; toast("Define el precio","Esta solicitud requiere definir la tarifa o el precio del adicional para continuar.","w"); return;
+    }
+    const x = by(S.excepciones,d.id);
+    const a = !x ? excAuto().find(y=>y.id===d.id) : null;
+    const obj = x || a;
+    if(!obj) return;
+    if(!puedeResolverExc(obj)){
+      S.audOmitir=true;
+      toast("Sin permiso",`Esta solicitud está asignada a <b>${esc(obj.assignedTo||obj.aprueba)}</b>.`,"r");
+      return;
+    }
+    const revertirLlegadaDeclarada = (woId) => {
+      const idx = S.asistencias.findIndex(as=>as.wo===woId && as.declarada);
+      if(idx>-1) S.asistencias.splice(idx,1);
+      const w = W(woId);
+      if(w){
+        w.asistencia = false;
+        desvalidar(w);
+        if(w.estado==="Completed") w.estado = w.fecha ? "Confirmed" : "Scheduled";
+        w.hist.push([hora(),"Llegada declarada rechazada — se revirtió el cierre sin asistencia verificada",S.usuario]);
+      }
+    };
+    if(x){
+      x.estado="Rechazada"; x.resol={quien:S.usuario,hora:hora()}; registrarHistorialApproval(x,"Rejected"); flash("exc:"+x.id);
+      if(x.tipo==="Llegada declarada" && x.wo) revertirLlegadaDeclarada(x.wo);
+      toast("Excepción rechazada","Queda registrado que no se autorizó.","w"); render(); return;
+    }
+    if(a){
+      const nx={...a,id:"X"+Date.now(),auto:false,estado:"Rechazada",resol:{quien:S.usuario,hora:hora()}};
+      registrarHistorialApproval(nx,"Rejected"); S.excepciones.push(nx);
+      if(a.tipo==="Llegada declarada" && a.wo) revertirLlegadaDeclarada(a.wo);
+    }
     toast("Excepción rechazada","Queda registrado que no se autorizó.","w"); render();
   },
 
@@ -368,7 +428,7 @@ Object.assign(ACC, {
     const sal=saldoTecWO(w), m=Math.round(parseFloat(val("pcM"))*100)/100;
     if(!(m>0)){ S.audOmitir=true; marcaFalta(["pcM"]); toast("Falta el monto","Escribe cuánto se le paga ahora.","r"); return; }
     if(m>=sal-0.004){ S.audOmitir=true; toast("Es el saldo completo","Para pagar todo usa «Marcar pagado».","r"); return; }
-    const id="NM"+(S.nomina.length+1), nota=val("pcN"), cheque=val("pcCh"), foto=S._recibo||null;
+    const id="NM"+(S.nomina.reduce((mx,x)=>Math.max(mx,parseInt(String(x.id||"").replace(/\D+/g,""),10)||0),S.nomina.length)+1), nota=val("pcN"), cheque=val("pcCh"), foto=S._recibo||null;
     S.nomina.push({id,semana:S.semana,periodo:{...S.periodo},tec:w.tec,wos:[w.id],total:m,tipo:"Parcial",nota,cheque,foto,quien:S.usuario,fecha:HOY_SUP,hora:hora()});
     (w.pagosTec=w.pagosTec||[]).push({monto:m,fecha:HOY_SUP,quien:S.usuario,nota,nomina:id});
     w.hist.push([hora(),`Pago parcial al técnico · ${money(m)} de ${money(egresoWO(w))}`,S.usuario]);
@@ -483,7 +543,7 @@ function pagarNomina(tec, ext){
   if(!c.ws.length){ S.audOmitir=true; toast("🚫 Nada para pagar",
     c.bloqueadas.length?`${c.bloqueadas.length} Work Order(s) con excepción sin resolver — es todo lo que hay pendiente en este período.`:"No hay Work Orders listas para pagar.","r"); return; }
   c.filas.forEach(f=>{
-    const id="NM"+(S.nomina.length+1);
+    const id="NM"+(S.nomina.reduce((mx,x)=>Math.max(mx,parseInt(String(x.id||"").replace(/\D+/g,""),10)||0),S.nomina.length)+1);
     S.nomina.push({id, semana:S.semana, periodo:{...S.periodo}, tec:f.t, wos:f.wt.map(w=>w.id), total:f.tot, desc:Math.min(f.b,f.dd),
       cheque:ext.cheque||"", foto:ext.foto||null, quien:S.usuario, fecha:HOY_SUP, hora:hora()});
     f.ds.forEach(x=>{ x.nomina=id; });   // ya se descontó: no se vuelve a restar ni se puede quitar
@@ -500,7 +560,19 @@ function pagarNomina(tec, ext){
 }
 function aprobarWO(w, que){
   if(!w) return;
+  if(!puedeValidar()){ S.audOmitir=true; toast("Sin permiso","Solo Claudia o Erika pueden validar Work Orders.","r"); return; }
+  if(w.estado!=="Completed"){ S.audOmitir=true; toast("No está terminada",`WO-${w.id} está en «${esc(w.estado)}». Solo se validan Work Orders terminadas.`,"r"); return; }
   leerValDraft(w); if(!aplicarEdicionVal(w)) return;
+  const falta = [];
+  if(!w.evid && !w.evidExcusada) falta.push("evidencia del trabajo");
+  if(ingresoWO(w)===null) falta.push("tarifa");
+  if(subWOsPendientesDeWO(w.id).length) falta.push(`${subWOsPendientesDeWO(w.id).length} Sub-WO sin terminar o sin evidencia`);
+  if(clienteRevisionPendienteDeWO(w.id)) falta.push("confirmación del cliente");
+  if(falta.length){
+    S.audOmitir=true;
+    toast("🚫 Falta información",`No se puede validar WO-${w.id}: falta <b>${esc(falta.join(", "))}</b>.`,"r");
+    return;
+  }
   const sello={quien:S.usuario,hora:hora(),fecha:HOY_SUP};
   if(que!=="factura" && !aprobPagoOK(w)) w.aprobPago={...sello};
   if(que!=="pago" && !aprobFacturaOK(w)) w.aprobFactura={...sello};
@@ -522,11 +594,11 @@ function modalValidar(w){
        tarifa son requisito real. El tiempo en sitio se sigue guardando solo
        (llegada → término), pero como dato de operación, no de nómina. */
     const falta = [];
-    if(!w.evid) falta.push("evidencia del trabajo");
+    if(!w.evid && !w.evidExcusada) falta.push("evidencia del trabajo");
     if(ingresoWO(w)===null) falta.push("tarifa");
     if(subsPend.length) falta.push(`${subsPend.length} Sub-WO sin terminar o sin evidencia`);
     if(clienteRevisionPendienteDeWO(w.id)) falta.push("confirmación del cliente");
-    const faltaBase=!w.evid || ingresoWO(w)===null;
+    const faltaBase=!w.evid && !w.evidExcusada;
     modal(`<div class="mh"><h3>Validar WO-${w.id}</h3>
       <p>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)} · ${esc(tecN(w.tec))}</p></div>
     <div class="mb">
@@ -616,6 +688,7 @@ function aplicarEdicionVal(w){
   };
   if(!rev("vaCobro",ingresoBaseWO(w),"precio","Ingreso") || !rev("vaPago",egresoBaseWO(w),"pago","Egreso")) return false;
   if(cambios.length && !mot){ S.audOmitir=true; marcaFalta(["vaMot"]); toast("Falta el motivo","Escribe por qué cambias el cobro o el pago.","r"); return false; }
+  if(cambios.length) desvalidar(w);
   cambios.forEach(c=>{
     w[c.campo]=c.despues/cant;
     if(c.campo==="precio" && puedeAprobarCambioMonto()) w.precioFijado=sellarPrecio();   // lo corrigió el aprobador: queda como precio suyo
@@ -1401,16 +1474,19 @@ Object.assign(ACC, {
     S._valMatDraft=null; modalValidar(w); toast("✓ Materiales ajustados",`WO-${w.id}: inventario y utilidad actualizados. Se deben aprobar pago y factura nuevamente.`,"v"); render();
   },
   valGuardar: d => { const w=W(+d.id); leerValDraft(w); if(!aplicarEdicionVal(w)) return;
+    desvalidar(w);
     S._valDraft=null; toast("✓ Guardado",`WO-${w.id} · cambios guardados. Sigue sin validar.`,"v"); modalValidar(w); render(); },
   valAjAgregar: d => { const w=W(+d.id); leerValDraft(w);
     const conc=val("vaConc"), monto=parseFloat(val("vaMonto")), tipo=val("vaTipo");
     if(!conc||!(monto>0)){ S.audOmitir=true; marcaFalta(["vaConc","vaMonto"]); toast("Falta información","Escribe concepto y un monto mayor a 0.","r"); return; }
     (w.ajustesVal=w.ajustesVal||[]).push({id:"AJ"+Date.now(), tipo, concepto:conc, monto, quien:S.usuario, hora:hora()});
+    desvalidar(w);
     w.hist.push([hora(),`Ajuste ${tipo}: ${conc} · ${money(monto)}`,S.usuario]);
     S._valDraft.conc=""; S._valDraft.monto=""; modalValidar(w); render(); },
   valAjQuitar: d => { const w=W(+d.id); leerValDraft(w);
     const a=(w.ajustesVal||[]).find(x=>x.id===d.aid); if(!a) return;
     w.ajustesVal=w.ajustesVal.filter(x=>x!==a);
+    desvalidar(w);
     w.hist.push([hora(),`Ajuste quitado: ${a.tipo} · ${a.concepto} · ${money(a.monto)}`,S.usuario]);
     modalValidar(w); render(); },
   /* Pago y factura se aprueban por separado; «Validar» aprueba las dos. w.validada solo queda en true
@@ -1448,10 +1524,15 @@ Object.assign(ACC, {
   pedirInfo: d => {
     const w=W(+d.id);
     /* Sin esta marca, la solicitud vivía solo en un aviso de texto: Erika no
-       tenía lista de lo pedido y el técnico no tenía dónde responder. */
+       tenía lista de lo pedido y el técnico no tenía dónde responder.
+       La tarifa la define oficina (no el técnico): al técnico solo se le pide evidencia. */
     const falta = [];
-    if(!w.evid)  falta.push("evidencia");
-    if(ingresoWO(w)===null) falta.push("tarifa");
+    if(!w.evid && !w.evidExcusada) falta.push("evidencia");
+    if(!falta.length){
+      S.audOmitir=true;
+      toast("Evidencia ya cargada","El técnico ya subió la evidencia. Si falta la tarifa, defínela en Tarifario o en Excepciones.","w");
+      return;
+    }
     w.infoPedida = {falta, quien:S.usuario, hora:hora(), fecha:HOY_SUP};
     w.hist.push([hora(),"Se pidió al técnico: "+falta.join(", "),S.usuario]);
     cm();
@@ -1506,7 +1587,8 @@ Object.assign(ACC, {
   cobrarGuardar: d => {
     const f=by(S.facturas,d.id), monto=parseFloat(val("cpMonto")), totalPrev=(S.pagos||[]).filter(p=>p.factura===f.id).reduce((n,p)=>n+(+p.monto||0),0), pendiente=Math.max(0,f.total-totalPrev);
     if(!(monto>0)||monto>pendiente+.009){ toast("Monto inválido",`El pago debe ser mayor a cero y no superar ${money(pendiente)}.`,"r"); return; }
-    S.pagos.push({id:"PG"+(S.pagos.length+1),factura:f.id,monto,medio:val("cpMedio"),referencia:val("cpRef"),fecha:val("cpFecha"),evidencia:!!S._recibo,foto:S._recibo||null,quien:S.usuario,nota:val("cpNota")});
+    const pgId="PG"+((S.pagos||[]).reduce((mx,x)=>Math.max(mx,parseInt(String(x.id||"").replace(/\D+/g,""),10)||0),(S.pagos||[]).length)+1);
+    S.pagos.push({id:pgId,factura:f.id,monto,medio:val("cpMedio"),referencia:val("cpRef"),fecha:val("cpFecha"),evidencia:!!S._recibo,foto:S._recibo||null,quien:S.usuario,nota:val("cpNota")});
     const recibido=totalPrev+monto, cerrado=recibido>=f.total-.009;
     f.estado=cerrado?"Pagada":"Enviada"; flash("fac:"+f.id);
     f.seguimiento=f.seguimiento||[];

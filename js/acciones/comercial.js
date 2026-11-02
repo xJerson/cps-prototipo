@@ -11,11 +11,20 @@ Object.assign(ACC, {
     if(s.lineas && s.lineas.length){
       s.estado="Programada";
       let n=0; const nuevas=[];
+      let defUni = (S.unidades.find(u=>u.prop===s.prop&&u.activa!==false) || S.unidades.find(u=>u.prop===s.prop) || {}).id || null;
       s.lineas.forEach(l=>{
+        let uniId = (l.unidad && U(l.unidad)) ? l.unidad : defUni;
+        if(!uniId){
+          const nidU="U"+(S.unidades.reduce((m,x)=>Math.max(m,parseInt(String(x.id).replace(/^U/,""),10)||0),0)+1);
+          S.unidades.push({id:nidU,prop:s.prop,num:"Principal",rooms:"1x1",pisos:1,tipo:"Regular",vacia:true,notas:"Creada automáticamente al programar estimado",activa:true});
+          defUni = nidU; uniId = nidU;
+        }
         const id=nid("w"); nuevas.push("wo:"+id);
-        S.wos.push({id,prop:s.prop,unidad:l.unidad,cat:l.cat,serv:l.serv,ubic:"",tec:null,
+        const tienePrecio = l.precio!==null && l.precio!==undefined && !isNaN(l.precio);
+        S.wos.push({id,prop:s.prop,unidad:uniId,cat:l.cat,serv:l.serv,ubic:"",tec:null,
           estado:"Scheduled",semana:null,fecha:"",horaProg:"",po:"",asistencia:false,
           precio:l.precio,pago:l.pago||0,cant:l.cantidad||1,
+          tarifaCongelada:tienePrecio?{tarifaId:l.tarifa||null,nivel:l.nivel||"Estimado",precio:+l.precio,pago:+(l.pago||0),tax:l.tax||"",fecha:HOY_SUP}:null,
           /* Nace SIN fecha: Programación la acuerda con el cliente (Coordinar fecha) y recién ahí pasa a Confirmed. */
           /* Lo que el cliente autorizó (sin precio): es lo que ve el técnico en su celular. */
           autorizado:l.autorizado||l.serv, desdeEstimado:s.estimadoNum,
@@ -457,7 +466,9 @@ Object.assign(ACC, {
       toast("🚫 Expediente incompleto",`<b>${esc(P(e.prop).nombre)}</b> todavía no tiene el Expediente completo (COI, contacto, etc). Complétalo antes de transferir a programación.`,"r"); return; }
     /* Cada línea viaja con su precio por unidad ya con descuento (el que se cobra) y el
        texto de lo autorizado, que es lo único que verá el técnico (sin precio). */
-    const nsol={id:"SOL"+Date.now(),prop:e.prop,cliente:P(e.prop).cliente,quien:S.usuario,hora:hora(),
+    let solNum = Date.now();
+    while(S.solicitudes.some(x=>x.id==="SOL"+solNum)) solNum++;
+    const nsol={id:"SOL"+solNum,prop:e.prop,cliente:P(e.prop).cliente,quien:S.usuario,hora:hora(),
       nota:`Desde el estimado ${e.num} — líneas ya aprobadas`,estado:"Pendiente",
       estimadoId:e.id, estimadoNum:e.num, tipo:estTipo(e), notasInt:e.notasInt||"",
       lineas:lineasAprobDe(e).map(i=>{ const l=e.lineas[i];
