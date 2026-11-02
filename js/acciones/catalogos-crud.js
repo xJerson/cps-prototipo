@@ -329,7 +329,7 @@ Object.assign(ACC, {
 
   tecNuevo: d => { const t = d&&d.id ? T(d.id) : null;
     modal(`<div class="mh"><h3>${t?"Editar "+esc(tecN(t.id)):"Nuevo técnico"}</h3>
-      <p>${t?"Cada campo que cambies queda en la Bitácora con el valor anterior.":"La pestaña <code>Tecnicos</code>, con los mismos campos."}</p></div>
+      <p>${t?"Cada campo que cambies queda en la Bitácora con el valor anterior.":"Datos de operación, contacto y acuerdos de contratación."}</p></div>
     <div class="mb">
       <div class="fg c2"><div class="fld"><label>Nombre <span class="req">*</span></label><input id="tN" value="${t?esc(t.nombre):""}"></div>
         <div class="fld"><label>Apellido <span class="req">*</span></label><input id="tA" value="${t?esc(t.apellido):""}"></div></div>
@@ -345,6 +345,36 @@ Object.assign(ACC, {
         <div class="fld"><label>Movimiento</label><select id="tMv">
           <option value="1" ${t&&t.movimiento?"selected":""}>Sí, se puede mover de zona</option>
           <option value="0" ${t&&!t.movimiento?"selected":""}>No</option></select></div></div>
+
+      <div style="border-top:1px solid var(--line);margin:14px 0 10px;padding-top:10px">
+        <div style="font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);margin-bottom:8px">Tipo de vínculo y acuerdos legales</div>
+        <div class="fg c2">
+          <div class="fld"><label>Tipo de vínculo</label><select id="tVin">
+            <option value="Empleado" ${!t||t.tipoVinculo==="Empleado"?"selected":""}>Empleado directo (W-2)</option>
+            <option value="Subcontratista (1099)" ${t&&t.tipoVinculo==="Subcontratista (1099)"?"selected":""}>Subcontratista (1099)</option>
+            <option value="Vendor externo" ${t&&t.tipoVinculo==="Vendor externo"?"selected":""}>Vendor externo (sin app de campo)</option>
+          </select></div>
+          <div class="fld"><label>Acuerdo / Contrato</label><select id="tCon">
+            <option value="Firmado" ${t&&t.contrato_firmado==="Firmado"?"selected":""}>Firmado ✓</option>
+            <option value="Pendiente" ${!t||t.contrato_firmado==="Pendiente"?"selected":""}>Pendiente</option>
+            <option value="No aplica" ${t&&t.contrato_firmado==="No aplica"?"selected":""}>No aplica</option>
+          </select></div>
+        </div>
+        <div class="fg c2">
+          <div class="fld"><label>W-9</label><select id="tW9">
+            <option value="Al día" ${t&&t.w9_subido==="Al día"?"selected":""}>Al día ✓</option>
+            <option value="Pendiente" ${!t||t.w9_subido==="Pendiente"?"selected":""}>Pendiente</option>
+            <option value="No aplica" ${t&&t.w9_subido==="No aplica"?"selected":""}>No aplica</option>
+          </select></div>
+          <div class="fld"><label>Seguro / COI</label><select id="tCoi">
+            <option value="Vigente" ${t&&t.seguro_coi==="Vigente"?"selected":""}>Vigente ✓</option>
+            <option value="Pendiente" ${!t||t.seguro_coi==="Pendiente"?"selected":""}>Pendiente</option>
+            <option value="No aplica" ${t&&t.seguro_coi==="No aplica"?"selected":""}>No aplica</option>
+          </select></div>
+        </div>
+        <div class="fld"><label>Notas legales y acuerdos</label>
+          <input id="tNotasLegales" placeholder="Póliza, condiciones de pago o notas particulares" value="${t?esc(t.notasLegales||""):""}"></div>
+      </div>
     </div>
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
       <button class="btn p" data-a="tecGuardar" data-id="${t?t.id:""}">${t?"Guardar corrección":"Guardar"}</button></div>`,true); },
@@ -353,13 +383,37 @@ Object.assign(ACC, {
     const esp = activos("especialidades").filter((e,i)=>chk("te"+i));
     if(!esp.length){ toast("Falta la especialidad","Sin especialidad el sistema no puede sugerirlo para asignar.","r"); return; }
     const yo = d&&d.id ? T(d.id) : null;
+    const tipoVinculo = val("tVin") || "Empleado";
+    const contrato_firmado = val("tCon") || "Pendiente";
+    const w9_subido = val("tW9") || "Pendiente";
+    const seguro_coi = val("tCoi") || "Pendiente";
+    const notasLegales = val("tNotasLegales") || "";
+    const esVendor = tipoVinculo === "Vendor externo";
+
     const datos = {nombre:val("tN"),apellido:val("tA"),esp,zona:val("tZ"),
-      tel:val("tT"),dir:val("tD"),movimiento:val("tMv")==="1"};
+      tel:val("tT"),dir:val("tD"),movimiento:val("tMv")==="1",
+      tipoVinculo, contrato_firmado, w9_subido, seguro_coi, notasLegales, esVendor};
     if(yo) return guardarEdicion(yo, datos, "Técnicos", tecN(yo.id), null, "tec:"+yo.id);
     const nt = {id:"T"+nid("t"), ...datos, nac:"", activo:true};
     S.tecnicos.push(nt); flash("tec:"+nt.id);
     cm(); toast("✓ Técnico dado de alta",`${esc(nt.nombre)} ${esc(nt.apellido)} — ${esc(esp.join(", "))}. Ya aparece al asignar.`,"v"); render();
   },
+
+  tecBuscar: () => { S.tecBuscar = val("tBus"); render(); },
+  tecFiltroZona: () => { S.tecFiltroZona = val("tFiltZ"); render(); },
+  tecFiltroEsp: () => { S.tecFiltroEsp = val("tFiltE"); render(); },
+  tecFiltroVinculo: () => { S.tecFiltroVinculo = val("tFiltV"); render(); },
+  tecFiltroEstado: () => { S.tecFiltroEstado = val("tFiltS"); render(); },
+  tecFiltroLimpiar: () => { S.tecBuscar = ""; S.tecFiltroZona = ""; S.tecFiltroEsp = ""; S.tecFiltroEstado = ""; S.tecFiltroVinculo = ""; render(); },
+
+  campoFiltroFecha: () => { S.campoFiltroFecha = val("cpFec"); render(); },
+  campoFiltroFechaHoy: () => { S.campoFiltroFecha = HOY_SUP; render(); },
+  campoFiltroFechaTodas: () => { S.campoFiltroFecha = ""; render(); },
+  campoFiltroTec: () => { S.campoFiltroTec = val("cpTec"); render(); },
+  campoFiltroProp: () => { S.campoFiltroProp = val("cpProp"); render(); },
+  campoFiltroEst: () => { S.campoFiltroEst = val("cpEst"); render(); },
+  campoFiltroZona: () => { S.campoFiltroZona = val("cpZona"); render(); },
+  campoFiltroLimpiar: () => { S.campoFiltroFecha = HOY_SUP; S.campoFiltroTec = ""; S.campoFiltroProp = ""; S.campoFiltroEst = ""; S.campoFiltroZona = ""; S.campoBuscar = ""; render(); },
 
   tarFiltro: () => { S.tarFp=val("tarFp"); S.tarFt=val("tarFt"); S.tarFs=""; S.tarOff=[]; render(); },
   tarFiltroQuitar: () => { S.tarFp=""; S.tarFt=""; S.tarFs=""; S.tarOff=[]; render(); },

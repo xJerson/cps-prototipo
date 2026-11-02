@@ -109,10 +109,34 @@ const respuestasVencidas = () => (S.comunicacionesWO||[]).filter(c=>c.estado!=="
    w.validada queda como "las dos" y como marca de las WO anteriores a este cambio: por eso los
    helpers la aceptan — nómina y facturación leen siempre estos dos, nunca w.validada directo. */
 const puedeValidar = () => ["Claudia","Erika"].includes(S.usuario);
-const aprobPagoOK = w => !!(w.aprobPago || w.validada);
-const aprobFacturaOK = w => !!(w.aprobFactura || w.validada);
+const aprobPagoOK = w => !w.fotosPend && !!(w.aprobPago || w.validada);
+const aprobFacturaOK = w => !w.fotosPend && !!(w.aprobFactura || w.validada);
 /* Una corrección o un cambio en la WO invalida las dos aprobaciones, no solo la marca general. */
 function desvalidar(w){ w.validada=false; w.aprobPago=null; w.aprobFactura=null; }
+/* Estado derivado de un estimado en función del ciclo de vida de las Work Orders que nacieron de él */
+function estEstadoDerivado(e){
+  if(!e) return { estado: "—", pill: "g", detalle: "", wos: [] };
+  const solIds = new Set((S.solicitudes||[]).filter(s=>s.estimadoId===e.id || s.estimadoNum===e.num).map(s=>s.id));
+  const wos = (S.wos||[]).filter(w =>
+    w.desdeEstimado === e.num ||
+    (w.origen && ((w.origen.tipo==="Estimado" && (w.origen.id===e.id || w.origen.num===e.num)) ||
+                  (w.origen.tipo==="Solicitud" && solIds.has(w.origen.id))))
+  );
+  if(!wos.length){
+    const pill = e.estado==="Aprobado"?"v":e.estado==="Rechazado"?"r":e.estado==="Transferido"?"m":"a";
+    return { estado: e.estado, pill, detalle: `Estado del estimado: ${e.estado}`, wos: [] };
+  }
+  const activas = wos.filter(w=>w.estado!=="Canceled");
+  if(!activas.length) return { estado: "WO cancelada", pill: "g", detalle: "Todas las Work Orders asociadas fueron canceladas", wos };
+  const todasCobradas = activas.every(w=>w.cobrada || w.estado==="Paid");
+  const todasFacturadas = activas.every(w=>w.facturada || w.estado==="Invoiced" || w.cobrada || w.estado==="Paid");
+  const todasTerminadas = activas.every(w=>["Completed","Invoiced","Paid"].includes(w.estado));
+
+  if(todasCobradas) return { estado: "Pagado", pill: "v", detalle: `Completado, facturado y pagado (${activas.length} WO)`, wos: activas };
+  if(todasFacturadas) return { estado: "Facturado", pill: "v", detalle: `Facturado (${activas.length} WO)`, wos: activas };
+  if(todasTerminadas) return { estado: "Terminado en campo", pill: "m", detalle: `Trabajo concluido en campo, listo para facturar (${activas.length} WO)`, wos: activas };
+  return { estado: `En WO (${activas.length})`, pill: "a", detalle: `${activas.filter(w=>w.estado==="In progress").length} en curso, ${activas.filter(w=>w.estado==="Completed").length} terminadas`, wos: activas };
+}
 /* «Aprobada p/ Nómina» / «Aprobada p/ Facturación» son APROBACIONES, no hechos: no dicen que ya se pagó o se facturó
    (eso está en «Pagado» de Nómina y en la factura). El tooltip lo aclara y, si hay, dice quién aprobó y cuándo. */
 function pillsAprob(w){

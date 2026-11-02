@@ -86,17 +86,21 @@ Object.assign(ACC, {
     const w=W(+d.id), p=P(w.prop);
     if(woEspera(w)){ toast("En espera",`Falta terminar WO-${woEspera(w).id} para poder empezar.`,"w"); return; }
     S.reloj += 23;
-    const prog = w.horaProg || "9:00";
-    const [ph,pm] = prog.split(":").map(Number);
-    const tarde = S.reloj > (ph*60+pm) + 10;   // 10 min de tolerancia
+    const prog = w.horaProg || null;
+    let tarde = false;
+    if(prog && prog.includes(":")){
+      const [ph,pm] = prog.split(":").map(Number);
+      if(!isNaN(ph) && !isNaN(pm)) tarde = S.reloj > (ph*60+pm) + 10;   // 10 min de tolerancia
+    }
+    const puntualidad = prog ? (tarde ? "Tarde" : "A tiempo") : "En campo";
     S.asistencias.push({id:"A"+Date.now(), wo:w.id, tec:w.tec, fecha:w.fecha,
-      horaProg:prog, horaReal:hora(),
-      puntualidad: tarde ? "Tarde" : "A tiempo",
+      horaProg:prog||"—", horaReal:hora(),
+      puntualidad,
       ubicacion: p.dir + " · " + p.zona});
     w.estado="In progress"; w.asistencia=true; w.nueva=false;
-    w.hist.push([hora(),`Llegó a la propiedad (${tarde?"tarde":"a tiempo"})`,T(w.tec).nombre]);
+    w.hist.push([hora(),prog ? `Llegó a la propiedad (${tarde?"tarde":"a tiempo"})` : `Llegó a la propiedad (sin hora fija)`,T(w.tec).nombre]);
     toast("📍 El técnico llegó",
-      `<b>${esc(tecN(w.tec))}</b> marcó llegada a las <b>${hora()}</b> en ${esc(p.nombre)} ${esc(U(w.unidad).num)}${tarde?" — <b>tarde</b>":""}.
+      `<b>${esc(tecN(w.tec))}</b> marcó llegada a las <b>${hora()}</b> en ${esc(p.nombre)} ${esc(U(w.unidad).num)}${prog&&tarde?" — <b>tarde</b>":""}.
        Míralo en <b>Técnicos › Hoy en campo</b>.`, tarde?"w":"v");
     render();
   },
@@ -104,6 +108,15 @@ Object.assign(ACC, {
     capturarFoto(url=>{
       (w.evidFotos=w.evidFotos||[]).push(fotoNueva(url, T(w.tec).nombre));
       w.evid=w.evidFotos.length;
+      if(w.fotosPend && w.evid > 0){
+        w.fotosPend = false;
+        w.hist.push([hora(),"Fotos de evidencia completadas",T(w.tec).nombre]);
+        const subsPend=subWOsOperativas().some(a=>a.wo===w.id && a.estadoTrabajo!=="Canceled" && (a.cantPendiente>0 || a.estadoTrabajo!=="Completed" || !(a.fotosEvidArr||[]).length));
+        if(w.estado==="Completed" && ingresoWO(w)!==null && !subsPend){
+          w.validada=true;
+          w.hist.push([hora(),"Validada automáticamente: fotos recibidas y tarifa completa","Sistema"]);
+        }
+      }
       w.hist.push([hora(),"Cargó evidencia",T(w.tec).nombre]);
       toast("📷 Evidencia recibida",`WO-${w.id} ya tiene ${w.evid} foto(s).`,"v"); render();
     });
@@ -353,13 +366,17 @@ Object.assign(ACC, {
     if(!asisDe(w.id)){ S.phSheet={t:"llegada",wo:w.id}; render(); return; }
     if(!w.corroborado){
       toast("🚫 Primero corrobora la unidad","Confirma si los datos de la unidad coinciden antes de terminar el trabajo.","r"); return; }
-    if(!w.evid){
-      toast("🚫 Falta la evidencia","Claudia: «no hay ni un registro, no me consta lo que me estás diciendo». Toma al menos una foto.","r"); return; }
+    const sinEvidencia = !w.evid;
+    if(sinEvidencia){
+      w.fotosPend = true;
+    } else {
+      w.fotosPend = false;
+    }
     S.reloj+=28; w.estado="Completed";
     const a=asisDe(w.id);
     if(a){ const [h1,m1]=a.horaReal.split(":").map(Number);
       w.horas = Math.max(0.5, Math.round(((S.reloj-(h1*60+m1))/60)*10)/10); }
-    w.hist.push([hora(),`Terminó · ${w.evid} evidencia(s)${w.horas?` · ${w.horas} h en sitio`:""}`,T(w.tec).nombre]);
+    w.hist.push([hora(),sinEvidencia ? `Terminó · ⚠️ fotos pendientes${w.horas?` · ${w.horas} h en sitio`:""}` : `Terminó · ${w.evid} evidencia(s)${w.horas?` · ${w.horas} h en sitio`:""}`,T(w.tec).nombre]);
     /* La corrección sigue el flujo de una WO normal: al terminarla con evidencia, el return queda listo para que la oficina la cierre. */
     const dvC=w.touchup&&w.devOrigen?DV(w.devOrigen):null;
     if(dvC && dvC.estado!=="Cerrada"){
@@ -375,19 +392,22 @@ Object.assign(ACC, {
     // Hoy Erika revisa a mano porque los reportes le llegan en papel.
     // Aquí el dato ya está: si está completo, se valida solo. A ella solo le llega lo que falla.
     const subsPend=subWOsOperativas().some(a=>a.wo===w.id && a.estadoTrabajo!=="Canceled" && (a.cantPendiente>0 || a.estadoTrabajo!=="Completed" || !(a.fotosEvidArr||[]).length));
-    if(w.evid>0 && ingresoWO(w)!==null && !subsPend){
+    if(!sinEvidencia && w.evid>0 && ingresoWO(w)!==null && !subsPend){
       w.validada=true;
       w.hist.push([hora(),"Validada automáticamente: evidencia y tarifa completas","Sistema"]);
+    } else if(sinEvidencia){
+      w.hist.push([hora(),"Validación pendiente: fotos de evidencia pendientes (pueden subirse desde casa)","Sistema"]);
     } else if(subsPend){
       w.hist.push([hora(),"Validación pendiente: hay Sub-WO sin terminar o sin evidencia","Sistema"]);
     }
-    toast("✓ Work Order terminada",`WO-${w.id} quedó lista. Pasa a supervisión de Gustavo.`,"v"); render(); },
+    toast(sinEvidencia ? "⚠️ Work Order terminada (fotos pendientes)" : "✓ Work Order terminada",
+      sinEvidencia ? `WO-${w.id} quedó terminada en campo. Recuerda subir las fotos antes del cierre de nómina.` : `WO-${w.id} quedó lista. Pasa a supervisión de Gustavo.`, sinEvidencia ? "w" : "v"); render(); },
   fLlegadaDecl: d => {
     const w=W(+d.id), p=P(w.prop);
+    const hDecl = val("plH") || w.horaProg || hora();
     S.asistencias.push({id:"A"+Date.now(), wo:w.id, tec:w.tec, fecha:w.fecha,
-      horaProg:w.horaProg||"9:00", horaReal:val("plH")||w.horaProg||"9:00",
+      horaProg:w.horaProg||"—", horaReal:hDecl,
       puntualidad:"Declarada", declarada:true, ubicacion:p.dir+" · "+p.zona});
-    const hDecl = val("plH");
     w.estado="In progress"; w.asistencia=true; w.nueva=false; S.phSheet=null;
     w.hist.push([hora(),`Llegada declarada a las ${hDecl} (no verificada)`,T(w.tec).nombre]);
     toast("Llegada declarada",`<b>${esc(tecN(w.tec))}</b> dice que llegó ${esc(hDecl)} a WO-${w.id}. Queda marcada como <b>no verificada</b> y levanta una excepción para Gustavo.`,"w");

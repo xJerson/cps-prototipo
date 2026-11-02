@@ -499,7 +499,7 @@ VIEWS.estimados = () => `
       <td class="mono" style="font-weight:700">${esc(e.num)}<div><span class="pill ${estTipo(e)==="Proyecto especial"?"a":"g"}" style="margin-top:3px">${esc(estTipo(e))}</span></div></td>
       <td>${esc(estPropNombre(e))}${e.prospecto?` <span class="pill w">prospecto</span>`:""}${e.notasInt?`<div class="note r" style="margin:5px 0 0;font-size:11px;white-space:pre-line"><b>Importante:</b> ${esc(e.notasInt)}</div>`:""}</td><td>${esc(contactosEst(e).map(c=>c.nombre).join(", "))}</td><td class="mono">${e.fecha.slice(5)}</td><td class="num mono">${e.lineas.length}</td>
       <td class="num mono" style="font-weight:700">${money(totalEst(e))}</td>
-      <td><span class="pill ${e.estado==="Aprobado"?"v":e.estado==="Rechazado"?"r":"a"}">${esc(e.estado)}</span></td>
+      <td>${(()=>{ const d=estEstadoDerivado(e); return `<span class="pill ${d.pill}" title="${esc(d.detalle)}">${esc(d.estado)}</span>${d.estado!==e.estado?`<div style="font-size:10px;color:var(--faint);margin-top:2px">(${esc(e.estado)})</div>`:""}`; })()}</td>
       <td>${e.aprob?`<span class="pill m">${esc(e.aprob.medio)}</span><div style="font-size:10px;color:var(--faint)">${esc(e.aprob.quien)} · ${esc(e.aprob.fecha)}${e.aprob.ip?" · IP "+e.aprob.ip:""}</div>`:'<span style="color:var(--faint)">esperando</span>'}</td>
       <td style="text-align:right;white-space:nowrap">
         <button class="btn sm" data-a="estInvoice" data-id="${e.id}">Invoice</button>

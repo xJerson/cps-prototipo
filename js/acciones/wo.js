@@ -459,6 +459,8 @@ Object.assign(ACC, {
       w.fechaSolicitada = w.fechaSolicitada || antes;
       w.fecha = f;
       w.semana = semanaDe(f);   // sin esto la WO sigue contando en la semana anterior (agenda, nómina y reportes)
+      const vtn = val("pgVentana") || "todo";
+      w.ventana = vtn;
       if(inicio) w.horaProg=inicio;
       if(fin) w.horaFin=fin;
       if(inicio) programarRecordatorios(w,f,inicio);   // 1 día antes / 1 hora antes de la hora de inicio, para el técnico y el equipo
@@ -500,6 +502,114 @@ Object.assign(ACC, {
     toast("Anotado — falta que confirme",
       `Quedó tentativo el <b>${f}</b> con <b>${esc(contacto)}</b>. La orden sigue <b>sin confirmar</b>.`,"w");
     render();
+  },
+
+  progVentanaCambio: () => {
+    const v = val("pgVentana");
+    const ini = document.getElementById("pgInicio");
+    const fin = document.getElementById("pgFin");
+    if(!ini || !fin) return;
+    if(v==="todo"){ ini.value="08:00"; fin.value="17:00"; }
+    else if(v==="manana"){ ini.value="08:00"; fin.value="12:00"; }
+    else if(v==="tarde"){ ini.value="12:00"; fin.value="17:00"; }
+    else if(v==="exacta"){ ini.value="09:00"; fin.value=""; }
+  },
+
+  woOficinaLlegada: d => {
+    const w = W(+d.id);
+    const hActual = hora();
+    modal(`<div class="mh"><h3>Marcar llegada por oficina · WO-${w.id}</h3>
+      <p>Registra la llegada en sitio por el técnico <b>${esc(tecN(w.tec))}</b>.</p></div>
+    <div class="mb">
+      <div class="fld"><label>Hora de llegada</label><input type="time" id="ofH" value="${hActual}"></div>
+      <div class="note">Quedará registrado como <b>Llegada registrada por oficina</b> en el historial y en la bitácora.</div>
+    </div>
+    <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
+      <button class="btn p" data-a="woOficinaLlegadaOK" data-id="${w.id}">Confirmar llegada</button></div>`);
+  },
+  woOficinaLlegadaOK: d => {
+    const w = W(+d.id), p = P(w.prop);
+    const hLlegada = val("ofH") || hora();
+    S.asistencias.push({id:"A"+Date.now(), wo:w.id, tec:w.tec, fecha:w.fecha,
+      horaProg:w.horaProg||"—", horaReal:hLlegada,
+      puntualidad:"Declarada", declarada:true, registradaOficina:true, ubicacion:p.dir+" · "+p.zona});
+    w.estado = "In progress"; w.asistencia = true; w.nueva = false;
+    w.hist.push([hora(), `Llegada a las ${hLlegada} — Registrado por oficina (${S.usuario}) por ${tecN(w.tec)}`, S.usuario]);
+    S.bitacora.unshift({ n:++S.audSeq, fecha:HOY_SUP, hora:hora(),
+      usuario:S.usuario, rol:ROLES[S.usuario].r,
+      accion:"Registró llegada en campo por el técnico", modulo:"Work Orders", ref:"WO-"+w.id });
+    cm(); flash("wo:"+w.id);
+    toast("✓ Llegada registrada", `WO-${w.id}: marcada como In progress a las ${hLlegada}.`, "v");
+    render();
+  },
+  woOficinaCorroborar: d => {
+    const w = W(+d.id);
+    w.corroborado = true;
+    w.hist.push([hora(), `Unidad corroborada — Registrado por oficina (${S.usuario}) por ${tecN(w.tec)}`, S.usuario]);
+    flash("wo:"+w.id);
+    toast("✓ Unidad corroborada", `WO-${w.id}: datos de unidad confirmados por oficina.`, "v");
+    render();
+  },
+  woOficinaTerminar: d => {
+    const w = W(+d.id);
+    const sinEvid = !(w.evid > 0);
+    w.estado = "Completed";
+    if(sinEvid) w.fotosPend = true; else w.fotosPend = false;
+    w.hist.push([hora(), `Terminada — Registrado por oficina (${S.usuario}) por ${tecN(w.tec)}${sinEvid?" (pendiente fotos)":""}`, S.usuario]);
+    S.bitacora.unshift({ n:++S.audSeq, fecha:HOY_SUP, hora:hora(),
+      usuario:S.usuario, rol:ROLES[S.usuario].r,
+      accion:"Marcó WO terminada por el técnico", modulo:"Work Orders", ref:"WO-"+w.id });
+    const subsPend = subWOsOperativas().some(a=>a.wo===w.id && a.estadoTrabajo!=="Canceled" && (a.cantPendiente>0 || a.estadoTrabajo!=="Completed" || !(a.fotosEvidArr||[]).length));
+    if(!sinEvid && w.evid>0 && ingresoWO(w)!==null && !subsPend){
+      w.validada = true;
+      w.hist.push([hora(),"Validada automáticamente: evidencia y tarifa completas","Sistema"]);
+    }
+    flash("wo:"+w.id);
+    toast(sinEvid ? "⚠️ WO terminada (fotos pendientes)" : "✓ Work Order terminada", `WO-${w.id} marcada como Completed por oficina.${sinEvid?" Fotos marcadas como pendientes.":""}`, sinEvid ? "w" : "v");
+    render();
+  },
+
+  fotoCopiar: d => {
+    const url = d.url;
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(url).then(()=>toast("✓ Enlace copiado","El enlace de la foto se copió al portapapeles.","v"))
+      .catch(()=>toast("Enlace",url,"a"));
+    } else {
+      toast("Enlace",url,"a");
+    }
+  },
+  woCopiarFotos: d => {
+    const w = W(+d.id), p = P(w.prop), u = U(w.unidad);
+    const urls = (w.evidFotos||[]).map(f=>f.url).filter(Boolean);
+    if(!urls.length){ toast("Sin fotos","Esta orden no tiene fotos de evidencia todavía.","w"); return; }
+    const texto = `Fotos WO-${w.id} · ${p.nombre} ${u.num} (${w.serv}):\n` + urls.map((u,i)=>`Foto ${i+1}: ${u}`).join("\n");
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(texto).then(()=>toast("✓ Enlaces copiados",`${urls.length} enlace(s) copiados al portapapeles listos para pegar.`,"v"));
+    } else {
+      modal(`<div class="mh"><h3>Enlaces de fotos · WO-${w.id}</h3></div><div class="mb"><textarea rows="6" readonly style="width:100%">${esc(texto)}</textarea></div><div class="mf"><button class="btn p" data-a="cm">Listo</button></div>`);
+    }
+  },
+  woDescargarFotos: d => {
+    const w = W(+d.id);
+    const urls = (w.evidFotos||[]).map(f=>f.url).filter(Boolean);
+    if(!urls.length){ toast("Sin fotos","Esta orden no tiene fotos de evidencia para descargar.","w"); return; }
+    urls.forEach((url,i)=>{
+      const a = document.createElement("a");
+      a.href = url;
+      a.target = "_blank";
+      a.download = `WO-${w.id}-evidencia-${i+1}.jpg`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    });
+    toast("✓ Descargando fotos",`Se abrieron ${urls.length} archivo(s) para descargar.`,"v");
+  },
+  woWsapFotos: d => {
+    const w = W(+d.id), p = P(w.prop), u = U(w.unidad);
+    const urls = (w.evidFotos||[]).map(f=>f.url).filter(Boolean);
+    const msg = `Hola, te compartimos la evidencia de WO-${w.id} en ${p.nombre} unidad ${u.num} (${w.serv}):\n` + (urls.length ? urls.join("\n") : "Fotos en proceso.");
+    const waUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;
+    window.open(waUrl, "_blank");
   },
 
   /* Si la WO o la propiedad traen notas, primero se leen y se aceptan; sin notas no hay nada que aceptar. */

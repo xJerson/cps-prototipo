@@ -170,6 +170,20 @@ function renderFon(){
       ${w.notasTec?dato("Nota de esta orden", w.notasTec):""}
     </div>
 
+    ${(()=>{
+      const pins=(S.pinturas||[]).filter(x=>x.prop===w.prop);
+      if(!pins.length && !p.notasPaint) return "";
+      const esPintura = w.cat==="Paint" || (w.serv||"").toLowerCase().includes("paint") || pins.length>0;
+      if(!esPintura) return "";
+      return `<div class="dc" style="border-color:var(--azul)">
+        <div class="dl" style="margin:0 0 6px;color:var(--azul)">🎨 Especificación de pintura de la propiedad</div>
+        ${p.notasPaint?`<div class="ds" style="margin-bottom:6px"><b>Nota general:</b> ${esc(p.notasPaint)}</div>`:""}
+        ${pins.map(x=>`<div class="ds" style="padding:4px 0;border-bottom:1px solid var(--line)">
+          <b>${esc(x.superficie)}:</b> ${esc(x.marca||"")}${x.color?" "+esc(x.color):""}${x.codigo?` · cód. ${esc(x.codigo)}`:""}${x.acabado?` · ${esc(x.acabado)}`:""}${x.nota?`<div style="font-size:10px;color:var(--faint)">${esc(x.nota)}</div>`:""}
+        </div>`).join("")}
+      </div>`;
+    })()}
+
     ${(w.fotosPrevias||[]).length || ["Repair","Cabinet","Resurface"].includes(w.cat)?`<div class="dc">
       <div class="dl" style="margin:0 0 6px">Fotos para prepararte antes de ir</div>
       ${(w.fotosPrevias||[]).length?`<div style="display:flex;gap:5px;flex-wrap:wrap">${w.fotosPrevias.map(f=>
@@ -304,7 +318,13 @@ function renderFon(){
                La <b>tarifa</b> la resuelve oficina, no tú.</div>`:""}
              <button class="db p" style="margin-top:9px" data-a="fCompletaInfo" data-id="${w.id}">Ya está, enviar</button>
            </div>` : "")
-    + (w.estado==="Completed" && !w.infoPedida
+    + (w.estado==="Completed" && w.fotosPend
+        ? `<div class="dc" style="background:var(--ambar-cl);border-color:var(--ambar)">
+             <div class="dh" style="color:var(--ambar)">⚠️ Faltan fotos de evidencia</div>
+             <div class="ds" style="margin-top:3px">El trabajo está terminado en campo pero <b>falta subir fotos de evidencia</b>. Puedes cargarlas desde casa antes del cierre de nómina para que se libere tu pago.</div>
+             <button class="db g" style="margin-top:6px" data-a="fFoto" data-id="${w.id}">📷 Subir foto de evidencia</button>
+           </div>` : "")
+    + (w.estado==="Completed" && !w.fotosPend && !w.infoPedida
         ? `<div class="dc" style="text-align:center;background:var(--verde-cl);border-color:transparent">
              <div style="font-size:24px">✓</div><div class="dh" style="color:var(--verde)">Trabajo cerrado</div>
              <div class="ds">Oficina ya lo tiene.</div></div>` : "")
@@ -325,7 +345,8 @@ function renderFon(){
         :w.nueva?"border-color:var(--azul);box-shadow:0 0 0 2px var(--azul-cl)":""}">
         <div style="display:flex;justify-content:space-between;gap:7px">
           <div style="min-width:0">
-            ${w.infoPedida?`<div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--ambar);margin-bottom:2px">TE FALTA ${esc(w.infoPedida.falta.join(" Y ").toUpperCase())}</div>`
+            ${w.fotosPend?`<div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--ambar);margin-bottom:2px">⚠️ FALTAN FOTOS</div>`
+             :w.infoPedida?`<div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--ambar);margin-bottom:2px">TE FALTA ${esc(w.infoPedida.falta.join(" Y ").toUpperCase())}</div>`
              :w.nueva?`<div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--azul);margin-bottom:2px">NUEVO</div>`:""}
             <div class="dh">${esc(P(w.prop).nombre)}</div>
             <div class="ds">${esc(U(w.unidad).num)} · ${esc(w.serv)}</div>

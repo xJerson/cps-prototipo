@@ -337,6 +337,7 @@ function fichaWO(id){
     <div>
       <div class="card"><div class="chd"><h3>Datos del trabajo</h3>
         <span class="r"><span class="pill ${estP(w.estado)}"><span class="dot"></span>${w.estado}</span>
+          ${w.fotosPend?`<span class="pill w" style="margin-left:5px">⚠️ fotos pendientes</span>`:""}
           ${puedeValidar()&&w.estado==="Completed"?`<span style="margin-left:5px">${pillsAprob(w)}</span>`:""}
           ${w.reagendada?`<span class="pill w" style="margin-left:5px" title="${esc(w.motivoReag||"")}">↻ reagendada${w.reagendada>1?" "+w.reagendada+"x":""}</span>`:""}
           ${fechaSinConfirmar(w)?`<span class="pill w" style="margin-left:5px" title="Se le propuso una fecha al cliente y todavía no la confirmó">⏳ fecha sin confirmar</span>`:""}
@@ -371,6 +372,34 @@ function fichaWO(id){
           <tr><td style="color:var(--faint)">Notas internas de oficina</td><td>${esc(w.notasOficina)||"—"}</td></tr>
           <tr><td style="color:var(--faint)">Qué hizo el técnico</td><td>${esc(w.notas)||'<span style="color:var(--faint)">sin describir</span>'}</td></tr>
         </tbody></table></div>
+
+      ${w.tec && !["Canceled","Paid"].includes(w.estado) ? `
+      <div class="card" style="border-left:4px solid var(--azul)"><div class="chd">
+        <h3>🏢 Acciones de oficina (Técnico sin celular o vendor externo)</h3>
+        <span class="s">Avanza estados manualmente cuando el técnico no usa la app — auditoría «Registrado por oficina»</span></div>
+        <div class="cp" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+          ${!asisDe(w.id)?`<button class="btn sm" data-a="woOficinaLlegada" data-id="${w.id}">Marcar llegada en campo</button>`:`<span class="pill v">✓ Llegada marcada</span>`}
+          ${w.estado==="In progress"&&!w.corroborado?`<button class="btn sm" data-a="woOficinaCorroborar" data-id="${w.id}">Corroborar unidad</button>`:w.corroborado?`<span class="pill v">✓ Unidad corroborada</span>`:""}
+          ${["In progress","Esperando aprobación"].includes(w.estado)?`<button class="btn sm" data-a="fotoVer" data-tipo="woEvid" data-id="${w.id}">📷 Cargar evidencia</button>`:""}
+          ${w.estado==="In progress"?`<button class="btn sm v" data-a="woOficinaTerminar" data-id="${w.id}">Marcar WO terminada</button>`:w.estado==="Completed"?`<span class="pill v">✓ WO terminada</span>`:""}
+          ${["In progress","Esperando aprobación"].includes(w.estado)?`<button class="btn sm r" data-a="woDetener" data-id="${w.id}">Detener WO</button>`:""}
+          ${w.estado==="Detenido"?`<button class="btn sm v" data-a="woReanudar" data-id="${w.id}">Reanudar WO</button>`:""}
+        </div></div>` : ""}
+
+      ${(()=>{
+        const pins=(S.pinturas||[]).filter(x=>x.prop===w.prop);
+        if(!pins.length && !p.notasPaint) return "";
+        const esPintura = w.cat==="Paint" || (w.serv||"").toLowerCase().includes("paint") || pins.length>0;
+        if(!esPintura) return "";
+        return `<div class="card"><div class="chd"><h3>🎨 Especificación de pintura de la propiedad</h3>
+          <span class="s">colores y acabados por superficie para esta propiedad</span></div>
+          <div class="cp">
+            ${p.notasPaint?`<div style="font-size:12px;margin-bottom:8px"><b>Nota de la propiedad:</b> ${esc(p.notasPaint)}</div>`:""}
+            ${pins.length?`<table><thead><tr><th>Superficie</th><th>Marca</th><th>Color</th><th>Código</th><th>Acabado</th><th>Nota</th></tr></thead>
+              <tbody>${pins.map(x=>`<tr><td style="font-weight:650">${esc(x.superficie)}</td><td>${esc(x.marca||"—")}</td><td>${esc(x.color||"—")}</td><td class="mono">${esc(x.codigo||"—")}</td><td>${esc(x.acabado||"—")}</td><td style="color:var(--soft)">${esc(x.nota||"—")}</td></tr>`).join("")}
+              </tbody></table>`:`<div class="empty">Sin detalle por superficie cargado</div>`}
+          </div></div>`;
+      })()}
 
       <div class="card"><div class="chd"><h3>Sub-Work Orders</h3>
         <span class="s">trabajos que cuelgan de esta WO — de oficina o encontrados en sitio</span></div>
@@ -447,11 +476,19 @@ function fichaWO(id){
         <div class="cp"><div style="display:flex;gap:6px;flex-wrap:wrap">${w.antesFotos.map(f=>
             `<a href="${f.url}" target="_blank"><img src="${f.url}" style="width:72px;height:54px;object-fit:cover;border-radius:7px;border:1px solid var(--line)"></a>`).join("")}</div>
           <button class="btn sm" style="margin-top:8px" data-a="fotoVer" data-tipo="woAntes" data-id="${w.id}">📷 Ver / agregar fotos</button></div></div>`:""}
-      <div class="card"><div class="chd"><h3>Evidencia — cómo quedó</h3><span class="r"><span class="pill ${w.evid?"v":"w"}">${w.evid}</span></span></div>
+      <div class="card"><div class="chd"><h3>Evidencia — cómo quedó</h3><span class="r">${w.fotosPend?`<span class="pill w" style="margin-right:6px">⚠️ Faltan fotos</span>`:""}<span class="pill ${w.evid?"v":"w"}">${w.evid}</span></span></div>
         <div class="cp">${w.evid?`<div style="display:flex;gap:6px;flex-wrap:wrap">${fotosConRelleno(w.evidFotos,w.evid).map(f=>f.url
-            ?`<a href="${f.url}" target="_blank"><img src="${f.url}" style="width:72px;height:54px;object-fit:cover;border-radius:7px;border:1px solid var(--line)"></a>`
-            :`<div title="Foto de una versión anterior del prototipo, sin archivo real" style="width:72px;height:54px;border-radius:7px;background:linear-gradient(135deg,#7fa8c9,#2d5a80)"></div>`).join("")}</div>`
-          :`<div style="color:var(--faint);font-size:12px">Todavía sin fotos del trabajo.</div>`}
+            ?`<div style="display:flex;flex-direction:column;gap:3px;align-items:center">
+                <a href="${f.url}" target="_blank"><img src="${f.url}" style="width:72px;height:54px;object-fit:cover;border-radius:7px;border:1px solid var(--line)"></a>
+                <button type="button" class="btn sm" data-a="fotoCopiar" data-url="${esc(f.url)}" style="font-size:10px;padding:2px 5px">Copiar</button>
+              </div>`
+            :`<div title="Foto de una versión anterior del prototipo, sin archivo real" style="width:72px;height:54px;border-radius:7px;background:linear-gradient(135deg,#7fa8c9,#2d5a80)"></div>`).join("")}</div>
+          <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
+            <button class="btn sm" data-a="woCopiarFotos" data-id="${w.id}">📋 Copiar todos los links</button>
+            <button class="btn sm" data-a="woDescargarFotos" data-id="${w.id}">⬇ Descargar fotos</button>
+            <button class="btn sm" data-a="woWsapFotos" data-id="${w.id}">💬 WhatsApp al cliente</button>
+          </div>`
+          :`<div style="color:var(--faint);font-size:12px">${w.fotosPend?"⚠️ El trabajo se marcó terminado en campo pero faltan las fotos de evidencia.":"Todavía sin fotos del trabajo."}</div>`}
           <button class="btn sm" style="margin-top:8px" data-a="fotoVer" data-tipo="woEvid" data-id="${w.id}">📷 ${w.evid?"Ver / agregar fotos":"Agregar foto"}</button></div></div>
 
       <div class="card"><div class="chd"><h3>Fotos de referencia</h3>
@@ -1230,9 +1267,23 @@ function modalProg(id){
     <div class="note" style="margin-bottom:12px">${reagendando
       ? "Esta WO ya tenía una fecha. Registra qué pasó y la nueva fecha; el historial conserva ambas."
       : "Primero se acuerda la fecha con el cliente; después se asigna el técnico."}</div>
-    <div class="fld"><label>Fecha acordada <span class="req">*</span></label>
-      <input type="date" id="pgF" value="${esc(f)}" data-a="progFecha"></div>
-    ${U(w.unidad).ocupacion==="Occupied"?`<div class="fg c2"><div class="fld"><label>Horario desde</label><input id="pgInicio" type="time" value="${esc(w.horaProg||"")}"></div><div class="fld"><label>Horario hasta</label><input id="pgFin" type="time" value="${esc(w.horaFin||"")}"></div></div><div class="note w" style="margin-top:-5px;margin-bottom:12px">Unidad ocupada: se crearán recordatorios simulados un día y una hora antes. La confirmación del cliente es opcional y no oculta la WO al técnico.</div>`:""}
+    <div class="fg c2">
+      <div class="fld"><label>Fecha acordada <span class="req">*</span></label>
+        <input type="date" id="pgF" value="${esc(f)}" data-a="progFecha"></div>
+      <div class="fld"><label>Ventana de horario</label>
+        <select id="pgVentana" data-a="progVentanaCambio">
+          <option value="todo" ${(!w.ventana||w.ventana==="todo")?"selected":""}>Todo el día (8:00 – 17:00)</option>
+          <option value="manana" ${w.ventana==="manana"?"selected":""}>Mañana (8:00 – 12:00)</option>
+          <option value="tarde" ${w.ventana==="tarde"?"selected":""}>Tarde (12:00 – 17:00)</option>
+          <option value="exacta" ${w.ventana==="exacta"?"selected":""}>Hora exacta</option>
+          <option value="personalizado" ${w.ventana==="personalizado"?"selected":""}>Personalizado</option>
+        </select></div>
+    </div>
+    <div class="fg c2" id="pgHorarioRango">
+      <div class="fld"><label>Horario desde</label><input id="pgInicio" type="time" value="${esc(w.horaProg||"08:00")}"></div>
+      <div class="fld"><label>Horario hasta</label><input id="pgFin" type="time" value="${esc(w.horaFin||"17:00")}"></div>
+    </div>
+    ${U(w.unidad).ocupacion==="Occupied"?`<div class="note w" style="margin-top:-5px;margin-bottom:12px">Unidad ocupada: se crearán recordatorios simulados un día y una hora antes. La confirmación del cliente es opcional y no oculta la WO al técnico.</div>`:""}
 
     <div style="margin:0 0 12px">
       <b style="font-size:11px;color:var(--faint);text-transform:uppercase;letter-spacing:.03em">Quién puede ese día</b>
