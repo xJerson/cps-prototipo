@@ -248,6 +248,7 @@ Object.assign(ACC, {
       bathrooms:val("wUniBathrooms")!==""?parseInt(val("wUniBathrooms"))||0:null,
       ocupacion:val("wUniOcup")||"Occupied",
       ubicacionUnidad:val("wUniLoc").trim(),
+      doorCode:val("wUniDoor").trim(),
       rooms:tipoNueva==="Residencial"&&bedTxt===""?null:roomsDesde(tipoNueva,bedrooms),
       pisos:parseInt(val("wUniPisos"))||null
     };

@@ -159,7 +159,8 @@ function renderFon(){
 
     <div class="dc" style="background:var(--azul-cl);border-color:transparent">
       <div class="dl" style="margin:0 0 6px;color:var(--azul)">Todo lo que necesitas al llegar</div>
-      ${dato("Código de puerta", p.door)}
+      ${dato("Gate code", p.door)}
+      ${dato("Door code", u.doorCode)}
       ${dato("Dónde está el shop", p.shop)}
       ${dato("Código del shop", p.shopCode)}
       ${dato("Horario", p.horario)}

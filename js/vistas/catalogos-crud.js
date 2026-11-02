@@ -6,12 +6,12 @@ VIEWS.propiedades = () => {
     <p>La pestaña <code>Propiedades</code>. Los tres contactos dejan de ser 9 columnas repetidas y las unidades dejan de vivir sueltas.</p></div>
     <div class="act"><button class="btn p" data-a="propNueva">+ Nueva propiedad</button></div></div>
   <div class="card"><table>
-    <thead><tr><th>Propiedad</th><th>Zona</th><th>Cliente (Management)</th><th class="num">Unidades</th><th class="num">Contactos</th><th>COI</th><th>Estado</th></tr></thead>
+    <thead><tr><th>Propiedad</th><th>City</th><th>Cliente (Management)</th><th class="num">Unidades</th><th class="num">Contactos</th><th>COI</th><th>Estado</th></tr></thead>
     <tbody>${S.propiedades.map(p=>{
       const nu=S.unidades.filter(u=>u.prop===p.id).length, nc=S.contactos.filter(c=>c.prop===p.id).length;
       return `<tr class="cl${fl("prop:"+p.id)}" data-a="propVer" data-id="${p.id}">
         <td style="font-weight:650">${esc(p.nombre)}<div style="font-size:10.5px;color:var(--faint)">${esc(p.dir)}</div></td>
-        <td>${esc(p.zona)}</td><td>${p.cliente?esc(CLI(p.cliente).nombre):'<span style="color:var(--faint)">—</span>'}<div style="font-size:10.5px;color:var(--faint)">${esc(p.estado||"")}</div></td>
+        <td>${esc(ciudadProp(p))}</td><td>${p.cliente?esc(CLI(p.cliente).nombre):'<span style="color:var(--faint)">—</span>'}<div style="font-size:10.5px;color:var(--faint)">${esc(estadoProp(p))}</div></td>
         <td class="num mono">${nu}</td><td class="num mono">${nc}</td>
         <td>${p.polizas&&p.polizas.length?`<span class="pill ${coiVigente(p.id)?"v":"r"}">${esc(p.polizas.reduce((a,x)=>!a||x.vence<a?x.vence:a,null))}</span>`:`<span class="pill r"><span class="dot"></span>falta</span>`}</td>
         <td>${p.activa?'<span class="pill v">Activa</span>':'<span class="pill g">Sin movimiento</span>'}</td></tr>`;
@@ -29,7 +29,7 @@ function fichaProp(id){
   <div class="ph"><div>
     <button class="btn sm" data-a="ir" data-m="propiedades" style="margin-bottom:7px">‹ Propiedades</button>
     <h2>${esc(p.nombre)} ${p.activa?"":'<span class="pill g" style="vertical-align:middle">Dada de baja</span>'}</h2>
-    <p>${esc(p.zona)} · ${p.cliente?esc(CLI(p.cliente).nombre):'<span style="color:var(--faint)">sin management</span>'} · ${esc(p.dir)}</p></div>
+    <p>${esc(ciudadProp(p))} · ${p.cliente?esc(CLI(p.cliente).nombre):'<span style="color:var(--faint)">sin management</span>'} · ${esc(p.dir)}</p></div>
     <div class="act"><button class="btn" data-a="propNueva" data-id="${id}">Editar datos</button>
       <button class="btn ${p.activa?"":"v"}" data-a="propBaja" data-id="${id}">
       ${p.activa?"Dar de baja":"Reactivar"}</button></div></div>
@@ -56,6 +56,7 @@ function fichaProp(id){
                existe ahí) — mostraba literal "undefined" en vez del dato
                real. Se trata aparte, como los contactos y el COI. */
             : c.k==="estimado" ? (S.estimados.find(e=>e.prop===id && e.estado==="Aprobado")||{}).num+" aprobado"
+            : c.k==="zona" ? ciudadProp(p)
             : String(p[c.k]))
         : "falta"}</td>
       <td style="text-align:right">${c.ok?"":(c.k==="contacto"
@@ -112,15 +113,16 @@ function fichaProp(id){
     </div></div>`:""}
 
   ${t==="datos"?`<div class="card"><table><tbody>
-    <tr><td style="color:var(--faint);width:210px">Zona (Area)</td><td>${esc(p.zona)}</td></tr>
+    <tr><td style="color:var(--faint);width:210px">City</td><td>${esc(ciudadProp(p))}</td></tr>
     <tr><td style="color:var(--faint)">Management</td><td>${p.cliente
       ?esc(CLI(p.cliente).nombre)
       :`<span style="color:var(--faint)">— sin management —</span> <button class="btn sm" data-a="cliNuevo" data-prop="${id}" style="margin-left:8px">+ Registrar management</button>`}</td></tr>
-    <tr><td style="color:var(--faint)">Client Status</td><td><span class="pill ${ESTCOL[p.estado]||"w"}">${esc(p.estado||"—")}</span></td></tr>
+    <tr><td style="color:var(--faint)">Client Status</td><td><span class="pill ${ESTCOL[estadoProp(p)]||"w"}">${esc(estadoProp(p)||"—")}</span></td></tr>
+    <tr><td style="color:var(--faint)">Vendedor</td><td>${p.vendedor?esc(p.vendedor):"—"}</td></tr>
     <tr><td style="color:var(--faint)">Client Source</td><td>${esc(p.origen||"—")}</td></tr>
     <tr><td style="color:var(--faint)">Dirección</td><td>${esc(p.dir)}</td></tr>
     <tr><td style="color:var(--faint)">Crédito</td><td>${diasCreditoProp(id)} días</td></tr>
-    <tr><td style="color:var(--faint)">Door code</td><td class="mono">${esc(p.door)}</td></tr>
+    <tr><td style="color:var(--faint)">Gate code</td><td class="mono">${esc(p.door)}</td></tr>
     <tr><td style="color:var(--faint)">Default Contact Method</td><td>${esc(p.pref)}</td></tr>
     <tr><td style="color:var(--faint)">Approval Method</td><td>${esc(p.aprob)}</td></tr>
     <tr><td style="color:var(--faint)">Accounts Payable Email 1</td><td>${esc(p.mailAP1)||"—"}</td></tr>
@@ -161,9 +163,9 @@ function fichaProp(id){
   ${t==="unidades"?`<div class="card"><div class="chd"><h3>Unidades</h3>
     <span class="s">catálogo de referencia — no bloquea agendar, se va llenando solo con cada WO/Estimado</span>
     <span class="r"><button class="btn sm p" data-a="uniNueva" data-prop="${id}">+ Unidad</button></span></div>
-    ${us.length?`<table><thead><tr><th>Building</th><th>Unidad</th><th>Location</th><th class="num">Floor</th><th>Rooms</th><th class="num">Bathrooms</th><th>Occupancy</th><th>Detail</th><th class="num">Work Orders</th><th></th></tr></thead><tbody>
+    ${us.length?`<table><thead><tr><th>Building</th><th>Unidad</th><th>Location</th><th>Door code</th><th class="num">Floor</th><th>Rooms</th><th class="num">Bathrooms</th><th>Occupancy</th><th>Detail</th><th class="num">Work Orders</th><th></th></tr></thead><tbody>
     ${us.map(u=>`<tr class="${fl("uni:"+u.id)}"><td class="mono">${esc(u.building)||"—"}</td><td style="font-weight:650">${esc(u.unidadNum||u.num)}</td>
-      <td style="font-size:11.5px;color:var(--soft)">${esc(u.ubicacionUnidad)||"—"}</td><td class="num mono">${u.pisos}</td>
+      <td style="font-size:11.5px;color:var(--soft)">${esc(u.ubicacionUnidad)||"—"}</td><td class="mono">${esc(u.doorCode)||"—"}</td><td class="num mono">${u.pisos}</td>
       <td>${esc(u.rooms)||'<span class="pill w">sin definir</span>'}</td>
       <td class="num mono">${u.bathrooms||"—"}</td>
       <td>${u.ocupacion==="Vacant"?'<span class="pill w">Vacant</span>':'<span class="pill v">Occupied</span>'}</td>
@@ -231,7 +233,7 @@ function vAltaGuiada(id){
   const tf=S.tarifas.filter(t=>t.prop===id).length;
   const es=S.estimados.filter(e=>e.prop===id).length;
   const pasos=[
-    {n:"Datos de la propiedad", ok:!!(p.nombre&&p.dir&&p.zona), det:`${esc(p.zona)} · ${esc(CLI(p.cliente).nombre)}`, tab:"datos", accion:null},
+    {n:"Datos de la propiedad", ok:!!(p.nombre&&p.dir&&ciudadProp(p)), det:`${esc(ciudadProp(p))} ·${esc(CLI(p.cliente).nombre)}`, tab:"datos", accion:null},
     {n:"Unidades",             ok:us>0,  det:us?`${us} unidad(es)`:"Sin unidades no se puede agendar", tab:"unidades", accion:null},
     {n:"Contactos",            ok:cs>0,  det:cs?`${cs} contacto(s)`:"Manager, assistant o mantenimiento", tab:"contactos", accion:null},
     {n:"Seguro (COI)",         ok:coiVigente(id), det:(p.polizas&&p.polizas.length)?`${p.polizas.length} póliza(s) · vence antes ${esc(p.polizas.reduce((a,x)=>!a||x.vence<a?x.vence:a,null))}`:"Lo emite la aseguradora, no Cordova", tab:"documentos",
@@ -450,6 +452,7 @@ const REFS = {
                   {a:()=>S.tarifas,    c:"variante",n:"tarifa(s)"}],
   especialidades:[{a:()=>S.tecnicos,   c:"esp",     n:"técnico(s)", lista:true}],
   tiendas:       [{a:()=>S.movs,       c:"tienda",  n:"movimiento(s) de inventario"}],
+  vendedores:    [{a:()=>S.propiedades,c:"vendedor",n:"propiedad(es)"}],
   pisos:         [{a:()=>S.unidades,   c:"pisos",   n:"unidad(es)"},
                   {a:()=>S.tarifas,    c:"pisos",   n:"tarifa(s)"}],
   folder:        [],
@@ -467,6 +470,8 @@ function renombrarCat(k, viejo, nuevo){
     if(r.lista){ const i=(o[r.c]||[]).indexOf(viejo); if(i>-1){ o[r.c][i]=nuevo; tocados++; } }
     else if(String(o[r.c])===String(viejo)){ o[r.c]=nuevo; tocados++; }
   }));
+  /* La ciudad de la propiedad se guarda también en zona; al renombrar, las dos se mantienen iguales. */
+  if(k==="zonas") S.propiedades.forEach(p=>{ if(p.ciudad===viejo) p.ciudad=nuevo; });
   if(S.bajas[k]) S.bajas[k]=S.bajas[k].map(x=>x===viejo?nuevo:x);
   const m=(CAT.meta||{})[k]; if(m && m[String(viejo)]){ m[String(nuevo)]=m[String(viejo)]; delete m[String(viejo)]; }
   return tocados;
@@ -487,12 +492,13 @@ const OJO_LOGICA = {
    El índice los agrupa por lo que describen, para que se entienda qué hay sin leerlo todo. */
 const LISTAS = [
   {k:"adicionales",   n:"Change order items", d:"Lo que el técnico elige en el celular cuando encuentra un trabajo que no estaba en la Work Order. Oficina lo aprueba antes de cobrarlo."},
-  {k:"zonas",         n:"Zonas",              d:"El área de cada propiedad y de cada técnico. Sirve para sugerir quién queda más cerca."},
+  {k:"zonas",         n:"Ciudades",           d:"La ciudad de cada propiedad y la base de cada técnico. Sirve para agendar y para sugerir quién queda más cerca."},
   {k:"rooms",         n:"Rooms",              d:"El tamaño de la unidad. Junto con el piso, define qué tarifa se cobra."},
   {k:"pisos",         n:"Pisos",              d:"Cuántos pisos tiene la unidad. Solo cambia el precio cuando la tarifa lo indica."},
   {k:"ubicaciones",   n:"Ubicaciones",        d:"Dónde, dentro de la unidad, se hace el trabajo."},
   {k:"especialidades",n:"Especialidades",     d:"Lo que sabe hacer cada técnico. Al asignar, avisa si el técnico no tiene la que pide el servicio."},
   {k:"tiendas",       n:"Tiendas",            d:"Dónde compran material los técnicos."},
+  {k:"vendedores",    n:"Vendedores",         d:"Quién consiguió la cuenta. Se elige en el formulario de la propiedad."},
   {k:"folder",        n:"Estado de carpeta",  d:"En qué quedó la carpeta de fotos de cada trabajo."}
 ];
 const CAT_VISTAS = {
@@ -508,6 +514,7 @@ const CAT_INDICE = [
   {g:"Propiedades y unidades", ks:["zonas","rooms","pisos","ubicaciones"]},
   {g:"Equipo", ks:["especialidades"]},
   {g:"Compras", ks:["tiendas"]},
+  {g:"Comercial", ks:["vendedores"]},
   {g:"Work Orders", ks:["estados","folder"]}
 ];
 const catNombre = k => (CAT_VISTAS[k]||{}).n || ({categorias:"Tipos de servicio",servicios:"Servicios"})[k] || k;
@@ -642,7 +649,7 @@ VIEWS.catalogos = () => {
    dice «falta» tiene que llevarte al campo, no dejarte buscándolo. */
 /* El Management no bloquea el expediente: Claudia crea la propiedad sin saberlo
    todavia — "es abstracto, podrian demorar en conseguirlo" — y se vincula despues. */
-const CAMPO_INPUT = {nombre:"nP", dir:"nD", zona:"nZ",
+const CAMPO_INPUT = {nombre:"nP", dir:"nD", zona:"nCiudad",
                      door:"nDC", pref:"nPR", aprob:"nAP", notas:"nNT", notasPaint:"nPaint"};
 /* Estado de un documento del management: con archivo adjunto está «Subido»; sin archivo, el que se marcó a mano. */
 const docEstadoTxt = (est, pdf) => pdf ? "Subido" : (est || "Pendiente");

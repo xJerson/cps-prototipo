@@ -425,10 +425,10 @@ Object.assign(ACC, {
     if(d.tipo==="todo"){
       e.estado="Aprobado";
       e.aprob=sello();
-      const p=P(e.prop); const era=p.estado;
-      if(p.estado==="Prospect"){ p.estado="Active"; }
+      const p=P(e.prop); const era=estadoProp(p);
+      if(era==="Lead"){ p.estado="Active"; }
       toast("✓ El cliente aprobó",`<b>${esc(e.num)}</b> · ${esc(d.medio)}.`
-        + (era==="Prospect"?` <b>${esc(p.nombre)}</b> dejó de ser prospecto y ya es cliente.`:"")
+        + (era==="Lead"?` <b>${esc(p.nombre)}</b> dejó de ser prospecto y ya es cliente.`:"")
         + (e.prospecto?` Toca «Convertir en cliente» para poder transferirlo a programación.`:""),"v");
       /* Un prospecto todavía no tiene propiedad: el COI y el Expediente vienen
          después de convertirlo en cliente. */

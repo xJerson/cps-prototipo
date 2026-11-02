@@ -31,7 +31,7 @@ VIEWS.wo = () => {
   /* Se filtra desde el encabezado: Tipo y Zona abren su lista de valores. */
   if(S.woFs) ws=ws.filter(w=>String(w.semana)===String(S.woFs));
   if(S.woFt) ws=ws.filter(w=>w.cat===S.woFt);
-  if(S.woFz) ws=ws.filter(w=>P(w.prop).zona===S.woFz);
+  if(S.woFz) ws=ws.filter(w=>ciudadProp(P(w.prop))===S.woFz);
   // «luego preguntan de unidades de hace dos meses, qué se hizo, qué pasó»
   // El identificador se compara también normalizado (sin guiones ni espacios)
   // para que "B102", "B 102" y "B-102" encuentren la misma unidad.
@@ -56,7 +56,7 @@ VIEWS.wo = () => {
     if(f==="pend") return false;   // «Pendientes» son WO que esperan algo del cliente
     if(S.woFs && String(sem)!==String(S.woFs)) return false;
     if(S.woFt && w.cat!==S.woFt) return false;
-    if(S.woFz && P(w.prop).zona!==S.woFz) return false;
+    if(S.woFz && ciudadProp(P(w.prop))!==S.woFz) return false;
     if(!fechaOk(fe)) return false;
     if(S.busca){ const un=U(w.unidad), txt=[un&&un.num,P(w.prop).nombre,a.concepto,a.ubic,w.serv,w.cat,w.id,tec?tecN(tec):""].filter(Boolean).join(" ").toLowerCase();
       if(!S.busca.toLowerCase().split(/\s+/).filter(Boolean).every(t=>txt.includes(t))) return false; }
@@ -67,7 +67,7 @@ VIEWS.wo = () => {
   if(filtrando) S.wos.forEach(w=>{ if(!propias.has(w.id) && (subsVistas[w.id]||[]).length) ws.push(w); });
   ws.sort((a,b)=>b.id-a.id);
   const cuenta = f => S.wos.reduce((m,w)=>{ const v=f(w); if(v) m[v]=(m[v]||0)+1; return m; },{});
-  const cT = cuenta(w=>w.cat), cZ = cuenta(w=>P(w.prop).zona), cS = cuenta(w=>w.semana);
+  const cT = cuenta(w=>w.cat), cZ = cuenta(w=>ciudadProp(P(w.prop))), cS = cuenta(w=>w.semana);
   const semanasWO = Object.keys(cS).map(Number).sort((a,b)=>b-a).map(s=>[s,cS[s]]);
   const cA = cuenta(w=>(w.fecha||"").slice(0,4)), aniosWO = Object.keys(cA).sort().reverse().map(a=>[a,cA[a]]);
   const tiposWO = activos("categorias").map(c=>[c,cT[c]||0]);
@@ -125,13 +125,13 @@ VIEWS.wo = () => {
     <button class="btn" data-a="buscarUni">Buscar</button>
     <span style="font-size:11px;color:var(--faint);font-weight:700;text-transform:uppercase;margin-left:6px">Tipo</span>
     <select id="woFtSel" data-a="woFiltroTipo"><option value="">Todos los tipos</option>${tiposWO.map(([v,n])=>`<option value="${esc(v)}" ${S.woFt===v?"selected":""}>${esc(v)} (${n})</option>`).join("")}</select>
-    <span style="font-size:11px;color:var(--faint);font-weight:700;text-transform:uppercase;margin-left:6px">Zona</span>
-    <select id="woFzSel" data-a="woFiltroZona"><option value="">Todas las zonas</option>${zonasWO.map(([v,n])=>`<option value="${esc(v)}" ${S.woFz===v?"selected":""}>${esc(v)} (${n})</option>`).join("")}</select>
+    <span style="font-size:11px;color:var(--faint);font-weight:700;text-transform:uppercase;margin-left:6px">City</span>
+    <select id="woFzSel" data-a="woFiltroZona"><option value="">Todas las ciudades</option>${zonasWO.map(([v,n])=>`<option value="${esc(v)}" ${S.woFz===v?"selected":""}>${esc(v)} (${n})</option>`).join("")}</select>
     ${S.woFt||S.woFz||S.woFs||fechaActiva?`<button class="btn sm" data-a="woFiltroQuitar">Quitar filtros</button>`:""}
    </div>
   </div></div>
   <div class="card"><table>
-    <thead><tr>${selMode?"<th></th>":""}<th>WO</th><th>Fecha</th><th>Hora</th><th>Sem</th><th>Propiedad · Unidad</th><th>Zona</th><th>Rooms</th><th>Tipo</th><th>Servicio</th><th>Técnico</th><th>Llegada</th><th>Estado</th>${puedeVerDinero?'<th class="num">Facturado</th><th class="num">Pago a técnico</th>':""}<th></th></tr></thead>
+    <thead><tr>${selMode?"<th></th>":""}<th>WO</th><th>Fecha</th><th>Hora</th><th>Sem</th><th>Propiedad · Unidad</th><th>City</th><th>Rooms</th><th>Tipo</th><th>Servicio</th><th>Técnico</th><th>Llegada</th><th>Estado</th>${puedeVerDinero?'<th class="num">Facturado</th><th class="num">Pago a técnico</th>':""}<th></th></tr></thead>
     <tbody>${(()=>{
     const _tbody = ws.map(w=>{
       const t=tarifaWO(w);
@@ -146,7 +146,7 @@ VIEWS.wo = () => {
         <td class="mono" style="font-weight:700">WO-${w.id}</td>
         <td class="mono">${w.fecha?w.fecha.slice(5):"sin fecha"}</td><td class="mono">${w.fecha?esc(w.horaProg||"9:00"):"—"}</td><td class="mono">${w.semana==null?"—":w.semana}</td>
         <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td>
-        <td>${P(w.prop).zona?`<span class="pill g">${esc(P(w.prop).zona)}</span>`:"—"}</td>
+        <td>${ciudadProp(P(w.prop))?`<span class="pill g">${esc(ciudadProp(P(w.prop)))}</span>`:"—"}</td>
         <td>${esc(U(w.unidad).rooms)}</td>
         <td><span class="pill g">${esc(w.cat)}</span></td>
         <td>${esc(w.serv)}</td>
@@ -171,7 +171,7 @@ VIEWS.wo = () => {
             <td class="mono" style="font-weight:700;padding-left:22px">↳ WO-${w.id} · Sub ${n}</td>
             <td class="mono">${fe.slice(5)}</td><td class="mono">${esc(w.horaProg||"9:00")}</td><td class="mono">${semanaDe(fe)}</td>
             <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td>
-            <td>${esc(P(w.prop).zona||"—")}</td>
+            <td>${esc(ciudadProp(P(w.prop))||"—")}</td>
             <td>${esc(U(w.unidad).rooms)}</td>
             <td><span class="pill a">Sub-WO</span></td>
             <td>${esc(a.concepto)}${(a.cant||1)>1?` ×${a.cant}`:""}${a.ubic?` · ${esc(a.ubic)}`:""}</td>
@@ -354,11 +354,12 @@ function fichaWO(id){
             ${w.facturada&&puedeEmitirNotaCredito()?`<button class="btn sm p" style="margin-top:6px" data-a="notaCreditoModal" data-id="${w.id}">Emitir nota de crédito</button>`:""}</div></div>`;
         })()}
         <table><tbody>
-          <tr><td style="color:var(--faint);width:170px">Propiedad</td><td>${esc(p.nombre)} · ${esc(p.zona)}</td></tr>
+          <tr><td style="color:var(--faint);width:170px">Propiedad</td><td>${esc(p.nombre)} · ${esc(ciudadProp(p))}</td></tr>
           <tr><td style="color:var(--faint)">Dirección</td><td>${esc(p.dir)}</td></tr>
           <tr><td style="color:var(--faint)">Unidad · Rooms · Pisos</td><td>${esc(u.num)} · ${esc(u.rooms)} · ${u.pisos}</td></tr>
           <tr><td style="color:var(--faint)">Ubicación del trabajo</td><td>${w.ubic?esc(w.ubic)+(w.ubicDetalle?" · "+esc(w.ubicDetalle):""):'<span class="pill w">sin especificar</span>'}</td></tr>
-          <tr><td style="color:var(--faint)">Código de puerta</td><td class="mono">${esc(p.door)}</td></tr>
+          <tr><td style="color:var(--faint)">Gate code</td><td class="mono">${esc(p.door)}</td></tr>
+          ${u.doorCode?`<tr><td style="color:var(--faint)">Door code</td><td class="mono">${esc(u.doorCode)}</td></tr>`:""}
           <tr><td style="color:var(--faint)">Técnico</td><td>${w.tec?esc(tecN(w.tec)):'<span class="pill w">sin asignar</span>'}</td></tr>
           <tr><td style="color:var(--faint)">Cantidad</td><td class="mono">${w.cant||1}${puedeVerDinero&&(w.cant||1)>1&&t?` × ${money(t.precio)} = ${money(ingresoWO(w))}`:""}</td></tr>
           ${w.desdeEstimado?`<tr><td style="color:var(--faint)">Viene del estimado</td><td><b>${esc(w.desdeEstimado)}</b>${w.autorizado?` · ${esc(w.autorizado)}`:""}</td></tr>`:""}
@@ -1095,10 +1096,11 @@ function refWO(){
     const pisosN = campo("wUniPisos", u&&u.pisos);
     const ocupN = campo("wUniOcup", u&&u.ocupacion||"Occupied")||"Occupied";
     const locN = campo("wUniLoc", u&&u.ubicacionUnidad||"");
+    const doorN = campo("wUniDoor", u&&u.doorCode||"");
     const bedroomsN = campo("wUniBedrooms", bedRooms);
     const bathroomsN = campo("wUniBathrooms", u&&u.bathrooms);
     return `
-    <div class="note" style="margin:-4px 0 10px"><b>Location:</b> ${p.zona?esc(p.zona):'<span style="color:var(--faint)">sin definir en la propiedad</span>'}</div>
+    <div class="note" style="margin:-4px 0 10px"><b>City:</b> ${ciudadProp(p)?esc(ciudadProp(p)):'<span style="color:var(--faint)">sin definir en la propiedad</span>'}</div>
     ${esNueva?`<div class="fg c2" style="margin:-4px 0 12px">
       <div class="fld" style="margin-bottom:0"><label>Building</label>
         <input id="wUniBld" data-a="woUniCampo" placeholder="A, B…" value="${esc(val("wUniBld"))}"></div>
@@ -1119,7 +1121,9 @@ function refWO(){
     </div>
     <div class="fld" style="margin:-4px 0 12px"><label>Unit Location</label>
       <input id="wUniLoc" data-a="woUniCampo" placeholder="Ej. edificio A, lado este / entrada trasera" value="${esc(locN)}">
-      <div class="hint">Referencia específica de esta unidad; la zona pertenece a la propiedad.</div></div>
+      <div class="hint">Referencia específica de esta unidad; la ciudad pertenece a la propiedad.</div></div>
+    <div class="fld" style="margin:-4px 0 12px"><label>Door code <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional, el de esta unidad</span></label>
+      <input id="wUniDoor" data-a="woUniCampo" class="mono" value="${esc(doorN)}"></div>
     ${tipoN==="Residencial"?`<div class="fg c2" style="margin:-4px 0 12px">
       <div class="fld" style="margin-bottom:0"><label>Bedrooms ${sinBedrooms(cat,val("wServ"))?'<span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional para este servicio</span>':'<span class="req">*</span>'}</label>
         <input id="wUniBedrooms" data-a="woUniCampo" type="number" min="0" class="mono" placeholder="0 = Studio" value="${esc(bedroomsN)}"></div>
@@ -1131,13 +1135,14 @@ function refWO(){
   document.getElementById("wDeriv").innerHTML = u
     ? `<div class="note" style="margin-bottom:12px"><b>Se llenan solos desde la propiedad y la unidad:</b>
         <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px">
-          <span class="pill a">Zona: ${esc(p.zona)}</span>
+          <span class="pill a">City: ${esc(ciudadProp(p))}</span>
           ${u.ubicacionUnidad?`<span class="pill a">Unit location: ${esc(u.ubicacionUnidad)}</span>`:""}
           <span class="pill a">Dirección: ${esc(p.dir)}</span>
           <span class="pill a">Rooms: ${u.rooms?esc(u.rooms):"por completar"}</span>
           ${u.pisos?`<span class="pill a">Pisos: ${u.pisos}</span>`:""}
           <span class="pill a">Occupancy: ${esc(u.ocupacion||"Occupied")}</span>
-          <span class="pill a">Door code: ${esc(p.door)}</span>
+          <span class="pill a">Gate code: ${esc(p.door)}</span>
+          ${u.doorCode?`<span class="pill a">Door code: ${esc(u.doorCode)}</span>`:""}
         </div>
         <div style="font-size:11px;margin-top:6px;opacity:.85">Hoy estos cinco se vuelven a escribir en cada fila de <code>Schedule</code>.</div></div>`
     : esNueva

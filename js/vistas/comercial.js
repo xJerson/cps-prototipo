@@ -2,8 +2,8 @@
 const EXPEDIENTE = [
   {k:"nombre",  n:"Nombre de la propiedad"},
   {k:"dir",     n:"Dirección"},
-  {k:"zona",    n:"Zona (Area)"},
-  {k:"door",    n:"Código de puerta"},
+  {k:"zona",    n:"City"},
+  {k:"door",    n:"Gate code"},
   {k:"pref",    n:"Default Contact Method"},
   {k:"coi",     n:"COI vigente"},
   {k:"contacto",n:"Al menos un contacto"},
@@ -22,6 +22,7 @@ function expedienteDe(pid){
     ok: c.k==="contacto" ? S.contactos.some(x=>x.prop===pid)
       : c.k==="coi" ? coiVigente(pid)
       : c.k==="estimado" ? S.estimados.some(e=>e.prop===pid && e.estado==="Aprobado")
+      : c.k==="zona" ? !!String(ciudadProp(p)).trim()
       : c.k==="notasPaint" ? (!!String(p.notasPaint||"").trim() || (S.pinturas||[]).some(x=>x.prop===pid))
       : !!String(p[c.k]||"").trim()
   }));
@@ -749,7 +750,7 @@ function estConvertirAplicar(eid, pid){
   const c={id:"C"+nid("c"), prop:pid, tipo:"Manager", nombre:pr.nombre, mail:pr.correo||"", tel:""};
   S.contactos.push(c);
   e.prop=pid; e.contactos=[c.id]; delete e.prospecto;
-  if(p.estado==="Prospect") p.estado="Active";
+  if(estadoProp(p)==="Lead") p.estado="Active";
   cm(); flash("est:"+e.id);
   toast("✓ Prospecto convertido en cliente",`<b>${esc(p.nombre)}</b> ya está registrada y <b>${esc(c.nombre)}</b> quedó como su contacto. Ahora corren el COI y el Expediente.`,"v");
   S.mod="estimados"; S.sub=null; S.tab=null; render();

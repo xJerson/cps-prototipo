@@ -101,7 +101,8 @@ const CAT = {
     {n:"Inspeccion",  p:"m", nuevo:false}
   ],
   tiendas:["Home Depot","Walmart","Sherwin Williams","Lowe's","Amazon"],
-  medios:["Correo","Mensaje","Llamada","Enlace digital"]
+  medios:["Correo","Mensaje","Llamada","Enlace digital"],
+  vendedores:[]   // quién consiguió la cuenta; la oficina los da de alta en Catálogos
 };
 const estP = n => (CAT.estados.find(e=>e.n===n)||{p:"g"}).p;
 /* "Quedó en confirmar después" no tenía dónde verse fuera del momento en

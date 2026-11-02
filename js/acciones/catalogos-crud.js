@@ -66,18 +66,25 @@ Object.assign(ACC, {
   },
   propNueva: d => { const p = d&&d.id ? P(d.id) : null;
     const op = (a,v) => a.map(x=>`<option ${x===v?"selected":""}>${esc(x)}</option>`).join("");
+    /* Si el valor actual ya no está en la lista (dado de baja, o escrito a mano antes), se ofrece igual para no borrarlo al editar. */
+    const conActual = (lista,v) => v && !lista.includes(v) ? lista.concat([v]) : lista;
+    const ciudadAct = p ? ciudadProp(p) : "", vendAct = p ? (p.vendedor||"") : "";
+    const vendedores = conActual(activos("vendedores"), vendAct);
     modal(`<div class="mh"><h3>${p?"Editar "+esc(p.nombre):"Nueva propiedad"}</h3>
       <p>${p?"Cada campo que cambies queda en la Bitácora con el valor anterior.":"Lo que Lydia registra al conseguir la cuenta. Claudia después le carga el seguro y la lista de precios."}</p></div>
     <div class="mb">
       <div class="fld"><label>Property Name <span class="req">*</span></label><input id="nP" value="${p?esc(p.nombre):""}"></div>
       <div class="fld"><label>Property Address <span class="req">*</span></label><input id="nD" value="${p?esc(p.dir):""}"></div>
       <div class="fg c3">
-        <div class="fld"><label>City</label><input id="nCiudad" value="${p?esc(p.ciudad):""}"></div>
+        <div class="fld"><label>City</label><select id="nCiudad"><option value="">— sin asignar —</option>${op(conActual(zonasN(),ciudadAct), ciudadAct)}</select></div>
         <div class="fld"><label>State</label><input id="nEstadoUS" value="${p?esc(p.estadoUS):""}"></div>
         <div class="fld"><label>ZIP Code</label><input id="nZip" class="mono" value="${p?esc(p.zip):""}"></div></div>
       <div class="fg c2">
-        <div class="fld"><label>Client Status</label><select id="nEst">${op(["Prospect","Onboarding","Active","On Hold","Inactive"], p?p.estado:"Prospect")}</select></div>
+        <div class="fld"><label>Client Status</label><select id="nEst">${op(["Lead","Active","Inactive"], p?estadoProp(p):"Lead")}</select></div>
         <div class="fld"><label>Client Source</label><select id="nOrig">${op(["Llamada","Formulario web","Referido","Visita comercial","Correo"], p?p.origen:"")}</select></div></div>
+      <div class="fld"><label>Vendedor <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional, quién consiguió la cuenta</span></label>
+        <select id="nVend"><option value="">— sin asignar —</option>${op(vendedores, vendAct)}</select>
+        ${vendedores.length?"":`<div class="hint">Todavía no hay vendedores: se dan de alta en Catálogos &gt; Vendedores.</div>`}</div>
       <div class="fg c2">
         <div class="fld"><label>Property Phone Number</label><input id="nTel" class="mono" value="${p?esc(p.tel):""}"></div>
         <div class="fld"><label>Crédito (días)</label><input id="nCred" type="number" min="0" step="1" value="${p?diasCreditoProp(p.id):30}"></div></div>
@@ -86,10 +93,8 @@ Object.assign(ACC, {
         <div class="fld"><label>Accounts Payable Email 2 <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><input id="nAP2" value="${p?esc(p.mailAP2):""}"></div></div>
       <div class="hint" style="margin:-6px 0 10px">A dónde se manda la factura de esta propiedad, si es distinto del contacto que coordina el trabajo.</div>
       <div class="fld"><label>Special Property Requirements</label><input id="nNT" value="${p?esc(p.notas):""}" placeholder="lo que siempre se olvida y genera reclamos"></div>
-      <div class="fld"><label>Zona (Area) — interno de Cordova <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— si todavía no se sabe, se deja sin asignar</span></label>
-        <select id="nZ"><option value="">— sin asignar —</option>${op(zonasN(), p?p.zona:"")}</select></div>
       <div class="fg c3">
-        <div class="fld"><label>Door code</label><input id="nDC" class="mono" value="${p?esc(p.door):""}"></div>
+        <div class="fld"><label>Gate code</label><input id="nDC" class="mono" value="${p?esc(p.door):""}"></div>
         <div class="fld"><label>Default Contact Method</label><input id="nPR" placeholder="Email, Text…" value="${p?esc(p.pref):""}"></div></div>
       <div class="fld"><label>Approval Method <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— optional</span></label>
         <input id="nAP" value="${p?esc(p.aprob):""}" placeholder="e.g., text Danielle, not email">
@@ -121,9 +126,9 @@ Object.assign(ACC, {
     if(!Number.isInteger(cred)||cred<0){ document.getElementById("nCred").parentElement.classList.add("bad"); toast("Crédito inválido","Los días de crédito deben ser un número entero, 0 o más.","r"); return; }
     const yo = d&&d.id ? P(d.id) : null;
     const cliVal = document.getElementById("nC") ? val("nC") : (yo ? (yo.cliente||"") : "");
-    if(yo) return guardarEdicion(yo, {...(yo.diasCredito!=null||cred!==diasCreditoProp(yo.id)?{diasCredito:cred}:{}),nombre:val("nP"),zona:val("nZ"),cliente:cliVal,dir:val("nD"),
+    if(yo) return guardarEdicion(yo, {...(yo.diasCredito!=null||cred!==diasCreditoProp(yo.id)?{diasCredito:cred}:{}),nombre:val("nP"),zona:val("nCiudad"),cliente:cliVal,dir:val("nD"),
       ciudad:val("nCiudad"),estadoUS:val("nEstadoUS"),zip:val("nZip"),tel:val("nTel"),
-      estado:val("nEst"),origen:val("nOrig"),
+      estado:val("nEst"),origen:val("nOrig"),vendedor:val("nVend"),
       door:val("nDC"),pref:val("nPR"),aprob:val("nAP"),
       mailAP1:val("nAP1"),mailAP2:val("nAP2"),
       notas:val("nNT"),
@@ -131,9 +136,9 @@ Object.assign(ACC, {
       finalExp:val("nFinalExp"),notasTec:val("nOjo")}, "Propiedades", yo.nombre, null, "prop:"+yo.id);
     const id="P"+nid("p");
     flash("prop:"+id);
-    S.propiedades.push({id,nombre:val("nP"),zona:val("nZ"),cliente:val("nC"),dir:val("nD"),
+    S.propiedades.push({id,nombre:val("nP"),zona:val("nCiudad"),cliente:val("nC"),dir:val("nD"),
       ciudad:val("nCiudad"),estadoUS:val("nEstadoUS"),zip:val("nZip"),tel:val("nTel"),notas:val("nNT"),
-      estado:val("nEst"),origen:val("nOrig"),
+      estado:val("nEst"),origen:val("nOrig"),vendedor:val("nVend"),
       activa:true,door:val("nDC"),aprob:val("nAP"),pref:val("nPR"),
       mailAP1:val("nAP1"),mailAP2:val("nAP2"),polizas:[],diasCredito:cred,
       shop:val("nShop"),shopCode:val("nShopCode"),horario:val("nHorario"),notasPaint:val("nPaint"),
@@ -189,8 +194,8 @@ Object.assign(ACC, {
     const tipoU = val("uTipo")||v("tipo")||"Residencial";
     modal(`<div class="mh"><h3>${u?"Editar unidad "+esc(u.num):"Nueva unidad"}</h3><p>${esc(P(pid).nombre)}</p></div>
     <div class="mb">
-      <div class="note" style="margin-bottom:12px"><b>Property area:</b> ${P(pid).zona?esc(P(pid).zona):'<span style="color:var(--faint)">sin definir en la propiedad</span>'}
-        <span style="font-size:10.5px;color:var(--faint)"> — la zona es de la propiedad; la ubicación exacta se guarda abajo por unidad</span></div>
+      <div class="note" style="margin-bottom:12px"><b>Property city:</b> ${ciudadProp(P(pid))?esc(ciudadProp(P(pid))):'<span style="color:var(--faint)">sin definir en la propiedad</span>'}
+        <span style="font-size:10.5px;color:var(--faint)"> — la ciudad es de la propiedad; la ubicación exacta se guarda abajo por unidad</span></div>
       <div class="fg c3">
         <div class="fld" style="margin-bottom:0"><label>Building <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— si aplica</span></label>
           <input id="uBld" placeholder="A, B…" value="${dr?esc(dr.building||""):(u?esc(u.building||""):"")}"></div>
@@ -210,7 +215,9 @@ Object.assign(ACC, {
           <div style="font-size:10.5px;color:var(--faint);margin-top:4px">El técnico verá este dato antes de entrar. Si está ocupada, deberá tocar y esperar autorización o acompañamiento.</div></div>
       </div>
       <div class="fld"><label>Unit Location</label><input id="uLoc" placeholder="Ej. edificio A, lado este / entrada trasera" value="${dr?esc(dr.ubicacionUnidad||""):(u?esc(u.ubicacionUnidad||""):"")}">
-        <div style="font-size:10.5px;color:var(--faint);margin-top:4px">Referencia específica de esta unidad. La zona de la propiedad se mantiene por separado.</div></div>
+        <div style="font-size:10.5px;color:var(--faint);margin-top:4px">Referencia específica de esta unidad. La ciudad de la propiedad se mantiene por separado.</div></div>
+      <div class="fld"><label>Door code <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional, el de esta unidad</span></label><input id="uDoor" class="mono" value="${dr?esc(dr.doorCode||""):(u?esc(u.doorCode||""):"")}">
+        <div style="font-size:10.5px;color:var(--faint);margin-top:4px">El código del portón (Gate code) es de la propiedad; el de la puerta es de cada unidad.</div></div>
       ${tipoU==="Residencial"?`<div class="fg c2">
         <div class="fld" style="margin-bottom:0"><label>Bedrooms <span class="req">*</span></label>
           <input id="uBedrooms" type="number" min="0" class="mono" placeholder="0 = Studio" value="${dr&&dr.bedrooms!=null?dr.bedrooms:(u&&u.bedrooms!=null?u.bedrooms:"")}"></div>
@@ -234,20 +241,20 @@ Object.assign(ACC, {
   uniCampoTipo: d => {
     S.uniDraft = {building:val("uBld"), unidadNum:val("uN"), pisos:val("uP"), tipo:val("uTipo"),
       bedrooms:val("uTipo")==="Residencial"?parseInt(val("uBedrooms"))||0:null,
-      bathrooms:parseInt(val("uBathrooms"))||null, ocupacion:val("uOcup"), ubicacionUnidad:val("uLoc")};
+      bathrooms:parseInt(val("uBathrooms"))||null, ocupacion:val("uOcup"), ubicacionUnidad:val("uLoc"), doorCode:val("uDoor")};
     ACC.uniNueva({id:d.id||"", prop:d.prop, keep:true});
   },
   uniDetAgregar: d => {
     S.uniDraft = {building:val("uBld"), unidadNum:val("uN"), pisos:val("uP"), tipo:val("uTipo"),
       bedrooms:val("uTipo")==="Residencial"?parseInt(val("uBedrooms"))||0:null,
-      bathrooms:parseInt(val("uBathrooms"))||null, ocupacion:val("uOcup"), ubicacionUnidad:val("uLoc")};
+      bathrooms:parseInt(val("uBathrooms"))||null, ocupacion:val("uOcup"), ubicacionUnidad:val("uLoc"), doorCode:val("uDoor")};
     S.uniDetalle.push({tipo:val("uDetTipo"), cantidad:parseInt(val("uDetCant"))||1});
     ACC.uniNueva({id:d.id||"", prop:d.prop, keep:true});
   },
   uniDetQuitar: d => {
     S.uniDraft = {building:val("uBld"), unidadNum:val("uN"), pisos:val("uP"), tipo:val("uTipo"),
       bedrooms:val("uTipo")==="Residencial"?parseInt(val("uBedrooms"))||0:null,
-      bathrooms:parseInt(val("uBathrooms"))||null, ocupacion:val("uOcup"), ubicacionUnidad:val("uLoc")};
+      bathrooms:parseInt(val("uBathrooms"))||null, ocupacion:val("uOcup"), ubicacionUnidad:val("uLoc"), doorCode:val("uDoor")};
     S.uniDetalle.splice(+d.i,1);
     ACC.uniNueva({id:d.id||"", prop:d.prop, keep:true});
   },
@@ -259,7 +266,7 @@ Object.assign(ACC, {
     const bld=val("uBld"), uNumR=val("uN");
     const bedroomsU = tipoU==="Residencial"?parseInt(val("uBedrooms"))||0:null;
     const datos = {building:bld, unidadNum:uNumR, num:uNumComp(bld,uNumR),
-      tipo:tipoU, bedrooms:bedroomsU, bathrooms:parseInt(val("uBathrooms"))||null, ocupacion:val("uOcup")||"Occupied", ubicacionUnidad:val("uLoc").trim(),
+      tipo:tipoU, bedrooms:bedroomsU, bathrooms:parseInt(val("uBathrooms"))||null, ocupacion:val("uOcup")||"Occupied", ubicacionUnidad:val("uLoc").trim(), doorCode:val("uDoor").trim(),
       rooms:roomsDesde(tipoU,bedroomsU),pisos:parseInt(val("uP"))||null,detalle:S.uniDetalle.slice()};
     S.uniDetalle=[]; S.uniDraft=null;
     if(yo) return guardarEdicion(yo, datos, "Propiedades", P(yo.prop).nombre+" · unidad "+yo.num, null, "uni:"+yo.id);
@@ -510,7 +517,7 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
     const tipoN = val("eUniTipo")||"Residencial";
     const pE = S.estHdr ? P(S.estHdr.prop) : null;
     if(cajaNueva) cajaNueva.innerHTML = esNueva ? `
-      <div class="note" style="margin:0 0 10px"><b>Location:</b> ${pE&&pE.zona?esc(pE.zona):'<span style="color:var(--faint)">sin definir en la propiedad</span>'}</div>
+      <div class="note" style="margin:0 0 10px"><b>City:</b> ${pE&&ciudadProp(pE)?esc(ciudadProp(pE)):'<span style="color:var(--faint)">sin definir en la propiedad</span>'}</div>
       <div class="fg c4" style="margin-top:6px">
         <div class="fld" style="margin-bottom:0"><label>Building</label>
           <input id="eUniBld" value="${esc(val("eUniBld"))}" placeholder="A, B…"></div>

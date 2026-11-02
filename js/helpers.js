@@ -30,7 +30,13 @@ function roomsDesde(tipo, bedrooms){
 const ETQ_CAMPO_UNIDAD = {pisos:"Floors", bedrooms:"Bedrooms", bathrooms:"Bathrooms", num:"Unit number", ocupacion:"Occupancy"};
 const T = id => by(S.tecnicos,id);
 const CLI = id => by(S.clientes,id) || {nombre:"—"};
-const ESTCOL = {Prospect:"w",Onboarding:"m",Active:"v","On Hold":"w",Inactive:"r"};
+const ESTCOL = {Lead:"w",Active:"v",Inactive:"r",Prospect:"w",Onboarding:"w","On Hold":"r"};
+/* Client Status oficial: Lead, Active, Inactive. Las propiedades guardadas antes
+   traen Prospect, Onboarding u On Hold; se leen como su equivalente hasta que se migren. */
+const ESTADO_PROP_LEGADO = {Prospect:"Lead",Onboarding:"Lead","On Hold":"Inactive"};
+const estadoProp = p => { const e=p&&p.estado; return ESTADO_PROP_LEGADO[e]||e||""; };
+/* La ciudad es el único dato de ubicación; las propiedades viejas solo traían zona. */
+const ciudadProp = p => (p&&(p.ciudad||p.zona))||"";
 const tecN = id => { const t=T(id); return t? t.nombre+" "+t.apellido : "sin asignar"; };
 const W = id => by(S.wos,id);
 /* Plazo de cobranza: días de crédito de la propiedad (30 si no tiene) y suma de días en UTC para que la zona horaria no mueva la fecha. */

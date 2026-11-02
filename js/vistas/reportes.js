@@ -4,7 +4,7 @@ const DIMS = {
   fecha:   {n:"Día",              f:w=>w.fecha||"Sin fecha"},
   prop:    {n:"Propiedad",        f:w=>P(w.prop).nombre},
   tec:     {n:"Técnico",          f:w=>w.tec?tecN(w.tec):"— sin asignar —"},
-  zona:    {n:"Zona",             f:w=>P(w.prop).zona},
+  zona:    {n:"City",            f:w=>ciudadProp(P(w.prop))},
   estado:  {n:"Estado",           f:w=>w.estado},
   cliente: {n:"Management",          f:w=>CLI(P(w.prop).cliente).nombre}
 };
@@ -165,7 +165,7 @@ function vSeguimiento(){
       <div style="background:var(--surface-3);border-radius:5px;height:10px">
         <div style="background:${activas.size<META_MIN?"var(--ambar)":"var(--verde)"};height:10px;border-radius:5px;width:${pct}%"></div></div>
     </div>
-    ${sinMov.length?`<table><thead><tr><th>Propiedad que dejó de agendar</th><th>Cliente</th><th>Zona</th><th>Última Work Order</th><th></th></tr></thead>
+    ${sinMov.length?`<table><thead><tr><th>Propiedad que dejó de agendar</th><th>Cliente</th><th>City</th><th>Última Work Order</th><th></th></tr></thead>
       <tbody>${sinMov.map(p=>`<tr>
         <td style="font-weight:650">${esc(p.nombre)}<div style="font-size:10.5px;color:var(--faint)">${esc(p.dir)}</div></td>
         <td>${esc(CLI(p.cliente).nombre)}</td><td>${esc(p.zona)}</td>
