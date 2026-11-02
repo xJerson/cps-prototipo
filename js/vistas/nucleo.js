@@ -174,7 +174,8 @@ VIEWS.alertas = () => {
 };
 
 /* ══════════ MODALES ══════════ */
-function modal(html,wide){ $("#mroot").innerHTML=`<div class="scrim" data-a="cm"><div class="modal ${wide?"wide":""}" data-stop>${html}</div></div>`;
+function modal(html,wide){ if(typeof nubeContadores==="function") nubeContadores();   /* al abrir un formulario, el contador de ids se pone al día con la nube */
+  $("#mroot").innerHTML=`<div class="scrim" data-a="cm"><div class="modal ${wide?"wide":""}" data-stop>${html}</div></div>`;
   /* Diferido: deja que corra primero el código que a veces sigue a modal()
      — foco en un campo, marcarlo, refWO(), etc. — y recién ahí la ayuda
      mira el formulario ya en su estado final. */

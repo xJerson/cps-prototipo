@@ -192,6 +192,7 @@ async function nubeIniciar(){
       _nubeSnap = _nubeTodo();
     }
     _nubeActiva = true;
+    nubeContadores();
     return true;
   }catch(e){
     console.warn("[nube] sin conexión, se usa el guardado local:", e.message);
@@ -221,8 +222,30 @@ async function nubeRefrescar(){
     if(JSON.stringify(nuevo) !== antes){ _nubeSnap = nuevo; render(); }
   }catch(e){ console.warn("[nube] no se pudo refrescar:", e.message); }
 }
-document.addEventListener("visibilitychange", () => { if(!document.hidden) nubeRefrescar(); });
-setInterval(() => { if(!document.hidden) nubeRefrescar(); }, 30000);
+/* Pone al día solo los contadores de ids con lo que ya hay en la nube (la lista de números, no los registros): así dos personas
+   que crean a la vez no reciben el mismo número. No toca S, así que es seguro mientras alguien llena un formulario. */
+const NUBE_CONTADORES = { p:["propiedades"], u:["unidades"], c:["contactos"], t:["tecnicos"], w:["wos"], ad:["adicionales"],
+  cl:["clientes"], cm:["comunicaciones"], rw:["recordatorios_wo"], mv:["movs","productos"], inv:["productos"] };
+let _nubeContAt = 0;
+async function nubeContadores(){
+  if(!_nubeActiva || Date.now() - _nubeContAt < 5000) return;
+  _nubeContAt = Date.now();
+  try{
+    const tablas = [...new Set(Object.values(NUBE_CONTADORES).flat())];
+    const [cfg, ...listas] = await Promise.all([
+      _nubeFetch("/config?select=data&k=eq.ID").then(r => r.json()),
+      ...tablas.map(t => _nubeFetch("/" + t + "?select=id:data-%3E%3Eid&limit=5000").then(r => r.json()))
+    ]);
+    const maxPor = {}; tablas.forEach((t, i) => { maxPor[t] = listas[i].reduce((a, r) => Math.max(a, idNumero(r.id)), 0); });
+    const nube = (cfg[0] && cfg[0].data && cfg[0].data.v) || {};
+    Object.keys(NUBE_CONTADORES).forEach(k => {
+      const mx = Math.max(nube[k] || 0, ...NUBE_CONTADORES[k].map(t => maxPor[t] || 0));
+      if(mx > (ID[k] || 0)) ID[k] = mx;
+    });
+  }catch(e){ console.warn("[nube] no se pudieron actualizar los contadores:", e.message); }
+}
+document.addEventListener("visibilitychange", () => { if(!document.hidden){ nubeRefrescar(); nubeContadores(); } });
+setInterval(() => { if(!document.hidden){ nubeRefrescar(); nubeContadores(); } }, 30000);
 
 /* ── FOTOS ── Worker de Cloudflare con un bucket R2 (ver worker/fotos.js).
    Devuelve la dirección pública de la foto subida.

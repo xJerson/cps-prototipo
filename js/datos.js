@@ -1,7 +1,17 @@
 "use strict";
 /* ══════════ DATOS SEMILLA ══════════ */
 let ID = {p:100,u:200,c:300,t:400,w:1062,e:500,f:605,pr:700,mv:800,cl:900,ad:962,cm:960,rw:10,gx:10,inv:10};
-const nid = k => ++ID[k];
+/* Un id nuevo nunca repite uno que ya existe: el contador ID es local de cada navegador y puede ir por detrás de lo que otras
+   personas ya crearon (dos WO con el mismo número no se pueden operar). Antes de dar el siguiente se sube el contador hasta el
+   mayor número que ya hay en la lista. Se ignoran números enormes (ids hechos con la hora) para que no disparen el contador. */
+const ID_LISTAS = { p:()=>S.propiedades, u:()=>S.unidades, c:()=>S.contactos, t:()=>S.tecnicos, w:()=>S.wos, ad:()=>S.adicionales,
+  cl:()=>S.clientes, cm:()=>S.comunicaciones, rw:()=>S.recordatoriosWO, mv:()=>[].concat(S.movs||[], S.productos||[]), inv:()=>S.productos };
+const idNumero = id => { const m = String(id==null ? "" : id).match(/(\d+)$/); const n = m ? parseInt(m[1], 10) : 0; return n < 1e6 ? n : 0; };
+const nid = k => {
+  const lista = ID_LISTAS[k];
+  if(lista){ try{ const mx = (lista() || []).reduce((a, r) => Math.max(a, idNumero(r && r.id)), 0); if(mx > (ID[k] || 0)) ID[k] = mx; }catch(e){} }
+  return ++ID[k];
+};
 /* Fotos semilla: no hay cámara real en el arranque del prototipo, pero la
    galería/miniatura necesita una URL de imagen real (no un contador ni
    url:null) para poder probarse desde que abre la demo. */
