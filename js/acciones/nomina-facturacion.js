@@ -42,7 +42,7 @@ function registrarHistorialApproval(x, evento, detalle){
 function aplicarPagoFacturaAdicional(l, w, s, cobrar){
   const cant = l.cant||1;
   const u = w ? U(w.unidad) : null;
-  const tf = u && l.cat && l.concepto ? tarifa(w.prop, l.cat, l.concepto, u.rooms, u.pisos) : null;
+  const tf = u && l.cat && l.concepto ? tarifa(w.prop, l.cat, l.concepto, u.rooms, u.pisos, w.fecha) : null;
   const pagoUnit = l.pago!=null ? l.pago : (tf && tf.pago!=null ? tf.pago : (l.precio||0));
   const montoPago = pagoUnit * cant;
   const montoCobro = (l.precio||0) * cant;

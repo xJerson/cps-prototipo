@@ -277,12 +277,61 @@ const notiSinLeer = () => S.notis.filter(n=>!n.leido).length;
    por servicio cuando el precio no cambia por pisos. */
 /* Una fila «por llenar» (sinPrecio, sin precio) es solo un renglón de la plantilla del
    Price List de la propiedad: no es una tarifa y ningún cálculo, lista ni envío la ve. */
-const tarActiva = t => !t.sinPrecio && t.precio != null;
-function tarifa(propId, cat, serv, variante, pisos){
+/* ── PRECIOS CON VIGENCIA ──
+   Una línea de precio (tipo + servicio + detail + piso + baños, de una propiedad o la general) puede tener
+   varias versiones: filas con el mismo «llave» y distinta fecha `desde` (opcional; sin `desde` = rige desde siempre).
+   La que rige en una fecha D es la de mayor `desde` <= D. Las de `desde` futuro están PROGRAMADAS y no rigen todavía;
+   las reemplazadas quedan solo en el Historial. Campos opcionales: desde, por, motivo, creada, lote. */
+const VIG_AVISO_DIAS = 14;      // avisar con tantos días de anticipación que entra una lista nueva
+const VIG_MAX_MESES = 12;       // tope para programar un cambio
+/* Fecha REAL de hoy (AAAA-MM-DD local). HOY_SUP es una fecha simulada fija: solo esta sirve para decidir qué precio rige. */
+const hoyReal = () => { const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
+const tarLlave = t => [t.prop||"", t.cat||"", t.serv||"", t.variante||"", t.pisos==null?"":t.pisos, t.banos==null?"":t.banos].join("|");
+const tarBase = t => !t.sinPrecio && t.precio != null;
+let _tarIdx = null, _tarVer = 0;
+const tarInval = () => { _tarVer++; };
+/* Índice de versiones por llave, cada grupo de la fecha más vieja a la más nueva (sin `desde` = la más vieja). */
+function tarIndice(){
+  const a = S.tarifas;
+  if(_tarIdx && _tarIdx.a===a && _tarIdx.n===a.length && _tarIdx.v===_tarVer) return _tarIdx;
+  const m = new Map(); let hay = false;
+  a.forEach(t=>{ if(!tarBase(t)) return; const k = tarLlave(t); if(!m.has(k)) m.set(k,[]); m.get(k).push(t); if(t.desde) hay = true; });
+  m.forEach(g=>g.sort((x,y)=>(x.desde||"")<(y.desde||"")?-1:(x.desde||"")>(y.desde||"")?1:0));
+  return (_tarIdx = {a, n:a.length, v:_tarVer, m, hay});
+}
+/* ¿Esta fila es la versión que rige en `fecha` (por defecto hoy)? */
+function tarVigente(t, fecha){
+  fecha = fecha || hoyReal();
+  if(t.desde && t.desde > fecha) return false;
+  const ix = tarIndice(); if(!ix.hay) return true;
+  const g = ix.m.get(tarLlave(t)); if(!g || g.length < 2) return true;
+  let mejor = "";
+  g.forEach(u=>{ if(u.desde && u.desde <= fecha && u.desde > mejor) mejor = u.desde; });
+  if(!mejor) return !t.desde;
+  if(t.desde !== mejor) return false;
+  const iguales = g.filter(u=>u.desde===mejor);
+  return iguales[iguales.length-1] === t;   // con la misma fecha, gana la última que se creó
+}
+/* Una fila reemplazada o programada no sale en las listas normales (sí en el Historial). */
+const tarOculta = t => tarBase(t) && !tarVigente(t);
+const tarEn = (t, fecha) => tarBase(t) && tarVigente(t, fecha);
+const tarProgramada = t => tarBase(t) && !!t.desde && t.desde > hoyReal();
+/* La próxima versión programada de la línea de esta fila, si hay. */
+function tarProxima(t){
+  const g = tarIndice().m.get(tarLlave(t)) || [], hoy = hoyReal();
+  return g.find(u=>u.desde && u.desde > hoy) || null;
+}
+const diasEntre = (a, b) => Math.round((Date.UTC(+b.slice(0,4),+b.slice(5,7)-1,+b.slice(8,10)) - Date.UTC(+a.slice(0,4),+a.slice(5,7)-1,+a.slice(8,10)))/86400000);
+/* Fecha con la que se cobra una WO: la del servicio, o hoy si todavía no tiene. */
+const fechaTarifaWO = w => (w && w.fecha) || hoyReal();
+/* Una fila «por llenar» y una versión programada o reemplazada no son tarifas vigentes. */
+const tarActiva = t => tarBase(t) && tarVigente(t);
+function tarifa(propId, cat, serv, variante, pisos, fechaRef){
+  fechaRef = fechaRef || hoyReal();
   /* variante vacía = «cualquier tamaño» (así se guarda un precio que se pasó
      al tarifario sin elegir unidad); la fila con la variante exacta gana. */
   const busca = (p, pi) => {
-    const m = S.tarifas.filter(t => tarActiva(t) &&
+    const m = S.tarifas.filter(t => tarEn(t, fechaRef) &&
       t.prop === p && t.cat === cat && t.serv === serv &&
       (pi === null ? (t.pisos == null) : t.pisos === pi));
     return m.find(t => t.variante === variante) || m.find(t => !t.variante);
@@ -340,7 +389,22 @@ function sugerenciasHTML(inputId, prop, cat, serv, rooms, clic){
     }).join("")}</div>`;
 }
 /* La WO se queda con la tarifa del día que se creó: un precio nuevo en el Tarifario solo rige para las WO que se creen después. */
-function tarifaWO(w){ if(w.tarifaCongelada) return {...w.tarifaCongelada}; const u=U(w.unidad); return tarifa(w.prop,w.cat,w.serv,u.rooms,u.pisos); }
+function tarifaWO(w){ if(w.tarifaCongelada) return {...w.tarifaCongelada}; const u=U(w.unidad); return tarifa(w.prop,w.cat,w.serv,u.rooms,u.pisos,fechaTarifaWO(w)); }
+/* Si la fecha de servicio de una WO cambia, su precio sigue a la versión que rige ese día. Solo mientras el precio no esté
+   cerrado: sin precio propio, ni fijado a mano, y antes de empezar el trabajo o facturar. Deja rastro solo si el precio cambia. */
+function tarRefijarPorFecha(w){
+  if(!w || w.precio!=null || ["In progress","Completed","Invoiced","Paid","Canceled"].includes(w.estado) || w.pagadaTec) return false;
+  if(S.facturas.some(f=>f.lineas.includes(w.id))) return false;
+  const antes = w.tarifaCongelada;
+  if(antes && (antes.precioFijado || antes.nivel==="Estimado")) return false;
+  const u = U(w.unidad); if(!u) return false;
+  const nueva = tarifa(w.prop,w.cat,w.serv,u.rooms,u.pisos,fechaTarifaWO(w));
+  if(!nueva) return false;
+  const cambia = !antes || antes.precio!==nueva.precio || antes.pago!==nueva.pago;
+  w.tarifaCongelada = nueva;
+  if(antes && cambia){ w.hist.push([hora(),"Tarifa actualizada por cambio de fecha",S.usuario]); return true; }
+  return false;
+}
 /* Override OPCIONAL del pago a UN técnico específico (ej. un especialista cobra
    más por el mismo servicio) — mismo esquema de fallback que tarifa(): propiedad
    exacta primero, después general; piso exacto primero, después cualquiera.
@@ -594,6 +658,17 @@ const fl    = k => (S.flash||[]).includes(k) ? " flash" : "";
    pisa, solo se deja de usar para bloquear algo que no debería bloquear. */
 const esAgendada = e => e==="Scheduled" || e==="Confirmed";
 
+/* Cambios de precio programados que entran pronto: [{nombre, desde, dias}] por propiedad (o general) y fecha. */
+function tarAvisos(){
+  const hoy = hoyReal(), vistos = new Set(), r = [];
+  S.tarifas.forEach(t=>{
+    if(!tarProgramada(t)) return;
+    const dias = diasEntre(hoy, t.desde); if(dias > VIG_AVISO_DIAS) return;
+    const k = (t.prop||"")+"|"+t.desde; if(vistos.has(k)) return; vistos.add(k);
+    r.push({nombre: t.prop && P(t.prop) ? P(t.prop).nombre : "Tarifario general", desde:t.desde, dias});
+  });
+  return r.sort((a,b)=>a.dias-b.dias);
+}
 /* Alertas — solo reglas que salen del propio Excel o del análisis */
 function alertas(){
   const A=[];
@@ -630,6 +705,9 @@ function alertas(){
   /* Aviso con COI_AVISO_DIAS de anticipación: una alerta por póliza que vence pronto (las ya vencidas siguen en «COI sin registrar») */
   S.propiedades.forEach(p=>(p.polizas||[]).filter(coiPorVencer).forEach(x=>A.push({t:"COI por vencer",
     d:`${p.nombre}: ${x.tipo} vence ${x.vence} (${coiDiasTxt(x)})`,q:"Claudia",n:"a"})));
+  /* Una lista de precios nueva ya programada que entra en VIG_AVISO_DIAS días o menos: una alerta por propiedad (o por el Tarifario general). */
+  tarAvisos().forEach(x=>A.push({t:"Cambio de precios por entrar",
+    d:`${x.nombre}: la lista nueva rige el ${x.desde} (en ${x.dias} día${x.dias===1?"":"s"})`,q:"Claudia",n:"a"}));
   S.productos.filter(p=>stock(p.id)<p.min).forEach(p=>A.push({t:"Stock bajo",d:`${p.nombre}: ${stock(p.id)} ${p.um} (mínimo ${p.min})`,q:"Gustavo",n:"w"}));
   S.disponibilidad.filter(d=>d.estado==="Pendiente").forEach(d=>A.push({t:"Permiso por aprobar",d:`${tecN(d.tec)} · ${d.motivo} ${d.desde} al ${d.hasta}`,q:"Gustavo",n:"a"}));
   S.facturas.filter(facVencida).forEach(f=>A.push({t:"Factura vencida",d:`${f.num} · ${P(f.prop).nombre}`,q:"Erika",n:"r"}));

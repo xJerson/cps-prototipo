@@ -263,7 +263,7 @@ Object.assign(ACC, {
       let uNueva = u;
       let cambiosUnidad=[];
       const llaveTarifa = w => { const x=U(w.unidad); return [w.prop,w.cat,w.serv,x.rooms,x.pisos].join("|"); };
-      const llaveAntes = yo ? llaveTarifa(yo) : null;
+      const llaveAntes = yo ? llaveTarifa(yo) : null, fechaAntes = yo ? yo.fecha : null;
       if(esNueva){
         const bld=val("wUniBld"), uNumR=val("wUniNum");
         uNueva = {id:"U"+nid("u"), prop:pid, building:bld, unidadNum:uNumR, num:uNumComp(bld,uNumR),
@@ -288,7 +288,8 @@ Object.assign(ACC, {
           "Work Orders", "WO-"+yo.id,
           (o,cambios)=>{
             flash("wo:"+o.id);
-            if(llaveTarifa(o)!==llaveAntes){ delete o.tarifaCongelada; const tc=tarifaWO(o); if(tc) o.tarifaCongelada=tc; }   // cambió lo que se cobra: toma la tarifa de hoy
+            if(llaveTarifa(o)!==llaveAntes){ delete o.tarifaCongelada; const tc=tarifaWO(o); if(tc) o.tarifaCongelada=tc; }   // cambió lo que se cobra: toma la tarifa que rige en su fecha de servicio
+            else if(fechaAntes!==o.fecha) tarRefijarPorFecha(o);   // solo cambió la fecha: puede cambiar la versión de la tarifa
             o.hist.push([hora(), "Datos corregidos: "+cambios.map(c=>c.campo).join(", "), S.usuario]);
             // Si ya hay técnico, el cambio le llega: si no, se entera al llegar
             if(o.tec) noti("Tu trabajo cambió",
@@ -329,7 +330,7 @@ Object.assign(ACC, {
         S.repWOId = null;
       }
       cm();
-      const t = tarifa(pid,cat,serv,uNueva.rooms,uNueva.pisos);
+      const t = tarifa(pid,cat,serv,uNueva.rooms,uNueva.pisos,fecha);
       toast("✓ Work Order creada", `<b>WO-${id}</b> · ${esc(P(pid).nombre)} ${esc(uNueva.num)}. ${t?"Ingreso "+money(t.precio)+" ya calculado.":"Sin tarifa: quedará como NA."}${esNueva?" Unidad "+esc(uNueva.num)+" agregada al catálogo.":""}`,"v");
       S.mod="wo"; S.sub=id; render();
     };
@@ -394,6 +395,7 @@ Object.assign(ACC, {
     w.fecha = f;
     w.semana = semanaDe(f);
     w.hist.push([hora(), `Fecha movida del ${antes} al ${f}`, S.usuario]);
+    tarRefijarPorFecha(w);   // el precio sigue a la versión de tarifa que rige en la nueva fecha
     if(w.confirmCliente && w.confirmCliente.fecha!==f){
       w.confirmCliente = null;
       if(w.estado==="Confirmed") w.estado = "Scheduled";
@@ -459,6 +461,7 @@ Object.assign(ACC, {
       w.fechaSolicitada = w.fechaSolicitada || antes;
       w.fecha = f;
       w.semana = semanaDe(f);   // sin esto la WO sigue contando en la semana anterior (agenda, nómina y reportes)
+      tarRefijarPorFecha(w);    // el precio sigue a la versión de tarifa que rige en la nueva fecha
       const vtn = val("pgVentana") || "todo";
       w.ventana = vtn;
       if(inicio) w.horaProg=inicio;
@@ -1316,7 +1319,7 @@ Object.assign(ACC, {
     const w=W(+val("swWo")), u=U(w.unidad);
     const tipo=val("swTipo"), ubic=val("swUbic"), cant=parseFloat(val("swCant"))||1, notas=val("swNotas")||"";
     const catSW=val("swCat"), item=catSW===CO_PEND;
-    const ref = u ? (item ? adicionalCatalogo(tipo) : tarifa(w.prop, catSW, tipo, u.rooms, u.pisos)) : null;
+    const ref = u ? (item ? adicionalCatalogo(tipo) : tarifa(w.prop, catSW, tipo, u.rooms, u.pisos, w.fecha)) : null;
     const rawP = val("swPrecio").trim();
     const precio = rawP!=="" ? (parseFloat(rawP)||null) : (ref ? ref.precio : null);
     const pago = ref && ref.pago!=null ? ref.pago : precio;

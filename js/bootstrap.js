@@ -142,6 +142,9 @@ const AUD = {
   precLlenarGuardar:{a:"Llenó precios del Price List de una propiedad", m:"Tarifario"},
   precPDF:{a:"Generó el PDF de una lista de precios", m:"Tarifario"},
   tarPDF:{a:"Generó el PDF de una lista de precios", m:"Tarifario"},
+  vigProgramarOK:{a:"Programó un cambio de precios", m:"Tarifario"},
+  vigCancelarOK:{a:"Canceló un cambio de precios programado", m:"Tarifario"},
+  vigPdfOK:{a:"Generó el PDF de una lista de precios", m:"Tarifario"},
   estMedioOK:{a:"Decidió la aprobación del estimado", m:"Estimados"},
   estEnviarOK:{a:"Envió un estimado al cliente", m:"Estimados"},
   estAgendar:{a:"Pasó el estimado a programación", m:"Estimados"},
@@ -275,7 +278,10 @@ const AUD_POST = {
   listaDesdeEstimado:  () => S._audTar || "",
   precLlenarGuardar:   () => S._audTar || "",
   precPDF:             () => S._audTar || "",
-  tarPDF:              () => S._audTar || ""
+  tarPDF:              () => S._audTar || "",
+  vigProgramarOK:      () => S._audTar || "",
+  vigCancelarOK:       () => S._audTar || "",
+  vigPdfOK:            () => S._audTar || ""
 };
 function refDe(d){
   if(!d) return "";

@@ -833,7 +833,7 @@ function modalSubWO(woId){
 function refSubWO(){
   const caja=document.getElementById("swSpecs"); if(!caja) return;
   const w=W(+val("swWo")), u=w&&U(w.unidad), cat=val("swCat"), tipo=val("swTipo");
-  const ref = w && u ? (cat===CO_PEND ? adicionalCatalogo(tipo) : tarifa(w.prop, cat, tipo, u.rooms, u.pisos)) : null;
+  const ref = w && u ? (cat===CO_PEND ? adicionalCatalogo(tipo) : tarifa(w.prop, cat, tipo, u.rooms, u.pisos, w.fecha)) : null;
   const inpP = document.getElementById("swPrecio");
   if(inpP) inpP.value = ref && ref.precio!=null ? ref.precio : "";
   const campos = SUBWO_SPECS[tipo] || [];
@@ -1241,7 +1241,7 @@ function refTarifa(){
   const u = hayEditor
     ? {rooms:tipoT==="Residencial"&&bedT===""?null:roomsDesde(tipoT,bedT), pisos:parseInt(val("wUniPisos"))||null}
     : guardada;
-  const t = u ? tarifa(val("wProp"), val("wCat"), serv, u.rooms, u.pisos) : null;
+  const t = u ? tarifa(val("wProp"), val("wCat"), serv, u.rooms, u.pisos, val("wFecha")) : null;
   caja.innerHTML = t
     ? `<div class="note v"><b>Tarifa ${t.nivel} (${esc(t.detalle)}):</b> se cobra ${money(t.precio)} y se le paga ${money(t.pago)} al técnico. Utilidad ${money(t.precio-t.pago)}.</div>`
     : `<div class="note w"><b>Sin tarifa para esta combinación.</b> Se puede guardar, pero saldrá «NA» y quedará una <b>excepción</b> para que Erika la defina.</div>${sugerenciasHTML("wTarifa", val("wProp"), val("wCat"), serv, u&&u.rooms, false)}`;

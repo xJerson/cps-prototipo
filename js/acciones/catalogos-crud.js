@@ -538,6 +538,12 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
             <button type="button" class="btn sm ${(v("descuentoTipo")||"%")==="$"?"p":""}" id="rDescBtnS" data-a="tarDescTipo" data-t="$" style="min-width:34px">$</button>
             <button type="button" class="btn sm ${(v("descuentoTipo")||"%")==="%"?"p":""}" id="rDescBtnP" data-a="tarDescTipo" data-t="%" style="min-width:34px">%</button>
           </div></div></div>
+      ${t&&tarActiva(t)?`<div class="vig-edit">
+        <div class="fg c2">
+          <div class="fld" style="margin-bottom:8px"><label>Aplicar desde</label><input id="rDesde" type="date" value="${hoyReal()}" min="${hoyReal()}" max="${vigMaxFecha()}"></div>
+          <div class="fld" style="margin-bottom:8px"><label>Motivo <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><input id="rMot" placeholder="ej. Ajuste anual"></div></div>
+        <label class="vig-corr"><input type="checkbox" id="rCorr" style="width:auto"> Es una corrección (no crear versión)</label>
+        <div class="hint">Si cambias el Price o el Pago se crea una versión nueva desde esa fecha y la anterior queda en el Historial. Marca «corrección» solo para arreglar un error de captura: se edita en el lugar.</div></div>`:""}
       ${t?`<div class="note w">Cambiar el precio no toca lo ya facturado: las Work Orders cerradas conservan lo que se cobró. Aplica de aquí en adelante.</div>`:""}
     </div>
     <div class="mf"><button class="btn" data-a="tarCancelar">Cancel</button>
@@ -661,7 +667,15 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
         }
       });
     };
-    if(yo) return guardarEdicion(yo, datos, "Tarifario", `${yo.nombre}${yo.prop?" · "+P(yo.prop).nombre:" · general"}`, (o,c)=>{ delete o.sinPrecio; resolverReturnsPendientes(); }, "tar:"+yo.id);
+    /* Con «Aplicar desde» a la vista: cambiar Price o Pago crea una versión nueva (la anterior queda intacta en el Historial);
+       «Es una corrección» o un cambio de la llave del precio (tipo, servicio, detail, piso, baños) edita en el lugar. */
+    if(yo && document.getElementById("rDesde") && !chk("rCorr") && tarActiva(yo)){
+      const mismo = k => (yo[k]==null?"":String(yo[k])) === (datos[k]==null?"":String(datos[k]));
+      const idIgual = ["cat","serv","variante","pisos","banos"].every(mismo);
+      if(idIgual && (yo.precio!==datos.precio || (yo.pago||0)!==(datos.pago||0)))
+        return vigNuevaVersion(yo, datos, val("rDesde")||hoyReal(), val("rMot"));
+    }
+    if(yo) return guardarEdicion(yo, datos, "Tarifario", `${yo.nombre}${yo.prop?" · "+P(yo.prop).nombre:" · general"}`, (o,c)=>{ delete o.sinPrecio; tarInval(); resolverReturnsPendientes(); }, "tar:"+yo.id);
     let trNum = Date.now();
     while(S.tarifas.some(x=>x.id==="TR"+trNum)) trNum++;
     const nr = {id:"TR"+trNum, ...datos};
@@ -898,6 +912,7 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
     const ts=S.tarifas.filter(t=>t.prop===d.id && tarActiva(t) && !(S.tarOff||[]).includes(String(t.id)))
       .sort((a,b)=>String(a.cat).localeCompare(String(b.cat))||String(a.serv).localeCompare(String(b.serv))||((a.pisos==null?-1:a.pisos)-(b.pisos==null?-1:b.pisos)));
     if(!ts.length){ S.audOmitir=true; toast("Sin precios marcados","Marca al menos un precio para generar el PDF.","r"); return; }
+    if(vigHayProgramada(d.id)){ S.audOmitir=true; vigPdfModal(d.id, ts); return; }   // hay lista nueva programada: primero se elige cuál mandar
     S._audTar = `${P(d.id).nombre} · ${ts.length} precio(s)`;
     pdfListaPrecios(d.id, ts);
   },
@@ -905,13 +920,14 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
     const fp=S.tarFp||"", ts=tarSeleccion();
     if(!fp){ S.audOmitir=true; toast("Elige una propiedad","El PDF es la lista de una propiedad. Elígela arriba, en «Propiedad».","w"); return; }
     if(!ts.length){ S.audOmitir=true; toast("Sin precios marcados","Marca al menos un precio para generar el PDF.","r"); return; }
+    if(vigHayProgramada(fp)){ S.audOmitir=true; vigPdfModal(fp, ts); return; }
     S._audTar = `${P(fp).nombre} · ${ts.length} precio(s)`;
     pdfListaPrecios(fp, ts);
   },
   /* Llenar precios: una tabla con todas las filas de la propiedad (las «por llenar» primero) y un solo Guardar. */
   precLlenar: d => {
     const id=d.id||d.prop, verPago=puedeVerUtilidad();
-    const ts=S.tarifas.filter(t=>t.prop===id).sort((a,b)=>(tarActiva(a)?1:0)-(tarActiva(b)?1:0)
+    const ts=S.tarifas.filter(t=>t.prop===id && !tarOculta(t)).sort((a,b)=>(tarActiva(a)?1:0)-(tarActiva(b)?1:0)
       ||String(a.cat).localeCompare(String(b.cat))||String(a.serv).localeCompare(String(b.serv))||((a.pisos==null?-1:a.pisos)-(b.pisos==null?-1:b.pisos)));
     if(!ts.length){ toast("Todavía no hay lista","Primero usa «Crear lista completa» en el Price List de la propiedad.","w"); return; }
     S._precProp=id;
@@ -946,6 +962,7 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
     if(mal){ S.audOmitir=true; toast("Revisa los números","Precio y pago deben ser números mayores o iguales a 0.","r"); return; }
     if(!cambios.length){ S.audOmitir=true; toast("Nada que guardar","No escribiste ningún precio nuevo.","w"); return; }
     cambios.forEach(({t,pv,gv})=>{ t.precio=pv; t.pago = gv!=null ? gv : (t.pago==null?0:t.pago); delete t.sinPrecio; });
+    tarInval();
     S._audTar = `${P(id).nombre} · ${cambios.length} precio(s)`;
     flash(cambios.map(c=>"tar:"+c.t.id)); cm();
     toast("✓ Precios guardados", `${cambios.length} precio(s) en el Price List de <b>${esc(P(id).nombre)}</b>.`, "v");

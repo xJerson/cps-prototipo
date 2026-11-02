@@ -329,7 +329,7 @@ Object.assign(ACC, {
        precio cargado) entra como manual y oficina lo define al aprobar. Un change order item pendiente conserva su
        precio fijo si lo tiene. */
     sh.filas.forEach(f=>{ const item=f.t===CO_PEND, cat=item?adicionalCatalogo(f.c):null,
-      tf=item?null:tarifa(w.prop,f.t,f.c,u.rooms,u.pisos), ref=cat||tf;
+      tf=item?null:tarifa(w.prop,f.t,f.c,u.rooms,u.pisos,w.fecha), ref=cat||tf;
       S.adicionales.push({
       id:nid("ad"), sol, wo:w.id, desc:sh.desc.trim(), ubic:sh.ubic,
       concepto:f.c, cat:item?null:f.t, serv:item?null:f.c, cant:parseFloat(f.q)||1,

@@ -409,7 +409,7 @@ function hojaCel(sh){
     /* Cada renglón es tipo → servicio, igual que en la Work Order. Al técnico no se le muestra dinero: solo si el
        precio sale de la tarifa o si lo define oficina al aprobar. */
     const u = U(w.unidad), tipos = tiposCO();
-    const conPrecio = (t,c) => t===CO_PEND ? !!adicionalCatalogo(c) : !!tarifa(w.prop,t,c,u.rooms,u.pisos);
+    const conPrecio = (t,c) => t===CO_PEND ? !!adicionalCatalogo(c) : !!tarifa(w.prop,t,c,u.rooms,u.pisos,w.fecha);
     return `<div class="fscrim" data-a="fSheetNo"><div class="fsheet" data-stop>
     <div class="grab"></div>
     <h4>Necesito aprobación</h4>

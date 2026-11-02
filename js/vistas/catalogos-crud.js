@@ -24,7 +24,7 @@ function fichaProp(id){
   const p=P(id), t=S.tab||"datos";
   const us=S.unidades.filter(u=>u.prop===id), cs=S.contactos.filter(c=>c.prop===id);
   const ws=S.wos.filter(w=>w.prop===id);
-  const tf=S.tarifas.filter(x=>x.prop===id), nTf=tf.filter(tarActiva).length, nVacios=tf.length-nTf;
+  const tf=S.tarifas.filter(x=>x.prop===id && !tarOculta(x)), nTf=tf.filter(tarActiva).length, nVacios=tf.length-nTf;
   const coms=S.comunicaciones.filter(m=>m.prop===id);
   const sMon = saldoCredito(id), sd = credServSaldos(id);
   return `
@@ -214,21 +214,23 @@ function fichaProp(id){
   ${t==="previo"?vPrevio(id):""}
 
   ${t==="precios"?(()=>{
+    if(S.vigModo===id && nTf) return vigenciaHTML(id);   // modo «Precios con vigencia»: reemplaza la tabla de abajo
     const off=S.tarOff||[], marcado=x=>tarActiva(x)&&!off.includes(String(x.id));
     const nSel=tf.filter(marcado).length;
     const filas=tf.slice().sort((a,b)=>String(a.cat).localeCompare(String(b.cat))||String(a.serv).localeCompare(String(b.serv))||((a.pisos==null?-1:a.pisos)-(b.pisos==null?-1:b.pisos)));
-    return `<div class="card"><div class="chd"><h3>Price List</h3>
+    return `${nTf?vigFraseLista(id):`<div class="vig-frase vig-frase-lista n">Esta propiedad todavía usa la tarifa general. Para preparar un cambio de precios, primero pulsa «Crear lista completa»: copia los precios de hoy a esta propiedad y desde ahí los cambias.</div>`}<div class="card"><div class="chd"><h3>Price List</h3>
     <span class="s">exclusivos de esta propiedad — mandan sobre la tarifa general${nVacios?` · <b>${nVacios} por llenar</b>`:""}</span>
     <span class="r" style="display:flex;gap:6px;flex-wrap:wrap">
-      ${nTf?`<button class="btn sm" data-a="precPDF" data-id="${id}" ${nSel?"":"disabled"} title="Genera un PDF con los precios marcados — sin pagos al técnico">Descargar PDF${nSel?` (${nSel})`:""}</button>`:""}
-      ${puede("tarifario")?`<button class="btn sm" data-a="preciosDesdeGeneral" data-id="${id}" title="Trae la tarifa general y los servicios del catálogo que faltan; no duplica nada">Crear lista completa</button>
+      ${nTf?`<button class="btn sm" data-a="vigAbrir" data-id="${id}" title="Prepara una lista nueva con fecha de entrada, sin tocar los precios de hoy">Preparar cambio de precios</button>
+      <button class="btn sm" data-a="precPDF" data-id="${id}" ${nSel?"":"disabled"} title="Genera un PDF con los precios marcados — sin pagos al técnico">Descargar PDF${nSel?` (${nSel})`:""}</button>`:""}
+      ${puede("tarifario")?`<button class="btn sm ${nTf?"":"p"}" data-a="preciosDesdeGeneral" data-id="${id}" title="Trae la tarifa general y los servicios del catálogo que faltan; no duplica nada">Crear lista completa</button>
       <button class="btn sm" data-a="precLlenar" data-id="${id}">Llenar precios</button>
-      <button class="btn sm p" data-a="tarNueva" data-prop="${id}">+ Nuevo precio</button>`:""}</span></div>
+      <button class="btn sm ${nTf?"p":""}" data-a="tarNueva" data-prop="${id}">+ Nuevo precio</button>`:""}</span></div>
     ${tf.length?`<table><thead><tr>${nTf?`<th style="width:30px"><input type="checkbox" data-a="precMarcaTodos" data-id="${id}" title="Marcar o desmarcar todos" ${nSel===nTf?"checked":""}></th>`:""}<th>Tipo</th><th>Servicio</th><th>Detail</th><th>Piso</th><th>Baños</th><th>Description</th><th class="num">Price</th>${puede("tarifario")?"<th></th>":""}</tr></thead><tbody>
     ${filas.map(x=>`<tr class="${fl("tar:"+x.id)}">${nTf?`<td>${tarActiva(x)?`<input type="checkbox" data-a="tarMarca" data-id="${x.id}" ${marcado(x)?"checked":""}>`:""}</td>`:""}<td>${esc(x.cat)||"—"}</td><td>${esc(x.serv)||"—"}</td><td>${esc(x.variante)||"—"}</td>
       <td>${x.pisos!=null?"Floor "+x.pisos:'<span class="pill g">cualquiera</span>'}</td>
       <td>${x.banos!=null?x.banos:'<span class="pill g">—</span>'}</td><td>${esc(x.desc)||"—"}</td>
-      <td class="num mono">${tarActiva(x)?money(x.precio):'<span class="pill g">por llenar</span>'}</td>
+      <td class="num mono">${tarActiva(x)?money(x.precio)+vigPillCambia(x):'<span class="pill g">por llenar</span>'}</td>
       ${puede("tarifario")?`<td style="text-align:right"><button class="btn sm" data-a="tarNueva" data-id="${x.id}">Editar</button></td>`:""}</tr>`).join("")}
     </tbody></table>`:`<div class="empty">Sin precios propios — usa la tarifa general</div>`}</div>`;
   })():""}
@@ -250,7 +252,7 @@ function vAltaGuiada(id){
   const p=P(id);
   const us=S.unidades.filter(u=>u.prop===id).length;
   const cs=S.contactos.filter(c=>c.prop===id).length;
-  const tfAll=S.tarifas.filter(t=>t.prop===id), tf=tfAll.filter(tarActiva).length, porLlenar=tfAll.length-tf;
+  const tfAll=S.tarifas.filter(t=>t.prop===id && !tarOculta(t)), tf=tfAll.filter(tarActiva).length, porLlenar=tfAll.length-tf;
   const venceMin=(p.polizas||[]).reduce((a,x)=>!a||x.vence<a.vence?x:a,null);
   const es=S.estimados.filter(e=>e.prop===id).length;
   const pasos=[
@@ -439,11 +441,12 @@ const vTecLista = () => {
 
 /* ── TARIFARIO ── Ingreso Fijo + Ingreso Variable, juntos ── */
 /* Lista de precios que se ve y se envía: la general, o la de una propiedad (sus tarifas propias reemplazan a la general del mismo servicio). */
-function listaPrecios(prop, tipo){
+function listaPrecios(prop, tipo, fecha){
   const llave = t => [t.cat,t.serv,t.variante,t.pisos,t.banos].join("|");
-  const propias = prop ? S.tarifas.filter(t=>tarActiva(t)&&t.prop===prop) : [];
+  const rige = fecha ? t=>tarEn(t,fecha) : tarActiva;   // fecha: la lista tal como rige ese día (p. ej. la programada)
+  const propias = prop ? S.tarifas.filter(t=>rige(t)&&t.prop===prop) : [];
   const usadas = new Set(propias.map(llave));
-  const generales = S.tarifas.filter(t=>tarActiva(t)&&!t.prop && !usadas.has(llave(t)));
+  const generales = S.tarifas.filter(t=>rige(t)&&!t.prop && !usadas.has(llave(t)));
   return propias.concat(generales).filter(t=>!tipo||t.cat===tipo)
     .sort((a,b)=>String(a.cat).localeCompare(String(b.cat))||String(a.serv).localeCompare(String(b.serv))||((a.pisos==null?-1:a.pisos)-(b.pisos==null?-1:b.pisos)));
 }
@@ -469,7 +472,9 @@ function crearListaPropiedad(propId, desdeEstimado){
   let copiados=0, vacios=0, delEst=0;
   S.tarifas.filter(t=>!t.prop && tarActiva(t)).forEach(t=>{
     if(tiene.has(llave(t))) return;
-    S.tarifas.push({...t, id:nuevoId(), prop:propId}); tiene.add(llave(t)); copiados++;
+    const c = {...t, id:nuevoId(), prop:propId};
+    ["desde","por","motivo","creada","lote"].forEach(k=>{ delete c[k]; });   // la copia nace como precio de hoy, sin el historial de la general
+    S.tarifas.push(c); tiene.add(llave(t)); copiados++;
   });
   const e = desdeEstimado ? by(S.estimados, desdeEstimado) : null;
   if(e && e.prop===propId) (e.lineas||[]).forEach(l=>{
@@ -495,10 +500,11 @@ function crearListaPropiedad(propId, desdeEstimado){
 }
 /* PDF de una lista de precios: documento listo para imprimir en un iframe oculto (sin ventanas
    emergentes); el navegador ofrece «Guardar como PDF». Solo precio al cliente: nada de pago al técnico ni impuestos. */
-function pdfListaPrecios(propId, ts){
+function pdfListaPrecios(propId, ts, rige){
   const porTipo={}; ts.forEach(t=>{ (porTipo[t.cat||"—"]=porTipo[t.cat||"—"]||[]).push(t); });
   const conPiso = ts.some(t=>t.pisos!=null);
-  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Price List - ${esc(P(propId).nombre)}</title><style>
+  const nomProp = propId ? P(propId).nombre : "Tarifario general";
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Price List - ${esc(nomProp)}</title><style>
     @page{size:Letter;margin:14mm}
     *{box-sizing:border-box} body{font:12px/1.4 Arial,Helvetica,sans-serif;color:#111;margin:0}
     .cab{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #1a3a6b;padding-bottom:8px;margin-bottom:14px}
@@ -509,8 +515,8 @@ function pdfListaPrecios(propId, ts){
     .n{text-align:right;white-space:nowrap} .s{font-size:10.5px;color:#666}
     .pie{margin-top:18px;font-size:10.5px;color:#666}
   </style></head><body>
-  <div class="cab"><div><h1>Cordova Property Services LLC</h1><div>${esc(P(propId).nombre)}</div></div>
-    <div class="d"><b>Price List</b><br>${esc(HOY_SUP)}</div></div>
+  <div class="cab"><div><h1>Cordova Property Services LLC</h1><div>${esc(nomProp)}</div></div>
+    <div class="d"><b>Price List</b><br>${rige?"Rige desde "+esc(rige):esc(HOY_SUP)}</div></div>
   ${Object.entries(porTipo).map(([cat,fs])=>`<h2>${esc(cat)}</h2><table><thead><tr><th>Servicio</th><th>Detail</th>${conPiso?"<th>Piso</th>":""}<th class="n">Price</th></tr></thead><tbody>
     ${fs.map(t=>`<tr><td>${esc(t.serv||cat)}${t.desc?`<div class="s">${esc(t.desc)}</div>`:""}</td><td>${esc(t.variante)||"—"}</td>${conPiso?`<td>${t.pisos!=null?"Floor "+esc(t.pisos):"—"}</td>`:""}<td class="n">${money(t.precio)}</td></tr>`).join("")}
     </tbody></table>`).join("")}
@@ -528,14 +534,19 @@ function pdfListaPrecios(propId, ts){
 
 VIEWS.tarifario = () => {
   const fp=S.tarFp||"", ft=S.tarFt||"", fs=S.tarFs||"";
+  if(S.vigModo==="_g" && !fp) return `<div class="ph"><div><h2>Tarifario</h2>
+    <p>Precios generales: prepara la lista nueva sin tocar lo que rige hoy.</p></div>
+    <div class="act"><button class="btn p" data-a="tarNueva">+ Nueva tarifa</button></div></div>${vigenciaHTML("")}`;
   const base=listaPrecios(fp,""), ts=base.filter(t=>(!ft||t.cat===ft)&&(!fs||t.serv===fs)), sel=ts.filter(t=>!(S.tarOff||[]).includes(String(t.id)));
   const nPorTipo={}; base.forEach(t=>{ nPorTipo[t.cat]=(nPorTipo[t.cat]||0)+1; });
   const props=S.propiedades.slice().sort((a,b)=>a.nombre.localeCompare(b.nombre));
+  const vigFrase=fp?"":vigFraseLista("");
   const enviadas=(S.listasPrecio||[]).slice(0,6);
   return `
   <div class="ph"><div><h2>Tarifario</h2>
     <p>${fp?`Lista de precios de <b>${esc(P(fp).nombre)}</b>: sus tarifas propias y las generales que no tiene negociadas.`:`Precios generales, de <code>Ingreso Fijo</code> — aplican a toda propiedad que no tenga una negociada aparte.`}</p></div>
     <div class="act"><button class="btn p" data-a="tarNueva">+ Nueva tarifa</button></div></div>
+  ${vigFrase}
   <div class="card" style="margin-bottom:10px"><div class="cp" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
     <span style="font-size:11px;color:var(--faint);font-weight:700;text-transform:uppercase">Propiedad</span>
     <select id="tarFp" data-a="tarFiltro"><option value="">Tarifario general</option>${props.map(p=>`<option value="${p.id}" ${fp===p.id?"selected":""}>${esc(p.nombre)}</option>`).join("")}</select>
@@ -543,6 +554,7 @@ VIEWS.tarifario = () => {
     <select id="tarFt" data-a="tarFiltro"><option value="">Todos los tipos (${base.length})</option>${activos("categorias").filter(c=>nPorTipo[c]).map(c=>`<option value="${esc(c)}" ${ft===c?"selected":""}>${esc(c)} (${nPorTipo[c]})</option>`).join("")}</select>
     ${fs?`<span class="pill a">Servicio: ${esc(fs)}</span>`:""}
     ${fp||ft||fs?`<button class="btn sm" data-a="tarFiltroQuitar">Quitar filtros</button>`:""}
+    ${!fp?`<button class="btn sm" data-a="vigAbrir" data-id="" title="Prepara una lista general nueva con fecha de entrada, sin tocar los precios de hoy">Preparar cambio de precios</button>`:""}
     <span style="margin-left:auto;font-size:12px;color:var(--soft)">${sel.length} de ${ts.length} precio(s) marcados</span>
     ${fp?`<button class="btn" data-a="tarPDF" ${sel.length?"":"disabled"}>Descargar PDF${sel.length?` (${sel.length})`:""}</button>`:""}
     <button class="btn p" data-a="tarEnviar" ${sel.length?"":"disabled"}>Enviar lista de precios${sel.length?` (${sel.length})`:""}</button>
@@ -556,7 +568,7 @@ VIEWS.tarifario = () => {
       <td>${t.pisos!=null?"Floor "+t.pisos:'<span class="pill g">cualquiera</span>'}</td>
       <td>${t.banos!=null?t.banos:'<span class="pill g">—</span>'}</td><td>${esc(t.desc)||"—"}</td>
       ${fp?`<td><span class="pill ${t.prop?"a":"g"}">${t.prop?"Propia":"General"}</span></td>`:""}
-      <td class="num mono">${money(t.precio)}</td>
+      <td class="num mono">${money(t.precio)}${vigPillCambia(t)}</td>
       <td style="text-align:right"><button class="btn sm" data-a="tarNueva" data-id="${t.id}">Editar</button></td></tr>`;
     }).join("")||`<tr><td colspan="${fp?10:9}" class="empty">Sin tarifas con ese filtro</td></tr>`}</tbody></table></div>
   ${enviadas.length?`<div class="card" style="margin-top:12px"><div class="chd"><h3>Listas de precios enviadas</h3><span class="s">las últimas ${enviadas.length}</span></div>
@@ -604,26 +616,26 @@ const REFS = {
   zonas:         [{a:()=>S.propiedades,c:"zona",    n:"propiedad(es)"},
                   {a:()=>S.tecnicos,   c:"zona",    n:"técnico(s)"}],
   categorias:    [{a:()=>S.wos,        c:"cat",     n:"Work Order(s)"},
-                  {a:()=>S.tarifas,    c:"cat",     n:"tarifa(s)"},
+                  {tar:true, a:()=>S.tarifas,    c:"cat",     n:"tarifa(s)"},
                   {a:()=>CAT.servicios,c:"tipo",    n:"servicio(s)"},
                   {a:()=>lineasEst(),  c:"cat",     n:"línea(s) de estimado"}],
   adicionales:   [{a:()=>S.adicionales,c:"concepto",n:"adicional(es)"}],
   ubicaciones:   [{a:()=>S.wos,        c:"ubic",    n:"Work Order(s)"},
                   {a:()=>S.adicionales,c:"ubic",    n:"adicional(es)"}],
   rooms:         [{a:()=>S.unidades,   c:"rooms",   n:"unidad(es)"},
-                  {a:()=>S.tarifas,    c:"variante",n:"tarifa(s)"}],
+                  {tar:true, a:()=>S.tarifas,    c:"variante",n:"tarifa(s)"}],
   especialidades:[{a:()=>S.tecnicos,   c:"esp",     n:"técnico(s)", lista:true}],
   tiendas:       [{a:()=>S.movs,       c:"tienda",  n:"movimiento(s) de inventario"}],
   vendedores:    [{a:()=>S.propiedades,c:"vendedor",n:"propiedad(es)"}],
   pisos:         [{a:()=>S.unidades,   c:"pisos",   n:"unidad(es)"},
-                  {a:()=>S.tarifas,    c:"pisos",   n:"tarifa(s)"}],
+                  {tar:true, a:()=>S.tarifas,    c:"pisos",   n:"tarifa(s)"}],
   folder:        [],
   servicios:     [{a:()=>S.wos,        c:"serv",    n:"Work Order(s)"},
-                  {a:()=>S.tarifas,    c:"serv",    n:"tarifa(s)"},
+                  {tar:true, a:()=>S.tarifas,    c:"serv",    n:"tarifa(s)"},
                   {a:()=>lineasEst(),  c:"serv",    n:"línea(s) de estimado"}]
 };
 const usosDe = (k,v) => (REFS[k]||[])
-  .map(r=>({n:r.n, c:r.a().filter(o => !o.sinPrecio).filter(o => r.lista
+  .map(r=>({n:r.n, c:r.a().filter(o => !o.sinPrecio).filter(o => !(r.tar && tarOculta(o))).filter(o => r.lista
       ? (o[r.c]||[]).includes(v) : String(o[r.c])===String(v)).length}))
   .filter(x=>x.c>0);
 function renombrarCat(k, viejo, nuevo){
