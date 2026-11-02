@@ -349,7 +349,7 @@ function modalCorreo(eid){
    aprobar — eso es lo que ve el cliente, esto es solo para consultar. */
 function modalInvoice(eid){
   const e=by(S.estimados,eid);
-  /* "Al tarifario": solo oficina que ve precios y solo si la propiedad está registrada */
+  /* «Price List de la propiedad»: solo oficina que ve precios y solo si la propiedad está registrada */
   const alTar = !e.prospecto && !!e.prop && puedeVerIngreso();
   modal(`<div class="mh"><h3>${esc(e.label||"Estimate")} ${esc(e.num)}</h3><p>${billToEst(e)} · ${money(totalEst(e))}</p></div>
   <div class="mb">
@@ -361,23 +361,22 @@ function modalInvoice(eid){
       <div><div style="font-size:10.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.04em">Date of Issue</div><div class="mono">${esc(e.fecha||"")}</div></div>
       <div><div style="font-size:10.5px;color:var(--faint);text-transform:uppercase;letter-spacing:.04em">Expiration Date</div><div class="mono">${esc(e.vence||"—")}</div></div></div>
     <table style="border:1px solid var(--line);border-radius:9px;overflow:hidden">
-      <thead><tr><th>Item</th><th class="num">Price</th><th class="num">Qty</th><th class="num">Disc.</th><th class="num">Tax</th><th class="num">Total</th>${alTar?"<th></th>":""}</tr></thead>
-      <tbody>${e.lineas.map((l,i)=>`<tr>
+      <thead><tr><th>Item</th><th class="num">Price</th><th class="num">Qty</th><th class="num">Disc.</th><th class="num">Tax</th><th class="num">Total</th></tr></thead>
+      <tbody>${e.lineas.map(l=>`<tr>
         <td>${esc(l.serv)}${l.descripcion?`<div style="font-size:11px;color:var(--soft)">${esc(l.descripcion)}</div>`:""}${l.unidad?`<div style="font-size:10.5px;color:var(--faint)">${esc(U(l.unidad).num)}</div>`:""}</td>
         <td class="num mono">${money(precioLinea(e,l))}</td>
         <td class="num mono">${l.cantidad||1}</td>
         <td class="num mono">${textoDescLinea(l)}</td>
         <td class="num mono">${tasaLinea(l)?tasaLinea(l)+"%":"—"}</td>
-        <td class="num mono" style="font-weight:700">${money(totalLinea(e,l))}</td>
-        ${alTar?`<td style="text-align:right">${l.enTarifario?`<span class="pill v">en tarifario</span>`:`<button class="btn sm" data-a="alTarifario" data-src="est" data-id="${e.id}" data-i="${i}">Al tarifario</button>`}</td>`:""}</tr>`).join("")}
+        <td class="num mono" style="font-weight:700">${money(totalLinea(e,l))}</td></tr>`).join("")}
       <tr><td colspan="5" style="text-align:right;color:var(--faint)">Subtotal</td>
-        <td class="num mono">${money(subtotalEst(e))}</td>${alTar?"<td></td>":""}</tr>
+        <td class="num mono">${money(subtotalEst(e))}</td></tr>
       <tr style="background:var(--surface-2)"><td colspan="5" style="font-weight:750">Total</td>
-        <td class="num mono" style="font-weight:750;font-size:16px">${money(totalEst(e))}</td>${alTar?"<td></td>":""}</tr></tbody></table>
+        <td class="num mono" style="font-weight:750;font-size:16px">${money(totalEst(e))}</td></tr></tbody></table>
     ${e.nota?`<div class="note" style="margin-top:13px;white-space:pre-line"><b>Notes:</b><br>${esc(e.nota)}</div>`:""}
     ${e.estado==="Borrador"?`<div class="note w" style="margin-top:13px"><b>DRAFT</b> — todavía no se le mandó al contacto.</div>`:""}
   </div>
-  <div class="mf"><button class="btn" data-a="cm">Cerrar</button></div>`,true);
+  <div class="mf">${alTar?`<button class="btn" data-a="listaDesdeEstimado" data-id="${e.id}" title="Arma el Price List de la propiedad con la tarifa general y los precios de este estimado">Price List de la propiedad</button>`:""}<button class="btn" data-a="cm">Cerrar</button></div>`,true);
 }
 
 /* El formato real que usa Cordova para mandar un estimado: no es un enlace

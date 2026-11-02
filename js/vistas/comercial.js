@@ -97,6 +97,13 @@ function modalMedioEst(id, tipo){
 const POLIZA_TIPOS = ["General Liability","Auto Liability","Umbrella/Excess Liability","Workers Compensation","Other"];
 const coiVigente = pid => { const p=P(pid);
   return !!(p.polizas && p.polizas.length && p.polizas.every(x=>x.vence && x.vence>=HOY_SUP)); };
+/* Días de anticipación con que se avisa que una póliza está por vencer */
+const COI_AVISO_DIAS = 14;
+const coiPorVencer = x => !!x.vence && x.vence>=HOY_SUP && x.vence<=fechaMover(HOY_SUP,COI_AVISO_DIAS);
+const coiDias = x => Math.round((new Date(x.vence+"T12:00:00")-new Date(HOY_SUP+"T12:00:00"))/86400000);
+const coiDiasTxt = x => { const n=coiDias(x); return n===0 ? "hoy" : n===1 ? "en 1 día" : `en ${n} días`; };
+/* Color de la fecha de vencimiento: rojo vencida, ámbar por vencer, verde vigente */
+const coiPill = x => !x.vence || x.vence<HOY_SUP ? "r" : coiPorVencer(x) ? "a" : "v";
 
 /* ── ESTIMADOS ── el sistema lo arma jalando el tarifario (UC-04) ── */
 /* Una sola fuente de verdad para el precio de una linea de estimado.
@@ -589,7 +596,6 @@ function modalEst(){
         <td class="num mono">${tasaLinea(l)?tasaLinea(l)+"%":"—"}</td>
         <td class="num mono" style="font-weight:700">${money(totalLinea({prop:h.prop},l))}</td>
         <td style="text-align:right;white-space:nowrap"><button class="btn sm" data-a="estEditLinea" data-i="${i}">Editar</button>
-          ${!pros&&h.prop?(l.enTarifario?`<span class="pill v">en tarifario</span>`:`<button class="btn sm" data-a="alTarifario" data-src="draft" data-i="${i}">Al tarifario</button>`):""}
           <button class="btn sm" data-a="estDelLinea" data-i="${i}">Quitar</button></td></tr>`).join("")}
       <tr><td colspan="5" style="text-align:right;color:var(--faint)">Subtotal</td>
         <td class="num mono">${money(subtotal)}</td><td></td></tr>
@@ -653,7 +659,7 @@ function estLinSugHTML(L){
 function modalLineaEst(){
   const h=S.estHdr, L=S.estLin, pros=h.modo==="prospecto";
   const us = pros ? [] : S.unidades.filter(u=>u.prop===h.prop);
-  const generales = S.tarifas.filter(t=>!t.prop), propias = pros ? [] : S.tarifas.filter(t=>t.prop===h.prop);
+  const generales = S.tarifas.filter(t=>tarActiva(t)&&!t.prop), propias = pros ? [] : S.tarifas.filter(t=>tarActiva(t)&&t.prop===h.prop);
   const modo = L.modo;
   const lista = modo==="propia" ? propias : generales;
   const opt = t => `<option value="${t.id}" ${t.id===L.tarId?"selected":""}>${esc(t.nombre||((t.serv||"")+" "+(t.variante||"")).trim())} — ${money(t.precio)}</option>`;
@@ -705,40 +711,6 @@ function modalLineaEst(){
   ACC.estUniDetalle();
   const mbDespues = document.querySelector("#mroot .mb");
   if(mbDespues && scrollAntes) mbDespues.scrollTop = scrollAntes;
-}
-
-/* ── AL TARIFARIO ── pasar el precio de una línea de estimado (o de una WO
-   con precio propio) al Price List de la propiedad. Siempre opcional: el
-   precio nace en el estimado y el tarifario nunca bloquea nada. S.alTar =
-   {src:"draft"|"est"|"wo", id, i}: de dónde viene el precio. */
-function alTarObj(){
-  const A=S.alTar; if(!A) return null;
-  if(A.src==="draft") return {o:S.draftEst[+A.i], prop:S.estHdr&&S.estHdr.prop};
-  if(A.src==="est"){ const e=by(S.estimados,A.id), l=e&&e.lineas[+A.i]; return l ? {o:{...l, precio:precioLinea(e,l)}, real:l, prop:e.prop} : null; }
-  const w=W(+A.id); return w ? {o:w, prop:w.prop} : null;
-}
-function alTarExiste(prop, o, variante, pisos){
-  return S.tarifas.find(t=>t.prop===prop && t.cat===o.cat && t.serv===o.serv && (t.variante||"")===variante && (t.pisos||null)===(pisos||null));
-}
-const alTarYaHTML = ya => ya ? `<div class="note w" style="margin-top:12px">Ya hay un precio para esta combinación (${money(ya.precio)}): se actualiza.</div>` : "";
-function modalAlTarifario(){
-  const x=alTarObj(); if(!x||!x.o){ cm(); return; }
-  const o=x.o, u=o.unidad?U(o.unidad):null, rooms=u&&u.rooms?u.rooms:"";
-  const salas=activos("rooms").slice(); if(rooms && !salas.includes(rooms)) salas.push(rooms);
-  const ya=alTarExiste(x.prop,o,rooms,null);
-  modal(`<div class="mh"><h3>Al tarifario</h3><p>${esc(o.serv)} · ${esc(P(x.prop).nombre)}</p></div>
-  <div class="mb">
-    <div class="note" style="margin:0 0 12px">Guarda este precio en el Price List de <b>${esc(P(x.prop).nombre)}</b>. Es opcional: no cambia el ${S.alTar.src==="wo"?"trabajo":"estimado"} ni frena nada, y el precio se puede seguir cambiando después.</div>
-    <div class="fg c2">
-      <div class="fld"><label>Precio <span class="req">*</span></label><input id="atP" type="number" step="0.01" min="0" class="mono" value="${esc(o.precio==null?"":o.precio)}">
-        <div id="atSug">${puedeVerIngreso()?sugerenciasHTML("atP",x.prop,o.cat,o.serv,rooms,true):""}</div></div>
-      <div class="fld"><label>Tamaño de unidad</label><select id="atR" data-a="alTarSug"><option value="">— cualquiera —</option>${salas.map(r=>`<option ${r===rooms?"selected":""}>${esc(r)}</option>`).join("")}</select></div></div>
-    <div class="fld" style="margin-bottom:0"><label>Piso <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— solo si el precio cambia según el piso</span></label>
-      <select id="atPi" data-a="alTarSug"><option value="">— cualquiera —</option>${activos("pisos").map(p=>`<option value="${p}">Floor ${p}</option>`).join("")}</select></div>
-    <div id="atYa">${alTarYaHTML(ya)}</div>
-  </div>
-  <div class="mf"><button class="btn" data-a="alTarVolver">Cancelar</button>
-    <button class="btn p" data-a="alTarGuardar">Guardar en el tarifario</button></div>`);
 }
 
 /* El prospecto aprobado ya es cliente: la propiedad recién creada pasa a ser la

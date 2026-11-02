@@ -530,7 +530,7 @@ const contactosDe  = pid => S.contactos.filter(c=>c.prop===pid);
 /* Lo que se puede elegir al armar un estimado: las tarifas generales (siempre
    cargadas) mas las exclusivas de la propiedad elegida (esas si cambian cada
    vez que se cambia de propiedad). */
-const tarifasDe = pid => S.tarifas.filter(t=>!t.prop || t.prop===pid);
+const tarifasDe = pid => S.tarifas.filter(t=>tarActiva(t) && (!t.prop || t.prop===pid));
 /* A quien se le manda el estimado: uno o varios contactos de la propiedad —
    no siempre el manager, a veces mantenimiento tambien lo quiere recibir.
    Los estimados sembrados sin "contactos" caen de vuelta al cliente/management. */

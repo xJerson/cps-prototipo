@@ -242,7 +242,7 @@ Object.assign(ACC, {
   estAddLinea: () => {
     estSnap();
     const h=S.estHdr, pros=h.modo==="prospecto";
-    const gen=S.tarifas.filter(t=>!t.prop), pro=pros?[]:S.tarifas.filter(t=>t.prop===h.prop);
+    const gen=S.tarifas.filter(t=>tarActiva(t)&&!t.prop), pro=pros?[]:S.tarifas.filter(t=>tarActiva(t)&&t.prop===h.prop);
     const modo = gen.length?"general":pro.length?"propia":"libre";
     const t = (modo==="general"?gen:modo==="propia"?pro:[])[0];
     const us = pros?[]:S.unidades.filter(u=>u.prop===h.prop);
@@ -267,7 +267,7 @@ Object.assign(ACC, {
     estLinSnap();
     const h=S.estHdr, L=S.estLin; L.modo=d.m;
     if(d.m!=="libre"){
-      const t=S.tarifas.filter(x=>d.m==="propia"?x.prop===h.prop:!x.prop)[0];
+      const t=S.tarifas.filter(x=>tarActiva(x)&&(d.m==="propia"?x.prop===h.prop:!x.prop))[0];
       L.tarId=t?t.id:""; if(t){ L.precio=t.precio; L.tax=t.tax||""; }
     }
     modalLineaEst();
@@ -324,49 +324,6 @@ Object.assign(ACC, {
   },
   estDelLinea: d => { estSnap(); S.draftEst.splice(+d.i,1); modalEst(); },
 
-  /* ---- AL TARIFARIO: pasar el precio de una línea / WO al Price List (siempre opcional) ---- */
-  alTarifario: d => {
-    if(d.src==="draft") estSnap();
-    S.alTar={src:d.src, id:d.id||null, i:d.i!=null?d.i:null};
-    modalAlTarifario();
-  },
-  alTarSug: () => {
-    const x=alTarObj(); if(!x||!x.o) return;
-    const rooms=val("atR"), pisos=val("atPi")?parseInt(val("atPi")):null;
-    const b=document.getElementById("atSug"); if(b) b.innerHTML=puedeVerIngreso()?sugerenciasHTML("atP",x.prop,x.o.cat,x.o.serv,rooms,true):"";
-    const y=document.getElementById("atYa"); if(y) y.innerHTML=alTarYaHTML(alTarExiste(x.prop,x.o,rooms,pisos));
-  },
-  alTarVolver: () => {
-    const A=S.alTar; S.alTar=null;
-    if(A&&A.src==="draft") modalEst(); else if(A&&A.src==="est") modalInvoice(A.id); else cm();
-  },
-  alTarGuardar: () => {
-    const x=alTarObj(); if(!x||!x.o){ S.audOmitir=true; cm(); return; }
-    const o=x.o, precio=parseFloat(val("atP")), variante=val("atR"), pisos=val("atPi")?parseInt(val("atPi")):null;
-    if(!(precio>0)){ S.audOmitir=true; marcaFalta(["atP"]); toast("Falta el precio","Pon un precio mayor a 0.","r"); return; }
-    const ex=alTarExiste(x.prop,o,variante,pisos);
-    let tid;
-    if(ex){ ex.precio=precio; tid=ex.id; }
-    else {
-      tid="TR"+Date.now();
-      S.tarifas.push({id:tid, prop:x.prop, nombre:`${P(x.prop).nombre} - ${(o.serv+" "+variante).trim()}`, cat:o.cat||"", serv:o.serv,
-        variante, pisos, banos:null, precio, pago:o.pago||0, desc:"", tax:o.tax||"", descuento:"", descuentoTipo:"%", cantidad:1});
-    }
-    /* Si el servicio todavía no existe en el catálogo, se crea con la misma forma que servSave */
-    const tipo=o.cat||"Otro";
-    if(!CAT.servicios.some(s=>s.tipo===tipo && uNorm(s.nombre)===uNorm(o.serv))){
-      CAT.servicios.push({id:"S"+Date.now(), tipo, nombre:o.serv});
-      if(!CAT.categorias.includes(tipo)) CAT.categorias.push(tipo);
-    }
-    const A=S.alTar; S.alTar=null;
-    if(A.src==="draft") S.draftEst[+A.i].enTarifario=true;
-    else if(A.src==="est") x.real.enTarifario=true;
-    else W(+A.id).enTarifario=true;
-    S._alTarRef=`${o.serv} · ${P(x.prop).nombre}`;
-    flash("tar:"+tid);
-    toast("✓ Al tarifario",`<b>${esc(o.serv)}</b> a ${money(precio)}${variante?" · "+esc(variante):" · cualquier tamaño"} quedó en el Price List de ${esc(P(x.prop).nombre)}.`,"v");
-    if(A.src==="draft") modalEst(); else if(A.src==="est") modalInvoice(A.id); else { cm(); render(); }
-  },
   /* Un prospecto aprobado se convierte en cliente: se abre el alta de propiedad
      ya con lo que dejó el prospecto, y al guardarla (propGuardar) el estimado
      pasa a colgar de esa propiedad (estConvertirAplicar). */

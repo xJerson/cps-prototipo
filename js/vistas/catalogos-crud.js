@@ -13,7 +13,7 @@ VIEWS.propiedades = () => {
         <td style="font-weight:650">${esc(p.nombre)}<div style="font-size:10.5px;color:var(--faint)">${esc(p.dir)}</div></td>
         <td>${esc(ciudadProp(p))}</td><td>${p.cliente?esc(CLI(p.cliente).nombre):'<span style="color:var(--faint)">—</span>'}<div style="font-size:10.5px;color:var(--faint)">${esc(estadoProp(p))}</div></td>
         <td class="num mono">${nu}</td><td class="num mono">${nc}</td>
-        <td>${p.polizas&&p.polizas.length?`<span class="pill ${coiVigente(p.id)?"v":"r"}">${esc(p.polizas.reduce((a,x)=>!a||x.vence<a?x.vence:a,null))}</span>`:`<span class="pill r"><span class="dot"></span>falta</span>`}</td>
+        <td>${p.polizas&&p.polizas.length?`<span class="pill ${coiVigente(p.id)?(p.polizas.some(coiPorVencer)?"a":"v"):"r"}">${esc(p.polizas.reduce((a,x)=>!a||x.vence<a?x.vence:a,null))}</span>`:`<span class="pill r"><span class="dot"></span>falta</span>`}</td>
         <td>${p.activa?'<span class="pill v">Activa</span>':'<span class="pill g">Sin movimiento</span>'}</td></tr>`;
     }).join("")}</tbody></table></div>
   <div class="tr">Hoy <code>Active?</code> está lleno en muy pocas propiedades, así que «¿sigue activa?» no se puede responder. Aquí es un campo con dos valores y nada más.</div>`;
@@ -23,7 +23,7 @@ function fichaProp(id){
   const p=P(id), t=S.tab||"datos";
   const us=S.unidades.filter(u=>u.prop===id), cs=S.contactos.filter(c=>c.prop===id);
   const ws=S.wos.filter(w=>w.prop===id);
-  const tf=S.tarifas.filter(x=>x.prop===id);
+  const tf=S.tarifas.filter(x=>x.prop===id), nTf=tf.filter(tarActiva).length, nVacios=tf.length-nTf;
   const coms=S.comunicaciones.filter(m=>m.prop===id);
   return `
   <div class="ph"><div>
@@ -33,7 +33,7 @@ function fichaProp(id){
     <div class="act"><button class="btn" data-a="propNueva" data-id="${id}">Editar datos</button>
       <button class="btn ${p.activa?"":"v"}" data-a="propBaja" data-id="${id}">
       ${p.activa?"Dar de baja":"Reactivar"}</button></div></div>
-  <div class="tabs">${[["datos","Datos"],["expediente",`Expediente ${expedienteOK(id)?"✓":"— incompleto"}`],["documentos","Documentos"],["unidades",`Unidades (${us.length})`],["contactos",`Contactos (${cs.length})`],["com",`Comunicación (${coms.length})`],["precios",`Price List (${tf.length})`],["previo",`Informes de campo (${S.reportes.filter(r=>r.prop===id).length})`],["hist",`Historial (${ws.length})`]]
+  <div class="tabs">${[["datos","Datos"],["expediente",`Expediente ${expedienteOK(id)?"✓":"— incompleto"}`],["documentos","Documentos"],["unidades",`Unidades (${us.length})`],["contactos",`Contactos (${cs.length})`],["com",`Comunicación (${coms.length})`],["precios",`Price List (${nTf})`],["previo",`Informes de campo (${S.reportes.filter(r=>r.prop===id).length})`],["hist",`Historial (${ws.length})`]]
     .map(([k,n])=>`<button class="tab ${t===k?"on":""}" data-a="tab" data-t="${k}">${n}</button>`).join("")}</div>
 
   ${t==="expediente"?(()=>{
@@ -92,7 +92,7 @@ function fichaProp(id){
     <span class="s">El seguro de esta propiedad — un mismo certificado (ACORD 25) trae varias pólizas</span></div>
     ${p.polizas&&p.polizas.length?`<table><thead><tr><th>Tipo</th><th>Aseguradora</th><th>Póliza</th><th>Vence</th></tr></thead>
     <tbody>${p.polizas.map(x=>`<tr><td>${esc(x.tipo)}</td><td>${esc(x.aseguradora)||"—"}</td>
-      <td class="mono">${esc(x.poliza)||"—"}</td><td><span class="pill ${x.vence&&x.vence>=HOY_SUP?"v":"r"}">${esc(x.vence)||"—"}</span></td></tr>`).join("")}
+      <td class="mono">${esc(x.poliza)||"—"}</td><td><span class="pill ${coiPill(x)}">${esc(x.vence)||"—"}</span>${coiPorVencer(x)?` <span style="font-size:11px;color:var(--faint)">${coiDiasTxt(x)}</span>`:""}</td></tr>`).join("")}
     </tbody></table>`:`<div class="empty">Sin pólizas registradas</div>`}
     <div class="cp" style="border-top:1px solid var(--line);display:flex;align-items:center;gap:8px">
       <span style="font-size:11.5px;color:var(--faint)">Certificado en PDF</span>
@@ -202,16 +202,25 @@ function fichaProp(id){
 
   ${t==="previo"?vPrevio(id):""}
 
-  ${t==="precios"?`<div class="card"><div class="chd"><h3>Price List</h3>
-    <span class="s">exclusivos de esta propiedad — mandan sobre la tarifa general</span>
-    ${puede("tarifario")?`<span class="r"><button class="btn sm p" data-a="tarNueva" data-prop="${id}">+ Nuevo precio</button></span>`:""}</div>
-    ${tf.length?`<table><thead><tr><th>Tipo</th><th>Servicio</th><th>Detail</th><th>Piso</th><th>Baños</th><th>Description</th><th class="num">Price</th>${puede("tarifario")?"<th></th>":""}</tr></thead><tbody>
-    ${tf.map(x=>`<tr class="${fl("tar:"+x.id)}"><td>${esc(x.cat)||"—"}</td><td>${esc(x.serv)||"—"}</td><td>${esc(x.variante)||"—"}</td>
+  ${t==="precios"?(()=>{
+    const off=S.tarOff||[], marcado=x=>tarActiva(x)&&!off.includes(String(x.id));
+    const nSel=tf.filter(marcado).length;
+    const filas=tf.slice().sort((a,b)=>String(a.cat).localeCompare(String(b.cat))||String(a.serv).localeCompare(String(b.serv))||((a.pisos==null?-1:a.pisos)-(b.pisos==null?-1:b.pisos)));
+    return `<div class="card"><div class="chd"><h3>Price List</h3>
+    <span class="s">exclusivos de esta propiedad — mandan sobre la tarifa general${nVacios?` · <b>${nVacios} por llenar</b>`:""}</span>
+    <span class="r" style="display:flex;gap:6px;flex-wrap:wrap">
+      ${nTf?`<button class="btn sm" data-a="precPDF" data-id="${id}" ${nSel?"":"disabled"} title="Genera un PDF con los precios marcados — sin pagos al técnico">Descargar PDF${nSel?` (${nSel})`:""}</button>`:""}
+      ${puede("tarifario")?`<button class="btn sm" data-a="preciosDesdeGeneral" data-id="${id}" title="Trae la tarifa general y los servicios del catálogo que faltan; no duplica nada">Crear lista completa</button>
+      <button class="btn sm" data-a="precLlenar" data-id="${id}">Llenar precios</button>
+      <button class="btn sm p" data-a="tarNueva" data-prop="${id}">+ Nuevo precio</button>`:""}</span></div>
+    ${tf.length?`<table><thead><tr>${nTf?`<th style="width:30px"><input type="checkbox" data-a="precMarcaTodos" data-id="${id}" title="Marcar o desmarcar todos" ${nSel===nTf?"checked":""}></th>`:""}<th>Tipo</th><th>Servicio</th><th>Detail</th><th>Piso</th><th>Baños</th><th>Description</th><th class="num">Price</th>${puede("tarifario")?"<th></th>":""}</tr></thead><tbody>
+    ${filas.map(x=>`<tr class="${fl("tar:"+x.id)}">${nTf?`<td>${tarActiva(x)?`<input type="checkbox" data-a="tarMarca" data-id="${x.id}" ${marcado(x)?"checked":""}>`:""}</td>`:""}<td>${esc(x.cat)||"—"}</td><td>${esc(x.serv)||"—"}</td><td>${esc(x.variante)||"—"}</td>
       <td>${x.pisos!=null?"Floor "+x.pisos:'<span class="pill g">cualquiera</span>'}</td>
       <td>${x.banos!=null?x.banos:'<span class="pill g">—</span>'}</td><td>${esc(x.desc)||"—"}</td>
-      <td class="num mono">${money(x.precio)}</td>
+      <td class="num mono">${tarActiva(x)?money(x.precio):'<span class="pill g">por llenar</span>'}</td>
       ${puede("tarifario")?`<td style="text-align:right"><button class="btn sm" data-a="tarNueva" data-id="${x.id}">Editar</button></td>`:""}</tr>`).join("")}
-    </tbody></table>`:`<div class="empty">Sin precios propios — usa la tarifa general</div>`}</div>`:""}
+    </tbody></table>`:`<div class="empty">Sin precios propios — usa la tarifa general</div>`}</div>`;
+  })():""}
 
   ${t==="hist"?`<div class="card"><div class="chd"><h3>Historial de la propiedad</h3>
     <span class="s">lo que Lydia necesita para atender sin transferir la llamada</span></div>
@@ -230,16 +239,17 @@ function vAltaGuiada(id){
   const p=P(id);
   const us=S.unidades.filter(u=>u.prop===id).length;
   const cs=S.contactos.filter(c=>c.prop===id).length;
-  const tf=S.tarifas.filter(t=>t.prop===id).length;
+  const tfAll=S.tarifas.filter(t=>t.prop===id), tf=tfAll.filter(tarActiva).length, porLlenar=tfAll.length-tf;
+  const venceMin=(p.polizas||[]).reduce((a,x)=>!a||x.vence<a.vence?x:a,null);
   const es=S.estimados.filter(e=>e.prop===id).length;
   const pasos=[
     {n:"Datos de la propiedad", ok:!!(p.nombre&&p.dir&&ciudadProp(p)), det:`${esc(ciudadProp(p))} ·${esc(CLI(p.cliente).nombre)}`, tab:"datos", accion:null},
     {n:"Unidades",             ok:us>0,  det:us?`${us} unidad(es)`:"Sin unidades no se puede agendar", tab:"unidades", accion:null},
     {n:"Contactos",            ok:cs>0,  det:cs?`${cs} contacto(s)`:"Manager, assistant o mantenimiento", tab:"contactos", accion:null},
-    {n:"Seguro (COI)",         ok:coiVigente(id), det:(p.polizas&&p.polizas.length)?`${p.polizas.length} póliza(s) · vence antes ${esc(p.polizas.reduce((a,x)=>!a||x.vence<a?x.vence:a,null))}`:"Lo emite la aseguradora, no Cordova", tab:"documentos",
+    {n:"Seguro (COI)",         ok:coiVigente(id), det:(p.polizas&&p.polizas.length)?`${p.polizas.length} póliza(s) · vence antes ${esc(venceMin.vence)}${coiPorVencer(venceMin)?` (${coiDiasTxt(venceMin)})`:""}`:"Lo emite la aseguradora, no Cordova", tab:"documentos",
      accion:coiVigente(id)?null:{a:"coiDirecto",t:"Registrar COI"}},
-    {n:"Lista de precios de la propiedad", ok:tf>0, det:tf?`${tf} precio(s) negociado(s)`:"Si no tiene, usa la tarifa general", tab:"precios",
-     accion:tf?null:{a:"preciosDesdeGeneral",t:"Partir de la general"}},
+    {n:"Lista de precios de la propiedad", ok:tf>0&&!porLlenar, det:tf||porLlenar?`${tf} precio(s)${porLlenar?` · ${porLlenar} por llenar`:""}`:"Si no tiene, usa la tarifa general", tab:"precios",
+     accion:porLlenar?{a:"precLlenar",t:"Llenar precios"}:tf?null:{a:"preciosDesdeGeneral",t:"Crear lista completa"}},
     {n:"Estimados",            ok:es>0,  det:es?`${es} estimado(s)`:"Cotizar las unidades que pidan", tab:null,
      accion:es?null:{a:"irEstimados",t:"Hacer un estimado"}}
   ];
@@ -350,9 +360,9 @@ const vTecLista = () => `
 /* Lista de precios que se ve y se envía: la general, o la de una propiedad (sus tarifas propias reemplazan a la general del mismo servicio). */
 function listaPrecios(prop, tipo){
   const llave = t => [t.cat,t.serv,t.variante,t.pisos,t.banos].join("|");
-  const propias = prop ? S.tarifas.filter(t=>t.prop===prop) : [];
+  const propias = prop ? S.tarifas.filter(t=>tarActiva(t)&&t.prop===prop) : [];
   const usadas = new Set(propias.map(llave));
-  const generales = S.tarifas.filter(t=>!t.prop && !usadas.has(llave(t)));
+  const generales = S.tarifas.filter(t=>tarActiva(t)&&!t.prop && !usadas.has(llave(t)));
   return propias.concat(generales).filter(t=>!tipo||t.cat===tipo)
     .sort((a,b)=>String(a.cat).localeCompare(String(b.cat))||String(a.serv).localeCompare(String(b.serv))||((a.pisos==null?-1:a.pisos)-(b.pisos==null?-1:b.pisos)));
 }
@@ -365,6 +375,76 @@ function textoListaPrecios(ts){
   return Object.entries(porTipo).map(([cat,fs])=>cat.toUpperCase()+"\n"+fs.map(t=>
     `• ${t.serv||cat}${t.variante?" ("+t.variante+")":""}${t.pisos!=null?" · Floor "+t.pisos:""}${t.desc?" — "+t.desc:""}: ${money(t.precio)}`).join("\n")).join("\n\n");
 }
+/* Price List completo de una propiedad, sin duplicar nada (llave: tipo + servicio + detail + piso + baños):
+   1) copia las tarifas generales que la propiedad aún no tiene,
+   2) si viene de un estimado, sus precios mandan sobre lo copiado (misma lógica que tenía «Al tarifario»),
+   3) deja una fila «por llenar» (sinPrecio) por cada servicio activo del catálogo que no tiene tarifa alguna.
+   Las filas por llenar no son tarifas: ver tarActiva. Devuelve {copiados, vacios, delEst}. */
+function crearListaPropiedad(propId, desdeEstimado){
+  const llave = t => [t.cat,t.serv,t.variante||"",t.pisos==null?"":t.pisos,t.banos==null?"":t.banos].join("|");
+  let seq = 0;
+  const nuevoId = () => "TR"+Date.now()+Math.random().toString(36).slice(2,6)+(seq++);
+  const tiene = new Set(S.tarifas.filter(t=>t.prop===propId).map(llave));
+  let copiados=0, vacios=0, delEst=0;
+  S.tarifas.filter(t=>!t.prop && tarActiva(t)).forEach(t=>{
+    if(tiene.has(llave(t))) return;
+    S.tarifas.push({...t, id:nuevoId(), prop:propId}); tiene.add(llave(t)); copiados++;
+  });
+  const e = desdeEstimado ? by(S.estimados, desdeEstimado) : null;
+  if(e && e.prop===propId) (e.lineas||[]).forEach(l=>{
+    if(l.libre || !l.serv || l.enTarifario) return;
+    const precio = precioLinea(e,l); if(!(precio>0)) return;
+    const u = l.unidad ? U(l.unidad) : null, variante = u && u.rooms ? u.rooms : "";
+    const ex = S.tarifas.find(t=>t.prop===propId && t.cat===l.cat && t.serv===l.serv && (t.variante||"")===variante && t.pisos==null);
+    if(ex){ ex.precio=precio; if(ex.pago==null) ex.pago=l.pago||0; delete ex.sinPrecio; }
+    else S.tarifas.push({id:nuevoId(), prop:propId, nombre:`${P(propId).nombre} - ${(l.serv+" "+variante).trim()}`, cat:l.cat||"", serv:l.serv,
+      variante, pisos:null, banos:null, precio, pago:l.pago||0, desc:"", tax:l.tax||"", descuento:"", descuentoTipo:"%", cantidad:1});
+    l.enTarifario=true; delEst++;
+  });
+  const hay = new Set(S.tarifas.filter(t=>!t.prop || t.prop===propId).map(t=>t.cat+"|"+t.serv));
+  CAT.servicios.filter(s=>!s.baja && !debaja("categorias",s.tipo) && !(CAT.tiposCO||[]).includes(s.tipo)).forEach(s=>{
+    const k = s.tipo+"|"+s.nombre; if(hay.has(k)) return; hay.add(k);
+    S.tarifas.push({id:nuevoId(), prop:propId, cat:s.tipo, serv:s.nombre, nombre:s.nombre, variante:"", pisos:null, precio:null, pago:null, sinPrecio:true});
+    vacios++;
+  });
+  /* una fila por llenar que ya tiene un precio hermano (se llenó por otro camino) sobra */
+  const conPrecio = new Set(S.tarifas.filter(t=>t.prop===propId && tarActiva(t)).map(t=>t.cat+"|"+t.serv));
+  for(let i=S.tarifas.length-1;i>=0;i--){ const t=S.tarifas[i]; if(t.prop===propId && !tarActiva(t) && conPrecio.has(t.cat+"|"+t.serv)) S.tarifas.splice(i,1); }
+  return {copiados, vacios, delEst};
+}
+/* PDF de una lista de precios: documento listo para imprimir en un iframe oculto (sin ventanas
+   emergentes); el navegador ofrece «Guardar como PDF». Solo precio al cliente: nada de pago al técnico ni impuestos. */
+function pdfListaPrecios(propId, ts){
+  const porTipo={}; ts.forEach(t=>{ (porTipo[t.cat||"—"]=porTipo[t.cat||"—"]||[]).push(t); });
+  const conPiso = ts.some(t=>t.pisos!=null);
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Price List - ${esc(P(propId).nombre)}</title><style>
+    @page{size:Letter;margin:14mm}
+    *{box-sizing:border-box} body{font:12px/1.4 Arial,Helvetica,sans-serif;color:#111;margin:0}
+    .cab{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #1a3a6b;padding-bottom:8px;margin-bottom:14px}
+    .cab h1{font-size:18px;margin:0;color:#1a3a6b} .cab .d{font-size:11px;color:#555;text-align:right}
+    h2{font-size:12px;text-transform:uppercase;letter-spacing:.05em;margin:16px 0 4px;color:#1a3a6b;break-after:avoid}
+    table{width:100%;border-collapse:collapse} th{text-align:left;font-size:10.5px;color:#555;border-bottom:1px solid #999;padding:4px 6px}
+    td{padding:4px 6px;border-bottom:1px solid #ddd;vertical-align:top} tr{break-inside:avoid}
+    .n{text-align:right;white-space:nowrap} .s{font-size:10.5px;color:#666}
+    .pie{margin-top:18px;font-size:10.5px;color:#666}
+  </style></head><body>
+  <div class="cab"><div><h1>Cordova Property Services LLC</h1><div>${esc(P(propId).nombre)}</div></div>
+    <div class="d"><b>Price List</b><br>${esc(HOY_SUP)}</div></div>
+  ${Object.entries(porTipo).map(([cat,fs])=>`<h2>${esc(cat)}</h2><table><thead><tr><th>Servicio</th><th>Detail</th>${conPiso?"<th>Piso</th>":""}<th class="n">Price</th></tr></thead><tbody>
+    ${fs.map(t=>`<tr><td>${esc(t.serv||cat)}${t.desc?`<div class="s">${esc(t.desc)}</div>`:""}</td><td>${esc(t.variante)||"—"}</td>${conPiso?`<td>${t.pisos!=null?"Floor "+esc(t.pisos):"—"}</td>`:""}<td class="n">${money(t.precio)}</td></tr>`).join("")}
+    </tbody></table>`).join("")}
+  <div class="pie">Cordova Property Services LLC · Pensacola, FL · scheduling@cordovaps.com · (469) 219-6869</div>
+  </body></html>`;
+  const f=document.createElement("iframe");
+  f.setAttribute("aria-hidden","true"); f.style.cssText="position:fixed;right:0;bottom:0;width:0;height:0;border:0";
+  document.body.appendChild(f);
+  const w=f.contentWindow, d=w.document; d.open(); d.write(html); d.close();
+  const quitar=()=>{ if(f.parentNode) f.remove(); };
+  w.addEventListener("afterprint", quitar);
+  setTimeout(()=>{ try{ w.focus(); w.print(); }catch(err){ quitar(); } }, 250);
+  setTimeout(quitar, 120000);   // por si el navegador nunca avisa que terminó de imprimir
+}
+
 VIEWS.tarifario = () => {
   const fp=S.tarFp||"", ft=S.tarFt||"", fs=S.tarFs||"";
   const base=listaPrecios(fp,""), ts=base.filter(t=>(!ft||t.cat===ft)&&(!fs||t.serv===fs)), sel=ts.filter(t=>!(S.tarOff||[]).includes(String(t.id)));
@@ -383,6 +463,7 @@ VIEWS.tarifario = () => {
     ${fs?`<span class="pill a">Servicio: ${esc(fs)}</span>`:""}
     ${fp||ft||fs?`<button class="btn sm" data-a="tarFiltroQuitar">Quitar filtros</button>`:""}
     <span style="margin-left:auto;font-size:12px;color:var(--soft)">${sel.length} de ${ts.length} precio(s) marcados</span>
+    ${fp?`<button class="btn" data-a="tarPDF" ${sel.length?"":"disabled"}>Descargar PDF${sel.length?` (${sel.length})`:""}</button>`:""}
     <button class="btn p" data-a="tarEnviar" ${sel.length?"":"disabled"}>Enviar lista de precios${sel.length?` (${sel.length})`:""}</button>
   </div></div>
   <div class="card"><table>
@@ -461,7 +542,7 @@ const REFS = {
                   {a:()=>lineasEst(),  c:"serv",    n:"línea(s) de estimado"}]
 };
 const usosDe = (k,v) => (REFS[k]||[])
-  .map(r=>({n:r.n, c:r.a().filter(o => r.lista
+  .map(r=>({n:r.n, c:r.a().filter(o => !o.sinPrecio).filter(o => r.lista
       ? (o[r.c]||[]).includes(v) : String(o[r.c])===String(v)).length}))
   .filter(x=>x.c>0);
 function renombrarCat(k, viejo, nuevo){
@@ -529,7 +610,7 @@ function resumenUsos(k, valores){
    Con una sola tarifa general se muestra el precio directo; cuando hay varias tarifas (una por tamaño/piso),
    el enlace «Ver precios» abre el Tarifario filtrado por ese servicio. */
 function catPrecio(s){
-  const ts=S.tarifas.filter(t=>!t.prop && t.cat===s.tipo && t.serv===s.nombre);
+  const ts=S.tarifas.filter(t=>tarActiva(t) && !t.prop && t.cat===s.tipo && t.serv===s.nombre);
   if(!ts.length) return {html:'<span style="color:var(--faint)">Sin precio</span>', t:null, multi:0, falta:true};
   if(ts.length>1) return {t:null, multi:ts.length, falta:false, html:`<button class="cat-lnk" data-a="tarVerServ" data-c="${esc(s.tipo)}" data-s="${esc(s.nombre)}">Ver precios (${ts.length})</button>`};
   return {t:ts[0], multi:1, falta:false, html:`<span class="mono" style="white-space:nowrap">${money(+ts[0].precio||0)}</span>`};

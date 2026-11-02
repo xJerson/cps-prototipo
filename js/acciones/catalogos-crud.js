@@ -607,7 +607,7 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
         }
       });
     };
-    if(yo) return guardarEdicion(yo, datos, "Tarifario", `${yo.nombre}${yo.prop?" · "+P(yo.prop).nombre:" · general"}`, resolverReturnsPendientes, "tar:"+yo.id);
+    if(yo) return guardarEdicion(yo, datos, "Tarifario", `${yo.nombre}${yo.prop?" · "+P(yo.prop).nombre:" · general"}`, (o,c)=>{ delete o.sinPrecio; resolverReturnsPendientes(); }, "tar:"+yo.id);
     let trNum = Date.now();
     while(S.tarifas.some(x=>x.id==="TR"+trNum)) trNum++;
     const nr = {id:"TR"+trNum, ...datos};
@@ -817,14 +817,85 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
     render();
   },
 
-  /* «yo creo la lista de precios de la propiedad» — se parte de la general y se ajusta */
+  /* «yo creo la lista de precios de la propiedad» — se arma completa (general + servicios del catálogo por llenar) y se ajusta.
+     Es idempotente: ver crearListaPropiedad. */
   preciosDesdeGeneral: d => {
-    const gen = S.tarifas.filter(t=>!t.prop);
-    if(!gen.length){ toast("No hay tarifa general","Carga primero el tarifario general.","r"); return; }
-    gen.forEach(t=>S.tarifas.push({...t, id:"TR"+Date.now()+Math.random().toString(36).slice(2,6), prop:d.id}));
-    toast("✓ Lista de precios creada",
-      `<b>${esc(P(d.id).nombre)}</b> arrancó con ${gen.length} precios copiados de la general. Ajusta los que negociaron distinto — los que dejes igual dan lo mismo.`,"v");
+    const r = crearListaPropiedad(d.id), nombre = P(d.id).nombre;
+    if(!r.copiados && !r.vacios && !r.delEst){ S.audOmitir=true; toast("La lista ya está completa",`<b>${esc(nombre)}</b> ya tiene todos los precios y servicios; no se agregó nada.`,"w"); S.tab="precios"; render(); return; }
+    S._audTar = `${nombre} · ${r.copiados} copiados, ${r.vacios} por llenar`;
+    toast("✓ Lista de precios creada", `${r.copiados} copiados de la general, ${r.vacios} por llenar, ${r.delEst} del estimado`, "v");
     S.tab="precios"; render();
+  },
+  /* Desde un estimado: lo mismo, y los precios del estimado mandan sobre los copiados. Termina en el Price List de la propiedad. */
+  listaDesdeEstimado: d => {
+    const e = by(S.estimados, d.id); if(!e || !e.prop){ S.audOmitir=true; return; }
+    const r = crearListaPropiedad(e.prop, e.id);
+    S._audTar = `${P(e.prop).nombre} · ${e.num||e.id}`;
+    toast("✓ Lista de precios creada", `${r.copiados} copiados de la general, ${r.vacios} por llenar, ${r.delEst} del estimado`, "v");
+    cm(); S.mod="propiedades"; S.sub=e.prop; S.tab="precios"; render();
+  },
+  precVer: d => { cm(); S.mod="propiedades"; S.sub=d.id; S.tab="precios"; render(); },
+  precMarcaTodos: d => {
+    const ts=S.tarifas.filter(t=>t.prop===d.id && tarActiva(t)), todos=ts.every(t=>!(S.tarOff||[]).includes(String(t.id)));
+    S.tarOff = todos ? (S.tarOff||[]).concat(ts.map(t=>String(t.id))) : (S.tarOff||[]).filter(id=>!ts.some(t=>String(t.id)===id));
+    render(); },
+  /* PDF del Price List de la propiedad: solo las filas con precio que siguen marcadas. */
+  precPDF: d => {
+    const ts=S.tarifas.filter(t=>t.prop===d.id && tarActiva(t) && !(S.tarOff||[]).includes(String(t.id)))
+      .sort((a,b)=>String(a.cat).localeCompare(String(b.cat))||String(a.serv).localeCompare(String(b.serv))||((a.pisos==null?-1:a.pisos)-(b.pisos==null?-1:b.pisos)));
+    if(!ts.length){ S.audOmitir=true; toast("Sin precios marcados","Marca al menos un precio para generar el PDF.","r"); return; }
+    S._audTar = `${P(d.id).nombre} · ${ts.length} precio(s)`;
+    pdfListaPrecios(d.id, ts);
+  },
+  tarPDF: () => {
+    const fp=S.tarFp||"", ts=tarSeleccion();
+    if(!fp){ S.audOmitir=true; toast("Elige una propiedad","El PDF es la lista de una propiedad. Elígela arriba, en «Propiedad».","w"); return; }
+    if(!ts.length){ S.audOmitir=true; toast("Sin precios marcados","Marca al menos un precio para generar el PDF.","r"); return; }
+    S._audTar = `${P(fp).nombre} · ${ts.length} precio(s)`;
+    pdfListaPrecios(fp, ts);
+  },
+  /* Llenar precios: una tabla con todas las filas de la propiedad (las «por llenar» primero) y un solo Guardar. */
+  precLlenar: d => {
+    const id=d.id||d.prop, verPago=puedeVerUtilidad();
+    const ts=S.tarifas.filter(t=>t.prop===id).sort((a,b)=>(tarActiva(a)?1:0)-(tarActiva(b)?1:0)
+      ||String(a.cat).localeCompare(String(b.cat))||String(a.serv).localeCompare(String(b.serv))||((a.pisos==null?-1:a.pisos)-(b.pisos==null?-1:b.pisos)));
+    if(!ts.length){ toast("Todavía no hay lista","Primero usa «Crear lista completa» en el Price List de la propiedad.","w"); return; }
+    S._precProp=id;
+    modal(`<div class="mh"><h3>Llenar precios</h3><p>${esc(P(id).nombre)} · <b id="pfCuenta"></b></p></div>
+    <div class="mb"><div class="note" style="margin:0 0 12px">Escribe el precio de cada fila y guarda todo junto. Las filas que dejes vacías quedan «por llenar» y no afectan ningún cálculo.</div>
+    <table><thead><tr><th>Tipo</th><th>Servicio</th><th>Detail</th><th class="num">Price</th>${verPago?`<th class="num">Pago al técnico</th>`:""}</tr></thead><tbody>
+    ${ts.map(t=>`<tr><td>${esc(t.cat)||"—"}</td><td>${esc(t.serv)||"—"}</td><td>${esc(t.variante)||"—"}${t.pisos!=null?" · Floor "+t.pisos:""}</td>
+      <td class="num"><div class="fld" style="margin:0"><input class="pfIn mono" type="number" step="0.01" min="0" data-pf="${esc(t.id)}" data-vacio="${tarActiva(t)?"":"1"}" value="${tarActiva(t)?esc(t.precio):""}" style="width:110px;text-align:right"></div></td>
+      ${verPago?`<td class="num"><div class="fld" style="margin:0"><input class="pfIn mono" type="number" step="0.01" min="0" data-pg="${esc(t.id)}" value="${t.pago!=null?esc(t.pago):""}" style="width:110px;text-align:right"></div></td>`:""}</tr>`).join("")}
+    </tbody></table></div>
+    <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="precLlenarGuardar">Guardar todo</button></div>`,true);
+    ACC.precLlenarCuenta();
+  },
+  precLlenarCuenta: () => {
+    const b=document.getElementById("pfCuenta"); if(!b) return;
+    const n=[...document.querySelectorAll("#mroot [data-pf][data-vacio='1']")].filter(e=>e.value.trim()==="").length;
+    b.textContent = n+" por llenar";
+  },
+  precLlenarGuardar: () => {
+    const id=S._precProp, ins=[...document.querySelectorAll("#mroot [data-pf]")];
+    const cambios=[]; let mal=false;
+    document.querySelectorAll("#mroot .fld.bad").forEach(e=>e.classList.remove("bad"));
+    ins.forEach(e=>{
+      const t=by(S.tarifas,e.dataset.pf); if(!t) return;
+      const pe=document.querySelector(`#mroot [data-pg="${CSS.escape(t.id)}"]`);
+      const v=e.value.trim(), g=pe?pe.value.trim():"";
+      const pv=v===""?null:parseFloat(v), gv=g===""?null:parseFloat(g);
+      if((pv!=null&&!(pv>=0))||(gv!=null&&!(gv>=0))){ mal=true; ((pv!=null&&!(pv>=0))?e:pe).parentElement.classList.add("bad"); return; }
+      if(pv==null) return;   // vacío: la fila queda como estaba
+      if(t.precio!==pv || (gv!=null && t.pago!==gv) || t.sinPrecio) cambios.push({t,pv,gv});
+    });
+    if(mal){ S.audOmitir=true; toast("Revisa los números","Precio y pago deben ser números mayores o iguales a 0.","r"); return; }
+    if(!cambios.length){ S.audOmitir=true; toast("Nada que guardar","No escribiste ningún precio nuevo.","w"); return; }
+    cambios.forEach(({t,pv,gv})=>{ t.precio=pv; t.pago = gv!=null ? gv : (t.pago==null?0:t.pago); delete t.sinPrecio; });
+    S._audTar = `${P(id).nombre} · ${cambios.length} precio(s)`;
+    flash(cambios.map(c=>"tar:"+c.t.id)); cm();
+    toast("✓ Precios guardados", `${cambios.length} precio(s) en el Price List de <b>${esc(P(id).nombre)}</b>.`, "v");
+    render();
   },
   /* Un mismo formulario sirve para dar de alta y para corregir: si viene con
      id, llega con los datos puestos y guarda encima en vez de duplicar. */

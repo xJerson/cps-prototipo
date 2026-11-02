@@ -27,6 +27,7 @@ document.addEventListener("input", e=>{
   else if(el.id==="wUniTxt") ACC.woUniBuscar();
   else if(el.id==="gaBuscar"||el.id==="gaSoloMarc") ACC.gaFiltrar();
   else if(el.classList.contains("gaWO")) ACC.gaContar();
+  else if(el.classList.contains("pfIn")) ACC.precLlenarCuenta();
   else if(el.id==="catBuscar") ACC.catBuscar();
 });
 document.addEventListener("change", e=>{
@@ -136,7 +137,11 @@ const AUD = {
   estGuardar:{a:"Emitió un estimado", m:"Estimados"},
   estLineaGuardar:{a:"Agregó o editó una línea de estimado", m:"Estimados"},
   estDelLinea:{a:"Quitó una línea de estimado", m:"Estimados"},
-  alTarGuardar:{a:"Pasó un precio al tarifario", m:"Tarifario"},
+  preciosDesdeGeneral:{a:"Creó la lista de precios completa de una propiedad", m:"Tarifario"},
+  listaDesdeEstimado:{a:"Armó el Price List de una propiedad desde un estimado", m:"Tarifario"},
+  precLlenarGuardar:{a:"Llenó precios del Price List de una propiedad", m:"Tarifario"},
+  precPDF:{a:"Generó el PDF de una lista de precios", m:"Tarifario"},
+  tarPDF:{a:"Generó el PDF de una lista de precios", m:"Tarifario"},
   estMedioOK:{a:"Decidió la aprobación del estimado", m:"Estimados"},
   estEnviarOK:{a:"Envió un estimado al cliente", m:"Estimados"},
   estAgendar:{a:"Pasó el estimado a programación", m:"Estimados"},
@@ -266,7 +271,11 @@ const AUD_POST = {
   estMedioOK:    () => ultimoEstTocado || "",
   estLineaGuardar: () => S.estHdr&&S.estHdr.num ? S.estHdr.num : "",
   estDelLinea:   () => S.estHdr&&S.estHdr.num ? S.estHdr.num : "",
-  alTarGuardar:  () => S._alTarRef || ""
+  preciosDesdeGeneral: () => S._audTar || "",
+  listaDesdeEstimado:  () => S._audTar || "",
+  precLlenarGuardar:   () => S._audTar || "",
+  precPDF:             () => S._audTar || "",
+  tarPDF:              () => S._audTar || ""
 };
 function refDe(d){
   if(!d) return "";

@@ -472,7 +472,7 @@ const AYUDA_VISTA = {
       "Cada línea se arma como una de factura: «+ Agregar línea» → servicio, descripción, <b>precio</b>, cantidad y descuento. «Editar» la reabre cuando haga falta.",
       "El precio se precarga de la tarifa <b>General</b> o <b>Propia</b>, pero siempre lo puedes cambiar. Si no hay tarifa, usa <b>Concepto libre</b> (nombre, tipo de servicio y precio): también se vuelve Work Order al aprobarse. Se pueden mezclar en un mismo estimado.",
       "Bajo el precio ves lo que se cobró antes por ese servicio, con porcentaje y cuántas veces — toca uno para usarlo.",
-      "«Al tarifario» (en cada línea) guarda ese precio en el Price List de la propiedad. Es opcional: <b>no hace falta tarifa para aprobar ni para transferir</b>.",
+      "Al aprobar, el Price List de la propiedad se arma desde el estimado (botón «Price List de la propiedad» del Invoice). Es opcional: <b>no hace falta tarifa para aprobar ni para transferir</b>.",
       "Opcional: depósito, documentos, firma del cliente, términos y nota. «Save draft» lo guarda; «Send» lo envía.",
       "«Aprobar» / «Rechazar» se registra a mano cuando el cliente responde, indicando por qué medio avisó. Si lo rechaza: «Modificar propuesta y reenviar».",
       "Un <b>prospecto</b> aprobado se pasa a cliente con «Convertir en cliente» (crea la propiedad con sus datos); recién ahí se puede transferir a programación."]},

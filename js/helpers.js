@@ -251,11 +251,14 @@ const notiSinLeer = () => S.notis.filter(n=>!n.leido).length;
      4) precio general, cualquier piso
    pisos = null significa "aplica a cualquiera": así no hay que cargar 3 filas
    por servicio cuando el precio no cambia por pisos. */
+/* Una fila «por llenar» (sinPrecio, sin precio) es solo un renglón de la plantilla del
+   Price List de la propiedad: no es una tarifa y ningún cálculo, lista ni envío la ve. */
+const tarActiva = t => !t.sinPrecio && t.precio != null;
 function tarifa(propId, cat, serv, variante, pisos){
   /* variante vacía = «cualquier tamaño» (así se guarda un precio que se pasó
      al tarifario sin elegir unidad); la fila con la variante exacta gana. */
   const busca = (p, pi) => {
-    const m = S.tarifas.filter(t =>
+    const m = S.tarifas.filter(t => tarActiva(t) &&
       t.prop === p && t.cat === cat && t.serv === serv &&
       (pi === null ? (t.pisos == null) : t.pisos === pi));
     return m.find(t => t.variante === variante) || m.find(t => !t.variante);
@@ -600,6 +603,9 @@ function alertas(){
   S.wos.filter(w=>w.precio==null && !tarifaWO(w)).forEach(w=>A.push({t:"Tarifa faltante",d:`${w.serv} · ${U(w.unidad).rooms} en ${P(w.prop).nombre} — hoy saldría "NA"`,q:"Erika",n:"w"}));
   S.propiedades.filter(p=>!p.activa).forEach(p=>A.push({t:"Propiedad inactiva",d:`${p.nombre} no genera Work Orders`,q:"Lydia",n:"g"}));
   S.propiedades.filter(p=>!coiVigente(p.id)).forEach(p=>A.push({t:"COI sin registrar",d:`${p.nombre} no tiene certificado vigente`,q:"Claudia",n:"r"}));
+  /* Aviso con COI_AVISO_DIAS de anticipación: una alerta por póliza que vence pronto (las ya vencidas siguen en «COI sin registrar») */
+  S.propiedades.forEach(p=>(p.polizas||[]).filter(coiPorVencer).forEach(x=>A.push({t:"COI por vencer",
+    d:`${p.nombre}: ${x.tipo} vence ${x.vence} (${coiDiasTxt(x)})`,q:"Claudia",n:"a"})));
   S.productos.filter(p=>stock(p.id)<p.min).forEach(p=>A.push({t:"Stock bajo",d:`${p.nombre}: ${stock(p.id)} ${p.um} (mínimo ${p.min})`,q:"Gustavo",n:"w"}));
   S.disponibilidad.filter(d=>d.estado==="Pendiente").forEach(d=>A.push({t:"Permiso por aprobar",d:`${tecN(d.tec)} · ${d.motivo} ${d.desde} al ${d.hasta}`,q:"Gustavo",n:"a"}));
   S.facturas.filter(facVencida).forEach(f=>A.push({t:"Factura vencida",d:`${f.num} · ${P(f.prop).nombre}`,q:"Erika",n:"r"}));
