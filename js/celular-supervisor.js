@@ -18,7 +18,7 @@ function renderFonSup(){
   $("#favi").textContent = g.nombre[0]+g.apellido[0];
   $("#fanm").textContent = "Celular de "+tecN(g.id);
   $("#fasu").textContent = "Supervisor de campo";
-  const hoy = repsDe(GUSTAVO).filter(r=>r.fecha==="2026-08-11");
+  const hoy = repsDe(GUSTAVO).filter(r=>r.fecha===HOY_SUP);
   const rd = diarioHoy();
   const nEnt = rd ? rd.entradas.length : 0;
   const nDev = devAbiertas().length;

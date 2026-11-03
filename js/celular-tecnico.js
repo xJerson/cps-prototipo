@@ -527,7 +527,7 @@ const fotosDe = r => (r.lotes||[]).reduce((t,l)=>t+(l.fotosArr||[]).length,0);
 const previosDe = uid => S.reportes.filter(r=>r.tipo==="previo" && r.unidad===uid);
 const repPend = () => S.reportes.filter(r=>r.estado==="Nuevo");
 
-const HOY_SUP = "2026-08-11";
+const HOY_SUP = hoyReal();
 const MOTIVOS_SUP = ["Supervisar","Inspección para estimado","Reunión con mantenimiento","Revisar reclamo","Otro"];
 
 /* Tipo de visita y estado del trabajo — los pidio Claudia en el formulario 1.

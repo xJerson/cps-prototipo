@@ -306,7 +306,7 @@ Object.keys(ACC).forEach(k=>{
       let ref = AUD_POST[k] ? AUD_POST[k]() : "";
       if(!ref) ref = refDe(d);
       S.bitacora.unshift({
-        n: ++S.audSeq, fecha:"2026-08-11", hora:hora(),
+        n: ++S.audSeq, fecha:HOY_SUP, hora:hora(),
         usuario:S.usuario, rol:ROLES[S.usuario].r,
         accion:meta.a, modulo:meta.m, ref
       });
