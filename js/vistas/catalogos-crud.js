@@ -308,6 +308,8 @@ function vCampo(){
   const fProp = S.campoFiltroProp || "";
   const fEst = S.campoFiltroEst || "";
   const fZona = S.campoFiltroZona || "";
+  const fUni = (S.campoFiltroUni || "").toLowerCase().trim();
+  const fTipo = S.campoFiltroTipo || "";
   const fQ = (S.campoBuscar || "").toLowerCase().trim();
 
   let hoy = S.wos.filter(w=>w.tec && ["Scheduled","Confirmed","In progress","Esperando aprobación","Completed"].includes(w.estado));
@@ -316,6 +318,8 @@ function vCampo(){
   if(fProp) hoy = hoy.filter(w=>w.prop === fProp);
   if(fEst) hoy = hoy.filter(w=>w.estado === fEst);
   if(fZona) hoy = hoy.filter(w=>ciudadProp(P(w.prop)) === fZona);
+  if(fUni) hoy = hoy.filter(w=>`${U(w.unidad).num} ${U(w.unidad).unidadNum||""}`.toLowerCase().includes(fUni));
+  if(fTipo) hoy = hoy.filter(w=>w.cat === fTipo);
   if(fQ) hoy = hoy.filter(w=>tecN(w.tec).toLowerCase().includes(fQ) || P(w.prop).nombre.toLowerCase().includes(fQ) || String(w.id).includes(fQ));
 
   const llegaron = hoy.filter(w=>asisDe(w.id)).length;
@@ -336,7 +340,13 @@ function vCampo(){
     <select id="cpEst" data-a="campoFiltroEst"><option value="">Todos los estados</option>${["Scheduled","Confirmed","In progress","Esperando aprobación","Completed"].map(e=>`<option value="${e}" ${fEst===e?"selected":""}>${e}</option>`).join("")}</select>
     <span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--faint);margin-left:6px">City</span>
     <select id="cpZona" data-a="campoFiltroZona"><option value="">Todas</option>${zonasN().map(z=>`<option value="${esc(z)}" ${fZona===z?"selected":""}>${esc(z)}</option>`).join("")}</select>
-    ${(fFecha!==HOY_SUP||fTec||fProp||fEst||fZona)?`<button class="btn sm" data-a="campoFiltroLimpiar">Limpiar filtros</button>`:""}
+    <span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--faint);margin-left:6px">Unidad</span>
+    <input id="cpUni" value="${esc(S.campoFiltroUni||"")}" placeholder="Ej. 27" data-a="campoFiltroUni" style="width:80px">
+    <span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--faint);margin-left:6px">Tipo de servicio</span>
+    <select id="cpTipo" data-a="campoFiltroTipo"><option value="">Todos</option>${activos("categorias").map(c=>`<option value="${esc(c)}" ${fTipo===c?"selected":""}>${esc(c)}</option>`).join("")}</select>
+    <span style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--faint);margin-left:6px">Buscar</span>
+    <input id="cpQ" value="${esc(S.campoBuscar||"")}" placeholder="N.º de WO, técnico o propiedad" data-a="campoBuscar" style="width:200px">
+    ${(fFecha!==HOY_SUP||fTec||fProp||fEst||fZona||fUni||fTipo||fQ)?`<button class="btn sm" data-a="campoFiltroLimpiar">Limpiar filtros</button>`:""}
   </div></div>
 
   <div class="kpis">
@@ -699,22 +709,12 @@ function resumenUsos(k, valores){
   const partes=Object.entries(m).map(([n,c])=>`<b>${c} ${esc(n)}</b>`);
   return partes.length ? "Se usan en "+partes.join(", ") : "Todavía no las usa ningún registro";
 }
-/* Precio general del servicio en Tipos y servicios.
-   Con una sola tarifa general se muestra el precio directo; cuando hay varias tarifas (una por tamaño/piso),
-   el enlace «Ver precios» abre el Tarifario filtrado por ese servicio. */
-function catPrecio(s){
-  const ts=S.tarifas.filter(t=>tarActiva(t) && !t.prop && t.cat===s.tipo && t.serv===s.nombre);
-  if(!ts.length) return {html:'<span style="color:var(--faint)">Sin precio</span>', t:null, multi:0, falta:true};
-  if(ts.length>1) return {t:null, multi:ts.length, falta:false, html:`<button class="cat-lnk" data-a="tarVerServ" data-c="${esc(s.tipo)}" data-s="${esc(s.nombre)}">Ver precios (${ts.length})</button>`};
-  return {t:ts[0], multi:1, falta:false, html:`<span class="mono" style="white-space:nowrap">${money(+ts[0].precio||0)}</span>`};
-}
 const catBuscador = (n,ph) => n>8 ? `<input class="cat-buscar" id="catBuscar" placeholder="${esc(ph)}" aria-label="${esc(ph)}">` : "";
 
 function catVistaTys(){
   const tipos=activos("categorias");
   const t=tipos.includes(S.catTipo) ? S.catTipo : tipos[0];
   const ss=CAT.servicios.filter(s=>s.tipo===t), act=ss.filter(s=>!s.baja), baja=ss.filter(s=>s.baja);
-  const precios=new Map(act.map(s=>[s.id,catPrecio(s)]));
   const iTipo=CAT.categorias.indexOf(t), tiposBaja=CAT.categorias.filter(c=>debaja("categorias",c));
   return `
   <div class="cat-cab"><div><h3>Tipos y servicios</h3><p>${esc(CAT_VISTAS.tys.d)}</p>
@@ -728,14 +728,11 @@ function catVistaTys(){
         <div class="cat-acc"><button class="btn sm" data-a="catRen" data-k="categorias" data-i="${iTipo}">Editar tipo</button>
           <button class="btn sm p" data-a="servAdd" data-t="${esc(t)}">Nuevo servicio</button></div></div>
       ${catBuscador(act.length,"Buscar en "+t)}
-      <table><thead><tr><th>Servicio</th><th>Tarifa general de referencia</th><th></th></tr></thead>
-      <tbody>${act.map(s=>{ const pr=precios.get(s.id);
-        return `<tr class="${fl("serv:"+s.id)}" data-q="${esc(s.nombre.toLowerCase())}"><td>${esc(s.nombre)}</td><td>${pr.html}</td>
-          <td class="cat-fila-acc">${pr.t?`<button class="cat-lnk" data-a="tarNueva" data-id="${pr.t.id}">Editar precio</button>`
-            :pr.multi>1?`<button class="cat-lnk" data-a="tarVerServ" data-c="${esc(s.tipo)}" data-s="${esc(s.nombre)}">Ver precios</button>`
-            :pr.falta?`<button class="cat-lnk" data-a="tarNueva" data-cat="${esc(s.tipo)}" data-serv="${esc(s.nombre)}">Agregar precio</button>`:""}
-            <button class="cat-lnk suave" data-a="servRen" data-id="${s.id}">Editar</button></td></tr>`;}).join("")
-        ||`<tr><td colspan="3" class="empty">Este tipo todavía no tiene servicios: agrega uno para poder agendarlo.</td></tr>`}</tbody></table>
+      <table><thead><tr><th>Servicio</th><th></th></tr></thead>
+      <tbody>${act.map(s=>
+        `<tr class="${fl("serv:"+s.id)}" data-q="${esc(s.nombre.toLowerCase())}"><td>${esc(s.nombre)}</td>
+          <td class="cat-fila-acc"><button class="cat-lnk suave" data-a="servRen" data-id="${s.id}">Editar</button></td></tr>`).join("")
+        ||`<tr><td colspan="2" class="empty">Este tipo todavía no tiene servicios: agrega uno para poder agendarlo.</td></tr>`}</tbody></table>
       <div class="note" style="margin-top:10px"><b>Catálogo vs Tarifario:</b> Aquí se definen los nombres de servicios y categorías. Las tarifas por propiedad y por tamaño de unidad se gestionan en <b>Tarifario</b> o en el <b>Price List</b> de la propiedad.</div>
       ${baja.length?`<details class="cat-bajas"><summary>${baja.length} servicio(s) dado(s) de baja en ${esc(t)}</summary><table><tbody>
         ${baja.map(s=>`<tr><td>${esc(s.nombre)}</td><td class="cat-fila-acc"><button class="cat-lnk" data-a="servAlta" data-id="${s.id}">Reactivar</button></td></tr>`).join("")}</tbody></table></details>`:""}

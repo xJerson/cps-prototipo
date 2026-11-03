@@ -413,7 +413,10 @@ Object.assign(ACC, {
   campoFiltroProp: () => { S.campoFiltroProp = val("cpProp"); render(); },
   campoFiltroEst: () => { S.campoFiltroEst = val("cpEst"); render(); },
   campoFiltroZona: () => { S.campoFiltroZona = val("cpZona"); render(); },
-  campoFiltroLimpiar: () => { S.campoFiltroFecha = HOY_SUP; S.campoFiltroTec = ""; S.campoFiltroProp = ""; S.campoFiltroEst = ""; S.campoFiltroZona = ""; S.campoBuscar = ""; render(); },
+  campoFiltroUni: () => { S.campoFiltroUni = val("cpUni"); render(); },
+  campoFiltroTipo: () => { S.campoFiltroTipo = val("cpTipo"); render(); },
+  campoBuscar: () => { S.campoBuscar = val("cpQ"); render(); },
+  campoFiltroLimpiar: () => { S.campoFiltroFecha = HOY_SUP; S.campoFiltroTec = ""; S.campoFiltroProp = ""; S.campoFiltroEst = ""; S.campoFiltroZona = ""; S.campoFiltroUni = ""; S.campoFiltroTipo = ""; S.campoBuscar = ""; render(); },
 
   tarFiltro: () => { S.tarFp=val("tarFp"); S.tarFt=val("tarFt"); S.tarFs=""; S.tarOff=[]; render(); },
   tarFiltroQuitar: () => { S.tarFp=""; S.tarFt=""; S.tarFs=""; S.tarOff=[]; render(); },
