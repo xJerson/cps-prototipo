@@ -618,7 +618,7 @@ Object.assign(ACC, {
     const w = W(+d.id), p = P(w.prop), u = U(w.unidad), para = correosDe(w.prop);
     const urls = (w.evidFotos||[]).map(f=>f.url).filter(Boolean);
     if(!urls.length){ toast("Sin fotos","Esta orden no tiene fotos de evidencia para compartir.","w"); return; }
-    abrirCorreo(para, `Evidencia WO-${w.id} - ${p.nombre} unidad ${u.num}`,
+    correoModal(para, `Evidencia WO-${w.id} - ${p.nombre} unidad ${u.num}`,
 `Buenos días,
 
 Te compartimos la evidencia de WO-${w.id} en ${p.nombre}, unidad ${u.num} (${w.serv}):
@@ -626,9 +626,11 @@ Te compartimos la evidencia de WO-${w.id} en ${p.nombre}, unidad ${u.num} (${w.s
 ${urls.join("\n")}
 
 Cordova Property Services LLC
-Tel: (469) 219-6869 | scheduling@cordovaps.com`);
-    toast("Correo listo", para.length ? `Para: ${esc(para.join(", "))}.` : "La propiedad no tiene contactos con correo: escribe el destinatario.", para.length?"v":"w");
+Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evidencia (enlaces en el mensaje)`);
   },
+  correoReal: () => { const c=_correoPend; if(c) abrirCorreo(c.para, c.asunto, c.cuerpo); },
+  correoEnviarSim: () => { const c=_correoPend; if(!c) return; cm();
+    toast("✓ Correo enviado (simulado)", `Para: ${esc(c.para.join(", "))}. En el sistema real saldría desde scheduling@cordovaps.com.`, "v"); _correoPend=null; },
 
   /* Si la WO o la propiedad traen notas, primero se leen y se aceptan; sin notas no hay nada que aceptar. */
   asigModal: d => { const w=W(+d.id);

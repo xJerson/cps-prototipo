@@ -549,10 +549,26 @@ function abrirCorreo(para, asunto, cuerpo){
   a.href=`mailto:${para.map(encodeURIComponent).join(",")}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
   document.body.appendChild(a); a.click(); a.remove();
 }
-const correosDe = pid => contactosDe(pid).map(c=>String(c.mail||"").trim()).filter(Boolean);
+/* Prototipo: no hay servidor de correo. Se muestra el correo tal como saldría y «Enviar» lo simula
+   (confirmación + registro en Bitácora). «Abrir en mi correo» sí lo abre en el programa de correo real. */
+let _correoPend = null;
+function correoModal(para, asunto, cuerpo, adjunto){
+  _correoPend = {para, asunto, cuerpo, adjunto};
+  modal(`<div class="mh"><h3>Correo al cliente</h3><p>Así le llegaría. En el prototipo «Enviar» solo lo simula.</p></div>
+  <div class="mb">
+    <div class="fld"><label>Para</label>${para.length?`<div>${esc(para.join(", "))}</div>`:`<div class="note w">La propiedad no tiene contactos con correo.</div>`}</div>
+    <div class="fld"><label>Asunto</label><div>${esc(asunto)}</div></div>
+    ${adjunto?`<div class="fld"><label>Adjunto</label><div>📎 ${esc(adjunto)}</div></div>`:""}
+    <div class="fld"><label>Mensaje</label><div style="white-space:pre-wrap;border:1px solid var(--line);border-radius:8px;padding:10px;max-height:220px;overflow:auto;font-size:12.5px">${esc(cuerpo)}</div></div>
+  </div>
+  <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
+    <button class="btn" data-a="correoReal">Abrir en mi correo</button>
+    <button class="btn p" data-a="correoEnviarSim" ${para.length?"":"disabled"}>Enviar</button></div>`);
+}
+const correosDe = pid =>contactosDe(pid).map(c=>String(c.mail||"").trim()).filter(Boolean);
 function correoPriceList(propId, rige){
   const nom = propId ? P(propId).nombre : "Tarifario general", para = propId ? correosDe(propId) : [];
-  abrirCorreo(para, `Price List - ${nom} - Cordova Property Services`,
+  correoModal(para, `Price List - ${nom} - Cordova Property Services`,
 `Buenos días,
 
 Adjunto encontrarás el Price List de ${nom}${rige?`, vigente desde ${rige}`:""}.
@@ -562,8 +578,7 @@ Cualquier duda, con gusto te ayudamos.
 Claudia S. Cordova
 CEO | Cordova Property Services LLC
 Pensacola, FL | Tel: (469) 219-6869
-Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`);
-  toast("Correo listo", para.length ? `Para: ${esc(para.join(", "))}. Adjunta el PDF que acabas de guardar.` : "La propiedad no tiene contactos con correo: escribe el destinatario. Adjunta el PDF que acabas de guardar.", para.length?"v":"w");
+Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`, `Price List - ${nom}.pdf`);
 }
 
 VIEWS.tarifario = () => {
