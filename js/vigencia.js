@@ -423,12 +423,12 @@ Object.assign(ACC, {
   vigPdfModo: d => { S.audOmitir = true; if(d.m==="p" && !vigPdfDesde(S._vigPdf.prop)) return; S._vigPdf.modo = d.m; vigPdfPinta(); },
   vigPdfSel: d => { S.audOmitir = true; const o = S._vigPdf.off, i = o.indexOf(d.k); if(i>-1) o.splice(i,1); else o.push(d.k); vigPdfPinta(); },
   vigPdfTodos: () => { S.audOmitir = true; const x = S._vigPdf; x.off = x.off.length ? [] : vigPdfCand(x.prop).map(c=>c.k); vigPdfPinta(); },
-  vigPdfOK: () => {
+  vigPdfOK: d => {
     const x = S._vigPdf, filas = vigPdfFilas();
     if(!filas.length){ S.audOmitir = true; toast("Sin precios marcados","Marca al menos un servicio para generar el PDF.","r"); return; }
     const rige = x.modo==="p" ? vigPdfDesde(x.prop) : hoyReal();
     S._audTar = `${vigNombre(x.prop)} · ${filas.length} precio(s) · rige desde ${rige}`;
-    pdfListaPrecios(x.prop, filas, rige);
+    pdfListaPrecios(x.prop, filas, rige, d && d.correo ? ()=>correoPriceList(x.prop, rige) : null);
   }
 });
 
@@ -478,7 +478,7 @@ function vigPdfModal(prop, ts){
         <div class="vig-lista-sel" id="vigSelPdf"></div>
         <button class="btn sm" data-a="vigPdfTodos" style="margin-top:8px">Marcar o desmarcar todos</button></div>
       <div class="vig-hoja"><div class="vig-papel" id="vigPapel"></div></div></div>
-    <div class="mf"><button class="btn" data-a="cm">Cerrar</button><button class="btn p" data-a="vigPdfOK">Descargar PDF</button></div>`, true);
+    <div class="mf"><button class="btn" data-a="cm">Cerrar</button><button class="btn" data-a="vigPdfOK">Descargar PDF</button><button class="btn p" data-a="vigPdfOK" data-correo="1" title="Genera el PDF y deja el correo listo con los contactos de la propiedad">Enviar por correo</button></div>`, true);
   vigPdfPinta();
 }
 function vigPdfPinta(){

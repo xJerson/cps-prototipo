@@ -917,7 +917,7 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
     if(!ts.length){ S.audOmitir=true; toast("Sin precios marcados","Marca al menos un precio para generar el PDF.","r"); return; }
     if(vigHayProgramada(d.id)){ S.audOmitir=true; vigPdfModal(d.id, ts); return; }   // hay lista nueva programada: primero se elige cuál mandar
     S._audTar = `${P(d.id).nombre} · ${ts.length} precio(s)`;
-    pdfListaPrecios(d.id, ts);
+    pdfListaPrecios(d.id, ts, null, d.correo ? ()=>correoPriceList(d.id, null) : null);
   },
   tarPDF: () => {
     const fp=S.tarFp||"", ts=tarSeleccion();

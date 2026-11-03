@@ -222,7 +222,8 @@ function fichaProp(id){
     <span class="s">exclusivos de esta propiedad — mandan sobre la tarifa general${nVacios?` · <b>${nVacios} por llenar</b>`:""}</span>
     <span class="r" style="display:flex;gap:6px;flex-wrap:wrap">
       ${nTf?`<button class="btn sm" data-a="vigAbrir" data-id="${id}" title="Prepara una lista nueva con fecha de entrada, sin tocar los precios de hoy">Preparar cambio de precios</button>
-      <button class="btn sm" data-a="precPDF" data-id="${id}" ${nSel?"":"disabled"} title="Genera un PDF con los precios marcados — sin pagos al técnico">Descargar PDF${nSel?` (${nSel})`:""}</button>`:""}
+      <button class="btn sm" data-a="precPDF" data-id="${id}" ${nSel?"":"disabled"} title="Genera un PDF con los precios marcados — sin pagos al técnico">Descargar PDF${nSel?` (${nSel})`:""}</button>
+      <button class="btn sm" data-a="precPDF" data-id="${id}" data-correo="1" ${nSel?"":"disabled"} title="Genera el PDF y deja el correo listo con los contactos de la propiedad">Enviar por correo</button>`:""}
       ${puede("tarifario")?`<button class="btn sm ${nTf?"":"p"}" data-a="preciosDesdeGeneral" data-id="${id}" title="Trae la tarifa general y los servicios del catálogo que faltan; no duplica nada">Crear lista completa</button>
       <button class="btn sm" data-a="precLlenar" data-id="${id}">Llenar precios</button>
       <button class="btn sm ${nTf?"p":""}" data-a="tarNueva" data-prop="${id}">+ Nuevo precio</button>`:""}</span></div>
@@ -510,7 +511,7 @@ function crearListaPropiedad(propId, desdeEstimado){
 }
 /* PDF de una lista de precios: documento listo para imprimir en un iframe oculto (sin ventanas
    emergentes); el navegador ofrece «Guardar como PDF». Solo precio al cliente: nada de pago al técnico ni impuestos. */
-function pdfListaPrecios(propId, ts, rige){
+function pdfListaPrecios(propId, ts, rige, luego){
   const porTipo={}; ts.forEach(t=>{ (porTipo[t.cat||"—"]=porTipo[t.cat||"—"]||[]).push(t); });
   const conPiso = ts.some(t=>t.pisos!=null);
   const nomProp = propId ? P(propId).nombre : "Tarifario general";
@@ -538,8 +539,31 @@ function pdfListaPrecios(propId, ts, rige){
   const w=f.contentWindow, d=w.document; d.open(); d.write(html); d.close();
   const quitar=()=>{ if(f.parentNode) f.remove(); };
   w.addEventListener("afterprint", quitar);
-  setTimeout(()=>{ try{ w.focus(); w.print(); }catch(err){ quitar(); } }, 250);
+  setTimeout(()=>{ try{ w.focus(); w.print(); if(luego) luego(); }catch(err){ quitar(); } }, 250);
   setTimeout(quitar, 120000);   // por si el navegador nunca avisa que terminó de imprimir
+}
+/* Abre el correo del usuario con los contactos de la propiedad, el asunto y el texto ya puestos. Un enlace mailto no
+   puede adjuntar archivos: el PDF se guarda desde la ventana de impresión y se adjunta a mano. */
+function abrirCorreo(para, asunto, cuerpo){
+  const a=document.createElement("a");
+  a.href=`mailto:${para.map(encodeURIComponent).join(",")}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
+  document.body.appendChild(a); a.click(); a.remove();
+}
+const correosDe = pid => contactosDe(pid).map(c=>String(c.mail||"").trim()).filter(Boolean);
+function correoPriceList(propId, rige){
+  const nom = propId ? P(propId).nombre : "Tarifario general", para = propId ? correosDe(propId) : [];
+  abrirCorreo(para, `Price List - ${nom} - Cordova Property Services`,
+`Buenos días,
+
+Adjunto encontrarás el Price List de ${nom}${rige?`, vigente desde ${rige}`:""}.
+
+Cualquier duda, con gusto te ayudamos.
+
+Claudia S. Cordova
+CEO | Cordova Property Services LLC
+Pensacola, FL | Tel: (469) 219-6869
+Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`);
+  toast("Correo listo", para.length ? `Para: ${esc(para.join(", "))}. Adjunta el PDF que acabas de guardar.` : "La propiedad no tiene contactos con correo: escribe el destinatario. Adjunta el PDF que acabas de guardar.", para.length?"v":"w");
 }
 
 VIEWS.tarifario = () => {
