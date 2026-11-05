@@ -1449,7 +1449,7 @@ function modalPermiso(){
   <div class="mb">
     <div class="fld"><label>Técnico <span class="req">*</span></label><select id="pT">${S.tecnicos.filter(t=>t.activo).map(t=>`<option value="${t.id}">${esc(tecN(t.id))}</option>`).join("")}</select></div>
     <div class="fg c2">
-      <div class="fld"><label>Desde <span class="req">*</span></label><input type="date" id="pD" value="2026-08-18"></div>
+      <div class="fld"><label>Desde <span class="req">*</span></label><input type="date" id="pD" value="${sumarDias(HOY_SUP,7)}"></div>
       <div class="fld"><label>Hasta <span class="req">*</span></label><input type="date" id="pH" value="2026-08-20"></div></div>
     <div class="fld"><label>Motivo <span class="req">*</span></label><input id="pM" placeholder="Vacaciones, permiso personal, incapacidad…"></div>
     <div class="note">Al aprobarlo, el técnico deja de aparecer como opción para asignar en esas fechas.</div>

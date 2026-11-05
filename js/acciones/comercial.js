@@ -104,7 +104,7 @@ Object.assign(ACC, {
       toast("✓ Solicitud actualizada","","v"); render();
       return;
     }
-    const ns = {id:"SC"+Date.now(), fecha:"2026-08-11", quien:S.usuario, estimadoId:null,
+    const ns = {id:"SC"+Date.now(), fecha:HOY_SUP, quien:S.usuario, estimadoId:null,
       estado: inspeccion?"Esperando inspección":"Lista para estimado", ...solSello(), ...datos};
     S.solicitudesComerciales.unshift(ns); flash("solcom:"+ns.id);
     // Si no la registró Claudia, se le avisa: tiene 24h para contestar
@@ -193,7 +193,7 @@ Object.assign(ACC, {
     const propSel = val("vcProp");
     const selEl = document.getElementById("vcContactoSel");
     const nv = {id:"VC"+Date.now(), tipo:"Comercial", prop:propSel, propNombre:"", contactoId: (selEl && selEl.value) ? selEl.value : null,
-      fecha:"2026-08-11", hora:hora(), contacto:val("vcContacto"), correo:val("vcCorreo"), quien:S.usuario,
+      fecha:HOY_SUP, hora:hora(), contacto:val("vcContacto"), correo:val("vcCorreo"), quien:S.usuario,
       notas:val("vcNotas"), resultado, proximaAccion: resultado==="Sigue en seguimiento"?val("vcProxima"):null,
       estado: resultado==="Sigue en seguimiento"?"En seguimiento":"Cerrada",
       hist:[[hora(),"Visita comercial registrada",S.usuario]]};
@@ -378,7 +378,7 @@ Object.assign(ACC, {
   estMedioOK: d => {
     const e=by(S.estimados,d.id);
     ultimoEstTocado = e.num;
-    const sello = () => ({medio:d.medio, quien:contactosEst(e).map(c=>c.nombre).join(", "), fecha:"2026-08-11 "+hora(), ip:null});
+    const sello = () => ({medio:d.medio, quien:contactosEst(e).map(c=>c.nombre).join(", "), fecha:HOY_SUP+" "+hora(), ip:null});
     if(d.tipo==="todo"){
       e.estado="Aprobado";
       e.aprob=sello();
@@ -466,12 +466,12 @@ Object.assign(ACC, {
     const ac=val("vAc");
     if(!ac){ marcaFalta(["vAc"]); toast("Falta lo acordado","Sin eso la visita no sirve de registro.","r"); return; }
     const p=P(d.prop);
-    S.visitas.push({id:"V"+Date.now(),tipo:"Supervisión",prop:d.prop,fecha:"2026-08-11",hora:hora(),
+    S.visitas.push({id:"V"+Date.now(),tipo:"Supervisión",prop:d.prop,fecha:HOY_SUP,hora:hora(),
       quien:S.usuario,acuerdos:ac,material:val("vMat"),estado:"Cerrada"});
     if(val("vMat")){
       S.excepciones.push({id:"X"+Date.now(),tipo:"Falta de material en sitio",wo:null,
         motivo:`${p.nombre}: ${val("vMat")} — reportado por ${S.usuario} en visita`,
-        monto:null,pide:S.usuario,aprueba:"Erika",estado:"Pendiente",fecha:"2026-08-11",resol:null});
+        monto:null,pide:S.usuario,aprueba:"Erika",estado:"Pendiente",fecha:HOY_SUP,resol:null});
     }
     cm();
     toast("✓ Visita registrada",`<b>${esc(p.nombre)}</b> · lo acordado con mantenimiento queda en el expediente.`

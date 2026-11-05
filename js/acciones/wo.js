@@ -274,7 +274,7 @@ Object.assign(ACC, {
         cambiosUnidad=diffCampos(uNueva,datosUnidad);
         if(cambiosUnidad.length){
           Object.assign(uNueva,datosUnidad); flash("uni:"+uNueva.id);
-          S.bitacora.unshift({n:++S.audSeq,fecha:"2026-08-11",hora:hora(),usuario:S.usuario,rol:ROLES[S.usuario].r,
+          S.bitacora.unshift({n:++S.audSeq,fecha:HOY_SUP,hora:hora(),usuario:S.usuario,rol:ROLES[S.usuario].r,
             accion:"Completó datos de unidad desde Work Order",modulo:"Propiedades",ref:P(pid).nombre+" · unidad "+uNueva.num,cambios:cambiosUnidad});
         }
       }
@@ -611,8 +611,8 @@ Object.assign(ACC, {
     const w = W(+d.id), p = P(w.prop), u = U(w.unidad);
     const urls = (w.evidFotos||[]).map(f=>f.url).filter(Boolean);
     const msg = `Hola, te compartimos la evidencia de WO-${w.id} en ${p.nombre} unidad ${u.num} (${w.serv}):\n` + (urls.length ? urls.join("\n") : "Fotos en proceso.");
-    const waUrl = `https://wa.me/?text=${encodeURIComponent(msg)}`;
-    window.open(waUrl, "_blank");
+    const tels = contactosDe(w.prop).map(c=>String(c.tel||"").trim()).filter(Boolean);
+    correoModal(tels, "", msg, urls.length ? `${urls.length} foto(s) de evidencia (enlaces en el mensaje)` : "", "WhatsApp");
   },
   woCorreoFotos: d => {
     const w = W(+d.id), p = P(w.prop), u = U(w.unidad), para = correosDe(w.prop);
@@ -628,9 +628,8 @@ ${urls.join("\n")}
 Cordova Property Services LLC
 Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evidencia (enlaces en el mensaje)`);
   },
-  correoReal: () => { const c=_correoPend; if(c) abrirCorreo(c.para, c.asunto, c.cuerpo); },
   correoEnviarSim: () => { const c=_correoPend; if(!c) return; cm();
-    toast("✓ Correo enviado (simulado)", `Para: ${esc(c.para.join(", "))}. En el sistema real saldría desde scheduling@cordovaps.com.`, "v"); _correoPend=null; },
+    toast(`✓ ${c.canal} enviado (simulado)`, `Para: ${esc(c.para.join(", "))}. En el sistema real se enviaría desde aquí mismo${c.canal==="Correo"?", con remitente scheduling@cordovaps.com":""}.`, "v"); _correoPend=null; },
 
   /* Si la WO o la propiedad traen notas, primero se leen y se aceptan; sin notas no hay nada que aceptar. */
   asigModal: d => { const w=W(+d.id);
@@ -733,7 +732,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
       <div class="note w" id="dvExp">${causaDe(Object.keys(CAUSAS_DEV)[0]).ex}</div>
       <div class="fg c2">
         <div class="fld"><label>Prioridad</label><select id="dvP">${PRIOR_DEV.map(p=>`<option ${p==="Alta"?"selected":""}>${esc(p)}</option>`).join("")}</select></div>
-        <div class="fld"><label>Fecha límite</label><input type="date" id="dvL" value="2026-08-14"></div>
+        <div class="fld"><label>Fecha límite</label><input type="date" id="dvL" value="${sumarDias(HOY_SUP,3)}"></div>
         <div class="fld"><label>Hora límite</label><input type="time" id="dvLH" value="17:00"></div></div>
       <div class="fld"><label>Foto de la observación <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label>
         ${S._dvFoto?`<img src="${S._dvFoto}" style="width:100%;height:96px;object-fit:cover;border-radius:9px;margin:0 0 6px">`:""}
@@ -770,7 +769,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     while(S.devoluciones.some(x=>x.id==="DV"+dvNum)) dvNum++;
     const dv = {id:"DV"+dvNum, prop:w.prop, unidad:w.unidad, wo:w.id, areas,
       desc:m, causa, responsable:w.tec, prioridad:val("dvP")||"Alta",
-      fechaRep:HOY_SUP, fechaLimite:val("dvL")||"2026-08-14", horaLimite:val("dvLH")||"17:00", estado:"Abierta",
+      fechaRep:HOY_SUP, fechaLimite:val("dvL")||sumarDias(HOY_SUP,3), horaLimite:val("dvLH")||"17:00", estado:"Abierta",
       lotesAntes:areas.map((a,i)=>({amb:a, fotosArr: i===0 && fotoObs ? [fotoNueva(fotoObs, S.usuario)] : []})), lotesDespues:[], verifica:null, quien:S.usuario,
       hist:[[hora(),"Return creado desde revisión de supervisión",S.usuario]]};
     S.devoluciones.push(dv); flash("dv:"+dv.id);
@@ -790,7 +789,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
       <button class="btn p" data-a="inspPedir" data-prop="${d.prop}">Solicitar</button></div>`),
   inspPedir: d => {
     const p=P(d.prop);
-    S.visitas.push({id:"I"+Date.now(),tipo:"Inspección",prop:d.prop,fecha:"2026-08-11",hora:hora(),
+    S.visitas.push({id:"I"+Date.now(),tipo:"Inspección",prop:d.prop,fecha:HOY_SUP,hora:hora(),
       quien:S.usuario,pide:val("ipQ")||"Medir y fotografiar antes de cotizar",estado:"Pendiente",ambientes:null});
     cm(); toast("✓ Inspección solicitada",`<b>${esc(p.nombre)}</b> le entró a Gustavo en su agenda, por el mismo canal que el resto de su trabajo.`,"v");
     render();
@@ -841,7 +840,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
 
   /* «Elaborar Reporte Diario → Entregar a CLAUDIA» */
   reporteEnviar: () => {
-    const hoy="2026-08-11";
+    const hoy=HOY_SUP;
     const vis=S.visitas.filter(v=>v.fecha===hoy);
     const dev=S.wos.filter(w=>w.devuelta).length;
     const apro=S.wos.filter(w=>w.supervisada).length;

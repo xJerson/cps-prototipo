@@ -374,7 +374,7 @@ function guardarEdicion(obj, nuevos, modulo, ref, extra, marca){
   Object.assign(obj, nuevos);
   if(marca) flash(marca);
   if(extra) extra(obj, cambios);
-  S.bitacora.unshift({ n:++S.audSeq, fecha:"2026-08-11", hora:hora(),
+  S.bitacora.unshift({ n:++S.audSeq, fecha:HOY_SUP, hora:hora(),
     usuario:S.usuario, rol:ROLES[S.usuario].r,
     accion:"Corrigió datos", modulo, ref, cambios });
   cm();

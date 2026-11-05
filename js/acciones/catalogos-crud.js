@@ -795,7 +795,7 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
       toast("⚠ Ya existe",`«${esc(nuevo)}» ya está en la lista. Renombrar no puede fusionar dos valores en uno: eso sí tendría que decidirse aparte.`,"w"); return; }
     CAT[d.k][+d.i] = d.k==="pisos" ? (parseInt(nuevo)||nuevo) : nuevo;
     const tocados = renombrarCat(d.k, viejo, CAT[d.k][+d.i]); flash("cat:"+d.k+":"+CAT[d.k][+d.i]);
-    S.bitacora.unshift({ n:++S.audSeq, fecha:"2026-08-11", hora:hora(),
+    S.bitacora.unshift({ n:++S.audSeq, fecha:HOY_SUP, hora:hora(),
       usuario:S.usuario, rol:ROLES[S.usuario].r, accion:"Renombró un valor de catálogo",
       modulo:"Catálogos", ref:catNombre(d.k),
       cambios:[{campo:"Nombre", de:viejo, a:nuevo}] });
@@ -829,7 +829,7 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
       toast("⚠ Ya existe",`«${esc(nuevo)}» ya está en ${esc(s.tipo)}.`,"w"); return; }
     s.nombre = nuevo;
     const tocados = renombrarCat("servicios", viejo, nuevo); flash("serv:"+s.id);
-    S.bitacora.unshift({ n:++S.audSeq, fecha:"2026-08-11", hora:hora(),
+    S.bitacora.unshift({ n:++S.audSeq, fecha:HOY_SUP, hora:hora(),
       usuario:S.usuario, rol:ROLES[S.usuario].r, accion:"Renombró un servicio",
       modulo:"Catálogos", ref:s.tipo, cambios:[{campo:"Nombre", de:viejo, a:nuevo}] });
     cm();
@@ -1054,7 +1054,7 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
     const datos = {nombre:val("kN"),contacto:val("kC"),tel,mail:val("kM"),
       vendorPlat:val("kVP"),notas:val("kNotas")};
     if(yo) return guardarEdicion(yo, datos, "Comercial", yo.nombre, null, "cli:"+yo.id);
-    const nc = {id:"CL"+nid("cl"), ...datos, fechaAlta:"2026-08-11",
+    const nc = {id:"CL"+nid("cl"), ...datos, fechaAlta:HOY_SUP,
       vendorPacket:"Pendiente", vendorPacketPdf:null, w9:"Pendiente", w9Pdf:null};
     S.clientes.push(nc); flash("cli:"+nc.id);
     const prop = by(S.propiedades, val("kProp"));

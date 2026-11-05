@@ -262,7 +262,7 @@ Object.assign(ACC, {
               areas:[], desc:d.desc||"",
               causa:Object.keys(CAUSAS_DEV)[0],
               responsable:(wo&&wo.tec)||S.tecnicos.filter(t=>t.id!==GUSTAVO)[0].id,
-              prioridad:"Alta", fechaLimite:"2026-08-14",
+              prioridad:"Alta", fechaLimite:sumarDias(HOY_SUP,3),
               amb:activos("ubicaciones")[0], lotes:[]};
     render();
   },
@@ -293,7 +293,7 @@ Object.assign(ACC, {
     const c = causaDe(g.causa);
     const d = {id:"DV"+Date.now(), prop:g.prop, unidad:g.unidad, wo:g.wo, areas:g.areas,
       desc:g.desc.trim(), causa:g.causa, responsable:g.responsable, prioridad:g.prioridad,
-      fechaRep:HOY_SUP, fechaLimite:g.fechaLimite||"2026-08-14", horaLimite:g.horaLimite||"17:00", estado:"Abierta",
+      fechaRep:HOY_SUP, fechaLimite:g.fechaLimite||sumarDias(HOY_SUP,3), horaLimite:g.horaLimite||"17:00", estado:"Abierta",
       lotesAntes:g.lotes.slice(), lotesDespues:[], verifica:null, quien:GUSTAVO,
       urgente:!!g.urgente,
       hist:[[hora(),"Return creado en campo",tecN(GUSTAVO)]]};
@@ -513,7 +513,7 @@ Object.assign(ACC, {
     if(!g.unidad){ toast("Falta la unidad","Esta propiedad no tiene unidades registradas.","r"); return; }
     const n = g.lotes.reduce((t,l)=>t+(l.fotosArr||[]).length,0);
     const r = {id:"R"+Date.now(), tipo:g.tipo, prop:g.prop, unidad:g.unidad, wo:null,
-      fecha:"2026-08-11", hora:hora(), quien:GUSTAVO,
+      fecha:HOY_SUP, hora:hora(), quien:GUSTAVO,
       antesDe:g.tipo==="previo"?g.antesDe:"",
       servicios: g.tipo==="relevamiento"
         ? [...new Set((g.items||[]).filter(it=>it.trabajo&&it.trabajo.trim()).map(it=>it.cat))]
@@ -572,7 +572,7 @@ Object.assign(ACC, {
        campo. Sin inspección: él ya la vio, es la suya. */
     if(r.adicional && r.adicional.trim()){
       const ctc = contactosDe(r.prop)[0];
-      const sc = {id:"SC"+Date.now(), fecha:"2026-08-11", quien:tecN(GUSTAVO), estimadoId:null,
+      const sc = {id:"SC"+Date.now(), fecha:HOY_SUP, quien:tecN(GUSTAVO), estimadoId:null,
         estado:"Lista para estimado", prop:r.prop, propNombre:"",
         contacto:ctc?ctc.nombre:"— por confirmar —", correo:ctc?ctc.mail:"",
         alcance:r.adicional.trim(), inspeccion:false, fechaObjetivo:"", origen:"Gustavo", pidio:"", ...solSello(),

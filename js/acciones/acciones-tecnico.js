@@ -413,7 +413,7 @@ Object.assign(ACC, {
     toast("Llegada declarada",`<b>${esc(tecN(w.tec))}</b> dice que llegó ${esc(hDecl)} a WO-${w.id}. Queda marcada como <b>no verificada</b> y levanta una excepción para Gustavo.`,"w");
     // El botón dice «Registrar y cerrar»: hay que cerrar. Si no, el técnico
     // toca cerrar, le piden la hora, la da… y sigue sin cerrar.
-    S.bitacora.unshift({ n:++S.audSeq, fecha:"2026-08-11", hora:hora(),
+    S.bitacora.unshift({ n:++S.audSeq, fecha:HOY_SUP, hora:hora(),
       usuario:S.usuario, rol:ROLES[S.usuario].r,
       accion:"Declaró llegada sin verificar", modulo:"Campo", ref:"WO-"+w.id });
     ACC.fTermine({id:String(w.id)});

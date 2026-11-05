@@ -158,7 +158,7 @@ const estTipo = e => e.tipo || ((e.lineas||[]).some(l=>l.libre||l.nivel==="Libre
    solicitud ni plazo de 24 h). Esta funcion arma el borrador en blanco. */
 function estInicializarBorrador(prop, solicitudId, directo){
   S.draftEst=[]; S.estLin=null; S.estEditIdx=null;
-  const cs=contactosDe(prop), hoy="2026-08-11";
+  const cs=contactosDe(prop), hoy=HOY_SUP;
   // Si la Solicitud ya dice con quién habló Lydia, es ese contacto el que
   // sale marcado — Claudia no tiene que volver a elegir con quién fue.
   const sol = solicitudId ? by(S.solicitudesComerciales,solicitudId) : null;
@@ -336,7 +336,7 @@ function modalSolCom(id){
 function ramificarVisita(v){
   if(v.resultado==="Requiere estimado"){
     if(!v.solicitudId){
-      const sc = {id:"SC"+Date.now(), fecha:"2026-08-11", prop:v.prop, propNombre:v.propNombre||"", contactoId:v.contactoId||null,
+      const sc = {id:"SC"+Date.now(), fecha:HOY_SUP, prop:v.prop, propNombre:v.propNombre||"", contactoId:v.contactoId||null,
         contacto:v.contacto, correo:v.correo||"", alcance:v.notas, inspeccion:false, fechaObjetivo:"",
         notas:`Generada desde la visita comercial de ${v.quien||S.usuario} el ${v.fecha}.`,
         quien:S.usuario, estado:"Lista para estimado", estimadoId:null, origen:"Visita", pidio:"", ...solSello()};

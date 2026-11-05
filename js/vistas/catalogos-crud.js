@@ -544,25 +544,21 @@ function pdfListaPrecios(propId, ts, rige, luego){
 }
 /* Abre el correo del usuario con los contactos de la propiedad, el asunto y el texto ya puestos. Un enlace mailto no
    puede adjuntar archivos: el PDF se guarda desde la ventana de impresión y se adjunta a mano. */
-function abrirCorreo(para, asunto, cuerpo){
-  const a=document.createElement("a");
-  a.href=`mailto:${para.map(encodeURIComponent).join(",")}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`;
-  document.body.appendChild(a); a.click(); a.remove();
-}
 /* Prototipo: no hay servidor de correo. Se muestra el correo tal como saldría y «Enviar» lo simula
    (confirmación + registro en Bitácora). «Abrir en mi correo» sí lo abre en el programa de correo real. */
 let _correoPend = null;
-function correoModal(para, asunto, cuerpo, adjunto){
-  _correoPend = {para, asunto, cuerpo, adjunto};
-  modal(`<div class="mh"><h3>Correo al cliente</h3><p>Así le llegaría. En el prototipo «Enviar» solo lo simula.</p></div>
+function correoModal(para, asunto, cuerpo, adjunto, canal){
+  canal = canal || "Correo";
+  const wa = canal==="WhatsApp";
+  _correoPend = {para, asunto, cuerpo, adjunto, canal};
+  modal(`<div class="mh"><h3>${wa?"WhatsApp":"Correo"} al cliente</h3><p>Así le llegaría. En el prototipo «Enviar» solo lo simula: no sale nada real.</p></div>
   <div class="mb">
-    <div class="fld"><label>Para</label>${para.length?`<div>${esc(para.join(", "))}</div>`:`<div class="note w">La propiedad no tiene contactos con correo.</div>`}</div>
-    <div class="fld"><label>Asunto</label><div>${esc(asunto)}</div></div>
+    <div class="fld"><label>Para</label>${para.length?`<div>${esc(para.join(", "))}</div>`:`<div class="note w">La propiedad no tiene contactos con ${wa?"teléfono":"correo"}.</div>`}</div>
+    ${wa?"":`<div class="fld"><label>Asunto</label><div>${esc(asunto)}</div></div>`}
     ${adjunto?`<div class="fld"><label>Adjunto</label><div>📎 ${esc(adjunto)}</div></div>`:""}
     <div class="fld"><label>Mensaje</label><div style="white-space:pre-wrap;border:1px solid var(--line);border-radius:8px;padding:10px;max-height:220px;overflow:auto;font-size:12.5px">${esc(cuerpo)}</div></div>
   </div>
   <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
-    <button class="btn" data-a="correoReal">Abrir en mi correo</button>
     <button class="btn p" data-a="correoEnviarSim" ${para.length?"":"disabled"}>Enviar</button></div>`);
 }
 const correosDe = pid =>contactosDe(pid).map(c=>String(c.mail||"").trim()).filter(Boolean);

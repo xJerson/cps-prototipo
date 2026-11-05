@@ -82,7 +82,7 @@ VIEWS.reportes = () => {
 
 /* «Necesitamos saber pinturas, pero EN DÓNDE ESTÁN para poder agendar» — el desglose por zona */
 function vPorZona(){
-  const dia = S.repDia || "2026-08-12";
+  const dia = S.repDia || HOY_SUP;
   const dias = [...new Set(S.wos.filter(w=>w.estado!=="Canceled").map(w=>w.fecha))].sort();
   const ws = S.wos.filter(w=>w.fecha===dia && w.estado!=="Canceled");
   const porZona = {};

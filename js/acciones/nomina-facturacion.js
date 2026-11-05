@@ -1702,7 +1702,7 @@ Object.assign(ACC, {
     if(marcaFalta(["mC","mT"])){ toast("Faltan datos","Cantidad y costo.","r"); return; }
     const prod=val("mP"), cant=parseFloat(val("mC"));
     if(d.tipo==="salida" && cant>stock(prod)){ toast("🚫 No hay tanto stock",`Solo quedan ${stock(prod)}.`,"r"); return; }
-    const nm={id:"M"+nid("mv"),prod,tipo:d.tipo,cant,fecha:"2026-08-11",
+    const nm={id:"M"+nid("mv"),prod,tipo:d.tipo,cant,fecha:HOY_SUP,
       wo:d.tipo==="salida"?+val("mW"):null,costo:parseFloat(val("mT")),tienda:d.tipo==="entrada"?val("mS"):"",quien:S.usuario,evid:d.tipo==="entrada"};
     S.movs.push(nm); flash("mov:"+nm.id);
     cm();

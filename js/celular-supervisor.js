@@ -582,7 +582,7 @@ function hojaCel(sh){
     <div class="grab"></div>
     <h4>Pedir permiso o vacaciones</h4>
     <div class="sub">Le llega a Gustavo. Si lo aprueba, dejas de aparecer para asignar en esas fechas.</div>
-    <label>Desde</label><input type="date" id="ppD" value="2026-08-18">
+    <label>Desde</label><input type="date" id="ppD" value="${sumarDias(HOY_SUP,7)}">
     <label>Hasta</label><input type="date" id="ppH" value="2026-08-20">
     <label>Motivo</label><input id="ppM" placeholder="Vacaciones, cita médica…">
     <button class="db p" style="margin-top:11px" data-a="fPermisoOK">Enviar</button>

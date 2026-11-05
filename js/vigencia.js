@@ -444,8 +444,8 @@ function vigNuevaVersion(yo, datos, desde, motivo){
   delete nr.sinPrecio; delete nr.precioFijado;
   const cambios = diffCampos(yo, datos); cambios.push({campo:"Rige desde", de:"—", a:desde});
   S.tarifas.push(nr); tarInval();
-  S.bitacora.unshift({n:++S.audSeq, fecha:"2026-08-11", hora:hora(), usuario:S.usuario, rol:ROLES[S.usuario].r,
-    accion:"Creó un precio nuevo con fecha", modulo:"Tarifario", ref:`${yo.nombre}${yo.prop?" · "+P(yo.prop).nombre:" · general"}`, cambios});
+  S.bitacora.unshift({n:++S.audSeq, fecha:HOY_SUP, hora:hora(), usuario:S.usuario, rol:ROLES[S.usuario].r,
+    accion:"Creó un precio nuevo con fecha", modulo:"Tarifario", ref:`${nr.nombre||yo.nombre||yo.serv||"Precio"}${yo.prop?" · "+P(yo.prop).nombre:" · general"}`, cambios});
   if(desde<=hoy) flash("tar:"+nr.id);
   cm();
   toast(desde>hoy?"Cambio de precio programado":"Precio nuevo aplicado",

@@ -416,7 +416,7 @@ function vRuta(){
 /* La ruta calculada a partir de los trabajos activos: sigue sirviendo como
    sugerencia de a dónde convendría mandarlo, pero ya no ES su agenda. */
 function vRutaCalc(){
-  const hoy = "2026-08-11";
+  const hoy = HOY_SUP;
   const enCurso = S.wos.filter(w=>["In progress","Esperando aprobación","Completed"].includes(w.estado) && !w.supervisada);
   const porZona = {};
   enCurso.forEach(w=>{ const z=P(w.prop).zona; (porZona[z]=porZona[z]||[]).push(w); });
@@ -530,7 +530,7 @@ function vCalidad(){
 
 /* UC-12b — «todo lo registrado durante la jornada arma solo el reporte diario» */
 function vReporteDia(){
-  const hoy="2026-08-11";
+  const hoy=HOY_SUP;
   const vis = S.visitas.filter(v=>v.fecha===hoy);
   const apro = S.wos.filter(w=>w.supervisada && w.hist.some(h=>h[1].includes("Supervisión")));
   const dev = S.wos.filter(w=>w.devuelta);
