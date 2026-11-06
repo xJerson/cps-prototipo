@@ -607,13 +607,6 @@ Object.assign(ACC, {
     });
     toast("✓ Descargando fotos",`Se abrieron ${urls.length} archivo(s) para descargar.`,"v");
   },
-  woWsapFotos: d => {
-    const w = W(+d.id), p = P(w.prop), u = U(w.unidad);
-    const urls = (w.evidFotos||[]).map(f=>f.url).filter(Boolean);
-    const msg = `Hola, te compartimos la evidencia de WO-${w.id} en ${p.nombre} unidad ${u.num} (${w.serv}):\n` + (urls.length ? urls.join("\n") : "Fotos en proceso.");
-    const tels = contactosDe(w.prop).map(c=>String(c.tel||"").trim()).filter(Boolean);
-    correoModal(tels, "", msg, urls.length ? `${urls.length} foto(s) de evidencia (enlaces en el mensaje)` : "", "WhatsApp");
-  },
   woCorreoFotos: d => {
     const w = W(+d.id), p = P(w.prop), u = U(w.unidad), para = correosDe(w.prop);
     const urls = (w.evidFotos||[]).map(f=>f.url).filter(Boolean);

@@ -486,7 +486,6 @@ function fichaWO(id){
           <div style="margin-top:10px;display:flex;gap:6px;flex-wrap:wrap">
             <button class="btn sm" data-a="woCopiarFotos" data-id="${w.id}">📋 Copiar todos los links</button>
             <button class="btn sm" data-a="woDescargarFotos" data-id="${w.id}">⬇ Descargar fotos</button>
-            <button class="btn sm" data-a="woWsapFotos" data-id="${w.id}">💬 WhatsApp al cliente</button>
             <button class="btn sm" data-a="woCorreoFotos" data-id="${w.id}">✉ Correo al cliente</button>
           </div>`
           :`<div style="color:var(--faint);font-size:12px">${w.fotosPend?"⚠️ El trabajo se marcó terminado en campo pero faltan las fotos de evidencia.":"Todavía sin fotos del trabajo."}</div>`}
