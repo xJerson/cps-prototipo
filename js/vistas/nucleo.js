@@ -323,7 +323,7 @@ const CAMPOS = {
   nombre:"Nombre", apellido:"Apellido", tipo:"Tipo", contacto:"Contacto",
   tel:"Teléfono", mail:"Correo", origen:"Origen", estado:"Estado",
   zona:"City", ciudad:"City", cliente:"Management", dir:"Dirección",
-  vendedor:"Vendedor", doorCode:"Door code (unidad)",
+  vendedor:"Ejecutivo de ventas", doorCode:"Door code (unidad)",
   diasCredito:"Crédito (días)", door:"Gate code", coi:"COI vence", pref:"Default Contact Method",
   aprob:"Approval Method", notas:"Special Property Requirements",
   mailAP1:"Accounts Payable Email 1", mailAP2:"Accounts Payable Email 2",

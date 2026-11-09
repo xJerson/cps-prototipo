@@ -39,8 +39,8 @@ function fichaProp(id){
     <div class="note v" style="margin:0 0 12px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
         <b>💳 Crédito disponible:</b>
-        ${sMon > 0 ? `<span class="pill v" style="font-size:12px;font-weight:700">${money(sMon)}</span>` : ""}
-        ${sd.length ? `<span><b>Servicios a favor:</b> ${sd.map(x=>`<span class="pill a">${esc(x.serv)} ×${x.saldo}${x.unidad?` (${esc(U(x.unidad).num)})`:""}</span>`).join(" ")}</span>` : ""}
+        ${sMon > 0 ? `<span title="Crédito general: dinero a favor que se descuenta de cualquier factura de esta propiedad"><b>General (dinero):</b> <span class="pill v" style="font-size:12px;font-weight:700">${money(sMon)}</span></span>` : ""}
+        ${sd.length ? `<span title="Crédito de servicio: servicios concretos ya pagados o a favor, que se usan en una WO de ese servicio"><b>De servicio:</b> ${sd.map(x=>`<span class="pill a">${esc(x.serv)} ×${x.saldo}${x.unidad?` (${esc(U(x.unidad).num)})`:""}</span>`).join(" ")}</span>` : ""}
       </div>
       <div><button class="btn sm" data-a="tab" data-t="datos">Ver tarjetas de crédito ↓</button></div>
     </div>` : ""}
@@ -134,7 +134,7 @@ function fichaProp(id){
       ?esc(CLI(p.cliente).nombre)
       :`<span style="color:var(--faint)">— sin management —</span> <button class="btn sm" data-a="cliNuevo" data-prop="${id}" style="margin-left:8px">+ Registrar management</button>`}</td></tr>
     <tr><td style="color:var(--faint)">Client Status</td><td><span class="pill ${ESTCOL[estadoProp(p)]||"w"}">${esc(estadoProp(p)||"—")}</span></td></tr>
-    <tr><td style="color:var(--faint)">Vendedor</td><td>${p.vendedor?esc(p.vendedor):"—"}</td></tr>
+    <tr><td style="color:var(--faint)">Ejecutivo de ventas</td><td>${p.vendedor?esc(p.vendedor):"—"}</td></tr>
     <tr><td style="color:var(--faint)">Client Source</td><td>${esc(p.origen||"—")}</td></tr>
     <tr><td style="color:var(--faint)">Dirección</td><td>${esc(p.dir)}</td></tr>
     <tr><td style="color:var(--faint)">Crédito</td><td>${diasCreditoProp(id)} días</td></tr>
@@ -154,7 +154,7 @@ function fichaProp(id){
     <tr><td style="color:var(--faint)">Activa</td><td>${p.activa?'<span class="pill v">Sí</span>':'<span class="pill g">No</span>'}</td></tr>
   </tbody></table></div>
   <div class="card" style="margin-top:14px"><div class="chd"><h3>Pinturas</h3>
-    <span class="s">lo que usan en esta propiedad — se agrega una fila por superficie</span>
+    <span class="s">Qué pintura lleva cada superficie de esta propiedad (marca, color, código y acabado), para que el técnico use la misma al pintar o retocar. Una fila por superficie: paredes, techo, puertas, etc.</span>
     <span class="r"><button class="btn sm p" data-a="pinturaNueva" data-id="${id}">+ Agregar pintura</button></span></div>
     ${(S.pinturas||[]).filter(x=>x.prop===id).length?`<table><thead><tr><th>Superficie</th><th>Marca</th><th>Color</th><th>Código</th><th>Acabado</th><th>Nota</th><th></th></tr></thead><tbody>
       ${(S.pinturas||[]).filter(x=>x.prop===id).map(x=>`<tr><td style="font-weight:650">${esc(x.superficie)}</td><td>${esc(x.marca)||"—"}</td><td>${esc(x.color)||"—"}</td><td class="mono">${esc(x.codigo)||"—"}</td><td>${esc(x.acabado)||"—"}</td><td style="color:var(--soft)">${esc(x.nota)||"—"}</td>
@@ -432,7 +432,7 @@ const vTecLista = () => {
         <td>${!t.activo?'<span class="pill g">Dado de baja</span>'
              :b?`<span class="pill r"><span class="dot"></span>${esc(b.motivo)} ${b.desde.slice(5)}–${b.hasta.slice(5)}</span>`
                :'<span class="pill v">Disponible</span>'}</td>
-        <td style="text-align:right;white-space:nowrap"><button class="btn sm" data-a="tecNuevo" data-id="${t.id}">Editar</button>
+        <td style="text-align:right;white-space:nowrap"><button class="btn sm" data-a="tecContratoVer" data-id="${t.id}">Contrato</button> <button class="btn sm" data-a="tecNuevo" data-id="${t.id}">Editar</button>
           <button class="btn sm ${t.activo?"":"v"}" data-a="tecBaja" data-id="${t.id}">${t.activo?"Dar de baja":"Reactivar"}</button></td></tr>`;
     }).join("")||`<tr><td colspan="9" class="empty">No hay técnicos que coincidan con la búsqueda</td></tr>`}</tbody></table></div>
   <div class="tr">La «última ubicación» es lo que UC-09 usa para sugerir al técnico más cercano. Sale sola de la llegada que él marca.</div>`;
@@ -705,7 +705,7 @@ const LISTAS = [
   {k:"ubicaciones",   n:"Ubicaciones",        d:"Dónde, dentro de la unidad, se hace el trabajo."},
   {k:"especialidades",n:"Especialidades",     d:"Lo que sabe hacer cada técnico. Al asignar, avisa si el técnico no tiene la que pide el servicio."},
   {k:"tiendas",       n:"Tiendas",            d:"Dónde compran material los técnicos."},
-  {k:"vendedores",    n:"Vendedores",         d:"Quién consiguió la cuenta. Se elige en el formulario de la propiedad."},
+  {k:"vendedores",    n:"Ejecutivos de ventas", d:"Responsable comercial de la cuenta. Se elige en el formulario de la propiedad."},
   {k:"folder",        n:"Estado de carpeta",  d:"En qué quedó la carpeta de fotos de cada trabajo."}
 ];
 const CAT_VISTAS = {

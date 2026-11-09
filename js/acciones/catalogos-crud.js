@@ -1,4 +1,19 @@
 "use strict";
+/* Hoja del contrato de CPS con el técnico (simulada). El texto real llega con el documento del cliente. */
+function contratoHojaHTML(nombre, zona, tel, vin){
+  return `<div style="border:1px solid var(--line);border-radius:8px;padding:18px 22px;background:#fff;color:#222;font-size:12.5px;line-height:1.55">
+      <div style="text-align:center;font-weight:800;letter-spacing:.04em">CORDOVA PROPERTY SERVICES</div>
+      <div style="text-align:center;font-weight:700;margin:2px 0 12px">ACUERDO DE SERVICIOS — ${esc((vin||"Empleado").toUpperCase())}</div>
+      <p><b>Técnico:</b> ${esc(nombre||"(nombre del técnico)")} &nbsp; <b>Zona:</b> ${esc(zona||"")} &nbsp; <b>Tel.:</b> ${esc(tel||"")}</p>
+      <p><b>1. Objeto.</b> [Cláusula de ejemplo: servicios que realizará el técnico para CPS.]</p>
+      <p><b>2. Pago.</b> [Cláusula de ejemplo: forma y fecha de pago.]</p>
+      <p><b>3. Seguro y documentos.</b> [Cláusula de ejemplo: W-9 y seguro/COI.]</p>
+      <p><b>4. Vigencia y terminación.</b> [Cláusula de ejemplo.]</p>
+      <div style="display:flex;justify-content:space-between;margin-top:30px;font-size:11.5px">
+        <div style="border-top:1px solid #444;padding-top:4px;width:44%">Firma del técnico</div>
+        <div style="border-top:1px solid #444;padding-top:4px;width:44%">Firma por CPS</div></div>
+    </div>`;
+}
 Object.assign(ACC, {
 
 
@@ -82,9 +97,9 @@ Object.assign(ACC, {
       <div class="fg c2">
         <div class="fld"><label>Client Status</label><select id="nEst">${op(["Lead","Active","Inactive"], p?estadoProp(p):"Lead")}</select></div>
         <div class="fld"><label>Client Source</label><select id="nOrig">${op(["Llamada","Formulario web","Referido","Visita comercial","Correo"], p?p.origen:"")}</select></div></div>
-      <div class="fld"><label>Vendedor <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional, quién consiguió la cuenta</span></label>
+      <div class="fld"><label>Ejecutivo de ventas <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional, responsable comercial de la cuenta</span></label>
         <select id="nVend"><option value="">— sin asignar —</option>${op(vendedores, vendAct)}</select>
-        ${vendedores.length?"":`<div class="hint">Todavía no hay vendedores: se dan de alta en Catálogos &gt; Vendedores.</div>`}</div>
+        ${vendedores.length?"":`<div class="hint">Todavía no hay ejecutivos de ventas: se dan de alta en Catálogos &gt; Ejecutivos de ventas.</div>`}</div>
       <div class="fg c2">
         <div class="fld"><label>Property Phone Number</label><input id="nTel" class="mono" value="${p?esc(p.tel):""}"></div>
         <div class="fld"><label>Crédito (días)</label><input id="nCred" type="number" min="0" step="1" value="${p?diasCreditoProp(p.id):30}"></div></div>
@@ -375,6 +390,21 @@ Object.assign(ACC, {
         <div class="fld"><label>Notas legales y acuerdos</label>
           <input id="tNotasLegales" placeholder="Póliza, condiciones de pago o notas particulares" value="${t?esc(t.notasLegales||""):""}"></div>
       </div>
+
+      <div style="border-top:1px solid var(--line);margin:14px 0 10px;padding-top:10px">
+        <div style="font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);margin-bottom:4px">Registro del técnico (formulario)</div>
+        <div style="font-size:11.5px;color:var(--soft);margin-bottom:8px">Aquí irán los datos del formulario de registro que llena cada técnico. Campos de ejemplo; se ajustan con el formulario del cliente.</div>
+        <div class="fg c2">
+          <div class="fld"><label>Fecha de ingreso</label><input id="tFIng" type="date" value="${t?esc(t.fIngreso||""):""}"></div>
+          <div class="fld"><label>Contacto de emergencia</label><input id="tFEm" placeholder="Nombre y teléfono" value="${t?esc(t.fEmerg||""):""}"></div></div>
+        <div class="fld"><label>Otros datos del formulario</label><input id="tFOt" placeholder="(se definen con el formulario del cliente)" value="${t?esc(t.fOtros||""):""}"></div>
+        <div class="fld"><label>Contrato / acuerdo</label>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+            <button class="btn sm" data-a="tecContratoPrev">Ver contrato de CPS</button>
+            <input id="tArch" type="file" style="font-size:11.5px;max-width:240px"></div>
+          <div id="tPrev" style="display:none;margin-top:8px"></div>
+          ${t&&t.contratoArchivo?`<div style="font-size:11.5px;color:var(--soft);margin-top:4px">Contrato firmado adjunto: <b>${esc(t.contratoArchivo)}</b></div>`:`<div style="font-size:11px;color:var(--faint);margin-top:4px">Adjunta aquí el contrato o acuerdo firmado (simulado, el archivo no se sube).</div>`}</div>
+      </div>
     </div>
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
       <button class="btn p" data-a="tecGuardar" data-id="${t?t.id:""}">${t?"Guardar corrección":"Guardar"}</button></div>`,true); },
@@ -389,15 +419,32 @@ Object.assign(ACC, {
     const seguro_coi = val("tCoi") || "Pendiente";
     const notasLegales = val("tNotasLegales") || "";
     const esVendor = tipoVinculo === "Vendor externo";
+    const fa = $("#tArch"); const arch = fa && fa.files && fa.files[0] ? fa.files[0].name : "";
 
     const datos = {nombre:val("tN"),apellido:val("tA"),esp,zona:val("tZ"),
       tel:val("tT"),dir:val("tD"),movimiento:val("tMv")==="1",
-      tipoVinculo, contrato_firmado, w9_subido, seguro_coi, notasLegales, esVendor};
+      tipoVinculo, contrato_firmado, w9_subido, seguro_coi, notasLegales, esVendor,
+      fIngreso:val("tFIng"), fEmerg:val("tFEm"), fOtros:val("tFOt"),
+      contratoArchivo: arch || (yo&&yo.contratoArchivo) || ""};
     if(yo) return guardarEdicion(yo, datos, "Técnicos", tecN(yo.id), null, "tec:"+yo.id);
     const nt = {id:"T"+nid("t"), ...datos, nac:"", activo:true};
     S.tecnicos.push(nt); flash("tec:"+nt.id);
     cm(); toast("✓ Técnico dado de alta",`${esc(nt.nombre)} ${esc(nt.apellido)} — ${esc(esp.join(", "))}. Ya aparece al asignar.`,"v"); render();
   },
+
+  /* Contrato de CPS con el técnico: vista previa simulada. El texto real llega con el documento del cliente. */
+  tecContratoVer: d => { const t = T(d.id); if(!t) return;
+    modal(`<div class="mh"><h3>Contrato de CPS — ${esc(tecN(t.id))}</h3><p>Vista previa simulada. El texto final se carga cuando llegue el documento.</p></div>
+    <div class="mb">${contratoHojaHTML(tecN(t.id), t.zona, t.tel, t.tipoVinculo)}
+    <div style="font-size:11.5px;color:var(--soft);margin-top:8px">Estado: ${esc(t.contrato_firmado||"Pendiente")}${t.contratoArchivo?" · Adjunto firmado: "+esc(t.contratoArchivo):" · Sin contrato firmado adjunto"}</div></div>
+    <div class="mf"><button class="btn" data-a="tecNuevo" data-id="${t.id}">Volver a la ficha</button>
+      <button class="btn p" data-a="tecContratoPDF" data-id="${t.id}">Descargar PDF</button></div>`,true); },
+  /* Dentro de la ficha (también al crear): muestra u oculta el contrato con los datos escritos, sin perder lo capturado. */
+  tecContratoPrev: () => { const p = $("#tPrev"); if(!p) return;
+    if(p.style.display !== "none"){ p.style.display = "none"; return; }
+    p.innerHTML = contratoHojaHTML((val("tN")+" "+val("tA")).trim(), val("tZ"), val("tT"), val("tVin"));
+    p.style.display = "block"; },
+  tecContratoPDF: d => { toast("Descarga simulada","El PDF del contrato se genera cuando esté el documento final.","v"); },
 
   tecBuscar: () => { S.tecBuscar = val("tBus"); render(); },
   tecFiltroZona: () => { S.tecFiltroZona = val("tFiltZ"); render(); },

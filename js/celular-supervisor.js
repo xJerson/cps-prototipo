@@ -1,7 +1,7 @@
 "use strict";
 VIEWS.gustavoweb = () => {
-  const t = ["panel","ruta","reportar","dia","devs","buscar"].includes(S.gvTab) ? S.gvTab : "panel";
-  const TABS = [["panel","Hoy"],["ruta","Mi ruta"],["reportar","Reportar"],["dia","Mi día"],["devs","Returns"],["buscar","Buscar"]];
+  const t = ["panel","ruta","reportar","dia","devs","buscar","proceso"].includes(S.gvTab) ? S.gvTab : "panel";
+  const TABS = [["panel","Hoy"],["ruta","Mi ruta"],["reportar","Reportar"],["dia","Mi día"],["devs","Returns"],["buscar","Buscar"],["proceso","Técnicos"]];
   return `
   <div class="ph"><div><h2>Vista de Gustavo</h2>
     <p>Lo mismo que ve en su celular (Supervisor de campo) — como página web, de referencia para cuando se construya la app real.</p></div></div>

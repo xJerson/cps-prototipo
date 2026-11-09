@@ -21,8 +21,11 @@ Object.assign(ACC, {
     /* La vista web de Gustavo (VIEWS.gustavoweb) comparte esta misma pantalla
        de contenido; si un enlace interno salta de pestaña (p.ej. "Visitas
        programadas" → Mi ruta), que salte en las dos, no solo en el celular. */
-    if(["panel","ruta","dia","reportar","devs","buscar"].includes(d.v)) S.gvTab=d.v;
+    if(["panel","ruta","dia","reportar","devs","buscar","proceso"].includes(d.v)) S.gvTab=d.v;
+    S.gTecWO=null;
     render(); },
+  gTecWO: d => { S.gTecWO=+d.id; render(); },
+  gTecWOCerrar: () => { S.gTecWO=null; render(); },
   fAbrir: d => { S.phView="wo"; S.phWO=+d.id; render(); },
   fSubAbrir: d => { S.phView="subwo"; S.phSub=+d.id; render(); },
   fSubIniciar: d => {

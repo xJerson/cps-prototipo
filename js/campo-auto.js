@@ -1428,7 +1428,7 @@ function campoProgramar(seg){
 }
 /* Lo llama bootstrap.js al terminar cada acción (ya con guardado) */
 const CAMPO_NO_DISPARAN = new Set(["campoAutoModo","campoAutoPerfil","campoResponderWO","campoPregRegistrar","campoPregOmitir","campoPregModo","ir","tab","cm","pop","pcl","campana",
-  "campoLogVer","campoLogFiltro","campoLogLimpiar","avLeidos","temaToggle","fView","fAbrir","fSubAbrir","fSheetNo","coachOff","coachOn","ayudaVistaToggle","gvTab","phTecPick","verTecnicoCel"]);
+  "campoLogVer","campoLogFiltro","campoLogLimpiar","avLeidos","temaToggle","fView","fAbrir","fSubAbrir","fSheetNo","coachOff","coachOn","ayudaVistaToggle","gvTab","phTecPick","verTecnicoCel","gTecWO","gTecWOCerrar"]);
 function campoAutoTrasAccion(k){
   try{
     if(CAMPO_NO_DISPARAN.has(k)) return;

@@ -892,7 +892,7 @@ function gustavoScreenHTML(view){
       + `<div class="dl" style="margin-top:10px">Lo que tengo hoy</div>
          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
            ${panelCell(IC_RUTA, `${vis}/${ag.length}`, "Visitas programadas para hoy", "#1f4e79", "fView", 'data-v="ruta"')}
-           ${panelCell(IC_PROCESO, enProceso().length, "Servicios en proceso", "#0d9488", "fView", 'data-v="proceso"')}
+           ${panelCell(IC_PROCESO, new Set(S.wos.filter(w=>w.estado==="In progress"&&w.tec).map(w=>w.tec)).size, "Técnicos en campo", "#0d9488", "fView", 'data-v="proceso"')}
            ${panelCell(IC_DEVS, dvPend.length, "Returns abiertos", dvPend.length?"#9b2226":"#8a97a4", "fView", 'data-v="devs"')}
            ${panelCell(IC_DIA, pendDia().length, "Actividades pendientes del reporte diario", "#8a5a00", "fView", 'data-v="dia"')}
            ${panelCell(IC_SUPERVISAR, porSupervisar().length, "Unidades pendientes de supervisión", "#1e5c3a")}
@@ -1157,27 +1157,58 @@ function gustavoScreenHTML(view){
      orden. El estado se traduce a SU vocabulario: el Excel los tiene en
      ingles y ella nombro otros seis. */
   else if(view==="proceso"){
-    const ws = serviciosEnProceso();
-    h = `<div class="note v" style="margin-top:5px"><b>Solo lectura</b> — lo que los técnicos tienen en curso ahora mismo, con su avance. No se edita desde aquí.</div>`
-      + `<div class="dl" style="margin-top:8px">Servicios en proceso (${ws.length})</div>`
-      + (ws.length ? ws.map(w=>{
-        const e = estadoSup(w), av = w.avance||0;
-        return `<div class="dc" style="border-left:3px solid ${e.c}">
+    const wSel = S.gTecWO ? W(S.gTecWO) : null;
+    if(wSel){
+      /* Detalle de la WO que el técnico tiene a la mano: solo lectura */
+      const e = estadoSup(wSel), av = wSel.avance||0, as = asisDe(wSel.id);
+      h = `<button class="db g" style="margin:5px 0 9px;padding:7px;font-size:11.5px" data-a="gTecWOCerrar">‹ Volver a los técnicos</button>
+        <div class="dc" style="border-left:3px solid ${e.c}">
           <div style="display:flex;justify-content:space-between;gap:6px;align-items:center">
-            <div class="dh" style="font-size:12px">${esc(P(w.prop).nombre)} · ${U(w.unidad)?esc(U(w.unidad).num):"—"}</div>
+            <div class="dh" style="font-size:12.5px">WO-${wSel.id} · ${esc(wSel.serv)}</div>
             <span class="dtag" style="background:${e.c};color:#fff;flex:none">${esc(e.n)}</span></div>
-          <div class="ds" style="margin-top:3px"><b>${esc(w.serv)}</b> · WO-${w.id}</div>
-          <div class="ds" style="margin-top:2px">${esc(tecN(w.tec))}</div>
-          <div class="ds" style="margin-top:2px">Inicio ${esc(w.fecha)} · Entrega ${w.fechaEntrega?esc(w.fechaEntrega):"<b>sin fecha</b>"}</div>
+          <div class="ds" style="margin-top:4px"><b>${esc(P(wSel.prop).nombre)}</b> · ${U(wSel.unidad)?esc(U(wSel.unidad).num):"—"}</div>
+          <div class="ds" style="margin-top:2px">${esc(P(wSel.prop).dir||"")}</div>
+          <div class="ds" style="margin-top:2px">Técnico: <b>${esc(tecN(wSel.tec))}</b></div>
+          <div class="ds" style="margin-top:2px">Día ${esc(wSel.fecha)}${as?` · Llegó ${esc(as.horaReal)}`:" · Aún no marca llegada"}${wSel.fechaEntrega?` · Entrega ${esc(wSel.fechaEntrega)}`:""}</div>
           <div style="display:flex;align-items:center;gap:7px;margin-top:6px">
-            <div style="flex:1;height:6px;background:#eef1f4;border-radius:99px;overflow:hidden">
-              <div style="width:${av}%;height:100%;background:${e.c}"></div></div>
+            <div style="flex:1;height:6px;background:#eef1f4;border-radius:99px;overflow:hidden"><div style="width:${av}%;height:100%;background:${e.c}"></div></div>
             <span class="dtag" style="background:#f0f2f4;color:#5b6875;flex:none">${av}%</span></div>
-          ${w.avanceNota?`<div class="ds" style="margin-top:5px;color:var(--ambar)">«${esc(w.avanceNota)}»</div>`:""}
-          <div class="ds" style="margin-top:4px;font-size:10.5px">${w.avanceFotos||0} foto(s) del progreso</div>
-        </div>`;}).join("")
-        : `<div class="dc" style="border-style:dashed"><div class="ds" style="text-align:center">
-            Ningún servicio en proceso ahora mismo.</div></div>`);
+          ${wSel.avanceNota?`<div class="ds" style="margin-top:5px;color:var(--ambar)">«${esc(wSel.avanceNota)}»</div>`:""}
+          <div class="ds" style="margin-top:4px;font-size:10.5px">${wSel.avanceFotos||0} foto(s) del progreso</div>
+        </div>
+        <div class="dc"><div class="dl" style="margin:0 0 5px">Movimientos de la WO</div>
+          ${(wSel.hist||[]).slice(-6).reverse().map(x=>`<div class="ds" style="margin-top:3px"><b>${esc(x[0])}</b> · ${esc(x[1])}${x[2]?` <span style="color:var(--faint)">— ${esc(x[2])}</span>`:""}</div>`).join("")||`<div class="ds">Sin movimientos todavía.</div>`}</div>`;
+    } else {
+      /* Una tarjeta por técnico: en qué está hoy y en qué WO */
+      const tecs = S.tecnicos.filter(t=>t.activo && t.id!==GUSTAVO);
+      const filas = tecs.map(t=>{
+        const hoy = S.wos.filter(w=>w.tec===t.id && w.fecha===HOY_SUP);
+        const act = hoy.find(w=>w.estado==="In progress") || hoy.find(w=>["Detenido","Esperando aprobación"].includes(w.estado));
+        const hechas = hoy.filter(w=>w.estado==="Completed");
+        const sig = hoy.find(w=>["Scheduled","Confirmed","Pending"].includes(w.estado));
+        const baja = S.disponibilidad.find(d=>d.tec===t.id && d.estado==="Aprobado" && d.desde<=HOY_SUP && d.hasta>=HOY_SUP);
+        let est, col, wo=null, nota="";
+        if(act){ est = act.estado==="In progress"?"Trabajando":estadoSup(act).n; col = estadoSup(act).c; wo = act; }
+        else if(baja){ est = "No disponible"; col = "#8a5a00"; nota = baja.motivo; }
+        else if(sig){ est = "Aún no llega"; col = "#8a97a4"; wo = sig; }
+        else if(hechas.length){ est = "Terminó hoy"; col = "#1e5c3a"; wo = hechas[hechas.length-1]; const as=asisDe(wo.id); nota = "Último trabajo"+(as?" · llegó "+as.horaReal:""); }
+        else { est = "Sin trabajos hoy"; col = "#8a97a4"; }
+        return {t, est, col, wo, nota, n:hoy.length};
+      });
+      const trab = filas.filter(f=>f.est==="Trabajando").length;
+      h = `<div class="note v" style="margin-top:5px"><b>Solo lectura</b> — dónde está cada técnico hoy según la WO que tiene. Toca uno para ver el detalle de su WO.</div>`
+        + `<div class="dl" style="margin-top:8px">Técnicos (${trab} trabajando ahora)</div>`
+        + (filas.length ? filas.map(f=>`<div class="dc" style="border-left:3px solid ${f.col};${f.wo?"cursor:pointer":""}" ${f.wo?`data-a="gTecWO" data-id="${f.wo.id}"`:""}>
+            <div style="display:flex;justify-content:space-between;gap:6px;align-items:center">
+              <div class="dh" style="font-size:12.5px">${esc(tecN(f.t.id))}</div>
+              <span class="dtag" style="background:${f.col};color:#fff;flex:none">${esc(f.est)}</span></div>
+            ${f.wo?`<div class="ds" style="margin-top:3px"><b>${esc(P(f.wo.prop).nombre)}</b> · ${U(f.wo.unidad)?esc(U(f.wo.unidad).num):"—"}</div>
+              <div class="ds" style="margin-top:2px">${esc(f.wo.serv)} · WO-${f.wo.id} · ${esc(estadoSup(f.wo).n)}</div>`:""}
+            ${f.nota?`<div class="ds" style="margin-top:2px;color:var(--faint)">${esc(f.nota)}</div>`:""}
+            ${f.n>1?`<div class="ds" style="margin-top:2px;font-size:10.5px">${f.n} trabajos hoy</div>`:""}
+          </div>`).join("")
+          : `<div class="dc" style="border-style:dashed"><div class="ds" style="text-align:center">No hay técnicos activos.</div></div>`);
+    }
   }
 
   /* ── BUSCAR POR UNIDAD Y VER HISTORIAL ──
