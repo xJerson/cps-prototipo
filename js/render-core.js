@@ -110,10 +110,10 @@ function ayudaContexto(){
       let sel, extra="Toca el botón de esa fila para completarlo.";
       if(falta.k==="contacto") sel=`[data-a="conNuevo"][data-prop="${pid}"]`;
       else if(falta.k==="coi") sel=`[data-a="coiDirecto"][data-id="${pid}"]`;
-      else if(falta.k==="estimado"){
-        const solL = S.solicitudesComerciales.find(sc=>sc.prop===pid && sc.estado!=="Estimado creado" && sc.estado!=="Descartada");
-        if(solL){ sel=`[data-a="solComEstimado"][data-id="${solL.id}"]`; extra="Toca «Crear estimado» — ya hay una Solicitud Comercial esperando."; }
-        else { sel=`[data-a="ir"][data-m="solicitudes"]`; extra="Primero registra una Solicitud Comercial de esta propiedad."; }
+      else if(falta.k==="tarifario"){
+        const tfAll = S.tarifas.filter(t=>t.prop===pid && !tarOculta(t));
+        if(!tfAll.length){ sel=`[data-a="preciosDesdeGeneral"][data-id="${pid}"]`; extra="Toca «Crear lista completa» para importar la plantilla de tarifas."; }
+        else { sel=`[data-a="precLlenar"][data-id="${pid}"]`; extra="Toca «Llenar precios» para completar las tarifas pendientes."; }
       }
       else sel=`[data-a="propNueva"][data-id="${pid}"][data-f="${falta.k}"]`;
       return {sel, txt:`Falta «${falta.n}». ${extra}`};
@@ -478,7 +478,7 @@ const AYUDA_VISTA = {
       "Un <b>prospecto</b> aprobado se pasa a cliente con «Convertir en cliente» (crea la propiedad con sus datos); recién ahí se puede transferir a programación."]},
   propiedades:{t:"Propiedades", d:"Cada edificio o complejo, con todo lo suyo adentro: unidades, contactos, seguro, precios.",
     tips:["Haz clic en cualquier fila para abrir la ficha de esa propiedad.","Adentro, la pestaña «Expediente» te marca lo que falta para poder agendar.","«+ Nueva propiedad» solo pide nombre y dirección — el resto se completa después entrando a la ficha.","En la ficha: «Crédito» (dinero, con unidad opcional) y «Créditos de servicio» (cortesías, p. ej. Full clean × 2). Se usan desde el borrador de factura."]},
-  tecnicos:{t:"Técnicos", d:"El equipo: quién está hoy en campo, la lista completa y el historial de asistencia.",
+  tecnicos:{t:"Técnicos", d:"El equipo: quién está hoy en campo y la lista completa de técnicos.",
     tips:["Haz clic en una fila para ver o corregir un técnico.","«+ Nuevo técnico» lo da de alta."]},
   tarifario:{t:"Tarifario", d:"Los precios generales: los que aplican a cualquier propiedad que no tenga un precio propio negociado.",
     tips:["«+ Nueva tarifa» agrega uno.","Haz clic en «Editar» para modificar uno existente.","La llave es Servicio + Rooms + Piso."]},

@@ -921,11 +921,10 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
   },
   tarPDF: () => {
     const fp=S.tarFp||"", ts=tarSeleccion();
-    if(!fp){ S.audOmitir=true; toast("Elige una propiedad","El PDF es la lista de una propiedad. Elígela arriba, en «Propiedad».","w"); return; }
     if(!ts.length){ S.audOmitir=true; toast("Sin precios marcados","Marca al menos un precio para generar el PDF.","r"); return; }
-    if(vigHayProgramada(fp)){ S.audOmitir=true; vigPdfModal(fp, ts); return; }
-    S._audTar = `${P(fp).nombre} · ${ts.length} precio(s)`;
-    pdfListaPrecios(fp, ts);
+    if(fp && vigHayProgramada(fp)){ S.audOmitir=true; vigPdfModal(fp, ts); return; }
+    S._audTar = `${fp ? P(fp).nombre : "Tarifario general"} · ${ts.length} precio(s)`;
+    pdfListaPrecios(fp||null, ts);
   },
   /* Llenar precios: una tabla con todas las filas de la propiedad (las «por llenar» primero) y un solo Guardar. */
   precLlenar: d => {

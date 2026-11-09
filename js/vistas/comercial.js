@@ -7,7 +7,7 @@ const EXPEDIENTE = [
   {k:"pref",    n:"Default Contact Method"},
   {k:"coi",     n:"COI vigente"},
   {k:"contacto",n:"Al menos un contacto"},
-  {k:"estimado",n:"Estimado aprobado"},
+  {k:"tarifario",n:"Tarifario completo"},
   {k:"notas",   n:"Notas del proyecto"},
   /* Del flujograma de Estimados: el expediente son 9 elementos, y este era
      el único que el checklist no contaba — el dato ya existía en la
@@ -21,27 +21,29 @@ function expedienteDe(pid){
     ...c,
     ok: c.k==="contacto" ? S.contactos.some(x=>x.prop===pid)
       : c.k==="coi" ? coiVigente(pid)
-      : c.k==="estimado" ? S.estimados.some(e=>e.prop===pid && e.estado==="Aprobado")
+      : c.k==="tarifario" ? (()=>{
+          const tfAll = S.tarifas.filter(t=>t.prop===pid && !tarOculta(t));
+          const tf = tfAll.filter(tarActiva).length, porLlenar = tfAll.length - tf;
+          return tf > 0 && !porLlenar;
+        })()
       : c.k==="zona" ? !!String(ciudadProp(p)).trim()
       : c.k==="notasPaint" ? (!!String(p.notasPaint||"").trim() || (S.pinturas||[]).some(x=>x.prop===pid))
       : !!String(p[c.k]||"").trim()
   }));
 }
-/* "Servicio directo" (la visita que salta la llamada de negociar) exigía
-   igual un Estimado aprobado antes de dejar pasar la propiedad — pero esa
-   es justo la llamada que "Servicio directo" promete que no hace falta.
+/* "Servicio directo" (la visita que salta la llamada de negociar) puede
+   eximir temporalmente el tarifario completo para acelerar el pase —
    sinEstimado=true se usa SOLO en ese camino: el resto del Expediente
-   (COI, contacto...) sigue exigiéndose igual — y el camino normal
-   ("Requiere estimado", Transferir a programación) no cambia.
-   El Price List ya NO es parte del Expediente: el precio nace en el
-   estimado y el tarifario nunca bloquea (ver "Al tarifario"). */
+   (COI, contacto...) sigue exigiéndose igual.
+   El cliente pide en REQ_FINAL que el Expediente valide "Tarifario completo"
+   alimentado por la base de datos de costos / plantilla de servicios globales. */
 /* Reunión 2026-09-09: las Unidades dejaron de ser requisito para el
    Expediente. No es un bloqueo antes — es un catálogo que se va llenando
    solo conforme se crean Work Orders y Estimados (ver "+ Nueva unidad…"
    en esos formularios), nunca algo que haya que precargar a mano primero. */
 const expedienteOK = (pid, opts) => {
   const sinEstimado = opts && opts.sinEstimado;
-  return expedienteDe(pid).every(c=>c.ok || (sinEstimado && c.k==="estimado"));
+  return expedienteDe(pid).every(c=>c.ok || (sinEstimado && c.k==="tarifario"));
 };
 
 /* ── EXCEPCIONES ── la compuerta antes de cerrar la semana ── */

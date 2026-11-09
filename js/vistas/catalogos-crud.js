@@ -63,23 +63,28 @@ function fichaProp(id){
       <td style="color:${c.ok?"var(--soft)":"var(--rojo)"}">${c.ok
         ? esc(c.k==="contacto" ? S.contactos.filter(x=>x.prop===id).length+" contacto(s)"
             : c.k==="coi" ? p.polizas.length+" póliza(s)"
-            /* "estimado" tampoco es un campo de la propiedad (p[c.k] no
-               existe ahí) — mostraba literal "undefined" en vez del dato
-               real. Se trata aparte, como los contactos y el COI. */
-            : c.k==="estimado" ? (S.estimados.find(e=>e.prop===id && e.estado==="Aprobado")||{}).num+" aprobado"
+            : c.k==="tarifario" ? (()=>{
+                const tfAll = S.tarifas.filter(t=>t.prop===id && !tarOculta(t));
+                const tf = tfAll.filter(tarActiva).length, porLlenar = tfAll.length - tf;
+                return `${tf} precio(s)${porLlenar ? " · " + porLlenar + " por llenar" : ""}`;
+              })()
             : c.k==="zona" ? ciudadProp(p)
             : String(p[c.k]))
-        : "falta"}</td>
+        : (c.k==="tarifario" ? (()=>{
+            const tfAll = S.tarifas.filter(t=>t.prop===id && !tarOculta(t));
+            const tf = tfAll.filter(tarActiva).length, porLlenar = tfAll.length - tf;
+            return tfAll.length ? `${tf} precio(s) · ${porLlenar} por llenar` : "sin lista";
+          })() : "falta")}</td>
       <td style="text-align:right">${c.ok?"":(c.k==="contacto"
         ? `<button class="btn sm p" data-a="conNuevo" data-prop="${id}">+ Contacto</button>`
         : c.k==="coi" ? `<button class="btn sm p" data-a="coiDirecto" data-id="${id}">Registrar COI</button>`
-        /* "Estimado aprobado" no es un campo de la propiedad (nombre,
-           dirección, etc.) — es un dato de otra colección. "Completar" lo
-           mandaba al formulario de "Editar propiedad", que no tiene ningún
-           campo para eso: el botón parecía funcionar pero no resolvía nada. */
-        : c.k==="estimado" ? (solLista
-            ? `<button class="btn sm p" data-a="solComEstimado" data-id="${solLista.id}" title="Ya hay una Solicitud Comercial de esta propiedad esperando — arma el estimado desde ahí">Crear estimado</button>`
-            : `<button class="btn sm p" data-a="ir" data-m="solicitudes" title="El estimado nace de una Solicitud Comercial — regístrala primero">Registrar Solicitud Comercial</button>`)
+        : c.k==="tarifario" ? (()=>{
+            const tfAll = S.tarifas.filter(t=>t.prop===id && !tarOculta(t));
+            const tf = tfAll.filter(tarActiva).length, porLlenar = tfAll.length - tf;
+            if(!tfAll.length) return `<button class="btn sm p" data-a="preciosDesdeGeneral" data-id="${id}">Crear lista completa</button>`;
+            if(porLlenar) return `<button class="btn sm p" data-a="precLlenar" data-id="${id}">Llenar precios</button>`;
+            return "";
+          })()
         : `<button class="btn sm p" data-a="propNueva" data-id="${id}" data-f="${c.k}">Completar</button>`)}</td></tr>`).join("")}
     <tr><td><span class="pill a">i</span></td>
       <td style="font-weight:500">Unidades registradas</td>
@@ -300,7 +305,7 @@ VIEWS.tecnicos = () => {
     <div class="act"><button class="btn p" data-a="tecNuevo">+ Nuevo técnico</button></div></div>
   <div class="tabs">${[["campo","Hoy en campo"],["lista","Lista de técnicos"]]
     .map(([k,n])=>`<button class="tab ${t===k?"on":""}" data-a="tab" data-t="${k}">${n}</button>`).join("")}</div>
-  ${t==="campo"?vCampo():t==="asis"?vAsis():vTecLista()}`;
+  ${t==="lista"?vTecLista():vCampo()}`;
 };
 
 function vCampo(){
@@ -325,7 +330,6 @@ function vCampo(){
 
   const llegaron = hoy.filter(w=>asisDe(w.id)).length;
   const sinLlegar = hoy.filter(w=>!asisDe(w.id) && esAgendada(w.estado)).length;
-  const tarde = hoy.filter(w=>{ const a=asisDe(w.id); return a && a.puntualidad==="Tarde"; }).length;
 
   return `
   <div class="card" style="margin-bottom:12px"><div class="cp" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center">
@@ -354,41 +358,24 @@ function vCampo(){
     <div class="kpi"><div class="l">Trabajos en filtro</div><div class="v">${hoy.length}</div></div>
     <div class="kpi"><div class="l">Ya llegaron</div><div class="v g">${llegaron}</div></div>
     <div class="kpi"><div class="l">Sin marcar llegada</div><div class="v ${sinLlegar?"w":""}">${sinLlegar}</div></div>
-    <div class="kpi"><div class="l">Llegaron tarde (con hora)</div><div class="v ${tarde?"b":""}">${tarde}</div></div>
   </div>
-  <div class="card"><div class="chd"><h3>Quién llegó, cuándo y dónde está</h3>
-    <span class="s">La puntualidad solo se evalúa contra Work Orders que tienen hora programada</span></div>
+  <div class="card"><div class="chd"><h3>Trabajos y técnicos en campo</h3>
+    <span class="s">Seguimiento de órdenes programadas y avance por propiedad</span></div>
     ${hoy.length?`<table>
-      <thead><tr><th>Técnico</th><th>WO</th><th>Propiedad · Unidad</th><th>Día</th><th>Tipo</th><th>Zona</th><th>Horario programado</th><th>Llegada real</th><th>Puntualidad</th><th>Estado</th><th>Última ubicación</th></tr></thead>
+      <thead><tr><th>Técnico</th><th>WO</th><th>Propiedad</th><th>Unidad</th><th>Día</th><th>Tipo de servicio</th><th>Estado</th><th>Zona</th></tr></thead>
       <tbody>${hoy.map(w=>{
-        const a=asisDe(w.id);
         return `<tr class="cl${fl("wo:"+w.id)}" data-a="woVer" data-id="${w.id}">
           <td style="font-weight:650">${esc(tecN(w.tec))}</td>
           <td class="mono" style="font-weight:700">WO-${w.id}</td>
-          <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td>
-          <td>${esc(w.fecha)}</td><td>${esc(w.cat)}</td><td>${esc(ciudadProp(P(w.prop)))}</td>
-          <td class="mono">${w.horaProg ? esc(w.horaFin?`${w.horaProg}–${w.horaFin}`:w.horaProg) : '<span style="color:var(--faint)">—</span>'}</td>
-          <td class="mono">${a?`<b>${esc(a.horaReal)}</b>`:'<span style="color:var(--faint)">—</span>'}</td>
-          <td style="white-space:nowrap">${a?`<span class="pill ${a.puntualidad==="Tarde"?"w":a.puntualidad==="Declarada"?"m":"v"}"><span class="dot"></span>${esc(a.puntualidad)}</span>`
-                 :'<span class="pill g">sin marcar</span>'}</td>
+          <td>${esc(P(w.prop).nombre)}</td>
+          <td>${esc(U(w.unidad).num)}</td>
+          <td>${esc(w.fecha)}</td>
+          <td>${esc(w.cat)}${w.serv?` · <span style="color:var(--soft)">${esc(w.serv)}</span>`:""}</td>
           <td><span class="pill ${estP(w.estado)}"><span class="dot"></span>${esc(w.estado)}</span></td>
-          <td style="font-size:11.5px;color:var(--soft)">${a?esc(a.ubicacion):'<span style="color:var(--faint)">sin dato</span>'}</td></tr>`;
+          <td>${esc(ciudadProp(P(w.prop)))}</td></tr>`;
       }).join("")}</tbody></table>`:`<div class="empty">No hay trabajos que coincidan con los filtros seleccionados</div>`}
   </div>
-  <div class="tr">La llegada la marca el técnico desde su celular. No se inventa horario ficticio: solo se evalúa retraso si la orden tenía hora explícita.</div>`;
-}
-
-function vAsis(){
-  return `<div class="card"><div class="chd"><h3>Historial de asistencia</h3>
-    <span class="s">${S.asistencias.length} registros</span></div>
-    ${S.asistencias.length?`<table><thead><tr><th>Fecha</th><th>Técnico</th><th>WO</th><th>Programada</th><th>Llegó</th><th>Puntualidad</th><th>Ubicación</th></tr></thead>
-    <tbody>${S.asistencias.slice().reverse().map(a=>`<tr>
-      <td class="mono">${esc(a.fecha)}</td><td style="font-weight:650">${esc(tecN(a.tec))}</td>
-      <td class="mono">WO-${a.wo}</td><td class="mono">${esc(a.horaProg)}</td><td class="mono"><b>${esc(a.horaReal)}</b></td>
-      <td><span class="pill ${a.puntualidad==="Tarde"?"w":a.puntualidad==="Declarada"?"m":"v"}">${esc(a.puntualidad)}</span></td>
-      <td style="font-size:11.5px;color:var(--soft)">${esc(a.ubicacion)}</td></tr>`).join("")}
-    </tbody></table>`:`<div class="empty">Todavía nadie ha marcado llegada.<br><span style="font-size:12px">Abre el celular del técnico y toca «Ya llegué».</span></div>`}
-  </div>`;
+  <div class="tr">La llegada la marca el técnico desde su celular cuando llega a la propiedad.</div>`;
 }
 
 const vTecLista = () => {
@@ -451,7 +438,7 @@ const vTecLista = () => {
   <div class="tr">La «última ubicación» es lo que UC-09 usa para sugerir al técnico más cercano. Sale sola de la llegada que él marca.</div>`;
 };
 
-/* ── TARIFARIO ── Ingreso Fijo + Ingreso Variable, juntos ── */
+/* ── TARIFARIO ── Lista de precios ── */
 /* Lista de precios que se ve y se envía: la general, o la de una propiedad (sus tarifas propias reemplazan a la general del mismo servicio). */
 function listaPrecios(prop, tipo, fecha){
   const llave = t => [t.cat,t.serv,t.variante,t.pisos,t.banos].join("|");
@@ -590,7 +577,7 @@ VIEWS.tarifario = () => {
   const enviadas=(S.listasPrecio||[]).slice(0,6);
   return `
   <div class="ph"><div><h2>Tarifario</h2>
-    <p>${fp?`Lista de precios de <b>${esc(P(fp).nombre)}</b>: sus tarifas propias y las generales que no tiene negociadas.`:`Precios generales, de <code>Ingreso Fijo</code> — aplican a toda propiedad que no tenga una negociada aparte.`}</p></div>
+    <p>${fp?`Lista de precios de <b>${esc(P(fp).nombre)}</b>: sus tarifas propias y las generales que no tiene negociadas.`:`Precios generales — aplican a toda propiedad que no tenga una negociada aparte.`}</p></div>
     <div class="act"><button class="btn p" data-a="tarNueva">+ Nueva tarifa</button></div></div>
   ${vigFrase}
   <div class="card" style="margin-bottom:10px"><div class="cp" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
@@ -602,7 +589,7 @@ VIEWS.tarifario = () => {
     ${fp||ft||fs?`<button class="btn sm" data-a="tarFiltroQuitar">Quitar filtros</button>`:""}
     ${!fp?`<button class="btn sm" data-a="vigAbrir" data-id="" title="Prepara una lista general nueva con fecha de entrada, sin tocar los precios de hoy">Preparar cambio de precios</button>`:""}
     <span style="margin-left:auto;font-size:12px;color:var(--soft)">${sel.length} de ${ts.length} precio(s) marcados</span>
-    ${fp?`<button class="btn" data-a="tarPDF" ${sel.length?"":"disabled"}>Descargar PDF${sel.length?` (${sel.length})`:""}</button>`:""}
+    <button class="btn" data-a="tarPDF" ${sel.length?"":"disabled"}>Descargar PDF${sel.length?` (${sel.length})`:""}</button>
     <button class="btn p" data-a="tarEnviar" ${sel.length?"":"disabled"}>Enviar lista de precios${sel.length?` (${sel.length})`:""}</button>
   </div></div>
   <div class="card"><table>

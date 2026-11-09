@@ -221,7 +221,8 @@ Object.assign(ACC, {
     const gcId="GC"+(S.gastosCompartidos.reduce((m,x)=>Math.max(m,parseInt(String(x.id).replace(/^GC/,""),10)||0),0)+1);
     S.gastosCompartidos.unshift({id:gcId,tipo,concepto:tipo==="Fuel"?"Fuel loaded by Gustavo":tipo,monto,fecha:sh.fecha||HOY_SUP,
       vehiculo:sh.veh,evidencia:true,foto:sh.foto,notas:sh.nota||"",asignaciones:[],quien:"Gustavo"});
-    S.phSheet=null; toast("✓ Guardado",`${esc(sh.tipo)} · ${money(monto)}. Ya está en Finanzas.`,"v"); render(); },
+    avisar("Lydia","Recibo de gasolina de Gustavo",`${sh.veh||"Vehiculo"}: ${money(monto)}${sh.nota?" — "+esc(sh.nota):""}.`,"v");
+    S.phSheet=null; toast("✓ Guardado",`${esc(sh.tipo)} · ${money(monto)}. Enviado a Lydia.`,"v"); render(); },
   fCompraMaterial: d => { S.phSheet={t:"compra", wo:+d.id, tienda:CAT.tiendas[0], filas:[filaCompra()], total:"", foto:null}; render(); },
   fCompraFoto: () => { leerCompra(); const sh=S.phSheet; if(!sh||sh.t!=="compra") return;
     capturarFoto(url=>{ sh.foto=url; render(); }); },

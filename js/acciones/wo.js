@@ -649,7 +649,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     w.hist.push([hora(),"Asignada a "+tecN(d.tec),S.usuario]);
     cm();
     toast("✓ Asignada",`WO-${w.id} → <b>${esc(tecN(d.tec))}</b>. Le salió el aviso a su app. La orden sigue en <b>${w.estado}</b>: asignar no cambia el estado.`,"v");
-    noti("Nueva Work Order",`${P(w.prop).nombre} · ${U(w.unidad).num} — ${w.serv} · ${w.fecha} ${w.horaProg||"9:00"}`);
+    noti("Nueva Work Order",`${P(w.prop).nombre} · ${U(w.unidad).num} — ${w.serv} · ${w.fecha}${w.horaProg ? " " + horaVentanaWO(w) : ""}`);
     flash("wo:"+w.id);
     S.phTec=d.tec; S.phView="agenda"; render();
   },
@@ -1011,7 +1011,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     const idTU = Math.max(ID.w, ...S.wos.map(x=>x.id)) + 1; ID.w = idTU;   // sube el contador: la próxima WO nueva no repite este número
     const w = {id: idTU, prop:dv.prop, unidad:dv.unidad,
       cat: orig?orig.cat:activos("categorias")[0], serv: val("tuS"), tec,
-      estado:"Scheduled", semana:S.semana, fecha:val("tuF"), horaProg:"9:00", po:"",
+      estado:"Scheduled", semana:S.semana, fecha:val("tuF"), horaProg:"", po:"",
       asistencia:false, evid:0, mats:[], notas:"", notasTec:"",
       /* marcas propias del touch-up */
       touchup:true, facturable:false, devOrigen:dv.id, woOrigen:dv.wo,

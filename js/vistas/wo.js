@@ -144,7 +144,7 @@ VIEWS.wo = () => {
       return `<tr class="cl${fl("wo:"+w.id)}" data-a="woVer" data-id="${w.id}"${propia?"":' style="opacity:.65"'}>
         ${selMode?`<td><input type="checkbox" data-a="pendSel" data-id="${w.id}" ${sel.includes(w.id)?"checked":""}></td>`:""}
         <td class="mono" style="font-weight:700">WO-${w.id}</td>
-        <td class="mono">${w.fecha?w.fecha.slice(5):"sin fecha"}</td><td class="mono">${w.fecha?esc(w.horaProg||"9:00"):"—"}</td><td class="mono">${w.semana==null?"—":w.semana}</td>
+        <td class="mono">${w.fecha?w.fecha.slice(5):"sin fecha"}</td><td class="mono">${w.fecha?esc(horaVentanaWO(w)):"—"}</td><td class="mono">${w.semana==null?"—":w.semana}</td>
         <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td>
         <td>${ciudadProp(P(w.prop))?`<span class="pill g">${esc(ciudadProp(P(w.prop)))}</span>`:"—"}</td>
         <td>${esc(U(w.unidad).rooms)}</td>
@@ -169,7 +169,7 @@ VIEWS.wo = () => {
           return `<tr class="cl${recienAbierta?" subwo":""}" data-a="woVerSub" data-id="${w.id}" data-lid="${a.id}" title="Abrir WO-${w.id} en esta Sub-WO" style="background:var(--surface-2)">
             ${selMode?"<td></td>":""}
             <td class="mono" style="font-weight:700;padding-left:22px">↳ WO-${w.id} · Sub ${n}</td>
-            <td class="mono">${fe.slice(5)}</td><td class="mono">${esc(w.horaProg||"9:00")}</td><td class="mono">${semanaDe(fe)}</td>
+            <td class="mono">${fe.slice(5)}</td><td class="mono">${esc(horaVentanaWO(w))}</td><td class="mono">${semanaDe(fe)}</td>
             <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td>
             <td>${esc(ciudadProp(P(w.prop))||"—")}</td>
             <td>${esc(U(w.unidad).rooms)}</td>
@@ -555,7 +555,7 @@ function trazaWO(w){
       `${esc(p.nombre)} · ${esc(U(w.unidad).num)} · ${esc(w.serv)}`,
       `${esc(w.hist[0]?w.hist[0][2]:"")} · ${esc(w.hist[0]?w.hist[0][0]:"")}`)}
     ${paso(!!w.tec,"Técnico asignado",
-      w.tec?`<b>${esc(tecN(w.tec))}</b> · ${w.fecha} ${esc(w.horaProg||"9:00")}`:"Todavía sin asignar",
+      w.tec?`<b>${esc(tecN(w.tec))}</b> · ${w.fecha}${w.horaProg ? " " + esc(horaVentanaWO(w)) : ""}`:"Todavía sin asignar",
       w.tec?esc((w.hist.find(h=>h[1].includes("Asignada"))||[])[2]||""):null)}
     ${paso(!!a,"Llegada a la propiedad",
       a?`Programada ${esc(a.horaProg)} · llegó <b>${esc(a.horaReal)}</b> · ${esc(a.puntualidad)}`:"Sin marcar",
@@ -597,7 +597,7 @@ function trazaWO(w){
 function filaWOAgenda(w){
   const pr=P(w.prop), un=U(w.unidad);
   return `<tr class="cl" data-a="woVer" data-id="${w.id}">
-    <td class="mono">${esc(w.horaProg||"9:00")}</td>
+    <td class="mono">${esc(horaVentanaWO(w))}</td>
     <td>${esc(pr.nombre)} · ${esc(un.num)}</td>
     <td>${esc(w.serv)}</td>
     <td>${w.tec?esc(tecN(w.tec)):'<span class="pill w">sin asignar</span>'}</td>
@@ -665,7 +665,7 @@ function vistaSemanal(sem){
 }
 
 function vistaDiaria(dia){
-  const ws = S.wos.filter(w=>w.fecha===dia && w.estado!=="Canceled").sort((a,b)=>(a.horaProg||"9:00").localeCompare(b.horaProg||"9:00"));
+  const ws = S.wos.filter(w=>w.fecha===dia && w.estado!=="Canceled").sort((a,b)=>(a.horaProg||"").localeCompare(b.horaProg||""));
   return `
   <div class="card">
     <div class="chd"><h3>${dia||"— elige un día —"}</h3>
@@ -677,7 +677,7 @@ function vistaDiaria(dia){
 }
 
 function vistaRango(per){
-  const ws = S.wos.filter(w=>w.estado!=="Canceled" && enPeriodo(w.fecha, per)).sort((a,b)=>a.fecha.localeCompare(b.fecha)||(a.horaProg||"9:00").localeCompare(b.horaProg||"9:00"));
+  const ws = S.wos.filter(w=>w.estado!=="Canceled" && enPeriodo(w.fecha, per)).sort((a,b)=>a.fecha.localeCompare(b.fecha)||(a.horaProg||"").localeCompare(b.horaProg||""));
   const porFecha = {};
   ws.forEach(w=>{ (porFecha[w.fecha]=porFecha[w.fecha]||[]).push(w); });
   const fechas = Object.keys(porFecha).sort();
@@ -1210,15 +1210,18 @@ function refWO(){
 
 function refAgendaNuevaWO(){
   const caja=document.getElementById("wAgendaDisponibilidad"); if(!caja) return;
-  const fecha=val("wFecha"), horaProg=val("wHora");
+  const fecha=val("wFecha"), horaProg=val("wHora"), horaFin=val("wHoraFin");
   if(!fecha){ caja.innerHTML=`<div class="hint" style="margin-top:7px">Elige una fecha para ver la disponibilidad del equipo.</div>`; return; }
   const filas=S.tecnicos.filter(t=>t.activo).map(t=>{
     const permiso=ausente(t.id,fecha), carga=capacidadDia(t.id,fecha), disponible=!permiso&&carga<CAP;
     return `<span class="pill ${disponible?"v":"w"}">${esc(tecN(t.id))}: ${permiso?"no disponible":carga+"/"+CAP+" WO"}</span>`;
   });
   const libres=S.tecnicos.filter(t=>t.activo&&!ausente(t.id,fecha)&&capacidadDia(t.id,fecha)<CAP).length;
-  const enHora=horaProg?S.wos.filter(w=>w.fecha===fecha&&w.horaProg===horaProg&&w.estado!=="Canceled").length:0;
-  caja.innerHTML=`<div class="note ${libres?"v":"w"}" style="margin-top:8px"><b>${libres} técnico(s) disponible(s)</b> para esta fecha${horaProg?` · ${enHora} WO(s) a las ${esc(horaProg)}`:""}.<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">${filas.join("")}</div></div>`;
+  const enRango = horaProg
+    ? S.wos.filter(w=>w.fecha===fecha && w.estado!=="Canceled" && (!w.horaProg || (w.horaProg <= (horaFin||horaProg) && (w.horaFin||w.horaProg) >= horaProg))).length
+    : S.wos.filter(w=>w.fecha===fecha && w.estado!=="Canceled").length;
+  const rangoTxt = horaProg ? (horaFin ? `${horaProg}–${horaFin}` : horaProg) : "";
+  caja.innerHTML=`<div class="note ${libres?"v":"w"}" style="margin-top:8px"><b>${libres} técnico(s) disponible(s)</b> para esta fecha${rangoTxt ? ` · ${enRango} WO(s) en horario ${esc(rangoTxt)}` : ` · ${enRango} WO(s) en la fecha`}.<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">${filas.join("")}</div></div>`;
 }
 
 /* Solo el precio: se llama al cambiar el servicio, sin tocar los desplegables */

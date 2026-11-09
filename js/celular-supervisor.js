@@ -378,7 +378,7 @@ function hojaCel(sh){
   if(sh.t==="veh") return `<div class="fscrim" data-a="fSheetNo"><div class="fsheet" data-stop>
     <div class="grab"></div>
     <h4>Gasolina / vehículo</h4>
-    <div class="sub">Va directo a Finanzas.</div>
+    <div class="sub">Se envía a Lydia.</div>
     <label>Tipo</label>
     <select id="gvTipoV">${Object.keys(TIPOS_VEH).map(t=>`<option ${t===sh.tipo?"selected":""}>${t}</option>`).join("")}</select>
     <label>Vehículo</label>
