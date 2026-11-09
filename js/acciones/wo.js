@@ -155,7 +155,7 @@ Object.assign(ACC, {
     if(!q){ sug.innerHTML=""; refWO(); return; }
     const ms = S.propiedades.filter(p=>p.activa && p.nombre.toLowerCase().includes(q)).slice(0,6);
     sug.innerHTML = ms.length
-      ? ms.map(p=>`<div class="sugrow" data-a="woPropElegir" data-id="${p.id}"><b>${esc(p.nombre)}</b><span class="sugsub">${esc(p.zona)}${p.dir?" · "+esc(p.dir):""}</span></div>`).join("")
+      ? ms.map(p=>`<div class="sugrow" data-a="woPropElegir" data-id="${p.id}"><b>${esc(p.nombre)}</b><span class="sugsub">${esc(ciudadProp(p))}${p.dir?" · "+esc(p.dir):""}</span></div>`).join("")
       : `<div class="sugrow sugvacio">Sin propiedades que coincidan</div>`;
     refWO();
   },
@@ -210,7 +210,7 @@ Object.assign(ACC, {
     modalWO(w); },
   woGuardar: d => {
     const pid=val("wProp"), cat=val("wCat"), serv=val("wServ"), ubic=val("wUbic"), fecha=val("wFecha");
-    const horaProg=val("wHora"), cantN=parseFloat(val("wCant")), po=val("wPO"), notasTec=val("wNotas"), notasOficina=val("wNotasOficina"), ubicDetalle=val("wUbicDetalle");
+    const horaProg=val("wHora"), horaFin=val("wHoraFin"), cantN=parseFloat(val("wCant")), po=val("wPO"), notasTec=val("wNotas"), notasOficina=val("wNotasOficina"), ubicDetalle=val("wUbicDetalle");
     const exige=reglaUbicacion(cat).obligatoria;
     let uid=val("wUni");
     const esNueva = uid==="__new__";
@@ -280,7 +280,7 @@ Object.assign(ACC, {
       }
       if(yo){
         const datosWO={prop:pid, unidad:uid, cat, serv, ubic, ubicDetalle, fecha, semana:fecha?semanaDe(fecha):null,
-          horaProg, cant:cantN, po, notasTec, notasOficina, dependeDe};
+          horaProg, horaFin, cant:cantN, po, notasTec, notasOficina, dependeDe};
         if(!diffCampos(yo,datosWO).length && cambiosUnidad.length){
           cm(); toast("✓ Unidad actualizada",`Los datos de <b>${esc(uNueva.num)}</b> quedaron guardados para las próximas Work Orders.`,"v"); render(); return;
         }
@@ -298,7 +298,7 @@ Object.assign(ACC, {
       }
       const id = nid("w");
       flash("wo:"+id);
-      const nueva = {id, prop:pid, unidad:uid, cat, serv, ubic, ubicDetalle, tec:null, estado:"Scheduled", horaProg, cant:cantN,
+      const nueva = {id, prop:pid, unidad:uid, cat, serv, ubic, ubicDetalle, tec:null, estado:"Scheduled", horaProg, horaFin, cant:cantN,
         semana:fecha?semanaDe(fecha):null, fecha, po, asistencia:false, evid:0, mats:[],
         notas:"", notasTec, notasOficina, fotosPrevias:(S.woFotosPreviasDraft||[]).slice(),
         propuestas:[{fecha,medio:"Registro de WO",contacto:S.usuario,respuesta:"Fecha programada",nota:"",motivo:"",quien:S.usuario,hora:hora(),dia:HOY_SUP}],

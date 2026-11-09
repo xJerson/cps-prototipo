@@ -86,7 +86,7 @@ VIEWS.wo = () => {
     <span class="s">llegaron con todo capturado — sin llamada y sin volver a escribir los datos</span></div>
     <table><thead><tr><th>Propiedad</th><th>Cliente</th><th>Quién la pasó</th><th>Nota</th><th></th></tr></thead><tbody>
     ${S.solicitudes.filter(x=>x.estado==="Pendiente").map(s=>`<tr class="${fl("sol:"+s.id)}">
-      <td style="font-weight:650">${esc(P(s.prop).nombre)}<div style="font-size:10.5px;color:var(--faint)">${esc(P(s.prop).zona)} · ${esc(P(s.prop).dir)}</div></td>
+      <td style="font-weight:650">${esc(P(s.prop).nombre)}<div style="font-size:10.5px;color:var(--faint)">${esc(ciudadProp(P(s.prop)))} · ${esc(P(s.prop).dir)}</div></td>
       <td>${esc(CLI(s.cliente).nombre)}</td><td>${esc(s.quien)} · ${esc(s.hora)}</td>
       <td style="font-size:11.5px;color:var(--soft)">${esc(s.nota)||"—"}${s.notasInt?`<div class="note r" style="margin:5px 0 0;font-size:11px;white-space:pre-line"><b>Importante:</b> ${esc(s.notasInt)}</div>`:""}${s.lineas&&s.lineas.length?` <span class="pill m">${s.lineas.length} línea(s) ya cotizadas</span>`:""}</td>
       <td style="text-align:right"><button class="btn sm p" data-a="solProgramar" data-id="${s.id}">Programar</button></td></tr>`).join("")}
@@ -1002,7 +1002,7 @@ function modalWO(w){
       <div class="fld"><label>Ubicación dentro de la unidad <span id="wUbicReq"></span></label>
         <select id="wUbic" data-value="${w?esc(w.ubic||""):""}"></select>
         <div id="wUbicDetalleBox" data-value="${w?esc(w.ubicDetalle||""):""}"></div><div class="hint" id="wUbicHint"></div></div>
-      <div class="fld"><label>Fecha <span class="req">*</span> <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">· hora opcional</span></label><div style="display:flex;gap:7px"><input type="date" id="wFecha" data-a="woFecha" value="${w?esc(w.fecha||""):""}" style="flex:2"><input id="wHora" data-a="woFecha" value="${w?esc(w.horaProg||""):""}" class="mono" style="flex:1" placeholder="9:00"></div><div id="wAgendaDisponibilidad"></div></div>
+      <div class="fld"><label>Fecha <span class="req">*</span> <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">· hora opcional (Desde / Hasta)</span></label><div style="display:flex;gap:7px;align-items:center"><input type="date" id="wFecha" data-a="woFecha" value="${w?esc(w.fecha||""):""}" style="flex:2"><input type="time" id="wHora" data-a="woFecha" value="${w?esc(w.horaProg||""):""}" class="mono" style="flex:1" placeholder="08:00"><span style="font-size:11px;color:var(--faint);font-weight:600">Hasta</span><input type="time" id="wHoraFin" data-a="woFecha" value="${w?esc(w.horaFin||""):""}" class="mono" style="flex:1" placeholder="17:00"></div><div id="wAgendaDisponibilidad"></div></div>
     </div>
     <div class="fg c2">
       <div class="fld"><label>Cantidad <span class="req">*</span></label><input id="wCant" value="${w?(w.cant||1):""}" placeholder="1" class="mono"></div>

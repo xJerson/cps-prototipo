@@ -21,7 +21,7 @@ Object.assign(ACC, {
     /* La vista web de Gustavo (VIEWS.gustavoweb) comparte esta misma pantalla
        de contenido; si un enlace interno salta de pestaña (p.ej. "Visitas
        programadas" → Mi ruta), que salte en las dos, no solo en el celular. */
-    if(["panel","ruta","dia","reportar","devs"].includes(d.v)) S.gvTab=d.v;
+    if(["panel","ruta","dia","reportar","devs","buscar"].includes(d.v)) S.gvTab=d.v;
     render(); },
   fAbrir: d => { S.phView="wo"; S.phWO=+d.id; render(); },
   fSubAbrir: d => { S.phView="subwo"; S.phSub=+d.id; render(); },
@@ -279,6 +279,53 @@ Object.assign(ACC, {
     render();
   },
   fSheetNo: () => { S.phSheet=null; render(); },
+  fPrevio: d => {
+    const w = d && d.wo ? W(+d.wo) : null;
+    const pr = w ? P(w.prop) : S.propiedades.filter(x=>x.activa)[0];
+    const uid = w ? w.unidad : ((S.unidades.filter(u=>u.prop===pr.id)[0]||{}).id||null);
+    S.phSheet = {t:"previo", wo:w?w.id:null, prop:pr.id, unidad:uid,
+      antesDe:w&&w.cat?w.cat:activos("categorias")[0],
+      amb:activos("ubicaciones")[0], cond:activos("condiciones")[0],
+      lotes:[], nota:""};
+    render();
+  },
+  fPrevioProp: () => {
+    leerPrevio(); const sh=S.phSheet; if(!sh||sh.t!=="previo") return;
+    sh.unidad=(S.unidades.filter(u=>u.prop===sh.prop)[0]||{}).id||null;
+    render();
+  },
+  fPrevioUni: () => { leerPrevio(); render(); },
+  fPrevioAmb: d => { leerPrevio(); if(S.phSheet&&S.phSheet.t==="previo"){ S.phSheet.amb=d.u; render(); } },
+  fPrevioCond: d => { leerPrevio(); if(S.phSheet&&S.phSheet.t==="previo"){ S.phSheet.cond=d.c; render(); } },
+  fPrevioFoto: () => {
+    leerPrevio(); const sh=S.phSheet; if(!sh||sh.t!=="previo") return;
+    capturarFoto(url=>{
+      const l = sh.lotes.find(x=>x.amb===sh.amb && (x.cond||null)===(sh.cond||null));
+      const f = fotoNueva(url, S.phTec);
+      if(l) l.fotosArr.push(f); else sh.lotes.push({amb:sh.amb, cond:sh.cond||null, etapa:null, desc:"", fotosArr:[f]});
+      S.reloj += 1;
+      render();
+    });
+  },
+  fPrevioQuita: d => { leerPrevio(); if(S.phSheet&&S.phSheet.t==="previo"){ S.phSheet.lotes.splice(+d.i,1); render(); } },
+  fPrevioOK: () => {
+    leerPrevio(); const sh=S.phSheet; if(!sh||sh.t!=="previo") return;
+    if(!sh.unidad){ toast("Falta la unidad","Selecciona una unidad antes de guardar.","r"); return; }
+    if(!sh.lotes.length && !(sh.nota&&sh.nota.trim())){ toast("Falta información","Toma al menos una foto o escribe una nota del estado previo.","r"); return; }
+    const n = sh.lotes.reduce((t,l)=>t+(l.fotosArr||[]).length,0);
+    const r = {id:"R"+Date.now(), tipo:"previo", prop:sh.prop, unidad:sh.unidad, wo:sh.wo||null,
+      fecha:HOY_SUP, hora:hora(), quien:S.phTec,
+      antesDe:sh.antesDe||"", servicios:[], lotes:sh.lotes.slice(), nota:sh.nota||"",
+      medidas:"", material:"", condUnidad:"", recom:"", servSup:"", problemas:"", adicional:"",
+      firmaGustavo:null, firmaMant:null, items:[],
+      estado:"Archivado", accion:"Archivado en la unidad"};
+    S.reportes.push(r);
+    if(sh.wo){ const w=W(sh.wo); if(w) w.hist.push([hora(),`Registró estado previo (${n} foto(s))`,tecN(S.phTec)]); }
+    S.phSheet=null; S.reloj+=2;
+    toast("✓ Estado previo guardado",
+      `${esc(P(r.prop).nombre)} · ${U(r.unidad)?esc(U(r.unidad).num):"—"}${n?` — <b>${n} foto(s)</b>.`:""} Queda pegado a la unidad con su fecha y hora.`,"v");
+    render();
+  },
   fPermiso: () => { S.phSheet={t:"permiso"}; render(); },
   fDisp: () => { S.phSheet={t:"disp"}; render(); },
   fDispOK: () => {

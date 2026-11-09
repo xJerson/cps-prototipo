@@ -953,8 +953,7 @@ function cPlanInsp(a){
     if(!u) return {u:null, items:[]};
     const items = cItemsSurvey(a.prop, u), ambs = Array.from(new Set(items.map(x=>x.ubic)));
     return {u:u.id, items, fotos:Math.min(12, Math.max(2, ambs.length + cRnd(0,2))), cond:(u.ocupacion||"Occupied")==="Vacant" ? "Desocupada" : "Ocupada",
-      cg:items.length >= 5 ? cPick(["Regular","Mala"]) : cPick(["Buena","Regular","Regular"]), recom:cChance(0.7) ? cPick(CAMPO_SURVEY_REC) : "",
-      nota:cPick(["Entré con la llave que dejó el manager.","Me abrió el manager y recorrimos la unidad juntos.","Hice el recorrido solo; tomé medidas de los ambientes principales."]), thalia:cChance(0.25)};
+      nota:cPick(["Entré con la llave que dejó el manager.","Me abrió el manager y recorrimos la unidad juntos.","Hice el recorrido solo; tomé medidas de los ambientes principales."])};
   });
 }
 const cUnidadDeLabel = (pid, lbl) => S.unidades.find(u=>u.prop===pid && cUniLabel(u)===lbl) || null;
@@ -976,10 +975,9 @@ CAMPO_MANEJADORES.push({ id:"greporte",
     while(items.length < Math.min(ROWS_SURVEY, pl.items.length + 1)) items.push({cat:activos("categorias")[0], trabajo:"", ubic:activos("ubicaciones")[0], cant:"1", medidas:"", coment:""});
     const campos = [{id:"unidad", label:"Unidad", tipo:"opciones", valor:cUniLabel(u), opciones:us.map(cUniLabel)},
       {id:"cond", label:"Condición de la unidad", tipo:"opciones", valor:pl.cond, opciones:["Desocupada","Ocupada"], fila:0},
-      {id:"cg", label:"Condición general", tipo:"opciones", valor:pl.cg, opciones:COND_GENERAL, fila:0},
       {id:"fotos", label:"Fotos generales", tipo:"numero", valor:pl.fotos, min:1, max:12, fila:0}];
     items.forEach((x,i)=>campos.push(...cCamposItem(i, x)));
-    campos.push({id:"recom", label:"Recomendaciones adicionales", tipo:"texto", largo:true, valor:pl.recom}, {id:"nota", label:"Nota para Claudia", tipo:"texto", largo:true, valor:pl.nota});
+    campos.push({id:"nota", label:"Nota para Lydia", tipo:"texto", largo:true, valor:pl.nota});
     return {paso:"relevamiento (inspección)", oblig:true, titulo:"Reporte de inspección para estimado",
       desc:`${P(a.prop).nombre}: el reporte pide fotos, unidad y al menos un servicio con el trabajo que hace falta. Al enviarlo, la solicitud queda lista para armar el estimado.`, campos};
   },
@@ -999,8 +997,7 @@ CAMPO_MANEJADORES.push({ id:"greporte",
       ACC.gRepPro({prop:a.prop});
       const g = S.gRep; if(!g) return;
       g.tipo = "relevamiento"; g.unidad = uni.id; g.condUnidad = d.cond==="Ocupada" ? "Ocupada" : "Desocupada";
-      g.condGeneral = COND_GENERAL.includes(d.cg) ? d.cg : COND_GENERAL[1]; g.recom = String(d.recom||""); g.nota = String(d.nota||"");
-      g.copiaThalia = !!pl.thalia;
+      g.nota = String(d.nota||"");
       g.items = items.map(x=>{ const o = Object.assign({}, x); delete o.nf; return o; });
       render();
       items.forEach((x,i)=>{ for(let k=0; k<(x.nf||0); k++) ACC.gRepItemFoto({i:String(i)}); });

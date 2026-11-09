@@ -276,6 +276,8 @@ function renderFon(){
            </div>` : "")
     + (["In progress","Esperando aprobación"].includes(w.estado) && w.corroborado
         ? `<div class="dl" style="margin-top:10px">Mientras trabajas</div>
+           <button class="db g" data-a="fPrevio" data-wo="${w.id}">${icBtn('<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>')}Estado previo</button>
+           <div class="ds" style="margin:-4px 0 7px;padding:0 2px">Lo que ya estaba dañado antes de empezar — queda pegado a la unidad.</div>
            <button class="db g" data-a="fFotoAntes" data-id="${w.id}">${icBtn(IC_FOTO)}Foto del antes</button>
            <div class="ds" style="margin:-4px 0 7px;padding:0 2px">Cómo encontraste la unidad — no cuenta para cerrar el trabajo.</div>
            <button class="db g" data-a="fFoto" data-id="${w.id}">${icBtn(IC_FOTO)}Foto de cómo quedó</button>
@@ -369,11 +371,16 @@ function renderFon(){
         <div class="ds" style="margin-top:6px;color:var(--azul);font-weight:650">Abrir ›</div></div>`;
     }).join("") : `<div style="text-align:center;padding:40px 14px;color:var(--faint);font-size:11.5px">Sin trabajos asignados</div>`)
     + `<div class="dl">Otras cosas</div>
+       <button class="db g" data-a="fPrevio">Reportar estado previo de una unidad</button>
        <button class="db g" data-a="fDisp">${dispSemDe(t.id)?"Cambiar mi disponibilidad de la semana":"Mi disponibilidad de la semana"}</button>
        <button class="db g" data-a="fPermiso">Pedir permiso o vacaciones</button>`;
   }
   $("#fbody").innerHTML=h;
+  const fsheetAntes = $("#fsheet").querySelector(".fsheet");
+  const scrollAntes = fsheetAntes ? fsheetAntes.scrollTop : 0;
   $("#fsheet").innerHTML = S.phSheet ? hojaCel(S.phSheet) : "";
+  const fsheetDespues = $("#fsheet").querySelector(".fsheet");
+  if(fsheetDespues && scrollAntes) fsheetDespues.scrollTop = scrollAntes;
 }
 
 function renderAvisos(){
@@ -423,9 +430,10 @@ function leerDev(){
 function leerSup(){
   const g=S.gRep; if(!g) return;
   const v = id => { const e=document.getElementById(id); return e? e.value : null; };
-  const p=v("gP"), u=v("gU"), a=v("gA"), n=v("gN"), m=v("gM"), md=v("gMed");
+  const p=v("gP"), u=v("gU"), ut=v("gUT"), a=v("gA"), n=v("gN"), m=v("gM"), md=v("gMed");
   if(p!==null) g.prop=p;
   if(u!==null && u!=="") g.unidad=u;
+  if(ut!==null) g.unidadTexto=ut;
   if(a!==null) g.antesDe=a;
   if(n!==null) g.nota=n;
   if(m!==null) g.material=m;
@@ -437,16 +445,17 @@ function leerSup(){
   if(mn!==null) g.mantNombre=mn;
   /* La descripcion de cada lote de fotos */
   (g.lotes||[]).forEach((l,i)=>{ const d=v("loD"+i); if(d!==null) l.desc=d; });
-  const tv=v("gTV"), et=v("gET"), rc=v("gRec");
+  const tv=v("gTV"), et=v("gET"), rt=v("gRepairs");
   if(tv!==null) g.tipoVisita=tv;
   if(et!==null) g.estadoTrabajo=et;
-  if(rc!==null) g.recom=rc;
+  if(rt!==null) g.repairsTexto=rt;
   /* El bloque repetible: render() rehace la hoja entera, asi que hay que
      rescatar cada renglon antes de repintar o se le borra lo escrito. */
   (g.items||[]).forEach((it,i)=>{
-    const c=v("itC"+i), t=v("itT"+i), u=v("itU"+i), q=v("itQ"+i),
+    const c=v("itC"+i), co=v("itCO"+i), t=v("itT"+i), u=v("itU"+i), q=v("itQ"+i),
           m=v("itM"+i), mt=v("itMt"+i), x=v("itX"+i);
     if(c!==null)  it.cat=c;
+    if(co!==null) it.catOtro=co;
     if(t!==null)  it.trabajo=t;
     if(u!==null)  it.ubic=u;
     if(q!==null)  it.cant=q;
@@ -454,6 +463,17 @@ function leerSup(){
     if(mt!==null) it.materiales=mt;
     if(x!==null)  it.coment=x;
   });
+}
+
+function leerPrevio(){
+  const sh=S.phSheet; if(!sh||sh.t!=="previo") return;
+  const v = id => { const e=document.getElementById(id); return e? e.value : null; };
+  const p=v("pvP"), u=v("pvU"), a=v("pvA"), n=v("pvN");
+  if(p!==null) sh.prop=p;
+  if(u!==null && u!=="") sh.unidad=u;
+  if(a!==null) sh.antesDe=a;
+  if(n!==null) sh.nota=n;
+  (sh.lotes||[]).forEach((l,i)=>{ const d=v("pvLoD"+i); if(d!==null) l.desc=d; });
 }
 
 /* render() reconstruye la hoja entera, así que antes de agregar o quitar un
@@ -525,10 +545,11 @@ const repsDe = q => S.reportes.filter(r=>r.quien===q);
 const fotosDe = r => (r.lotes||[]).reduce((t,l)=>t+(l.fotosArr||[]).length,0);
 /* El estado previo no se decide: se queda pegado a la unidad para siempre */
 const previosDe = uid => S.reportes.filter(r=>r.tipo==="previo" && r.unidad===uid);
+const wosDeUnidad = uid => S.wos.filter(w=>w.unidad===uid);
 const repPend = () => S.reportes.filter(r=>r.estado==="Nuevo");
 
 const HOY_SUP = hoyReal();
-const MOTIVOS_SUP = ["Supervisar","Inspección para estimado","Reunión con mantenimiento","Revisar reclamo","Otro"];
+const MOTIVOS_SUP = ["Supervisar","Inspección para estimado","Reunión con mantenimiento","Revisar reclamo","Solicitud de cliente","Otro"];
 
 /* Tipo de visita y estado del trabajo — los pidio Claudia en el formulario 1.
    "No se pudo ingresar" es una condicion real de campo que no estaba. */
@@ -537,7 +558,6 @@ const EST_TRABAJO = ["No iniciado","En proceso","Terminado","Requiere correcció
 /* Condicion de la unidad al llegar a inspeccionar. "No se pudo ingresar" es
    una condicion real de campo que no estaba modelada en ningun lado. */
 const COND_UNIDAD = ["Desocupada","Ocupada","No se pudo ingresar"];
-const COND_GENERAL = ["Buena","Regular","Mala"];
 /* Las tres etapas de la evidencia. Claudia pidio "descripcion debajo de cada
    foto": una unidad puede llevar 100 fotos, asi que la descripcion va por
    LOTE (ambiente + etapa), que es como de verdad se revisan. */
@@ -574,7 +594,7 @@ function libresEse(fecha, prop){
   });
 }
 /* Una linea del relevamiento: es el borrador de una linea del estimado. */
-const itemVacio = () => ({cat:activos("categorias")[0], trabajo:"", ubic:activos("ubicaciones")[0],
+const itemVacio = () => ({cat:activos("categorias")[0], catOtro:"", trabajo:"", ubic:activos("ubicaciones")[0],
                           cant:"1", medidas:"", mat:false, materiales:"", coment:"", fotos:0});
 
 /* La causa de la devolucion decide la plata. Sin esto, cada devolucion se
@@ -878,6 +898,7 @@ function gustavoScreenHTML(view){
            ${panelCell(IC_SUPERVISAR, porSupervisar().length, "Unidades pendientes de supervisión", "#1e5c3a")}
            ${panelCell(IC_INSPECCION, inspPend().length, "Inspecciones para estimados", "#5b3a8a")}
            ${panelCell(IC_LISTA, unidadesListas().length, "Unidades listas para entregar", "#1f4e79")}
+           ${panelCell(IC_SUPERVISAR, "Buscar", "Buscar por unidad y ver historial", "#1f4e79", "fView", 'data-v="buscar"')}
          </div>`
          // Sus gastos de gasolina y vehículo: van al mismo libro de Finanzas que los de la oficina
          + (S.phone && S.phRol==="supervisor" ? gastosVehiculoHTML() : "")
@@ -902,6 +923,7 @@ function gustavoScreenHTML(view){
             const pr=P(pa.prop);
             const ok = pa.estado==="Visitada", no = pa.estado==="No completada", cam = pa.estado==="En camino";
             const col = ok?"var(--verde)":no?"var(--ambar)":cam?"var(--azul)":"";
+            const presentes = [...new Set(S.wos.filter(w=>w.prop===pa.prop && w.estado==="In progress" && w.tec).map(w=>w.tec))];
             return `<div class="dc" style="${col?`border-color:${col}`:""}">
               <div style="display:flex;justify-content:space-between;gap:7px;align-items:flex-start">
                 <div style="min-width:0"><div class="dh">${esc(pr.nombre)}</div>
@@ -911,6 +933,7 @@ function gustavoScreenHTML(view){
                  :no?`<span class="dtag" style="background:#8a5a0022;color:#8a5a00;flex:none">no se pudo</span>`:""}</div>
               <div class="ds" style="margin-top:5px"><b style="color:var(--azul)">${esc(pa.motivo)}</b></div>
               ${pa.nota?`<div class="ds" style="margin-top:3px">«${esc(pa.nota)}»</div>`:""}
+              ${presentes.length?`<div class="ds" style="margin-top:4px;color:var(--verde);font-weight:650">En la propiedad ahora: ${presentes.map(t=>esc(tecN(t))).join(", ")}</div>`:""}
               ${no
                 ? `<div class="ds" style="margin-top:6px;color:var(--ambar)">${esc(pa.motivoNo||"")}</div>`
                 : ok
@@ -957,13 +980,10 @@ function gustavoScreenHTML(view){
         + falta.map(a=>`<div class="dc" style="opacity:.72">
             <div class="dh">${esc(P(a.prop).nombre)}</div>
             <div class="ds">${esc(a.motivo)} · sin llegar</div></div>`).join(""):"")
-      /* Los dos formularios que pidio Claudia van primero y con su numero de
-         modulo. Los otros dos salen del flujograma de Gustavo y van abajo,
-         separados: si no, parecen modulos de ella y no lo son. */
+      /* Los dos formularios que pidio Claudia van con su numero de modulo.
+         El estado previo paso al celular de los tecnicos. */
       + ((tira, titulo) => tira.length ? `<div class="dl" style="margin-top:9px">${titulo}</div>` + tira.join("") : "")(
           Object.keys(REP).filter(k=>REP[k].mod).map(k=>fichaRep(k)), "O reportar de otra propiedad")
-      + `<div class="dl" style="margin-top:11px">Otros avisos</div>`
-      + Object.keys(REP).filter(k=>!REP[k].mod).map(k=>fichaRep(k)).join("")
       + `<div class="dc" style="border-style:dashed"><div class="ds" style="text-align:center">
          Todo lo que mandes le llega a <b>Claudia</b> al instante, con la propiedad, la hora y las fotos ordenadas por ambiente.</div></div>`;
   }
@@ -1138,7 +1158,8 @@ function gustavoScreenHTML(view){
      ingles y ella nombro otros seis. */
   else if(view==="proceso"){
     const ws = serviciosEnProceso();
-    h = `<div class="dl" style="margin-top:5px">Servicios en proceso (${ws.length})</div>`
+    h = `<div class="note v" style="margin-top:5px"><b>Solo lectura</b> — lo que los técnicos tienen en curso ahora mismo, con su avance. No se edita desde aquí.</div>`
+      + `<div class="dl" style="margin-top:8px">Servicios en proceso (${ws.length})</div>`
       + (ws.length ? ws.map(w=>{
         const e = estadoSup(w), av = w.avance||0;
         return `<div class="dc" style="border-left:3px solid ${e.c}">
@@ -1157,6 +1178,107 @@ function gustavoScreenHTML(view){
         </div>`;}).join("")
         : `<div class="dc" style="border-style:dashed"><div class="ds" style="text-align:center">
             Ningún servicio en proceso ahora mismo.</div></div>`);
+  }
+
+  /* ── BUSCAR POR UNIDAD Y VER HISTORIAL ──
+     Para cuando un manager le pregunta a Gustavo en campo qué se hizo en una unidad. */
+  else if(view==="buscar"){
+    const fp = S.gBusqProp || "";
+    const q = (S.gBusqQ || "").trim().toLowerCase();
+    const uidSel = S.gBusqUni && U(S.gBusqUni) ? S.gBusqUni : null;
+    if(uidSel){
+      const u = U(uidSel), pr = P(u.prop);
+      const ws = wosDeUnidad(u.id).slice().sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""));
+      const prevs = previosDe(u.id).slice().reverse();
+      const otrosReps = S.reportes.filter(r=>r.unidad===u.id && r.tipo!=="previo").slice().reverse();
+      const devs = devDe(u.id).slice().reverse();
+      h = `<button class="db g" style="margin:5px 0 9px;padding:7px;font-size:11.5px" data-a="gBusqCerrarUni">‹ Volver a la búsqueda</button>
+        <div class="dc" style="border-left:3px solid var(--azul)">
+          <div class="dh">${esc(pr.nombre)} · Unidad ${esc(u.num)}</div>
+          <div class="ds">${esc(u.rooms||"—")}${u.pisos?` · ${u.pisos} piso(s)`:""}${u.ocupacion?` · ${esc(u.ocupacion)}`:""}${u.doorCode?` · Door code: ${esc(u.doorCode)}`:""}</div>
+        </div>
+        <div class="dl" style="margin-top:10px">Work Orders (${ws.length})</div>
+        ${ws.length ? ws.map(w=>{
+          const col={g:"#8a97a4",a:"#1f4e79",m:"#5b21b6",w:"#8a5a00",v:"#1e5c3a",r:"#9b2226"}[estP(w.estado)]||"#8a97a4";
+          return `<div class="dc" style="border-left:3px solid ${col}">
+            <div style="display:flex;justify-content:space-between;gap:6px;align-items:center">
+              <div class="dh" style="font-size:12px">WO-${w.id} · ${esc(w.serv)}</div>
+              <span class="dtag" style="background:${col}22;color:${col};flex:none">${esc(w.estado)}</span></div>
+            <div class="ds" style="margin-top:3px">${esc(w.fecha||"—")} · ${w.tec?esc(tecN(w.tec)):"Sin técnico"}${w.evid?` · ${w.evid} foto(s)`:""}</div>
+            ${w.notas?`<div class="ds" style="margin-top:3px;color:var(--tinta)">«${esc(w.notas)}»</div>`:""}
+          </div>`;
+        }).join("") : `<div class="dc" style="border-style:dashed"><div class="ds" style="text-align:center">Sin Work Orders en esta unidad.</div></div>`}
+        <div class="dl" style="margin-top:10px">Estado previo (${prevs.length})</div>
+        ${prevs.length ? prevs.map(r=>`<div class="dc" style="border-left:3px solid #8a5a00">
+          <div style="display:flex;justify-content:space-between;gap:6px;align-items:center">
+            <div class="dh" style="font-size:12px">Antes de: ${esc(r.antesDe||"—")}</div>
+            <span class="dtag" style="background:#8a5a0022;color:#8a5a00;flex:none">${fotosDe(r)} foto(s)</span></div>
+          <div class="ds" style="margin-top:2px">${esc(r.fecha)} ${esc(r.hora||"")} · ${esc(tecN(r.quien))}</div>
+          ${r.nota?`<div class="ds" style="margin-top:3px;color:var(--tinta)">«${esc(r.nota)}»</div>`:""}
+        </div>`).join("") : `<div class="dc" style="border-style:dashed"><div class="ds" style="text-align:center">Sin registros de estado previo.</div></div>`}
+        <div class="dl" style="margin-top:10px">Reportes de supervisión / inspección (${otrosReps.length})</div>
+        ${otrosReps.length ? otrosReps.map(r=>{
+          const rr = REP[r.tipo] || {n:r.tipo, c:"#1f4e79"};
+          return `<div class="dc" style="border-left:3px solid ${rr.c}">
+            <div style="display:flex;justify-content:space-between;gap:6px;align-items:center">
+              <div class="dh" style="font-size:12px">${esc(rr.n)}</div>
+              <span class="dtag" style="background:${rr.c}22;color:${rr.c};flex:none">${fotosDe(r)} foto(s)</span></div>
+            <div class="ds" style="margin-top:2px">${esc(r.fecha)} ${esc(r.hora||"")} · ${esc(tecN(r.quien))}</div>
+            ${r.estadoTrabajo?`<div class="ds" style="margin-top:2px">Estado: <b>${esc(r.estadoTrabajo)}</b></div>`:""}
+            ${r.nota?`<div class="ds" style="margin-top:3px;color:var(--tinta)">«${esc(r.nota)}»</div>`:""}
+          </div>`;
+        }).join("") : `<div class="dc" style="border-style:dashed"><div class="ds" style="text-align:center">Sin reportes en esta unidad.</div></div>`}
+        <div class="dl" style="margin-top:10px">Returns (${devs.length})</div>
+        ${devs.length ? devs.map(d=>{
+          const col = d.estado==="Cerrada"?"#1e5c3a":"#9b2226";
+          return `<div class="dc" style="border-left:3px solid ${col};cursor:pointer" data-a="gDevVer" data-id="${d.id}">
+            <div style="display:flex;justify-content:space-between;gap:6px;align-items:center">
+              <div class="dh" style="font-size:12px">${esc(devAreasTxt(d))}</div>
+              <span class="dtag" style="background:${col};color:#fff;flex:none">${esc(d.estado)}</span></div>
+            <div class="ds" style="margin-top:3px">${esc(d.desc)}</div>
+            <div class="ds" style="margin-top:2px">${esc(d.fechaRep)} · ${esc(tecN(d.responsable))}</div>
+          </div>`;
+        }).join("") : `<div class="dc" style="border-style:dashed"><div class="ds" style="text-align:center">Sin returns en esta unidad.</div></div>`}`;
+    } else {
+      const unidades = S.unidades.filter(u=>{
+        if(fp && u.prop!==fp) return false;
+        if(!q) return true;
+        const pNom = (P(u.prop).nombre||"").toLowerCase();
+        return (u.num||"").toLowerCase().includes(q) || pNom.includes(q);
+      });
+      h = `<div class="dl" style="margin-top:5px">Buscar unidad y ver historial</div>
+        <div class="dc">
+          <label style="display:block;font-size:10px;font-weight:750;text-transform:uppercase;color:var(--faint);margin:0 0 4px">Propiedad</label>
+          <select id="gBusqProp" data-a="gBusqCambia" style="width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:8px;font-size:12px;margin-bottom:7px">
+            <option value="">Todas las propiedades</option>
+            ${S.propiedades.filter(x=>x.activa).map(x=>`<option value="${x.id}" ${x.id===fp?"selected":""}>${esc(x.nombre)}</option>`).join("")}
+          </select>
+          <label style="display:block;font-size:10px;font-weight:750;text-transform:uppercase;color:var(--faint);margin:0 0 4px">Número de unidad</label>
+          <div style="display:flex;gap:6px">
+            <input id="gBusqQ" data-a="gBusqCambia" value="${esc(S.gBusqQ||"")}" placeholder="Ej. 204, A-211…" style="flex:1;padding:7px 8px;border:1px solid var(--line);border-radius:8px;font-size:12px">
+            <button class="db p" style="width:auto;margin:0;padding:7px 12px;font-size:12px" data-a="gBusqCambia">Buscar</button>
+          </div>
+        </div>
+        <div class="dl" style="margin-top:10px">Unidades (${unidades.length})</div>
+        ${unidades.length ? unidades.map(u=>{
+          const nW = wosDeUnidad(u.id).length;
+          const nP = previosDe(u.id).length;
+          const nR = S.reportes.filter(r=>r.unidad===u.id && r.tipo!=="previo").length;
+          const nD = devDe(u.id).length;
+          return `<div class="dc" style="cursor:pointer" data-a="gBusqAbrirUni" data-id="${u.id}">
+            <div style="display:flex;justify-content:space-between;gap:6px;align-items:center">
+              <div><div class="dh" style="font-size:12.5px">${esc(P(u.prop).nombre)} · Unidad ${esc(u.num)}</div>
+                <div class="ds">${esc(u.rooms||"—")}${u.pisos?` · ${u.pisos} piso(s)`:""}</div></div>
+              <span style="color:var(--azul);font-weight:750;font-size:12px">Ver ›</span></div>
+            <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">
+              <span class="dtag" style="background:#f0f2f4;color:#5b6875">${nW} WO</span>
+              <span class="dtag" style="background:#f0f2f4;color:#5b6875">${nP} previo(s)</span>
+              <span class="dtag" style="background:#f0f2f4;color:#5b6875">${nR} reporte(s)</span>
+              ${nD?`<span class="dtag" style="background:#9b222222;color:#9b2226">${nD} return(s)</span>`:""}
+            </div>
+          </div>`;
+        }).join("") : `<div class="dc" style="border-style:dashed"><div class="ds" style="text-align:center">Ninguna unidad coincide con la búsqueda.</div></div>`}`;
+    }
   }
   return h;
 }

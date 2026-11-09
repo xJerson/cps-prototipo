@@ -142,7 +142,7 @@ function vCampoRep(){
     const u = U(r.unidad);
     return `<div class="card" style="margin:0 0 12px;border-left:4px solid ${rr.c}">
       <div class="chd">
-        <h3>${esc(P(r.prop).nombre)} · ${u?esc(u.num):"—"}</h3>
+        <h3>${esc(P(r.prop).nombre)} · ${r.unidadTexto?esc(r.unidadTexto):(u?esc(u.num):"—")}</h3>
         <span class="s">${rr.n} · ${r.fecha} ${esc(r.hora)} · ${esc(tecN(r.quien))}</span>
         <span class="r"><span class="pill ${r.estado==="Nuevo"?"a":"g"}">${esc(r.estado)}</span>
           <span class="pill m">${fotosDe(r)} fotos</span></span></div>
@@ -174,7 +174,7 @@ function vCampoRep(){
           <div class="tr" style="margin:6px 0 0">Cada renglón se convierte en una línea del estimado sin volver a escribirlo.</div>
         </div>`:""}
 
-        ${r.recom?`<div class="note" style="margin:0 0 10px"><b>Recomendaciones de Gustavo:</b> ${esc(r.recom)}</div>`:""}
+        ${r.repairsTexto?`<div class="note w" style="margin:0 0 10px"><b>Repairs (reparaciones):</b> ${esc(r.repairsTexto)}<div style="font-size:10.5px;color:var(--faint);margin-top:4px">No se generó línea de estimado automática para esto — agrégala a mano.</div></div>`:""}
 
         ${r.servSup?`<div style="margin-bottom:9px"><b style="font-size:11px;color:var(--faint);text-transform:uppercase">Servicio supervisado</b><br>
           <span class="pill a">${esc(r.servSup)}</span>
@@ -290,7 +290,7 @@ function vPrevio(pid){
       </div>`).join("")}
     </div>`;}).join("")
     || `<div class="empty"><div class="b">·</div>Sin registros de estado previo en esta propiedad.<br>
-        <span style="font-size:12px">Gustavo los toma desde su celular antes de que arranque un trabajo.</span></div>`}
+        <span style="font-size:12px">Los técnicos los toman desde su celular antes de que arranque un trabajo.</span></div>`}
 
   <div class="tr">Claudia: «a veces toman captura de todo, porque el dueño puede decir <i>eso no estuvo así, ustedes lo hicieron</i>».
     Es el mismo problema de «no me consta lo que me estás diciendo», pero al revés.</div>`;

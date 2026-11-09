@@ -359,13 +359,14 @@ function vCampo(){
   <div class="card"><div class="chd"><h3>Quién llegó, cuándo y dónde está</h3>
     <span class="s">La puntualidad solo se evalúa contra Work Orders que tienen hora programada</span></div>
     ${hoy.length?`<table>
-      <thead><tr><th>Técnico</th><th>WO</th><th>Propiedad · Unidad</th><th>Horario programado</th><th>Llegada real</th><th>Puntualidad</th><th>Estado</th><th>Última ubicación</th></tr></thead>
+      <thead><tr><th>Técnico</th><th>WO</th><th>Propiedad · Unidad</th><th>Día</th><th>Tipo</th><th>Zona</th><th>Horario programado</th><th>Llegada real</th><th>Puntualidad</th><th>Estado</th><th>Última ubicación</th></tr></thead>
       <tbody>${hoy.map(w=>{
         const a=asisDe(w.id);
         return `<tr class="cl${fl("wo:"+w.id)}" data-a="woVer" data-id="${w.id}">
           <td style="font-weight:650">${esc(tecN(w.tec))}</td>
           <td class="mono" style="font-weight:700">WO-${w.id}</td>
           <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td>
+          <td>${esc(w.fecha)}</td><td>${esc(w.cat)}</td><td>${esc(ciudadProp(P(w.prop)))}</td>
           <td class="mono">${w.horaProg ? esc(w.horaFin?`${w.horaProg}–${w.horaFin}`:w.horaProg) : '<span style="color:var(--faint)">—</span>'}</td>
           <td class="mono">${a?`<b>${esc(a.horaReal)}</b>`:'<span style="color:var(--faint)">—</span>'}</td>
           <td style="white-space:nowrap">${a?`<span class="pill ${a.puntualidad==="Tarde"?"w":a.puntualidad==="Declarada"?"m":"v"}"><span class="dot"></span>${esc(a.puntualidad)}</span>`

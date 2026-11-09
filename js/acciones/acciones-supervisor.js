@@ -55,7 +55,7 @@ Object.assign(ACC, {
       <p>Claudia la agenda en alguna de sus rutas</p></div>
     <div class="mb">
       <div class="fld"><label>Tipo <span class="req">*</span></label>
-        <select id="ssT"><option>Estimado</option><option>Supervisión</option></select></div>
+        <select id="ssT"><option>Estimado</option><option>Supervisión</option><option>Solicitud de cliente</option></select></div>
       <div class="fld"><label>Propiedad <span class="req">*</span></label>
         <select id="ssP">${S.propiedades.filter(p=>p.activa).map(p=>
           `<option value="${p.id}">${esc(p.nombre)} — ${esc(p.zona)}</option>`).join("")}</select></div>
@@ -83,7 +83,7 @@ Object.assign(ACC, {
     if(!s || s.estado!=="Por agendar") return;
     const f=val("sag-"+s.id)||s.fechaTentativa;
     if(!f){ toast("Falta el día","Elige la fecha en la que va Gustavo.","r"); return; }
-    const a={id:"AS"+Date.now(), fecha:f, prop:s.prop, motivo:s.tipo==="Estimado"?"Inspección para estimado":"Supervisar",
+    const a={id:"AS"+Date.now(), fecha:f, prop:s.prop, motivo:s.tipo==="Estimado"?"Inspección para estimado":s.tipo==="Solicitud de cliente"?"Solicitud de cliente":"Supervisar",
              nota:s.nota, estado:"Pendiente", hora:null, quien:S.usuario, solicitud:s.id};
     S.agendaSup.push(a);
     Object.assign(s,{estado:"Agendada", agendadaPara:f, aprobo:S.usuario, horaAprob:hora()});
@@ -391,14 +391,14 @@ Object.assign(ACC, {
 
   gRepNuevo: d => {
     const pr = S.propiedades.filter(x=>x.activa)[0];
-    S.gRep = {tipo:d.t, prop:pr.id, unidad:(S.unidades.filter(u=>u.prop===pr.id)[0]||{}).id||null,
+    S.gRep = {tipo:d.t, prop:pr.id, unidad:(S.unidades.filter(u=>u.prop===pr.id)[0]||{}).id||null, unidadTexto:"",
               amb:activos("ubicaciones")[0], cond:d.t==="previo"?activos("condiciones")[0]:null,
               antesDe:activos("categorias")[0], servicios:[], lotes:[], nota:"", medidas:"", material:"",
               tipoVisita:TIPO_VISITA[1], estadoTrabajo:EST_TRABAJO[1],
-              condUnidad:COND_UNIDAD[0], condGeneral:COND_GENERAL[0],
+              condUnidad:COND_UNIDAD[0],
               etapa:ETAPAS[0], servSup:"", problemas:"", adicional:"",
               conMant:false, mantNombre:"", mantFirma:false,
-              items:[itemVacio()], recom:"", copiaThalia:false, copiaCliente:false};
+              items:[itemVacio()], repairsTexto:""};
     render();
   },
   /* Desde la ruta: la propiedad ya viene puesta, que es como se usa de verdad */
@@ -409,15 +409,15 @@ Object.assign(ACC, {
     const pa = paradaDe(d.prop);
     const tipo = pa && pa.motivo==="Inspección para estimado" ? "relevamiento"
                : pa && pa.motivo==="Supervisar" ? "revision" : "relevamiento";
-    S.gRep = {tipo, prop:d.prop, desdeRuta:true, unidad:(S.unidades.filter(u=>u.prop===d.prop)[0]||{}).id||null,
+    S.gRep = {tipo, prop:d.prop, desdeRuta:true, unidad:(S.unidades.filter(u=>u.prop===d.prop)[0]||{}).id||null, unidadTexto:"",
               amb:activos("ubicaciones")[0], cond:tipo==="previo"?activos("condiciones")[0]:null,
               antesDe:activos("categorias")[0],
               servicios:[], lotes:[], nota:"", medidas:"", material:"",
               tipoVisita:TIPO_VISITA[1], estadoTrabajo:EST_TRABAJO[1],
-              condUnidad:COND_UNIDAD[0], condGeneral:COND_GENERAL[0],
+              condUnidad:COND_UNIDAD[0],
               etapa:ETAPAS[0], servSup:"", problemas:"", adicional:"",
               conMant:false, mantNombre:"", mantFirma:false,
-              items:[itemVacio()], recom:"", copiaThalia:false, copiaCliente:false};
+              items:[itemVacio()], repairsTexto:""};
     render();
   },
   gRepNo: () => { S.gRep=null; render(); },
@@ -441,10 +441,6 @@ Object.assign(ACC, {
   gRepMant:  () => { leerSup(); const g=S.gRep; g.conMant=!g.conMant;
     if(!g.conMant){ g.mantNombre=""; g.mantFirma=false; } render(); },
   gRepMantFirma: () => { leerSup(); S.gRep.mantFirma=!S.gRep.mantFirma; render(); },
-  /* Claudia pidió poder "enviar copia a Claudia, scheduling o al cliente" —
-     antes el informe SIEMPRE le llegaba solo a ella. */
-  gRepCopiaThalia:  () => { leerSup(); S.gRep.copiaThalia=!S.gRep.copiaThalia; render(); },
-  gRepCopiaCliente: () => { leerSup(); S.gRep.copiaCliente=!S.gRep.copiaCliente; render(); },
 
   /* Borrador: se guarda tal cual y se retoma. Nada se envia a Claudia. */
   gRepBorrador: () => {
@@ -472,7 +468,7 @@ Object.assign(ACC, {
   },
 
   gRepCondU: d => { leerSup(); S.gRep.condUnidad=d.c; render(); },
-  gRepCondG: d => { leerSup(); S.gRep.condGeneral=d.c; render(); },
+  gRepItemCat:   () => { leerSup(); render(); },
   gRepItemMas:   () => { leerSup(); S.gRep.items.push(itemVacio()); render(); },
   gRepItemMenos: d => { leerSup(); S.gRep.items.splice(+d.i,1); render(); },
   gRepItemMat:   d => { leerSup(); const it=S.gRep.items[+d.i]; it.mat=!it.mat; if(!it.mat) it.materiales=""; render(); },
@@ -507,62 +503,56 @@ Object.assign(ACC, {
     const noEntro = g.tipo==="relevamiento" && g.condUnidad==="No se pudo ingresar";
     if(g.tipo==="relevamiento" && !noEntro){
       const conT = (g.items||[]).filter(it=>it.trabajo && it.trabajo.trim());
-      if(!conT.length){ toast("Falta el trabajo","Escribe al menos un servicio con lo que hay que hacer.","r"); return; }
+      if(!conT.length && !(g.repairsTexto&&g.repairsTexto.trim())){ toast("Falta el trabajo","Escribe al menos un servicio con lo que hay que hacer.","r"); return; }
     }
-    if(!g.lotes.length && !noEntro){ toast("Sin fotos","Toma al menos una antes de enviar.","r"); return; }
-    if(!g.unidad){ toast("Falta la unidad","Esta propiedad no tiene unidades registradas.","r"); return; }
+    const utxt = (g.unidadTexto||"").trim();
+    if(utxt){
+      const uMatch = S.unidades.find(u=>u.prop===g.prop && (u.num||"").toLowerCase()===utxt.toLowerCase());
+      if(uMatch) g.unidad = uMatch.id;
+    }
+    if(!g.unidad && !utxt){ toast("Falta la unidad","Escribe o selecciona una unidad antes de enviar.","r"); return; }
+    const catItem = it => it.cat==="__otro__" ? ((it.catOtro||"").trim()||"Otro") : it.cat;
     const n = g.lotes.reduce((t,l)=>t+(l.fotosArr||[]).length,0);
-    const r = {id:"R"+Date.now(), tipo:g.tipo, prop:g.prop, unidad:g.unidad, wo:null,
+    const r = {id:"R"+Date.now(), tipo:g.tipo, prop:g.prop, unidad:g.unidad, unidadTexto:utxt, wo:null,
       fecha:HOY_SUP, hora:hora(), quien:GUSTAVO,
       antesDe:g.tipo==="previo"?g.antesDe:"",
       servicios: g.tipo==="relevamiento"
-        ? [...new Set((g.items||[]).filter(it=>it.trabajo&&it.trabajo.trim()).map(it=>it.cat))]
+        ? [...new Set((g.items||[]).filter(it=>it.trabajo&&it.trabajo.trim()).map(catItem).concat((g.repairsTexto&&g.repairsTexto.trim())?["Repair"]:[]))]
         : g.servicios.slice(),
       lotes:g.lotes.slice(), nota:g.nota, medidas:g.medidas, material:g.material,
       /* Lo del formulario 2 viaja entero: Claudia arma el estimado sin
          volver a escribir nada de lo que Gustavo ya escribio en campo. */
-      condUnidad:g.condUnidad||"", condGeneral:g.condGeneral||"", recom:g.recom||"",
+      condUnidad:g.condUnidad||"", repairsTexto:g.repairsTexto||"",
       servSup:g.servSup||"", problemas:g.problemas||"", adicional:g.adicional||"",
       firmaGustavo:{quien:GUSTAVO, hora:hora()},
       firmaMant: g.conMant ? {nombre:g.mantNombre||"", firmada:!!g.mantFirma, hora:hora()} : null,
-      copiaThalia:!!g.copiaThalia, copiaCliente:!!g.copiaCliente,
-      items:(g.items||[]).filter(it=>it.trabajo && it.trabajo.trim()).map(it=>({...it})),
+      items:(g.items||[]).filter(it=>it.trabajo && it.trabajo.trim()).map(it=>({...it, cat:catItem(it)})),
       estado:"Nuevo", accion:null};
     S.reportes.push(r);
     /* Si Claudia estaba esperando esta inspección para armar un estimado, la solicitud queda lista y se le avisa. */
     if(g.tipo==="relevamiento"){
       S.solicitudesComerciales.filter(sc=>sc.inspeccion && sc.prop===r.prop && sc.estado==="Esperando inspección").forEach(sc=>{
         sc.estado="Lista para estimado";
-        avisar("Claudia","Inspección entregada — ya se puede armar el estimado",`${P(sc.prop).nombre}: Gustavo entregó su reporte de campo. Toca «Crear estimado» en Solicitudes.`,"v");
+        avisar("Lydia","Inspección entregada — ya se puede armar el estimado",`${P(sc.prop).nombre}: Gustavo entregó su reporte de campo. Toca «Crear estimado» en Solicitudes.`,"v");
       });
     }
     /* El estado previo no espera decisión de nadie: se archiva en la unidad */
     if(g.tipo==="previo"){ r.estado="Archivado"; r.accion="Archivado en la unidad"; }
     /* El informe se engancha solo al reporte del día */
     const et = (REP[r.tipo]||{n:r.tipo}).n;
+    const uniNum = utxt || (U(r.unidad)?U(r.unidad).num:"—");
     anotarDia(g.tipo==="relevamiento"?"estimado":"supervision",
-      `${et}: ${esc(P(r.prop).nombre)} ${esc(U(r.unidad).num)}`
+      `${et}: ${esc(P(r.prop).nombre)} ${esc(uniNum)}`
       + (g.estadoTrabajo?` — ${esc(g.estadoTrabajo)}`:""),
       r.id, {prop:r.prop, unidad:r.unidad, fotos:n});
     r.tipoVisita = g.tipoVisita||""; r.estadoTrabajo = g.estadoTrabajo||"";
     const pideDev = g.tipo==="revision" && g.estadoTrabajo==="Requiere correcci\u00f3n";
     S.gRep=null; S.phView=pideDev?S.phView:"dia"; S.reloj+=4;
     toast(`📷 ${et} enviado`,
-      `${esc(P(r.prop).nombre)} · ${esc(U(r.unidad).num)} — <b>${n} foto(s)</b> en ${r.lotes.length} ambiente(s).`
+      `${esc(P(r.prop).nombre)} · ${esc(uniNum)}${n?` — <b>${n} foto(s)</b> en ${r.lotes.length} ambiente(s).`:` — sin fotos adjuntas.`}`
       + (g.tipo==="previo"
          ? ` Queda <b>pegado a la unidad</b>: si algún día reclaman un daño, está la foto con su fecha.`
-         : ` Le llegó a <b>Claudia</b> para que decida — aparece en <b>Supervisión → De campo</b>.`), "v");
-    /* Claudia pidió poder mandar copia a scheduling o al cliente, no solo a
-       ella — antes el informe SIEMPRE se quedaba solo con ella. */
-    if(r.copiaThalia){
-      avisar("Thalia","Copia de informe de "+esc(tecN(GUSTAVO)),
-        `${et} · ${esc(P(r.prop).nombre)} ${esc(U(r.unidad).num)}.`,"");
-    }
-    if(r.copiaCliente){
-      const ctc = contactosDe(r.prop)[0];
-      if(ctc) toast("✓ Copia enviada al cliente",
-        `${esc(ctc.nombre)} (${esc(ctc.mail)}) recibió copia del informe por correo.`,"");
-    }
+         : ` Le llegó a <b>Lydia</b> para que decida — aparece en <b>Supervisión → De campo</b>.`), "v");
     /* Si marcó «requiere corrección», el return se abre en el acto: si se
        deja para después, no se crea nunca y el trabajo malo queda facturado. */
     /* El trabajo adicional recomendado no se entierra en el informe: antes
@@ -576,11 +566,22 @@ Object.assign(ACC, {
         estado:"Lista para estimado", prop:r.prop, propNombre:"",
         contacto:ctc?ctc.nombre:"— por confirmar —", correo:ctc?ctc.mail:"",
         alcance:r.adicional.trim(), inspeccion:false, fechaObjetivo:"", origen:"Gustavo", pidio:"", ...solSello(),
-        notas:`Trabajo adicional recomendado por ${tecN(GUSTAVO)} durante la supervisión de ${esc(U(r.unidad).num)} (informe ${r.id}).`};
+        notas:`Trabajo adicional recomendado por ${tecN(GUSTAVO)} durante la supervisión de ${esc(uniNum)} (informe ${r.id}).`};
       S.solicitudesComerciales.unshift(sc); flash("solcom:"+sc.id);
-      avisar("Claudia","Gustavo recomienda trabajo adicional",
-        `${esc(P(r.prop).nombre)} ${U(r.unidad)?esc(U(r.unidad).num):""} — ${esc(r.adicional.slice(0,90))}. Ya quedó como Solicitud Comercial — contestar antes de ${fmtLim(sc.limite)}.`,"a");
+      avisar("Lydia","Gustavo recomienda trabajo adicional",
+        `${esc(P(r.prop).nombre)} ${esc(uniNum)} — ${esc(r.adicional.slice(0,90))}. Ya quedó como Solicitud Comercial — contestar antes de ${fmtLim(sc.limite)}.`,"a");
     }
     if(pideDev){ ACC.gDevNueva({prop:r.prop, unidad:r.unidad, desc:g.problemas||g.nota||""}); return; }
     render();
-  },});
+  },
+  gBusqCambia: () => {
+    const p = document.getElementById("gBusqProp"), q = document.getElementById("gBusqQ");
+    const act = document.activeElement && document.activeElement===q, pos = act ? q.selectionStart : null;
+    if(p) S.gBusqProp = p.value;
+    if(q) S.gBusqQ = q.value;
+    S.gBusqUni = null;
+    render();
+    if(act){ const q2 = document.getElementById("gBusqQ"); if(q2 && q2.focus){ q2.focus(); try{ if(pos!=null) q2.setSelectionRange(pos,pos); }catch(e){} } }
+  },
+  gBusqAbrirUni: d => { S.gBusqUni = d.id; render(); },
+  gBusqCerrarUni: () => { S.gBusqUni = null; render(); },});

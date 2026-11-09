@@ -1,7 +1,7 @@
 "use strict";
 VIEWS.gustavoweb = () => {
-  const t = ["panel","ruta","reportar","dia","devs"].includes(S.gvTab) ? S.gvTab : "panel";
-  const TABS = [["panel","Hoy"],["ruta","Mi ruta"],["reportar","Reportar"],["dia","Mi día"],["devs","Returns"]];
+  const t = ["panel","ruta","reportar","dia","devs","buscar"].includes(S.gvTab) ? S.gvTab : "panel";
+  const TABS = [["panel","Hoy"],["ruta","Mi ruta"],["reportar","Reportar"],["dia","Mi día"],["devs","Returns"],["buscar","Buscar"]];
   return `
   <div class="ph"><div><h2>Vista de Gustavo</h2>
     <p>Lo mismo que ve en su celular (Supervisor de campo) — como página web, de referencia para cuando se construya la app real.</p></div></div>
@@ -34,12 +34,14 @@ function renderFonSup(){
     {v:"reportar",n:"Reportar", b:0,
      ic:'<path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>'},
     {v:"devs",  n:"Returns", b:nDev, bc:"var(--rojo)",
-     ic:'<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/>'}
-  ].map(b=>`<button class="${S.phView===b.v||(b.v==="devs"&&S.phView==="dev")?"on":""}" data-a="fView" data-v="${b.v}">
+     ic:'<path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-15-6.7L3 13"/>'},
+    {v:"buscar",n:"Buscar",  b:0,
+     ic:'<circle cx="11" cy="11" r="8"/><path d="M21 21l-4.3-4.3"/>'}
+  ].map(b=>`<button class="${S.phView===b.v||(b.v==="devs"&&S.phView==="dev")?"on":""}" style="padding:4px 5px" data-a="fView" data-v="${b.v}">
     ${b.b?`<span style="position:absolute;top:1px;right:5px;min-width:14px;height:14px;padding:0 3px;background:${b.bc};color:#fff;border-radius:99px;font-size:8.5px;font-weight:800;display:flex;align-items:center;justify-content:center">${b.b}</span>`:""}
     <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${b.ic}</svg>${b.n}</button>`).join("");
 
-  if(!["panel","ruta","dia","reportar","devs","dev","proceso"].includes(S.phView)) S.phView = "panel";
+  if(!["panel","ruta","dia","reportar","devs","dev","proceso","buscar"].includes(S.phView)) S.phView = "panel";
   if(S.phView==="dev" && !DV(S.phDev)) S.phView = "devs";
   const h = gustavoScreenHTML(S.phView);
 
@@ -78,10 +80,11 @@ function hojaSup(g){
           `<option value="${x.id}" ${x.id===g.prop?"selected":""}>${esc(x.nombre)}</option>`).join("")}</select>`}
     ${(()=>{ const pa=paradaDe(g.prop);
       return pa && pa.estado==="Visitada"
-        ? `<div class="sub" style="color:var(--verde);margin:4px 0 0">✓ Llegaste a las ${esc(pa.hora)} · ${esc(pa.motivo)}</div>`
+        ? `<div class="sub" style="color:var(--verde);margin:4px 0 0">✓ ${esc(pa.motivo)}</div>`
         : `<div class="sub" style="color:var(--ambar);margin:4px 0 0">No marcaste llegada aquí. Puedes reportar igual, pero queda sin hora de llegada.</div>`; })()}
 
     <label>Unidad</label>
+    <input id="gUT" value="${esc(g.unidadTexto||"")}" placeholder="Escribe la unidad (ej. 204, A-211…)" style="margin-bottom:5px">
     <select id="gU" data-a="gRepUnidad">${us.length?us.map(u=>
       `<option value="${u.id}" ${u.id===g.unidad?"selected":""}>${esc(u.num)} — ${esc(u.rooms)}</option>`).join("")
       :`<option value="">— sin unidades —</option>`}</select>
@@ -120,8 +123,10 @@ function hojaSup(g){
         <div style="display:flex;justify-content:space-between;align-items:center;gap:7px;margin-bottom:6px">
           <b style="font-size:11px;color:var(--azul)">Servicio ${i+1}</b>
           <button class="adx" data-a="gRepItemMenos" data-i="${i}" ${g.items.length===1?"disabled":""}>−</button></div>
-        <select id="itC${i}">${activos("categorias").map(c=>
-          `<option ${c===it.cat?"selected":""}>${esc(c)}</option>`).join("")}</select>
+        <select id="itC${i}" data-a="gRepItemCat" data-i="${i}">${activos("categorias").filter(c=>c!=="Repair").map(c=>
+          `<option value="${esc(c)}" ${c===it.cat?"selected":""}>${esc(c)}</option>`).join("")}
+          <option value="__otro__" ${it.cat==="__otro__"?"selected":""}>Otro</option></select>
+        ${it.cat==="__otro__"?`<input id="itCO${i}" value="${esc(it.catOtro||"")}" placeholder="Escribe la categoría" style="margin-top:5px">`:""}
         <input id="itT${i}" value="${esc(it.trabajo)}" placeholder="Qu\u00e9 trabajo hace falta" style="margin-top:5px">
         <div class="adnum" style="margin-top:5px">
           <label>D\u00f3nde<select id="itU${i}">${activos("ubicaciones").map(u=>
@@ -137,13 +142,8 @@ function hojaSup(g){
           \ud83d\udcf7 ${it.fotos?it.fotos+" foto(s) de este servicio":"Tomar foto de este servicio"}</button>
       </div>`).join("")}
       <button class="db g admas" data-a="gRepItemMas">+ Agregar otro servicio</button>
-
-      <label style="margin-top:11px">Condici\u00f3n general de la unidad</label>
-      <div class="gchips">${COND_GENERAL.map(c=>
-        `<button class="gchip ${g.condGeneral===c?"on":""}" data-a="gRepCondG" data-c="${esc(c)}">${esc(c)}</button>`).join("")}</div>
-
-      <label>Recomendaciones adicionales</label>
-      <textarea id="gRec" placeholder="Lo que conviene hacer aunque no lo hayan pedido">${esc(g.recom||"")}</textarea>`:""}`:""}
+      <label>Repairs (reparaciones)</label>
+      <textarea id="gRepairs" placeholder="Escribe todas las reparaciones que hagan falta en esta unidad">${esc(g.repairsTexto||"")}</textarea>`:""}`:""}
 
     <label style="margin-top:11px">${g.tipo==="relevamiento"?"Fotos generales de la unidad":"Fotos"}${total?` · ${total} tomada(s)`:""}</label>
     <div class="sub" style="margin:-3px 0 7px">Elige el ambiente y dispara. Se agrupan solas para que Claudia las pueda revisar.</div>
@@ -213,16 +213,7 @@ function hojaSup(g){
     <label>${g.tipo==="revision"?"Comentarios generales":"Nota"}</label>
     <textarea id="gN" placeholder="Lo que Claudia necesita saber">${esc(g.nota||"")}</textarea>
 
-    <label style="margin-top:11px">Enviar copia también a</label>
-    <div class="sub" style="margin:-3px 0 7px">A Claudia siempre le llega. Esto es aparte.</div>
-    <div class="gchips">
-      <button class="gchip ${g.copiaThalia?"on":""}" data-a="gRepCopiaThalia">${g.copiaThalia?"✓ ":""}Thalia (scheduling)</button>
-      ${(()=>{ const ctc=contactosDe(g.prop)[0];
-        return `<button class="gchip ${g.copiaCliente?"on":""}" data-a="gRepCopiaCliente" ${ctc?"":"disabled"}>
-          ${g.copiaCliente?"✓ ":""}Cliente${ctc?" — "+esc(ctc.nombre):" (sin contacto registrado)"}</button>`; })()}
-    </div>
-
-    <button class="db p" style="margin-top:11px;background:${r.c}" data-a="gRepOK">Enviar a Claudia</button>
+    <button class="db p" style="margin-top:11px;background:${r.c}" data-a="gRepOK">Enviar a Lydia</button>
     <button class="db g" data-a="gRepBorrador">Guardar borrador y seguir despu\u00e9s</button>
     <button class="db g" data-a="gRepNo">Cancelar</button>
   </div></div>`;
@@ -373,7 +364,7 @@ function hojaDev(g){
 
 /* Gasolina / mantenimiento / servicio de Gustavo. Se guardan en S.gastosCompartidos (la misma estructura
    que Finanzas ya lee), así salen en su libro y en el CSV de salidas sin duplicar nada. */
-const TIPOS_VEH = {"Gasolina":"Fuel","Mantenimiento":"Vehicle maintenance","Servicio":"Vehicle service"};
+const TIPOS_VEH = {"Gasolina":"Fuel"};
 const gastosVehiculoGustavo = () => (S.gastosCompartidos||[]).filter(g=>g.quien==="Gustavo" && g.vehiculo);
 function gastosVehiculoHTML(){
   return `<button class="db p" style="margin-top:10px" data-a="gVehAbrir">Gasolina / vehículo</button>`
@@ -588,6 +579,49 @@ function hojaCel(sh){
     <button class="db p" style="margin-top:11px" data-a="fPermisoOK">Enviar</button>
     <button class="db g" data-a="fSheetNo">Cancelar</button>
   </div></div>`;
+  if(sh.t==="previo"){
+    const us = S.unidades.filter(u=>u.prop===sh.prop);
+    const total = (sh.lotes||[]).reduce((t,l)=>t+(l.fotosArr||[]).length,0);
+    return `<div class="fscrim" data-a="fSheetNo"><div class="fsheet" data-stop>
+    <div class="grab"></div>
+    <h4 style="color:#8a5a00">Estado previo</h4>
+    <div class="sub">Lo que ya estaba dañado antes de empezar — queda registrado en la unidad con fecha, hora y tus fotos.</div>
+    <label>Propiedad</label>
+    <select id="pvP" data-a="fPrevioProp">${S.propiedades.filter(x=>x.activa).map(x=>
+      `<option value="${x.id}" ${x.id===sh.prop?"selected":""}>${esc(x.nombre)}</option>`).join("")}</select>
+    <label>Unidad</label>
+    <select id="pvU" data-a="fPrevioUni">${us.length?us.map(u=>
+      `<option value="${u.id}" ${u.id===sh.unidad?"selected":""}>${esc(u.num)} — ${esc(u.rooms)}</option>`).join("")
+      :`<option value="">— sin unidades —</option>`}</select>
+    <label>Antes de qué trabajo</label>
+    <select id="pvA">${activos("categorias").map(c=>`<option ${c===sh.antesDe?"selected":""}>${esc(c)}</option>`).join("")}</select>
+    <label style="margin-top:11px">Fotos${total?` · ${total} tomada(s)`:""}</label>
+    <div class="sub" style="margin:-3px 0 7px">Elige el ambiente y qué estaba dañado antes de tomar la foto.</div>
+    <div class="gchips">${activos("ubicaciones").map(u=>
+      `<button class="gchip ${sh.amb===u?"on":""}" data-a="fPrevioAmb" data-u="${esc(u)}">${esc(u)}</button>`).join("")}</div>
+    <div class="gchips" style="margin-top:5px">${activos("condiciones").map(c=>
+      `<button class="gchip cond ${sh.cond===c?"on":""}" data-a="fPrevioCond" data-c="${esc(c)}">${esc(c)}</button>`).join("")}</div>
+    <button class="db p gcam" data-a="fPrevioFoto">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      Tomar foto${sh.amb?" · "+esc(sh.amb):""}${sh.cond?" · "+esc(sh.cond):""}
+    </button>
+    ${(sh.lotes||[]).length?`<div class="glotes">${sh.lotes.map((l,i)=>`
+      <div style="border-bottom:1px solid var(--line);padding:7px 0">
+        <div class="glote" style="border:none;padding:0">
+          <span><b>${esc(l.amb)}</b>${l.cond?` · ${esc(l.cond)}`:""}</span>
+          <span><b>${(l.fotosArr||[]).length}</b> foto(s)
+            <button class="adx" style="height:23px;width:23px;font-size:14px;margin-left:5px" data-a="fPrevioQuita" data-i="${i}">−</button></span></div>
+        ${(l.fotosArr||[]).length?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">${l.fotosArr.map(f=>
+          `<a href="${f.url}" target="_blank"><img src="${f.url}" style="width:44px;height:44px;object-fit:cover;border-radius:5px;border:1px solid var(--line)"></a>`).join("")}</div>`:""}
+        <input id="pvLoD${i}" value="${esc(l.desc||"")}" placeholder="Qué se ve en estas fotos" style="margin-top:5px">
+      </div>`).join("")}</div>`
+      :`<div class="dc" style="border-style:dashed;margin-top:7px"><div class="ds" style="text-align:center">Sin fotos todavía</div></div>`}
+    <label>Nota</label>
+    <textarea id="pvN" placeholder="Qué estaba dañado antes de empezar">${esc(sh.nota||"")}</textarea>
+    <button class="db p" style="margin-top:11px;background:#8a5a00" data-a="fPrevioOK">Guardar estado previo</button>
+    <button class="db g" data-a="fSheetNo">Cancelar</button>
+  </div></div>`;
+  }
   return "";
 }
 

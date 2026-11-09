@@ -29,6 +29,7 @@ document.addEventListener("input", e=>{
   else if(el.classList.contains("gaWO")) ACC.gaContar();
   else if(el.classList.contains("pfIn")) ACC.precLlenarCuenta();
   else if(el.id==="catBuscar") ACC.catBuscar();
+  else if(el.id==="gBusqQ") ACC.gBusqCambia();
 });
 document.addEventListener("change", e=>{
   const sel = e.target.closest("select[data-a], input[data-a], textarea[data-a]");
@@ -100,6 +101,7 @@ const AUD = {
   fSubHallazgo:{a:"Registró un initial finding de una Sub-Work Order", m:"Campo"},
   fSubTerminar:{a:"Cerró una Sub-Work Order", m:"Campo"},
   fPermisoOK:{a:"Solicitó permiso", m:"Campo"},
+  fPrevioOK:{a:"Registró estado previo de una unidad", m:"Campo"},
   fDispOK:{a:"Envió su disponibilidad de la semana", m:"Campo"},
   dispRecordar:{a:"Recordó la disponibilidad a los técnicos", m:"Disponibilidad"},
   medioOK:{a:"Decidió un adicional", m:"Excepciones"},
