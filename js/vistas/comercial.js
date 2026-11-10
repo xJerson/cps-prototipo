@@ -31,20 +31,17 @@ function expedienteDe(pid){
       : !!String(p[c.k]||"").trim()
   }));
 }
-/* "Servicio directo" (la visita que salta la llamada de negociar) puede
-   eximir temporalmente el tarifario completo para acelerar el pase —
-   sinEstimado=true se usa SOLO en ese camino: el resto del Expediente
-   (COI, contacto...) sigue exigiéndose igual.
-   El cliente pide en REQ_FINAL que el Expediente valide "Tarifario completo"
+/* El cliente pide en REQ_FINAL que el Expediente valide "Tarifario completo"
    alimentado por la base de datos de costos / plantilla de servicios globales. */
 /* Reunión 2026-09-09: las Unidades dejaron de ser requisito para el
    Expediente. No es un bloqueo antes — es un catálogo que se va llenando
    solo conforme se crean Work Orders y Estimados (ver "+ Nueva unidad…"
    en esos formularios), nunca algo que haya que precargar a mano primero. */
-const expedienteOK = (pid, opts) => {
-  const sinEstimado = opts && opts.sinEstimado;
-  return expedienteDe(pid).every(c=>c.ok || (sinEstimado && c.k==="tarifario"));
-};
+/* Lo ÚNICO que bloquea el paso a programación es el COI vigente (pedido del cliente).
+   El resto de la lista es de seguimiento: se ve qué falta, pero no frena nada. */
+const expedienteOK = pid => coiVigente(pid);
+/* Lista completa (informativa): todos los elementos en verde. */
+const expedienteCompleto = pid => expedienteDe(pid).every(c=>c.ok);
 
 /* ── EXCEPCIONES ── la compuerta antes de cerrar la semana ── */
 function emailBodyDefaultEst(e){
@@ -210,9 +207,9 @@ VIEWS.solicitudes = () => `
           ${atascada?`<div style="font-size:10px;color:var(--ambar);margin-top:2px">⏳ no llegó a Thalia — falta el Expediente</div>`:""}</td>
         <td>${v.proximaAccion?`<span class="mono" style="${vencido?"color:var(--rojo);font-weight:700":""}">${esc(v.proximaAccion)}${vencido?" ⚠":""}</span>`:"—"}</td>
         <td style="text-align:right">${v.estado==="En seguimiento"?`<button class="btn sm" data-a="visitaComEditar" data-id="${v.id}">Actualizar</button>`
-          :atascada?(expedienteOK(v.prop,{sinEstimado:true})
+          :atascada?(expedienteOK(v.prop)
             ?`<button class="btn sm p" data-a="visitaReintentarDirecto" data-id="${v.id}">Reintentar</button>`
-            :`<button class="btn sm" data-a="visitaIrExpediente" data-id="${v.id}">Completar Expediente</button>`)
+            :`<button class="btn sm" data-a="visitaIrExpediente" data-id="${v.id}">Registrar COI</button>`)
           :""}</td></tr>`;
     }).join("")||`<tr><td colspan="7" class="empty">Sin visitas comerciales todavía</td></tr>`}
     </tbody></table>
@@ -354,7 +351,7 @@ function ramificarVisita(v){
        igual lo volvía imposible de cerrar la primera vez que se usaba una
        propiedad nueva. El resto del Expediente (COI, contacto...)
        sigue exigiéndose igual. */
-    else if(!expedienteOK(v.prop,{sinEstimado:true})){ toast("Expediente incompleto",`Completa el expediente de <b>${esc(P(v.prop).nombre)}</b> antes de transferir a Thalia.`,"w"); }
+    else if(!expedienteOK(v.prop)){ toast("Falta el COI vigente",`Registra el COI de <b>${esc(P(v.prop).nombre)}</b> antes de transferir a Thalia.`,"w"); }
     else if(!v.solicitudDirectaId){
       const p=P(v.prop);
       const nsol={id:"SOL"+Date.now(),prop:v.prop,cliente:p.cliente,quien:S.usuario,hora:hora(),
@@ -512,7 +509,7 @@ VIEWS.estimados = () => `
         ${e.estado==="Rechazado"?`<button class="btn sm p" data-a="estModificar" data-id="${e.id}">Modificar propuesta y reenviar</button>`:""}
         ${e.estado==="Aprobado"&&e.prospecto?`<button class="btn sm p" data-a="estConvertir" data-id="${e.id}">Convertir en cliente</button>`:""}
         ${e.estado==="Aprobado"&&!e.prospecto&&!coiVigente(e.prop)?`<button class="btn sm" style="border-color:var(--rojo);color:var(--rojo)" data-a="estCOI" data-id="${e.id}">Solicitar COI</button>`:""}
-        ${e.estado==="Aprobado"&&!e.prospecto&&!expedienteOK(e.prop)?`<button class="btn sm" data-a="estIrExpediente" data-id="${e.id}">Completar Expediente</button>`:""}
+        ${e.estado==="Aprobado"&&!e.prospecto&&!expedienteOK(e.prop)?`<button class="btn sm" data-a="estIrExpediente" data-id="${e.id}">Registrar COI</button>`:""}
         ${e.estado==="Aprobado"&&!e.prospecto?`<button class="btn sm ${expedienteOK(e.prop)?"p":""}" data-a="estAgendar" data-id="${e.id}" ${expedienteOK(e.prop)?"":"disabled"}>Transferir a programación</button>`:""}
         ${e.estado==="Transferido"?`<span class="pill v" style="margin-left:6px">Con Thalia</span>`:""}
       </td></tr>`).join("")||`<tr><td colspan="9" class="empty">Sin estimados todavía</td></tr>`}

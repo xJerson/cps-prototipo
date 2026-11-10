@@ -44,7 +44,7 @@ function fichaProp(id){
       </div>
       <div><button class="btn sm" data-a="tab" data-t="datos">Ver tarjetas de crédito ↓</button></div>
     </div>` : ""}
-  <div class="tabs">${[["datos","Datos"],["expediente",`Expediente ${expedienteOK(id)?"✓":"— incompleto"}`],["documentos","Documentos"],["unidades",`Unidades (${us.length})`],["contactos",`Contactos (${cs.length})`],["com",`Comunicación (${coms.length})`],["precios",`Price List (${nTf})`],["previo",`Informes de campo (${S.reportes.filter(r=>r.prop===id).length})`],["hist",`Historial (${ws.length})`]]
+  <div class="tabs">${[["datos","Datos"],["expediente",`Expediente ${expedienteCompleto(id)?"✓":"— incompleto"}`],["documentos","Documentos"],["unidades",`Unidades (${us.length})`],["contactos",`Contactos (${cs.length})`],["com",`Comunicación (${coms.length})`],["precios",`Price List (${nTf})`],["previo",`Informes de campo (${S.reportes.filter(r=>r.prop===id).length})`],["hist",`Historial (${ws.length})`]]
     .map(([k,n])=>`<button class="tab ${t===k?"on":""}" data-a="tab" data-t="${k}">${n}</button>`).join("")}</div>
 
   ${t==="expediente"?(()=>{
@@ -93,9 +93,11 @@ function fichaProp(id){
     </tbody></table>
     <div class="cp" style="border-top:1px solid var(--line)">
       <div style="margin-bottom:10px"><button class="btn sm" data-a="inspPedirModal" data-prop="${id}">Pedir inspección en sitio</button></div>
-      ${expedienteOK(id)
+      ${!expedienteOK(id)
+        ? `<div class="note r" style="margin:0"><b>Falta el COI vigente.</b> Es lo único que bloquea: sin COI vigente no se puede transferir a programación.${expedienteCompleto(id)?"":` Los demás datos que faltan (${expedienteDe(id).filter(c=>!c.ok&&c.k!=="coi").length}) no bloquean, pero conviene completarlos.`}</div>`
+        : expedienteCompleto(id)
         ? `<div class="note v" style="margin:0"><b>Expediente completo.</b> Esta propiedad ya puede pasar a programación sin que nadie tenga que llamar a preguntar nada.</div>`
-        : `<div class="note r" style="margin:0"><b>Expediente incompleto.</b> El sistema no deja transferir a programación hasta que estén los ${expedienteDe(id).filter(c=>!c.ok).length} campos que faltan. Es lo que hoy se descubre cuando el técnico ya está en la propiedad.</div>`}
+        : `<div class="note a" style="margin:0"><b>COI vigente: ya puede pasar a programación.</b> Quedan ${expedienteDe(id).filter(c=>!c.ok).length} dato(s) por completar; no bloquean, pero conviene tenerlos antes de que el técnico llegue.</div>`}
     </div>
     <div class="mf" style="border-top:1px solid var(--line)">
       <button class="btn ${expedienteOK(id)?"p":""}" data-a="transferir" data-id="${id}" ${expedienteOK(id)?"":"disabled"}>Transferir a programación</button>
@@ -839,7 +841,7 @@ VIEWS.catalogos = () => {
   <div class="card cat-det">${det}</div>`;
 };
 
-/* ── UC-06 ── Expediente de la propiedad: 9 campos que bloquean el paso a programación ── */
+/* ── UC-06 ── Expediente de la propiedad: solo el COI vigente bloquea el paso a programación; el resto es seguimiento ── */
 /* Qué campo del formulario corresponde a cada fila del expediente: la fila que
    dice «falta» tiene que llevarte al campo, no dejarte buscándolo. */
 /* El Management no bloquea el expediente: Claudia crea la propiedad sin saberlo

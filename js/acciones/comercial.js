@@ -161,7 +161,7 @@ Object.assign(ACC, {
   visitaIrExpediente: d => { const v=by(S.visitas,d.id); S.mod="propiedades"; S.sub=v.prop; S.tab="expediente"; render(); },
   visitaReintentarDirecto: d => {
     const v=by(S.visitas,d.id);
-    if(!expedienteOK(v.prop,{sinEstimado:true})){ toast("🚫 Expediente incompleto",`<b>${esc(P(v.prop).nombre)}</b> todavía no tiene el Expediente completo.`,"r"); return; }
+    if(!expedienteOK(v.prop)){ toast("🚫 Falta el COI vigente",`<b>${esc(P(v.prop).nombre)}</b> todavía no tiene COI vigente. Regístralo antes de continuar.`,"r"); return; }
     ramificarVisita(v); render();
   },
   /* "Propiedades" sí está en los módulos de Lydia — crear la propiedad es
@@ -420,7 +420,7 @@ Object.assign(ACC, {
        estimado a la WO, haya o no tarifa para esa propiedad. */
     if(!expedienteOK(e.prop)){
       S.audOmitir=true;
-      toast("🚫 Expediente incompleto",`<b>${esc(P(e.prop).nombre)}</b> todavía no tiene el Expediente completo (COI, contacto, etc). Complétalo antes de transferir a programación.`,"r"); return; }
+      toast("🚫 Falta el COI vigente",`<b>${esc(P(e.prop).nombre)}</b> todavía no tiene COI vigente. Regístralo antes de transferir a programación.`,"r"); return; }
     /* Cada línea viaja con su precio por unidad ya con descuento (el que se cobra) y el
        texto de lo autorizado, que es lo único que verá el técnico (sin precio). */
     let solNum = Date.now();

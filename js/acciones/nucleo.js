@@ -68,7 +68,7 @@ Object.assign(ACC, {
 
   /* ---- UC-02: Lydia pasa la solicitud a Thalia sin llamada ---- */
   transferir: d => {
-    if(!expedienteOK(d.id)){ toast("🚫 Expediente incompleto","Faltan campos obligatorios.","r"); return; }
+    if(!expedienteOK(d.id)){ toast("🚫 Falta el COI vigente","Sin COI vigente no se puede transferir a programación. Regístralo en el Expediente.","r"); return; }
     const p=P(d.id);
     const nsol={id:"SOL"+Date.now(),prop:d.id,cliente:p.cliente,quien:S.usuario,hora:hora(),
       nota:"Expediente completo · lista para agendar",estado:"Pendiente"};

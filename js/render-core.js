@@ -105,8 +105,8 @@ function ayudaContexto(){
     if(!expedienteOK(pid)){
       if(tab!=="expediente")
         return {sel:'[data-a="tab"][data-t="expediente"]',
-          txt:"A esta propiedad le falta completar el Expediente. Abre esta pestaña para ver qué falta."};
-      const falta = expedienteDe(pid).find(c=>!c.ok);
+          txt:"A esta propiedad le falta el COI vigente, y sin él no se puede transferir a programación. Abre esta pestaña para registrarlo."};
+      const falta = expedienteDe(pid).find(c=>c.k==="coi");
       let sel, extra="Toca el botón de esa fila para completarlo.";
       if(falta.k==="contacto") sel=`[data-a="conNuevo"][data-prop="${pid}"]`;
       else if(falta.k==="coi") sel=`[data-a="coiDirecto"][data-id="${pid}"]`;
@@ -128,7 +128,7 @@ function ayudaContexto(){
   if(S.mod==="propiedades" && !S.sub){
     const p = S.propiedades.find(x=>x.activa && !expedienteOK(x.id));
     if(p) return {sel:`tr[data-a="propVer"][data-id="${p.id}"]`,
-      txt:`«${esc(p.nombre)}» tiene el Expediente incompleto. Entra para terminarlo.`};
+      txt:`«${esc(p.nombre)}» no tiene COI vigente. Entra para registrarlo.`};
     return null;
   }
 
@@ -150,9 +150,9 @@ function ayudaContexto(){
     const eP = S.estimados.find(e=>e.estado==="Aprobado" && e.prospecto);
     if(eP) return {sel:`[data-a="estConvertir"][data-id="${eP.id}"]`, txt:`El prospecto de ${esc(eP.num)} aprobó. Toca «Convertir en cliente» para registrar su propiedad y poder transferirlo.`};
     const eA = S.estimados.find(e=>e.estado==="Aprobado" && !e.prospecto && expedienteOK(e.prop));
-    if(eA) return {sel:`[data-a="estAgendar"][data-id="${eA.id}"]`, txt:`El estimado ${esc(eA.num)} está aprobado y su Expediente completo. Toca «Transferir a programación».`};
+    if(eA) return {sel:`[data-a="estAgendar"][data-id="${eA.id}"]`, txt:`El estimado ${esc(eA.num)} está aprobado y su propiedad tiene COI vigente. Toca «Transferir a programación».`};
     const eX = S.estimados.find(e=>e.estado==="Aprobado" && !e.prospecto && !expedienteOK(e.prop));
-    if(eX) return {sel:`[data-a="estIrExpediente"][data-id="${eX.id}"]`, txt:`Al estimado ${esc(eX.num)} le falta completar el Expediente de la propiedad.`};
+    if(eX) return {sel:`[data-a="estIrExpediente"][data-id="${eX.id}"]`, txt:`Al estimado ${esc(eX.num)} le falta el COI vigente de la propiedad.`};
     const eE = S.estimados.find(e=>e.estado==="Enviado");
     if(eE) return {sel:`[data-a="estClienteOK"][data-id="${eE.id}"]`, txt:`El estimado ${esc(eE.num)} está enviado. Cuando el cliente responda, marca «Aprobar» o «Rechazar».`};
     const eRj = S.estimados.find(e=>e.estado==="Rechazado");
@@ -574,7 +574,7 @@ function renderAyudaVista(){
       tips:["«Asignar técnico» / «Programar con el cliente»: los dos pasos antes de que arranque el trabajo.","«Ver en el celular de …»: abre esta orden en el celular del técnico que la tiene — desde ahí él marca llegada, sube fotos y cierra.","«Detener trabajo»: si empezó pero no puede seguir por algo externo (falta material, no hay acceso…)."]};
     if(S.mod==="propiedades" && S.sub) info = {t:"Ficha de la propiedad",
       d:"Todo lo de esta propiedad, en pestañas. Se completan en cualquier orden; el «Expediente» te va marcando lo que falta.",
-      tips:["«Datos» son los datos generales — «Editar datos» los modifica.","«Expediente»: la lista de control. Sin completarla no se puede transferir a programación.","«Contactos», «Documentos» (el seguro), «Price List» y «Unidades» se cargan cada uno en su pestaña.","«Comunicación»: anota cada llamada o correo con esta propiedad, para que quede el registro."]};
+      tips:["«Datos» son los datos generales — «Editar datos» los modifica.","«Expediente»: la lista de seguimiento. Solo el COI vigente bloquea el paso a programación; lo demás se ve qué falta pero no frena nada.","«Contactos», «Documentos» (el seguro), «Price List» y «Unidades» se cargan cada uno en su pestaña.","«Comunicación»: anota cada llamada o correo con esta propiedad, para que quede el registro."]};
   }
   const btn = `<button class="avb" data-a="ayudaVistaToggle">❔ ¿Qué es esta pantalla?</button>`;
   if(!S.ayudaVista || !info){ box.innerHTML = btn; return; }
