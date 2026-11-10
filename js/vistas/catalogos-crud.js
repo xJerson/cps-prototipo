@@ -421,7 +421,7 @@ const vTecLista = () => {
           <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start">
             <span class="pill ${t.tipoVinculo==="Vendor externo"?"m":t.tipoVinculo==="Subcontratista (1099)"?"a":"g"}">${esc(t.tipoVinculo||"Empleado")}</span>
             <div style="display:flex;gap:3px;flex-wrap:wrap">
-              ${t.contrato_firmado==="Firmado"?`<span class="pill v" style="font-size:10px" title="Contrato de servicios firmado">Contrato ✓</span>`:t.contrato_firmado==="Pendiente"?`<span class="pill w" style="font-size:10px" title="Contrato pendiente de firma">Contrato pend.</span>`:""}
+              ${t.contratoArchivo?`<span class="pill v" style="font-size:10px" title="Contrato firmado y adjunto${t.contratoFecha?" el "+esc(t.contratoFecha):""}">Contrato ✓</span>`:`<span class="pill w" style="font-size:10px" title="Contrato pendiente de firma: se genera y se adjunta desde la ficha del técnico">Contrato pend.</span>`}
               ${t.w9_subido==="Al día"?`<span class="pill v" style="font-size:10px" title="Formulario W-9 al día">W-9 ✓</span>`:t.w9_subido==="Pendiente"?`<span class="pill w" style="font-size:10px" title="W-9 pendiente">W-9 pend.</span>`:""}
               ${t.seguro_coi==="Vigente"?`<span class="pill v" style="font-size:10px" title="Seguro / COI vigente">COI ✓</span>`:t.seguro_coi==="Pendiente"?`<span class="pill r" style="font-size:10px" title="Seguro pendiente">COI pend.</span>`:""}
             </div>
@@ -434,7 +434,7 @@ const vTecLista = () => {
         <td>${!t.activo?'<span class="pill g">Dado de baja</span>'
              :b?`<span class="pill r"><span class="dot"></span>${esc(b.motivo)} ${b.desde.slice(5)}–${b.hasta.slice(5)}</span>`
                :'<span class="pill v">Disponible</span>'}</td>
-        <td style="text-align:right;white-space:nowrap"><button class="btn sm" data-a="tecContratoVer" data-id="${t.id}">Contrato</button> <button class="btn sm" data-a="tecNuevo" data-id="${t.id}">Editar</button>
+        <td style="text-align:right;white-space:nowrap">${t.contratoArchivo?`<button class="btn sm" data-a="tecContratoVer" data-id="${t.id}">Contrato</button> `:""}<button class="btn sm" data-a="tecNuevo" data-id="${t.id}">Editar</button>
           <button class="btn sm ${t.activo?"":"v"}" data-a="tecBaja" data-id="${t.id}">${t.activo?"Dar de baja":"Reactivar"}</button></td></tr>`;
     }).join("")||`<tr><td colspan="9" class="empty">No hay técnicos que coincidan con la búsqueda</td></tr>`}</tbody></table></div>
   <div class="tr">La «última ubicación» es lo que UC-09 usa para sugerir al técnico más cercano. Sale sola de la llegada que él marca.</div>`;

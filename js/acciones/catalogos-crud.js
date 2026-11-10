@@ -369,18 +369,13 @@ Object.assign(ACC, {
             <option value="Subcontratista (1099)" ${t&&t.tipoVinculo==="Subcontratista (1099)"?"selected":""}>Subcontratista (1099)</option>
             <option value="Vendor externo" ${t&&t.tipoVinculo==="Vendor externo"?"selected":""}>Vendor externo (sin app de campo)</option>
           </select></div>
-          <div class="fld"><label>Acuerdo / Contrato</label><select id="tCon">
-            <option value="Firmado" ${t&&t.contrato_firmado==="Firmado"?"selected":""}>Firmado ✓</option>
-            <option value="Pendiente" ${!t||t.contrato_firmado==="Pendiente"?"selected":""}>Pendiente</option>
-            <option value="No aplica" ${t&&t.contrato_firmado==="No aplica"?"selected":""}>No aplica</option>
-          </select></div>
-        </div>
-        <div class="fg c2">
           <div class="fld"><label>W-9</label><select id="tW9">
             <option value="Al día" ${t&&t.w9_subido==="Al día"?"selected":""}>Al día ✓</option>
             <option value="Pendiente" ${!t||t.w9_subido==="Pendiente"?"selected":""}>Pendiente</option>
             <option value="No aplica" ${t&&t.w9_subido==="No aplica"?"selected":""}>No aplica</option>
           </select></div>
+        </div>
+        <div class="fg c2">
           <div class="fld"><label>Seguro / COI</label><select id="tCoi">
             <option value="Vigente" ${t&&t.seguro_coi==="Vigente"?"selected":""}>Vigente ✓</option>
             <option value="Pendiente" ${!t||t.seguro_coi==="Pendiente"?"selected":""}>Pendiente</option>
@@ -398,12 +393,21 @@ Object.assign(ACC, {
           <div class="fld"><label>Fecha de ingreso</label><input id="tFIng" type="date" value="${t?esc(t.fIngreso||""):""}"></div>
           <div class="fld"><label>Contacto de emergencia</label><input id="tFEm" placeholder="Nombre y teléfono" value="${t?esc(t.fEmerg||""):""}"></div></div>
         <div class="fld"><label>Otros datos del formulario</label><input id="tFOt" placeholder="(se definen con el formulario del cliente)" value="${t?esc(t.fOtros||""):""}"></div>
-        <div class="fld"><label>Contrato / acuerdo</label>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-            <button class="btn sm" data-a="tecContratoPrev">Ver contrato de CPS</button>
-            <input id="tArch" type="file" style="font-size:11.5px;max-width:240px"></div>
-          <div id="tPrev" style="display:none;margin-top:8px"></div>
-          ${t&&t.contratoArchivo?`<div style="font-size:11.5px;color:var(--soft);margin-top:4px">Contrato firmado adjunto: <b>${esc(t.contratoArchivo)}</b></div>`:`<div style="font-size:11px;color:var(--faint);margin-top:4px">Adjunta aquí el contrato o acuerdo firmado (simulado, el archivo no se sube).</div>`}</div>
+      </div>
+
+      <div style="border-top:1px solid var(--line);margin:14px 0 10px;padding-top:10px">
+        <div style="font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);margin-bottom:4px">Contrato con CPS</div>
+        <div style="font-size:11.5px;color:var(--soft);margin-bottom:8px">1) Genera el contrato y descárgalo para el técnico · 2) el técnico lo firma y lo devuelve (escaneo o foto) · 3) la oficina lo adjunta aquí. Solo entonces queda <b>Firmado</b> y aparece el botón «Contrato» en la lista.</div>
+        <div style="margin-bottom:8px">${t&&t.contratoArchivo
+          ?`<span class="pill v">Firmado${t.contratoFecha?" el "+esc(t.contratoFecha):""}</span> <span style="font-size:11.5px;color:var(--soft)">Archivo: <b>${esc(t.contratoArchivo)}</b></span>`
+          :`<span class="pill w">Contrato pendiente de firma</span>`}</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn sm" data-a="tecContratoPrev">Generar contrato</button>
+          <button class="btn sm" data-a="tecContratoPDF">Descargar PDF</button></div>
+        <div id="tPrev" style="display:none;margin-top:8px"></div>
+        <div class="fld" style="margin:10px 0 0"><label>${t&&t.contratoArchivo?"Reemplazar contrato firmado":"Adjuntar contrato firmado"}</label>
+          <input id="tArch" type="file" accept="image/*,application/pdf" style="font-size:11.5px;max-width:280px">
+          <div style="font-size:11px;color:var(--faint);margin-top:4px">Escaneo o foto del contrato firmado (simulado: solo se guarda el nombre del archivo).</div></div>
       </div>
     </div>
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
@@ -414,7 +418,6 @@ Object.assign(ACC, {
     if(!esp.length){ toast("Falta la especialidad","Sin especialidad el sistema no puede sugerirlo para asignar.","r"); return; }
     const yo = d&&d.id ? T(d.id) : null;
     const tipoVinculo = val("tVin") || "Empleado";
-    const contrato_firmado = val("tCon") || "Pendiente";
     const w9_subido = val("tW9") || "Pendiente";
     const seguro_coi = val("tCoi") || "Pendiente";
     const notasLegales = val("tNotasLegales") || "";
@@ -423,9 +426,12 @@ Object.assign(ACC, {
 
     const datos = {nombre:val("tN"),apellido:val("tA"),esp,zona:val("tZ"),
       tel:val("tT"),dir:val("tD"),movimiento:val("tMv")==="1",
-      tipoVinculo, contrato_firmado, w9_subido, seguro_coi, notasLegales, esVendor,
-      fIngreso:val("tFIng"), fEmerg:val("tFEm"), fOtros:val("tFOt"),
-      contratoArchivo: arch || (yo&&yo.contratoArchivo) || ""};
+      tipoVinculo, w9_subido, seguro_coi, notasLegales, esVendor,
+      fIngreso:val("tFIng"), fEmerg:val("tFEm"), fOtros:val("tFOt")};
+    /* El contrato queda «Firmado» solo cuando la oficina adjunta el archivo firmado; no se marca a mano. */
+    datos.contratoArchivo = arch || (yo&&yo.contratoArchivo) || "";
+    datos.contratoFecha = arch ? HOY_SUP : (yo&&yo.contratoFecha) || "";
+    datos.contrato_firmado = datos.contratoArchivo ? "Firmado" : "Pendiente";
     if(yo) return guardarEdicion(yo, datos, "Técnicos", tecN(yo.id), null, "tec:"+yo.id);
     const nt = {id:"T"+nid("t"), ...datos, nac:"", activo:true};
     S.tecnicos.push(nt); flash("tec:"+nt.id);
@@ -433,18 +439,22 @@ Object.assign(ACC, {
   },
 
   /* Contrato de CPS con el técnico: vista previa simulada. El texto real llega con el documento del cliente. */
+  /* Solo existe el botón en la lista cuando el contrato ya está firmado y adjunto: aquí se ve ESE archivo firmado. */
   tecContratoVer: d => { const t = T(d.id); if(!t) return;
-    modal(`<div class="mh"><h3>Contrato de CPS — ${esc(tecN(t.id))}</h3><p>Vista previa simulada. El texto final se carga cuando llegue el documento.</p></div>
-    <div class="mb">${contratoHojaHTML(tecN(t.id), t.zona, t.tel, t.tipoVinculo)}
-    <div style="font-size:11.5px;color:var(--soft);margin-top:8px">Estado: ${esc(t.contrato_firmado||"Pendiente")}${t.contratoArchivo?" · Adjunto firmado: "+esc(t.contratoArchivo):" · Sin contrato firmado adjunto"}</div></div>
-    <div class="mf"><button class="btn" data-a="tecNuevo" data-id="${t.id}">Volver a la ficha</button>
-      <button class="btn p" data-a="tecContratoPDF" data-id="${t.id}">Descargar PDF</button></div>`,true); },
+    if(!t.contratoArchivo){ toast("Contrato pendiente","Todavía no hay contrato firmado. Genéralo y adjúntalo desde la ficha del técnico.","a"); return; }
+    modal(`<div class="mh"><h3>Contrato firmado — ${esc(tecN(t.id))}</h3><p>Firmado${t.contratoFecha?" el "+esc(t.contratoFecha):""}. Adjuntado por la oficina.</p></div>
+    <div class="mb"><div class="card" style="text-align:center;padding:28px 12px;margin:0">
+      <div style="font-size:34px">📄</div>
+      <div style="font-weight:650;margin-top:6px">${esc(t.contratoArchivo)}</div>
+      <div style="font-size:11.5px;color:var(--soft);margin-top:4px">Vista del archivo firmado (simulada: en el desarrollo aquí se abre el escaneo o la foto subida).</div></div></div>
+    <div class="mf"><button class="btn" data-a="tecNuevo" data-id="${t.id}">Ir a la ficha</button>
+      <button class="btn p" data-a="tecContratoPDF" data-id="${t.id}">Descargar</button></div>`,true); },
   /* Dentro de la ficha (también al crear): muestra u oculta el contrato con los datos escritos, sin perder lo capturado. */
   tecContratoPrev: () => { const p = $("#tPrev"); if(!p) return;
     if(p.style.display !== "none"){ p.style.display = "none"; return; }
     p.innerHTML = contratoHojaHTML((val("tN")+" "+val("tA")).trim(), val("tZ"), val("tT"), val("tVin"));
     p.style.display = "block"; },
-  tecContratoPDF: d => { toast("Descarga simulada","El PDF del contrato se genera cuando esté el documento final.","v"); },
+  tecContratoPDF: d => { toast("Descarga simulada","El archivo se descarga cuando esté el documento final.","v"); },
 
   tecBuscar: () => { S.tecBuscar = val("tBus"); render(); },
   tecFiltroZona: () => { S.tecFiltroZona = val("tFiltZ"); render(); },
