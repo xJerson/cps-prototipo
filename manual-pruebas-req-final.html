@@ -389,6 +389,9 @@
       color: #334155;
       margin-bottom: 12px;
       font-style: italic;
+      overflow-wrap: break-word;
+      word-break: break-word;
+      line-height: 1.5;
     }
     .route-bar {
       font-size: 12.5px;
@@ -937,7 +940,7 @@
         <li><a href="#p4"><span class="badge-num">4</span> Categoría con opción Otro</a></li>
         <li><a href="#p5"><span class="badge-num">5</span> Repairs texto + fotos</a></li>
         <li><a href="#p6"><span class="badge-num">6</span> Sin condición general</a></li>
-        <li><a href="#p7"><span class="badge-num">7</span> Recomendaciones = Notas</a></li>
+        <li><a href="#p7"><span class="badge-num">7</span> Recomendaciones adicionales quitadas; las notas siguen aparte</a></li>
         <li><a href="#p8"><span class="badge-num">8</span> Sin envío a Thalia/Cliente</a></li>
         <li><a href="#p9"><span class="badge-num">9</span> Solicitud de cliente</a></li>
         <li><a href="#p10"><span class="badge-num">10</span> Estado previo exclusivo</a></li>
@@ -1002,7 +1005,7 @@
       <div class="nav-group-title">6. Estimados (P26, P37)</div>
       <ul class="nav-list">
         <li><a href="#p26"><span class="badge-num">26</span> COI único bloqueo</a></li>
-        <li><a href="#p37"><span class="badge-num">37</span> Estimado a WO</a></li>
+        <li><a href="#p37"><span class="badge-num">37</span> Estimado a Work Order y ciclo de facturación (Estado derivado)</a></li>
       </ul>
 
       <div class="nav-group-title">Cierre</div>
@@ -1107,8 +1110,8 @@
             <span class="menu-item-num">P07</span>
             <div class="menu-item-badges"><span class="chip-v">v84</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <div class="menu-item-name">Recomendaciones = Notas</div>
-          <div class="menu-item-sub">Unificado en un solo campo de Notas para no duplicar datos</div>
+          <div class="menu-item-name">Recomendaciones adicionales quitadas; las notas siguen aparte</div>
+          <div class="menu-item-sub">Recomendaciones adicionales quitadas; las notas siguen aparte</div>
         </a>
         <a href="#p8" class="menu-item-card">
           <div class="menu-item-top">
@@ -1374,10 +1377,10 @@
         <a href="#p37" class="menu-item-card">
           <div class="menu-item-top">
             <span class="menu-item-num">P37</span>
-            <div class="menu-item-badges"><span class="chip-v">v84</span><span class="chip-status ok">✔ Implementado</span></div>
+            <div class="menu-item-badges"><span class="chip-v">v93</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <div class="menu-item-name">Estimado → Work Order</div>
-          <div class="menu-item-sub">Conversión fluida de estimado aprobado a orden de trabajo</div>
+          <div class="menu-item-name">Estimado a Work Order y ciclo de facturación (Estado derivado)</div>
+          <div class="menu-item-sub">Transferencia a programación y seguimiento en tiempo real del ciclo derivado de las WO</div>
         </a>
       </div>
     </section>
@@ -1392,7 +1395,7 @@
       </div>
 
       <!-- P01 -->
-                                                <article class="point-card" id="p1">
+                                                                                          <article class="point-card" id="p1">
         <div class="point-header">
           <div class="point-title-wrap">
             <span class="point-badge">P01</span>
@@ -1401,7 +1404,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«¿Qué es Servicios en proceso?: reemplazado por la pestaña 'Técnicos' con tarjeta 'Técnicos en campo'» (Requerimiento de CPS · v92)</div>
+        <div class="quote-box">«¿Qué es Servicios en proceso?» (Requerimiento de CPS)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> Es la sección que monitorea los trabajos activos en ejecución. En el celular de Gustavo se accede mediante la tarjeta 'Técnicos en campo' (con el conteo en vivo de órdenes en progreso) y en la versión web de oficina mediante 'Técnicos &gt; Hoy en campo'. Responde a la pregunta del requerimiento sin alterar la operación.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Supervisión &gt; Ver su celular &gt; Pestaña 'Hoy' &gt; Tarjeta 'Técnicos en campo' (o en Web: Técnicos &gt; Hoy en campo)</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/celular-tecnico.js:895</code></div>
 
@@ -1458,7 +1464,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«En vista Gustavo celular poder registrar gasto de gasolina (solo gasolina) y que se envíe aviso a Lydia» (Requerimiento de CPS · v80)</div>
+        <div class="quote-box">«Solo tener gasolina, lo de servicio y mantenimiento no.» … «Esto se envia a lydia no a thalia y Claudia tampoco» (Requerimiento de CPS · v80)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> En la vista de celular de Gustavo se permite registrar exclusivamente gastos de gasolina (concepto 'Fuel'), enviando aviso automático a Lydia.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Supervisión &gt; Ver su celular &gt; Pestaña 'Hoy' &gt; Botón 'Gasolina / vehículo' &gt; Botón 'Guardar'</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/celular-supervisor.js:393</code></div>
 
@@ -1523,9 +1532,12 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Escribir la unidad en lugar de seleccionar y quitar la hora» (Requerimiento de CPS · v84)</div>
+        <div class="quote-box">«Escribir la unidad (en lugar de seleccionar)  y quitar la hora» (Requerimiento de CPS)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> Se sustituyó el select de unidad por un input de texto libre (#gUT) con unidad: null por defecto, permitiendo reportar sin exigir hora fija ni forzar unidades previas.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Supervisión &gt; Ver su celular &gt; Pestaña 'Reportar' &gt; Tarjeta 'Inspección para estimado' &gt; Campo 'Unidad'</div>
-        <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/celular-supervisor.js:84</code></div>
+        <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/celular-supervisor.js:87</code> y <code>js/acciones/acciones-supervisor.js:394,508</code></div>
 
         <div class="mock-frame">
           <div class="mock-topbar">
@@ -1553,13 +1565,14 @@
           <h4>Pasos a realizar:</h4>
           <ol class="steps-list">
             <li>En el celular de Gustavo, ve a la pestaña <strong>Reportar</strong>.</li>
-            <li>Comprueba que el campo <strong>Unidad</strong> es un input de texto libre con placeholder <code>Escribe la unidad (ej. 204, A-211…)</code> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
+            <li>Comprueba que el campo <strong>Unidad</strong> es un input de texto libre con placeholder <code>Escribe la unidad (ej. 204, A-211…)</code> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span> y que el selector desplegable previo fue completamente retirado.</li>
             <li>Verifica el aviso informativo <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">2</span>: <i>No marcaste llegada aquí. Puedes reportar igual, pero queda sin hora de llegada.</i></li>
+            <li>Intenta enviar con el campo de unidad vacío y confirma el aviso de validación <em>«Falta la unidad: Escribe la unidad antes de enviar.»</em>. Si escribes una unidad existente (ej. 204) la enlaza al catálogo; si escribes una que no existe (ej. 999) viaja como texto libre sin arrojar error.</li>
           </ol>
         </div>
         <div class="result-box">
           <h5>Qué debe pasar:</h5>
-          <p>La unidad se escribe libremente y el reporte se puede emitir sin obligar una hora de llegada prefijada.</p>
+          <p>La unidad se ingresa mediante texto libre en lugar de seleccionarse de un menú (unidad: null por defecto), y el informe puede enviarse sin forzar una hora de llegada predeterminada ni requerir que la unidad exista en catálogo.</p>
         </div>
         <div class="test-feedback">
           <div class="test-feedback-header">
@@ -1582,9 +1595,12 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Servicios por categoría con opción 'otro' para escribir» (Requerimiento de CPS · v84)</div>
-        <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Supervisión &gt; Ver su celular &gt; Pestaña 'Reportar' &gt; Tarjeta 'Inspección para estimado' &gt; Qué hay que hacer &gt; Servicio 1 &gt; caja 'Qué trabajo hace falta'</div>
-        <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/celular-supervisor.js:129</code></div>
+        <div class="quote-box">«Los servicios debe ser por categoria y se pueden seleccionar otro para escribir» (Requerimiento de CPS · v84)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> El selector de cada servicio lista los servicios del catálogo agrupados por categoría, con «Otro» al final. Con un servicio de la lista no hay nada que escribir; solo con «Otro» aparece la caja para escribir la sugerencia.
+        </div>
+        <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Supervisión &gt; Ver su celular &gt; Pestaña 'Reportar' &gt; Tarjeta 'Inspección para estimado' &gt; Qué hay que hacer &gt; Servicio 1 &gt; selector de servicio</div>
+        <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/celular-supervisor.js:123-127</code></div>
 
         <div class="mock-frame">
           <div class="mock-topbar">
@@ -1594,16 +1610,15 @@
           <div class="mock-viewport">
             <div style="background:#fff;border:1px solid #cbd5e1;border-radius:10px;padding:14px;max-width:320px;margin:0 auto">
               <div class="highlight-target" style="width:100%;margin-bottom:6px">
-                <select id="itC0" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px">
-                  <option>Clean</option><option>Paint</option><option selected value="__otro__">Otro</option>
+                <select id="itC0" onchange="document.getElementById('itCOwrap').style.display=(this.value==='__otro__')?'block':'none';var c=document.getElementById('itCO0');if(this.value==='__otro__'){c.focus();}else{c.value='';}" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px">
+                  <option value="">— Elige el servicio —</option><optgroup label="Clean"><option value="Clean::Full clean">Full clean</option><option value="Clean::Heavy clean">Heavy clean</option><option value="Clean::Office and amenities">Office and amenities</option><option value="Clean::Touch up clean">Touch up clean</option><option value="Clean::Carpet clean">Carpet clean</option><option value="Clean::Trash out">Trash out</option><option value="Clean::Pressure washing">Pressure washing</option><option value="Clean::Carpet - Pet treatment">Carpet - Pet treatment</option></optgroup><optgroup label="Paint"><option value="Paint::Full paint">Full paint</option><option value="Paint::Color change">Color change</option><option value="Paint::Gloss finish change">Gloss finish change</option><option value="Paint::Touch up paint">Touch up paint</option><option value="Paint::Full ceilings paint">Full ceilings paint</option><option value="Paint::Partial ceilings paint">Partial ceilings paint</option><option value="Paint::Exterior door paint">Exterior door paint</option><option value="Paint::Bathroom cabinet paint">Bathroom cabinet paint</option><option value="Paint::Kitchen cabinet paint">Kitchen cabinet paint</option><option value="Paint::Exterior closet paint">Exterior closet paint</option><option value="Paint::Color change ceilings paint">Color change ceilings paint</option><option value="Paint::Accent wall paint">Accent wall paint</option></optgroup><optgroup label="Resurface"><option value="Resurface::Tub resurfacing just tub">Tub resurfacing just tub</option><option value="Resurface::Tub resurfacing with wall">Tub resurfacing with wall</option><option value="Resurface::Bathroom cabinet resurface">Bathroom cabinet resurface</option><option value="Resurface::Kitchen cabinet resurface">Kitchen cabinet resurface</option><option value="Resurface::Bathroom countertop resurface">Bathroom countertop resurface</option><option value="Resurface::Kitchen countertop resurface">Kitchen countertop resurface</option><option value="Resurface::Sink resurface">Sink resurface</option><option value="Resurface::Kitchen countertop marble resurface">Kitchen countertop marble resurface</option><option value="Resurface::Bathroom countertop marble resurface">Bathroom countertop marble resurface</option></optgroup><optgroup label="Make Ready Checklist"><option value="Make Ready Checklist::Make Ready Checklist">Make Ready Checklist</option></optgroup><optgroup label="Flooring Services"><option value="Flooring Services::Carpet tear out">Carpet tear out</option></optgroup><optgroup label="Installation"><option value="Installation::Tile installation">Tile installation</option><option value="Installation::Grab bar installation">Grab bar installation</option><option value="Installation::Bath tub installation">Bath tub installation</option><option value="Installation::Light fixture installation">Light fixture installation</option><option value="Installation::Blinds installation">Blinds installation</option><option value="Installation::Dishwasher installation">Dishwasher installation</option><option value="Installation::Kitchen installation">Kitchen installation</option><option value="Installation::Interior door installation">Interior door installation</option><option value="Installation::Exterior door installation">Exterior door installation</option><option value="Installation::2 doors interior closet installation">2 doors interior closet installation</option><option value="Installation::4 doors interior closet installation">4 doors interior closet installation</option><option value="Installation::Trim installation">Trim installation</option><option value="Installation::Baseboard installation">Baseboard installation</option><option value="Installation::Full cabinets installation">Full cabinets installation</option><option value="Installation::Full cabinets door installation">Full cabinets door installation</option><option value="Installation::Shower rod installation">Shower rod installation</option><option value="Installation::Cabinet handles installation">Cabinet handles installation</option></optgroup><optgroup label="Removal"><option value="Removal::Removal">Removal</option></optgroup><optgroup label="Estimate"><option value="Estimate::Estimate">Estimate</option></optgroup><optgroup label="Inspection"><option value="Inspection::Inspection">Inspection</option></optgroup><option value="__otro__" selected>Otro</option>
                 </select>
                 <div class="step-marker">1</div>
               </div>
-              <div class="highlight-target" style="width:100%;margin-bottom:6px">
-                <input id="itCO0" placeholder="Escribe la categoría" value="Limpieza de ductos" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px">
+              <div id="itCOwrap" class="highlight-target" style="width:100%;margin-bottom:6px;display:block">
+                <input id="itCO0" placeholder="Escribe el servicio" value="" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px">
                 <div class="step-marker">2</div>
               </div>
-              <input id="itT0" placeholder="Qué trabajo hace falta" value="Limpiar ductos de ventilación principal" style="width:100%;padding:6px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px">
             </div>
           </div>
         </div>
@@ -1611,15 +1626,16 @@
         <div class="steps-box">
           <h4>Pasos a realizar:</h4>
           <ol class="steps-list">
-            <li>En el relevamiento de Gustavo, despliega el selector de categoría de servicio <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
-            <li>Selecciona la opción <strong>Otro</strong>.</li>
-            <li>Verifica que aparece el campo adicional con placeholder <code>Escribe la categoría</code> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">2</span>.</li>
+            <li>La captura se abre con <strong>Otro</strong> ya elegido en el selector de servicio <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span> y, debajo, la caja en blanco con el texto de ayuda <code>Escribe el servicio</code> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">2</span>: ahí se escribe la sugerencia (por ejemplo «Limpieza de ductos»).</li>
+            <li>Despliega el selector: los servicios están agrupados por categoría (Clean, Paint, Resurface…) y «Otro» es la última opción de la lista.</li>
+            <li>Elige un servicio de la lista (por ejemplo <strong>Full clean</strong>): la caja <strong>desaparece</strong>, porque no hay nada que escribir.</li>
+            <li>Vuelve a elegir <strong>Otro</strong>: la caja en blanco aparece de nuevo.</li>
           </ol>
         </div>
         <div class="result-box">
           <h5>Qué debe pasar:</h5>
-          <p>Al elegir 'Otro' se desbloquea un input de texto para especificar una categoría personalizada sin bloquear el reporte.</p>
-          <p>Esa categoría escrita no está en el catálogo, así que no tiene tarifa: cuando Lydia arma el estimado desde este reporte, el sistema avisa «sin tarifa: hay que definirla antes de enviar» y ella la define.</p>
+          <p>El selector lista los servicios del catálogo agrupados por categoría. Solo al elegir «Otro» se abre una caja para escribir a mano; con un servicio de la lista no hay nada que escribir.</p>
+          <p>El servicio escrito en «Otro» no está en el catálogo, así que no tiene tarifa: cuando Lydia arma el estimado desde este reporte, el sistema avisa «sin tarifa: hay que definirla antes de enviar» y ella la define.</p>
         </div>
         <div class="test-feedback">
           <div class="test-feedback-header">
@@ -1642,7 +1658,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Repairs: todo junto en un solo espacio de texto + fotos» (Requerimiento de CPS · v84)</div>
+        <div class="quote-box">«En repairs debe estar todo junto. El supervisor prefiere tener el espacio para poner la info porque en una unidad con muchas reparaciones es muy tardado, buscamos que el pueda escribir todo  y queba las fotos.» (Requerimiento de CPS · v84)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> En relevamiento inicial se consolidaron las reparaciones en una sola área de texto abierto (#gRepairs) con soporte para adjuntar fotos por ambiente.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Supervisión &gt; Ver su celular &gt; Pestaña 'Reportar' &gt; Tarjeta 'Inspección para estimado' &gt; Repairs (reparaciones)</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/celular-supervisor.js:145</code></div>
 
@@ -1695,7 +1714,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Quitar 'condición general de la unidad'» (Requerimiento de CPS · v84)</div>
+        <div class="quote-box">«Quitar la condicion genera de la unidad.» (Requerimiento de CPS · v84)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> Se eliminó el campo 'Condición general de la unidad' (Bueno/Regular/Malo) del relevamiento, pasando directamente a la captura de servicios por ambiente.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Supervisión &gt; Ver su celular &gt; Pestaña 'Reportar' &gt; Tarjeta 'Inspección para estimado' (abre el formulario directo)</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/celular-supervisor.js:121</code></div>
 
@@ -1746,26 +1768,37 @@
         <div class="point-header">
           <div class="point-title-wrap">
             <span class="point-badge">P07</span>
-            <h3 class="point-title">Gustavo Celular: Recomendaciones = Notas (no duplicar)</h3>
+            <h3 class="point-title">Recomendaciones adicionales quitadas; las notas siguen aparte</h3>
             <div class="point-meta-chips"><span class="chip-v">v84</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Recomendaciones adicionales = Notas; no duplicar» (Requerimiento de CPS · v84)</div>
-        <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Supervisión &gt; Ver su celular &gt; Pestaña 'Reportar' &gt; Campo 'Trabajo adicional recomendado'</div>
-        <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/celular-supervisor.js:192</code></div>
+        <div class="quote-box">«Recomendaciones adiciones es lo mismo de notas? Sino quitar.» (Requerimiento de CPS)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> En relevamiento inicial se conservan solo las notas generales, y en supervisión se mantiene el campo separado de trabajo adicional recomendado (#gAd) que genera solicitud a Lydia.
+        </div>
+        <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Supervisión &gt; Ver su celular &gt; Pestaña 'Reportar' &gt; Informe de supervisión</div>
+        <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/celular-supervisor.js:191</code> y <code>js/acciones/acciones-supervisor.js:571</code></div>
 
         <div class="mock-frame">
           <div class="mock-topbar">
             <div class="mock-dots"><span class="mock-dot r"></span><span class="mock-dot y"></span><span class="mock-dot g"></span></div>
-            <div class="mock-url">https://xjerson.github.io/cps-prototipo/gustavo.html (Celular de Gustavo: Adicional)</div>
+            <div class="mock-url">https://xjerson.github.io/cps-prototipo/gustavo.html (Informe de supervisión)</div>
           </div>
           <div class="mock-viewport">
             <div style="background:#fff;border:1px solid #cbd5e1;border-radius:10px;padding:14px;max-width:320px;margin:0 auto">
               <label style="font-size:11px;font-weight:700;color:var(--faint);text-transform:uppercase;display:block;margin-bottom:4px">Trabajo adicional recomendado</label>
               <div class="highlight-target" style="width:100%">
-                <textarea id="gAd" placeholder="Lo que conviene hacer y no estaba en la orden" style="width:100%;height:50px;padding:7px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px">Pintura completa de gabinete de baño y sellado de tina</textarea>
+                <textarea id="gAd" placeholder="Lo que conviene hacer y no estaba en la orden" style="width:100%;height:45px;padding:7px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px">Pintura completa de gabinete de baño y sellado de tina</textarea>
                 <div class="step-marker">1</div>
+              </div>
+              <div class="dc" style="margin:5px 0 10px;padding:6px 8px;background:#f0fdf4;border-radius:6px;border:1px solid #bbf7d0">
+                <div class="ds" style="color:#166534;font-size:11px">Al enviar, esto le llega a Lydia como <b>oportunidad de estimado</b>, no enterrado dentro del informe. Así se vende.</div>
+              </div>
+              <label style="font-size:11px;font-weight:700;color:var(--faint);text-transform:uppercase;display:block;margin-bottom:4px">Comentarios generales</label>
+              <div class="highlight-target" style="width:100%">
+                <textarea id="gN" placeholder="Lo que Lydia necesita saber" style="width:100%;height:45px;padding:7px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px">Unidad en buen estado general; cliente solicita coordinar entrega de llaves.</textarea>
+                <div class="step-marker">2</div>
               </div>
             </div>
           </div>
@@ -1774,14 +1807,20 @@
         <div class="steps-box">
           <h4>Pasos a realizar:</h4>
           <ol class="steps-list">
-            <li>Localiza el campo <strong>Trabajo adicional recomendado</strong> en el informe de relevamiento <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
-            <li>Comprueba su placeholder exacto: <code>Lo que conviene hacer y no estaba en la orden</code>.</li>
-            <li>Verifica que no exista un segundo campo redundante de notas generales para el mismo propósito.</li>
+            <li>Desde el módulo <strong>Supervisión</strong>, haz clic en <strong>Ver su celular</strong> (o abre directamente <code>gustavo.html</code>).</li>
+            <li>En la pestaña <strong>Reportar</strong>, pulsa en <strong>Informe de supervisión</strong>.</li>
+            <li>Comprueba que existen ambos campos independientes con sus nombres de pantalla oficiales (sin jerga técnica):
+              <ul>
+                <li><strong>Trabajo adicional recomendado</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>: campo comercial que al enviarse genera una solicitud comercial directa para Lydia.</li>
+                <li><strong>Comentarios generales</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">2</span>: campo de notas operativas para Lydia.</li>
+              </ul>
+            </li>
+            <li>Verifica que en el formulario de <strong>Inspección para estimado</strong> ya no aparece ningún campo redundante denominado <em>«Recomendaciones adicionales»</em>.</li>
           </ol>
         </div>
         <div class="result-box">
           <h5>Qué debe pasar:</h5>
-          <p>El campo actúa como canal único de observaciones comerciales y recomendaciones operativas.</p>
+          <p>En «Inspección para estimado» ya no existe el campo «Recomendaciones adicionales» (se cumplió la regla de quitarlo si no era lo mismo). En el informe de supervisión «Trabajo adicional recomendado» se mantiene porque genera la solicitud comercial para Lydia, y «Comentarios generales» es el campo de notas libre independiente para Lydia.</p>
         </div>
         <div class="test-feedback">
           <div class="test-feedback-header">
@@ -1804,7 +1843,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Quitar que lo reciba Thalia y el cliente (llega a Claudia como oportunidad de estimado)» (Requerimiento de CPS · v84)</div>
+        <div class="quote-box">«Quitar que lo recibe thalia y tampoco el cliente» (Requerimiento de CPS · v84)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> El informe no se envía ni a Thalia ni al cliente; genera una oportunidad de estimado directa para Lydia en la oficina.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Supervisión &gt; Ver su celular &gt; Pestaña 'Reportar' &gt; Recuadro verde informativo</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/celular-supervisor.js:195</code></div>
 
@@ -1817,7 +1859,7 @@
             <div style="background:#fff;border:1px solid #cbd5e1;border-radius:10px;padding:14px;max-width:320px;margin:0 auto">
               <div class="highlight-target" style="width:100%">
                 <div style="color:var(--verde);font-size:11.5px;line-height:1.4">
-                  Al enviar, esto le llega a Claudia como <b>oportunidad de estimado</b>, no enterrado dentro del informe. Así se vende.
+                  Al enviar, esto le llega a Lydia como <b>oportunidad de estimado</b>, no enterrado dentro del informe. Así se vende.
                 </div>
                 <div class="step-marker">1</div>
               </div>
@@ -1829,13 +1871,13 @@
           <h4>Pasos a realizar:</h4>
           <ol class="steps-list">
             <li>Observa el mensaje verde al pie del relevamiento en el celular de Gustavo <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
-            <li>Verifica el texto: <i>Al enviar, esto le llega a Claudia como oportunidad de estimado, no enterrado dentro del informe. Así se vende.</i></li>
+            <li>Verifica el texto: <i>Al enviar, esto le llega a Lydia como oportunidad de estimado, no enterrado dentro del informe. Así se vende.</i></li>
             <li>Confirma que no se envían correos automáticos al cliente ni copias a la bandeja de Thalia.</li>
           </ol>
         </div>
         <div class="result-box">
           <h5>Qué debe pasar:</h5>
-          <p>El hallazgo se convierte en oportunidad comercial para Claudia sin comprometer la relación con el cliente.</p>
+          <p>El hallazgo se convierte en oportunidad comercial para Lydia sin comprometer la relación con el cliente ni enviar copias a Thalia.</p>
         </div>
         <div class="test-feedback">
           <div class="test-feedback-header">
@@ -1858,7 +1900,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Solicitud de cliente como acción de Gustavo» (Requerimiento de CPS · v84)</div>
+        <div class="quote-box">«Agregar en lo que puede hacer Gustavo: Solicitud de cliente. Cuando le piden que vaya a una propiedad» (Requerimiento de CPS · v84)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> En la vista de Gustavo se agregó la opción 'Solicitud de cliente' al registrar una nueva parada en su ruta del día.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Supervisión &gt; Calendario de Gustavo &gt; Botón 'Solicitar visita de Gustavo' &gt; Selector 'Tipo' (esto se hace en la web, no en el celular)</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/acciones/acciones-supervisor.js:58</code></div>
 
@@ -1913,7 +1958,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Estado previo solo para técnicos, no para Gustavo» (Requerimiento de CPS · v84)</div>
+        <div class="quote-box">«El estado previo debe ser para los tecnicos, pero a gustavo no le sirve» (Requerimiento de CPS · v84)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> La captura del estado previo se mantiene en la aplicación del técnico mediante el botón 'Estado previo', retirándola de las opciones del supervisor.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Celular del Técnico &gt; Detalle de orden &gt; Botón 'Estado previo'</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/celular-tecnico.js:279</code></div>
 
@@ -1966,9 +2014,12 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Historial de returns visible» (Requerimiento de CPS · v84)</div>
-        <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Supervisión &gt; Ver su celular &gt; Pestaña 'Returns' &gt; Botón 'Verificar y tomar fotos del después'</div>
-        <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/celular-tecnico.js:1141</code></div>
+        <div class="quote-box">«Qu veea el historial de los returns, supongo que eso se ve en la pestana de returns no?» (Requerimiento de CPS · v84)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> En la pestaña Returns del celular de Gustavo se muestra el bloque de historial de cada devolución con sus eventos fechados.
+        </div>
+        <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Supervisión &gt; Ver su celular &gt; Pestaña 'Returns' &gt; Detalle del return &gt; Bloque 'Historial'</div>
+        <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/celular-tecnico.js:1149</code></div>
 
         <div class="mock-frame">
           <div class="mock-topbar">
@@ -1979,8 +2030,11 @@
             <div style="background:#fff;border:1px solid #cbd5e1;border-radius:10px;padding:14px;max-width:320px;margin:0 auto">
               <div style="font-size:12px;font-weight:700;color:var(--azul);margin-bottom:6px">Harbor Pointe · C-8</div>
               <div style="font-size:11.5px;color:var(--soft);margin-bottom:8px">Retocar pintura en marco y zócalo inferior</div>
+              <div style="font-size:11px;font-weight:700;color:var(--faint);text-transform:uppercase;margin:8px 0 4px">Historial</div>
               <div class="highlight-target" style="width:100%">
-                <button class="btn sm p" data-a="gDevVerif" style="width:100%;background:var(--verde)">Verificar y tomar fotos del después</button>
+                <div style="font-size:11px;padding:6px 8px;background:#f8fafc;border-radius:6px;border:1px solid #e2e8f0">
+                  <span style="color:var(--faint)">09:15</span> — Abierta por supervisor <span style="color:var(--faint)">(Gustavo Andrade)</span>
+                </div>
                 <div class="step-marker">1</div>
               </div>
             </div>
@@ -1990,14 +2044,14 @@
         <div class="steps-box">
           <h4>Pasos a realizar:</h4>
           <ol class="steps-list">
-            <li>En el celular de Gustavo, ve a la pestaña <strong>Returns</strong>.</li>
-            <li>Revisa el listado de devoluciones abiertas con su propiedad y unidad.</li>
-            <li>Comprueba el botón verde <strong>Verificar y tomar fotos del después</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
+            <li>En el celular de Gustavo, ve a la pestaña <strong>Returns</strong> y pulsa en una devolución abierta.</li>
+            <li>Localiza el bloque <strong>Historial</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span> al pie del detalle.</li>
+            <li>Comprueba que muestra la cronología de eventos con su hora, acción y responsable.</li>
           </ol>
         </div>
         <div class="result-box">
           <h5>Qué debe pasar:</h5>
-          <p>Gustavo puede verificar en sitio las correcciones realizadas por los técnicos y certificar el cierre con fotos.</p>
+          <p>El return mantiene visible su historial completo de acciones para auditoría y trazabilidad en sitio.</p>
         </div>
         <div class="test-feedback">
           <div class="test-feedback-header">
@@ -2020,9 +2074,12 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Fotos de la inspección por unidad, opcional» (Requerimiento de CPS · v84)</div>
-        <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Supervisión &gt; Ver su celular &gt; Pestaña 'Reportar' &gt; Botón 'Enviar a Lydia'</div>
-        <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/celular-supervisor.js:216</code></div>
+        <div class="quote-box">«Cada que revisa una unidad subir fotos de que paso la inspección, aunque por el momento que sea opcional, estamos revisando esto porque seria mucho trabajo.» (Requerimiento de CPS · v84)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> La captura de fotos generales por ambiente es opcional; el informe de inspección puede enviarse sin fotos adjuntas.
+        </div>
+        <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Supervisión &gt; Ver su celular &gt; Pestaña 'Reportar' &gt; Sección 'Fotos generales de la unidad'</div>
+        <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/celular-supervisor.js:148</code></div>
 
         <div class="mock-frame">
           <div class="mock-topbar">
@@ -2031,11 +2088,12 @@
           </div>
           <div class="mock-viewport">
             <div style="background:#fff;border:1px solid #cbd5e1;border-radius:10px;padding:14px;max-width:320px;margin:0 auto">
-              <div style="font-size:12px;color:var(--soft);margin-bottom:8px">Unidad C-8 · Full Clean</div>
-              <div class="highlight-target" style="width:100%">
-                <button class="btn sm p" data-a="gRepOK" style="width:100%">Enviar a Lydia</button>
+              <div class="highlight-target" style="width:100%;margin-bottom:8px">
+                <label style="font-size:11px;font-weight:700;color:var(--faint);text-transform:uppercase;display:block;margin-bottom:3px">Fotos generales de la unidad</label>
+                <div style="font-size:10.5px;color:var(--faint)">Elige el ambiente y dispara. Se agrupan solas para que Lydia las pueda revisar.</div>
                 <div class="step-marker">1</div>
               </div>
+              <button class="db p" style="width:100%;background:var(--azul)" data-a="gRepOK">Enviar a Lydia</button>
             </div>
           </div>
         </div>
@@ -2043,9 +2101,9 @@
         <div class="steps-box">
           <h4>Pasos a realizar:</h4>
           <ol class="steps-list">
-            <li>Llena los datos del relevamiento en el celular de Gustavo sin adjuntar fotografías.</li>
-            <li>Haz clic directamente en el botón <strong>Enviar a Lydia</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
-            <li>Verifica que el informe se procesa sin arrojar mensajes de bloqueo por ausencia de fotos.</li>
+            <li>En el formulario de relevamiento del supervisor, ubica la sección <strong>Fotos generales de la unidad</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
+            <li>Comprueba que las fotos son opcionales y no tienen ningún asterisco de obligatoriedad.</li>
+            <li>Haz clic en <strong>Enviar a Lydia</strong> sin tomar fotografías y verifica que el reporte se procesa exitosamente sin bloqueos.</li>
           </ol>
         </div>
         <div class="result-box">
@@ -2073,7 +2131,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Buscar por unidad y ver su historial» (Requerimiento de CPS · v84)</div>
+        <div class="quote-box">«Que tenga para buscar por unidad y vea el historial, por si le pregunta un manager» (Requerimiento de CPS · v84)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> En la pestaña Buscar del celular de Gustavo se permite buscar por número de unidad y consultar su historial completo de inspecciones y órdenes.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Supervisión &gt; Ver su celular &gt; Pestaña 'Buscar' &gt; Campo de número de unidad (ej. 204, A-211…)</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/celular-tecnico.js:1289</code></div>
 
@@ -2126,7 +2187,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«En su ruta del día ver los nombres de otros técnicos en la misma propiedad» (Requerimiento de CPS · v84)</div>
+        <div class="quote-box">«Que en su ruta del dia si hay alguien en la misma propiedad que el vea el nombre. Por ejemplo le toca crossings, y el esta ahi, con los que estan ahi el pueda verlo.» (Requerimiento de CPS · v84)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> En la hoja de relevamiento e inspección se muestran los nombres de los técnicos que tienen asignaciones en la misma propiedad y unidad.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Supervisión &gt; Ver su celular &gt; Pestaña 'Reportar' &gt; Tarjeta 'Inspección para estimado' &gt; Subtexto de técnicos asignados</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/celular-supervisor.js:185</code></div>
 
@@ -2180,7 +2244,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Ubicación de técnicos: el cliente dijo 'aún no hacer el cambio' → NO hay seguimiento en tiempo real; resuelto con lista de técnicos y detalle de WO» (Requerimiento de CPS · v92)</div>
+        <div class="quote-box">«Esto yo lo tengo que confirmar, aun no hacer el cambio: Tambien que pueda ver donde estan los tecnicos en el momento» (Requerimiento de CPS)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> Respetado sin cambios operativos: no hay seguimiento en tiempo real con GPS continuo hasta confirmación del cliente. Se informa la última ubicación a partir de las llegadas voluntarias marcadas.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Técnicos &gt; Pestaña 'Lista de técnicos' &gt; Columna 'Última ubicación'</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/vistas/catalogos-crud.js:413</code></div>
 
@@ -2241,7 +2308,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Estados Lead / Active / Inactive en formulario de propiedad» (Requerimiento de CPS · v80)</div>
+        <div class="quote-box">«Los estados seran» … «Lead» … «Active» … «Inactive» (Requerimiento de CPS · v80)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> En el formulario de alta y edición de propiedades se configuraron los estados oficiales Lead, Active e Inactive en el selector 'Client Status'.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Propiedades &gt; Ficha de propiedad &gt; Botón 'Editar datos' &gt; Selector 'Client Status'</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/acciones/catalogos-crud.js:98</code></div>
 
@@ -2306,7 +2376,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«'Ejecutivo de ventas' (antes Vendedor; opcional; catálogo en Catálogos > Ejecutivos de ventas)» (Requerimiento de CPS · v92)</div>
+        <div class="quote-box">«Agregar quien lo consiguio en caso de que tengamos un catalogo de vendedores» (Requerimiento de CPS · v92)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> Se añadió el campo opcional 'Ejecutivo de ventas' (#nVend) vinculado al catálogo administrable de ejecutivos comerciales.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Propiedades &gt; Ficha de propiedad &gt; 'Editar datos' &gt; Selector 'Ejecutivo de ventas'</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/acciones/catalogos-crud.js:100</code></div>
 
@@ -2368,7 +2441,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Se muestra City (no zona duplicada)» (Requerimiento de CPS · v80)</div>
+        <div class="quote-box">«Se duplica la zona. Cuando agendamos ocupamos la city» (Requerimiento de CPS)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> Se muestra la columna City en la tabla general de propiedades y un campo único City en el formulario, eliminando la duplicidad con Zona.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Menú lateral &gt; Propiedades &gt; Tabla de propiedades</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/vistas/catalogos-crud.js:9</code></div>
 
@@ -2430,7 +2506,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Gate code en lugar de Door code» (Requerimiento de CPS · v80)</div>
+        <div class="quote-box">«Door code seria gate code porque el door debe ser por unidad.» (Requerimiento de CPS · v80)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> Se renombró el campo a 'Gate code' a nivel propiedad, reservando el door code para el detalle por unidad.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Propiedades &gt; Ficha de propiedad &gt; 'Editar datos' &gt; Campo 'Gate code'</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/acciones/catalogos-crud.js:112</code></div>
 
@@ -2491,7 +2570,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Aviso cuando una póliza vence en 2 semanas (COI_AVISO_DIAS = 14)» (Requerimiento de CPS · v80)</div>
+        <div class="quote-box">«Dentro de la propiedad, en polizas sale notificaciones cuando este a 2 semanas que venza» (Requerimiento de CPS)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> Notificación automática de alerta con 14 días (2 semanas) de anticipación para pólizas de seguro próximas a vencer.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Propiedades &gt; Ficha de propiedad &gt; Pestaña 'Documentos'</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/vistas/comercial.js:100</code> y <code>js/vistas/catalogos-crud.js:113</code></div>
 
@@ -2579,7 +2661,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Expediente 'Tarifario completo' + 'Crear lista completa'/'Llenar precios' + Descargar PDF selectivo» (Requerimiento de CPS · v86/v87)</div>
+        <div class="quote-box">«En la parte de estimado aprobado cambiarlo por tarifario completo, donde se meta de base de datos de los costos… De ese price list se pueda crear un PDF para mandarlo y que podamos seleccionar lo que queremos mandar» (Requerimiento de CPS)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> El expediente incluye 'Tarifario completo', botones 'Crear lista completa' / 'Llenar precios' y exportación en PDF de filas seleccionadas.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Propiedades &gt; Pestaña 'Expediente' (o 'Price List') &gt; Botones de lista y PDF</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/vistas/catalogos-crud.js:84</code></div>
 
@@ -2644,7 +2729,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Cambio de precios programado con vigencia e historial» (Requerimiento de CPS · v84)</div>
+        <div class="quote-box">«Tenemos la duda de como podemos hacer en los casos en que queramos actualizar la tabla para nuevos precios, pero queremos trabajar ene so desde 3 mese antes pero que no afecte a los precios hasta que que se compla algun requisito de tiempo., y tambien quisieramos tener antecedentes» (Requerimiento de CPS)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> Modal 'Programar cambio de precios' con fecha de vigencia desde y fecha límite anterior para conservar antecedentes sin alterar precios antes de tiempo.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Propiedades &gt; Price List &gt; Botón 'Preparar cambio de precios' (o Tarifario &gt; Precios con vigencia)</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/vigencia.js:110</code></div>
 
@@ -2718,7 +2806,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Pintura: texto que explica 'una fila por superficie'» (Requerimiento de CPS · v92)</div>
+        <div class="quote-box">«Que es lo de pintura que se agrega una fila por superficie?» (Requerimiento de CPS · v92)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> Se incluyó texto explicativo en la tabla de pinturas indicando que se debe registrar una fila por superficie (paredes, techos, molduras).
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Propiedades &gt; Ficha de propiedad &gt; Pestaña 'Datos' &gt; Tarjeta 'Pinturas'</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/vistas/catalogos-crud.js:159</code></div>
 
@@ -2783,7 +2874,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Crédito general (dinero) vs de servicio, visible arriba de la ficha» (Requerimiento de CPS · v92)</div>
+        <div class="quote-box">«Y la diferencia del credito de ervicio y general.. El credito que aparezca arriba» (Requerimiento de CPS · v92)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> En la parte superior de la ficha de propiedad se diferencian el crédito general (en dinero) y el crédito específico de servicio.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Propiedades &gt; Ficha de propiedad &gt; Bloque superior de saldo</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/vistas/catalogos-crud.js:41</code></div>
 
@@ -2838,7 +2932,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Pestaña Comunicación: explicación de para qué sirve» (Requerimiento de CPS · v84)</div>
+        <div class="quote-box">«Que es la parte de comunicacion? Eso a donde se va o para que sive ??» (Requerimiento de CPS · v84)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> En la pestaña Comunicación se incorporó una nota explicativa que aclara su propósito: registrar bitácora de llamadas y mensajes con el cliente.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Propiedades &gt; Ficha de propiedad &gt; Pestaña 'Comunicación'</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/vistas/catalogos-crud.js:205</code></div>
 
@@ -2909,6 +3006,9 @@
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
         <div class="quote-box">«Lo único que debe bloquear es el COI» (Requerimiento de CPS · v93)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> El certificado de seguro (COI) vigente es la única validación que bloquea la creación y agendamiento de órdenes en la propiedad.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Comercial &gt; Estimados / Propiedades &gt; Ficha de propiedad &gt; Pestaña 'Expediente'</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/vistas/catalogos-crud.js:98</code> y <code>js/vistas/comercial.js:513</code></div>
 
@@ -2975,7 +3075,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«'Hoy en campo': columnas exactas Técnico, WO, Propiedad, Unidad, Día, Tipo de servicio, Estado, Zona, con filtros» (Requerimiento de CPS · v88)</div>
+        <div class="quote-box">«Lo que debe aparecer en hoy en campo:  (debe tener filtros igual)» … «Tecnico, WO propiedad, unidad, dia, tipo de servicio, estado y zona» (Requerimiento de CPS · v88)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> La vista 'Hoy en campo' cuenta con las 8 columnas requeridas (Técnico, WO, Propiedad, Unidad, Día, Tipo de servicio, Estado, Zona) y barra de filtros combinables.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Menú lateral &gt; Técnicos &gt; Pestaña 'Hoy en campo'</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/vistas/catalogos-crud.js:367</code></div>
 
@@ -3043,9 +3146,12 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Agendar por rango de horas Desde/Hasta; sin hora inventada» (Requerimiento de CPS · v89)</div>
+        <div class="quote-box">«No se puede agendar por hora, mejor por rango.» (Requerimiento de CPS)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> Rango Desde / Hasta para agendar WO; se eliminó la hora por defecto y ni los recordatorios ni las alertas asumen 9:00 inventada.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Work Orders &gt; Detalle de WO &gt; Editar / Agendar WO</div>
-        <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/vistas/wo.js:1005</code></div>
+        <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/vistas/wo.js:1005</code>, <code>js/helpers.js:186</code> y <code>js/helpers.js:690</code></div>
 
         <div class="mock-frame">
           <div class="mock-topbar">
@@ -3074,13 +3180,13 @@
           <h4>Pasos a realizar:</h4>
           <ol class="steps-list">
             <li>En la pantalla de agendamiento o edición de una orden, ubica el bloque horario <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
-            <li>Comprueba los campos <code>wHora</code> y <code>wHoraFin</code> con el conector <code>Hasta</code>.</li>
-            <li>Verifica que si no se colocan horas, el sistema no fuerza arbitrariamente un valor como las 9:00 AM.</li>
+            <li>Comprueba los selectores de horario de inicio y fin con la etiqueta conectora <strong>Hasta</strong>.</li>
+            <li>Verifica que si una orden no tiene hora programada, el recordatorio al cliente (helpers.js:186) y la alerta de supervisión (helpers.js:690) no inventan las 9:00, sino que usan la ventana (o sin hora fija), y la alerta «Sin marcar llegada» no se dispara a las 9:10 si nunca tuvo hora asignada.</li>
           </ol>
         </div>
         <div class="result-box">
           <h5>Qué debe pasar:</h5>
-          <p>La orden se agenda por franja horaria acordada y no asume una hora de inicio inventada si se deja en blanco.</p>
+          <p>La orden se agenda por franja horaria acordada; si se deja sin hora fija no se asume 9:00 en recordatorios ni en la alerta de llegada.</p>
         </div>
         <div class="test-feedback">
           <div class="test-feedback-header">
@@ -3103,7 +3209,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«'WO esta semana': explicación» (Requerimiento de CPS · v84)</div>
+        <div class="quote-box">«En tecnicos, que es lo de WO semana??» (Requerimiento de CPS · v84)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> La columna 'WO esta semana' contabiliza las órdenes asignadas al técnico durante la semana en curso para balancear cargas operativas.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Técnicos &gt; Pestaña 'Lista de técnicos' &gt; Columna 'WO esta semana'</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/vistas/catalogos-crud.js:413</code></div>
 
@@ -3172,7 +3281,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Formulario de registro del técnico y contrato/acuerdo formal con CPS» (Requerimiento de CPS · v94)</div>
+        <div class="quote-box">«Debe aparecer otros datos. Te mando el formulario que ellos llenan para tener su registro y adjuntar su contrato/ acuerdo» (Requerimiento de CPS · v94)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> Se implementó el flujo completo de registro formal del técnico y generación/carga de contrato firmado (11 escenarios evaluados).
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Técnicos &gt; Lista de técnicos &gt; Ficha del técnico &gt; Sección 'Contrato con CPS'</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/acciones/catalogos-crud.js:405</code></div>
 
@@ -4007,7 +4119,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Filtros de técnicos: búsqueda por texto, zona, especialidad, vínculo y estado activo/baja» (Requerimiento de CPS · v93)</div>
+        <div class="quote-box">«Falta en tecnicos para buscar / filtrar» (Requerimiento de CPS · v93)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> Se añadieron controles combinables de búsqueda por texto, zona, especialidad, vínculo y estado en la lista de técnicos.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Técnicos &gt; Lista de técnicos (barra de filtros superior)</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/vistas/catalogos-crud.js:408</code></div>
 
@@ -4085,7 +4200,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«La pestaña de asistencia se retira del módulo de técnicos» (Requerimiento de CPS · v93)</div>
+        <div class="quote-box">«No sentimos que deba venir lo de historial de asistencia» (Requerimiento de CPS · v93)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> Se retiró la pestaña de historial de asistencia del módulo de técnicos, conservando únicamente 'Hoy en campo' y 'Lista de técnicos'.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Técnicos (encabezado del módulo)</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/vistas/catalogos-crud.js:308</code></div>
 
@@ -4147,7 +4265,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«El catálogo de tipos y servicios no maneja precios; los precios se administran en Tarifario y en el Price List de cada propiedad» (Requerimiento de CPS · v93)</div>
+        <div class="quote-box">«Lo de catalo nos referimos solo a los servicios y tipos de servicios pero ahi aparecen precios y esos precios son los del tarifario, son lo que son pro propiedad. Esta bien solo quitar los precios. Ese mismo catalogo es lo que van a tener como tarif alas propiedades.» (Requerimiento de CPS · v93)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> El catálogo de tipos y servicios quedó limpio de columnas de precios, los cuales se gestionan exclusivamente en Tarifario y en el Price List de cada propiedad.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Catálogos &gt; Tipos y servicios</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/vistas/catalogos-crud.js:739</code></div>
 
@@ -4235,7 +4356,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Acciones de oficina para avanzar estados cuando el técnico no usa celular o es vendor externo» (Requerimiento de CPS · v93)</div>
+        <div class="quote-box">«Tener la opcion de avanzar en los estados de los tecnicos manual porque a veces no quieren usar su celular o por algo no tienen. O para los vendors externos.» (Requerimiento de CPS · v93)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> Se habilitó el bloque 'Acciones de oficina' en la Work Order para avanzar manualmente los estados (llegada, terminar, etc.) ante vendors externos o técnicos sin dispositivo.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Work Orders &gt; Detalle de WO (sección Acciones de oficina)</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/vistas/wo.js:378</code></div>
 
@@ -4305,7 +4429,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Permitir terminar el trabajo aunque falten fotos, marcando la orden con advertencia de fotos pendientes» (Requerimiento de CPS · v93)</div>
+        <div class="quote-box">«El estado de terminar lo podrian poner en cuanto acaben pero no condicionado a que suban fotos, pero si que haya como un pendiente o recordatorio de que para la nomina o para cerrar la semana que suban sus fotos pero puede ser en su casa.» (Requerimiento de CPS · v93)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> Se permite terminar la orden sin bloquear por fotos faltantes, marcando la orden como 'Terminó · ⚠️ fotos pendientes' para revisión antes de nómina.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Celular del técnico &gt; Finalizar labor / Work Orders &gt; Detalle</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/acciones/acciones-tecnico.js:430</code></div>
 
@@ -4369,7 +4496,10 @@
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Entrega de evidencias fotográficas por link copiado, descarga o correo formal» (Requerimiento de CPS · v93)</div>
+        <div class="quote-box">«En el tema de las aprobaciones, Thalia necesita descargar las imagenes y mandarlas por correo o mensaje, hay formra de vicnularlo con mensajes? O como seria mas facil?» (Requerimiento de CPS · v93)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> Se agregaron los botones 'Copiar link', 'Descargar zip' y 'Enviar por correo' para facilitar la distribución de las evidencias fotográficas de la orden.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Work Orders &gt; Detalle de WO &gt; Fotos del trabajo</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/vistas/wo.js:487</code></div>
 
@@ -4444,14 +4574,17 @@
         <div class="point-header">
           <div class="point-title-wrap">
             <span class="point-badge">P37</span>
-            <h3 class="point-title">Conversión de estimado a Work Order vía 'Transferir a programación'</h3>
-            <div class="point-meta-chips"><span class="chip-v">v93</span><span class="chip-status ok">✔ Con Thalia</span></div>
+            <h3 class="point-title">Estimado a Work Order y ciclo de facturación (Estado derivado)</h3>
+            <div class="point-meta-chips"><span class="chip-v">v93</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
           <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
         </div>
-        <div class="quote-box">«Estimado aprobado: botón 'Transferir a programación' crea la Work Order para Thalia» (Requerimiento de CPS · v93)</div>
+        <div class="quote-box">«Que se cree el estimado y que se mande a WO y de ahí se sigue el flujo natural para el invoice y su estado debería ser si ya se convirtió en WO, si ya se facturó etc.» (Requerimiento de CPS)</div>
+        <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
+          <strong>Cómo quedó:</strong> Los estimados aprobados reflejan su ciclo de vida posterior mediante estados derivados: si ya generaron Work Order, si la orden está en curso, completada o facturada.
+        </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Comercial &gt; Estimados</div>
-        <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/vistas/comercial.js:513</code></div>
+        <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/helpers.js:117</code> (cálculo de estado derivado <code>estEstadoDerivado</code>) y <code>js/vistas/comercial.js:501</code> (renderizado en tabla)</div>
 
         <div class="mock-frame">
           <div class="mock-topbar">
@@ -4468,7 +4601,7 @@
                   <td>Lydia Vance</td>
                   <td class="mono">11-09</td>
                   <td class="num mono">2</td>
-                  <td class="num mono" style="font-weight:700">.00</td>
+                  <td class="num mono" style="font-weight:700">$450.00</td>
                   <td><span class="pill v">Aprobado</span></td>
                   <td><span class="pill m">Email</span><div style="font-size:10px;color:var(--faint)">Lydia · 2026-11-09</div></td>
                   <td style="text-align:right;white-space:nowrap">
@@ -4486,16 +4619,99 @@
                   <td>Sarah Jenkins</td>
                   <td class="mono">11-08</td>
                   <td class="num mono">1</td>
-                  <td class="num mono" style="font-weight:700">.00</td>
-                  <td><span class="pill v">Transferido</span></td>
+                  <td class="num mono" style="font-weight:700">$320.00</td>
+                  <td>
+                    <div class="highlight-target" style="display:inline-block">
+                      <span class="pill v">Transferido</span>
+                      <div class="step-marker">2</div>
+                    </div>
+                    <div style="font-size:10px;color:var(--faint);margin-top:2px">(Con Thalia)</div>
+                  </td>
                   <td><span class="pill m">Teléfono</span><div style="font-size:10px;color:var(--faint)">Sarah · 2026-11-08</div></td>
                   <td style="text-align:right;white-space:nowrap">
                     <button class="btn sm" data-a="estInvoice" data-id="92">Invoice</button>
                     <button class="btn sm" data-a="estVer" data-id="92">Ver</button>
+                    <span class="pill v" style="margin-left:6px">Con Thalia</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="mono" style="font-weight:700">EST-2026-088<div><span class="pill g" style="margin-top:3px">Estándar</span></div></td>
+                  <td>Ocean View Apartments</td>
+                  <td>Mike Taylor</td>
+                  <td class="mono">11-05</td>
+                  <td class="num mono">1</td>
+                  <td class="num mono" style="font-weight:700">$650.00</td>
+                  <td>
                     <div class="highlight-target" style="display:inline-block">
-                      <span class="pill v" style="margin-left:6px">Con Thalia</span>
-                      <div class="step-marker">2</div>
+                      <span class="pill a" title="1 en curso, 0 terminadas">En WO (1)</span>
+                      <div class="step-marker">3</div>
                     </div>
+                    <div style="font-size:10px;color:var(--faint);margin-top:2px">(Aprobado)</div>
+                  </td>
+                  <td><span class="pill m">Email</span><div style="font-size:10px;color:var(--faint)">Mike · 2026-11-05</div></td>
+                  <td style="text-align:right;white-space:nowrap">
+                    <button class="btn sm" data-a="estInvoice" data-id="88">Invoice</button>
+                    <button class="btn sm" data-a="estVer" data-id="88">Ver</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="mono" style="font-weight:700">EST-2026-075<div><span class="pill g" style="margin-top:3px">Estándar</span></div></td>
+                  <td>Bay Terrace</td>
+                  <td>Amanda Clark</td>
+                  <td class="mono">10-28</td>
+                  <td class="num mono">2</td>
+                  <td class="num mono" style="font-weight:700">$1,200.00</td>
+                  <td>
+                    <div class="highlight-target" style="display:inline-block">
+                      <span class="pill m" title="Trabajo concluido en campo, listo para facturar (1 WO)">Terminado en campo</span>
+                      <div class="step-marker">4</div>
+                    </div>
+                    <div style="font-size:10px;color:var(--faint);margin-top:2px">(Aprobado)</div>
+                  </td>
+                  <td><span class="pill m">Email</span><div style="font-size:10px;color:var(--faint)">Amanda · 2026-10-28</div></td>
+                  <td style="text-align:right;white-space:nowrap">
+                    <button class="btn sm" data-a="estInvoice" data-id="75">Invoice</button>
+                    <button class="btn sm" data-a="estVer" data-id="75">Ver</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="mono" style="font-weight:700">EST-2026-060<div><span class="pill g" style="margin-top:3px">Estándar</span></div></td>
+                  <td>Palm Gardens</td>
+                  <td>Robert Perez</td>
+                  <td class="mono">10-15</td>
+                  <td class="num mono">1</td>
+                  <td class="num mono" style="font-weight:700">$280.00</td>
+                  <td>
+                    <div class="highlight-target" style="display:inline-block">
+                      <span class="pill v" title="Facturado (1 WO)">Facturado</span>
+                      <div class="step-marker">5</div>
+                    </div>
+                    <div style="font-size:10px;color:var(--faint);margin-top:2px">(Aprobado)</div>
+                  </td>
+                  <td><span class="pill m">Email</span><div style="font-size:10px;color:var(--faint)">Robert · 2026-10-15</div></td>
+                  <td style="text-align:right;white-space:nowrap">
+                    <button class="btn sm" data-a="estInvoice" data-id="60">Invoice</button>
+                    <button class="btn sm" data-a="estVer" data-id="60">Ver</button>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="mono" style="font-weight:700">EST-2026-042<div><span class="pill g" style="margin-top:3px">Estándar</span></div></td>
+                  <td>Sunset Palms</td>
+                  <td>David Miller</td>
+                  <td class="mono">10-02</td>
+                  <td class="num mono">1</td>
+                  <td class="num mono" style="font-weight:700">$540.00</td>
+                  <td>
+                    <div class="highlight-target" style="display:inline-block">
+                      <span class="pill v" title="Completado, facturado y pagado (1 WO)">Pagado</span>
+                      <div class="step-marker">6</div>
+                    </div>
+                    <div style="font-size:10px;color:var(--faint);margin-top:2px">(Aprobado)</div>
+                  </td>
+                  <td><span class="pill m">Email</span><div style="font-size:10px;color:var(--faint)">David · 2026-10-02</div></td>
+                  <td style="text-align:right;white-space:nowrap">
+                    <button class="btn sm" data-a="estInvoice" data-id="42">Invoice</button>
+                    <button class="btn sm" data-a="estVer" data-id="42">Ver</button>
                   </td>
                 </tr>
               </tbody>
@@ -4506,15 +4722,23 @@
         <div class="steps-box">
           <h4>Pasos a realizar:</h4>
           <ol class="steps-list">
-            <li>En el módulo <strong>Comercial</strong> &gt; <strong>Estimados</strong>, ubica un estimado aprobado.</li>
-            <li>Haz clic en el botón azul <strong>Transferir a programación</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
-            <li>Observa el cambio de estado con la pastilla verde <strong>Con Thalia</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">2</span>, confirmando la creación de la Work Order.</li>
+            <li>En el módulo <strong>Comercial</strong> &gt; <strong>Estimados</strong>, ubica un estimado aprobado y haz clic en <strong>Transferir a programación</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
+            <li>Observa que su estado pasa inmediatamente a <strong>Con Thalia</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">2</span>, quedando en manos del equipo de programación.</li>
+            <li>Cuando Thalia agenda y asigna las Work Orders originadas a partir del estimado, abre nuevamente <strong>Estimados</strong> y comprueba que la columna <strong>Estado</strong> refleja dinámicamente el ciclo de las WO:
+              <ul>
+                <li><strong>En WO (n)</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">3</span> (pastilla ámbar): cuando las órdenes están programadas o en curso (<code>Scheduled</code> / <code>In progress</code>).</li>
+                <li><strong>Terminado en campo</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">4</span> (pastilla morada): cuando los técnicos concluyen los trabajos en campo (<code>Completed</code>) y queda listo para facturación.</li>
+                <li><strong>Facturado</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">5</span> (pastilla verde): cuando las órdenes han sido facturadas (<code>Invoiced</code>).</li>
+                <li><strong>Pagado</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">6</span> (pastilla verde): cuando se registra el cobro de las facturas (<code>Paid</code>).</li>
+              </ul>
+            </li>
+            <li><em>Nota de prueba:</em> El cálculo es dinámico en vivo; para observar cada transición con datos de ejemplo, avanza el estado de las órdenes en el módulo de Work Orders.</li>
           </ol>
         </div>
 
         <div class="result-box">
           <h5>Resultado Esperado:</h5>
-          <p>El estimado se transforma en orden de trabajo conservando unidad, cliente, propiedad y precios.</p>
+          <p>El estimado se transfiere a programación y queda «Con Thalia»; cuando Thalia agenda las WO, la columna <strong>Estado</strong> las sigue en tiempo real a través de todo el ciclo de vida derivado de sus Work Orders (<code>En WO (n)</code> → <code>Terminado en campo</code> → <code>Facturado</code> → <code>Pagado</code>) conforme a la regla de negocio oficial.</p>
         </div>
 
         <div class="test-feedback">
@@ -4552,15 +4776,15 @@
               <tr><td><b>P01</b></td><td>Celular supervisor: módulo 'Técnicos en campo'</td><td>Tarjeta <code>Técnicos en campo</code></td><td><code>js/celular-tecnico.js:895</code></td><td><span class="pill v">Verificado literal</span></td></tr>
               <tr><td><b>P02</b></td><td>Registro de gasolina de Gustavo</td><td>Modal <code>gVehOK</code> (botón <code>Guardar</code>)</td><td><code>js/celular-supervisor.js:393</code></td><td><span class="pill v">Verificado literal</span></td></tr>
               <tr><td><b>P03</b></td><td>Aviso si supervisor no marcó llegada</td><td>Input <code>#gUT</code> y aviso <code>No marcaste llegada aquí</code></td><td><code>js/celular-supervisor.js:84</code></td><td><span class="pill v">Verificado literal</span></td></tr>
-              <tr><td><b>P04</b></td><td>Change Order: categoría 'Otro' y campo abierto</td><td>Input <code>#itCO0</code> (<code>Escribe la categoría</code>)</td><td><code>js/celular-supervisor.js:129</code></td><td><span class="pill v">Verificado literal</span></td></tr>
+              <tr><td><b>P04</b></td><td>Servicios por categoría y opción 'Otro' con caja para escribir</td><td>Selector <code>#itC0</code> con servicios agrupados por categoría y caja <code>#itCO0</code> (<code>Escribe el servicio</code>) solo con «Otro»</td><td><code>js/celular-supervisor.js:123-127</code></td><td><span class="pill v">Verificado literal</span></td></tr>
               <tr><td><b>P05</b></td><td>Repairs separadas de change order regular</td><td>Label <code>Repairs (reparaciones)</code> (<code>#gRepairs</code>)</td><td><code>js/celular-supervisor.js:145</code></td><td><span class="pill v">Verificado literal</span></td></tr>
-              <tr><td><b>P06</b></td><td>Inspección para estimado sin condición general</td><td>Bloque <code>Un bloque por servicio. Claudia lo convierte...</code></td><td><code>js/celular-supervisor.js:121</code></td><td><span class="pill a">Plantilla dinámica</span></td></tr>
-              <tr><td><b>P07</b></td><td>Trabajo adicional recomendado</td><td>Modal <code>#gAd</code> (<code>Trabajo adicional recomendado</code>)</td><td><code>js/celular-supervisor.js:192</code></td><td><span class="pill v">Verificado literal</span></td></tr>
+              <tr><td><b>P06</b></td><td>Inspección para estimado sin condición general</td><td>Bloque <code>Un bloque por servicio. Lydia lo convierte...</code></td><td><code>js/celular-supervisor.js:121</code></td><td><span class="pill a">Plantilla dinámica</span></td></tr>
+              <tr><td><b>P07</b></td><td>Recomendaciones adicionales quitadas; notas aparte</td><td>Campos <code>#gAd</code> (Trabajo adicional) y <code>#gN</code> (Notas)</td><td><code>js/celular-supervisor.js:191</code></td><td><span class="pill v">Verificado literal</span></td></tr>
               <tr><td><b>P08</b></td><td>Opción de generar estimado desde supervisor</td><td>Chip <code>oportunidad de estimado</code></td><td><code>js/celular-supervisor.js:195</code></td><td><span class="pill v">Verificado literal</span></td></tr>
               <tr><td><b>P09</b></td><td>Solicitud directa de cliente en supervisor</td><td>Opción select <code>Solicitud de cliente</code> (<code>#ssT</code>)</td><td><code>js/acciones/acciones-supervisor.js:58</code></td><td><span class="pill v">Verificado literal</span></td></tr>
               <tr><td><b>P10</b></td><td>Fotos de antes en celular del técnico</td><td>Botón <code>data-a="fPrevio"</code> (<code>Estado previo</code>)</td><td><code>js/celular-tecnico.js:279</code></td><td><span class="pill v">Verificado literal</span></td></tr>
-              <tr><td><b>P11</b></td><td>Devolución: verificar fotos del después</td><td>Botón <code>data-a="gDevVerif"</code> (<code>Verificar fotos después</code>)</td><td><code>js/celular-tecnico.js:1141</code></td><td><span class="pill v">Verificado literal</span></td></tr>
-              <tr><td><b>P12</b></td><td>Aviso al supervisor de que Lydia fue notificada</td><td>Botón <code>data-a="gRepOK"</code> (<code>Enviar a Lydia</code>)</td><td><code>js/celular-supervisor.js:216</code></td><td><span class="pill v">Verificado literal</span></td></tr>
+              <tr><td><b>P11</b></td><td>Devolución: historial de returns visible</td><td>Bloque <code>Historial</code> en detalle de devolución</td><td><code>js/celular-tecnico.js:1149</code></td><td><span class="pill v">Verificado literal</span></td></tr>
+              <tr><td><b>P12</b></td><td>Fotos de inspección por unidad opcionales</td><td>Sección <code>Fotos generales de la unidad</code></td><td><code>js/celular-supervisor.js:148</code></td><td><span class="pill v">Verificado literal</span></td></tr>
               <tr><td><b>P13</b></td><td>Técnico: buscar unidad y ver historial</td><td>Input <code>#gBusqQ</code> (<code>Buscar unidad y ver historial</code>)</td><td><code>js/celular-tecnico.js:1289</code></td><td><span class="pill v">Verificado literal</span></td></tr>
               <tr><td><b>P14</b></td><td>Relevamiento muestra técnicos asignados de WO</td><td>Texto dinámico <code>Técnicos asignados a esta unidad:</code></td><td><code>js/celular-supervisor.js:185</code></td><td><span class="pill a">Plantilla dinámica</span></td></tr>
               <tr><td><b>P15</b></td><td>Última ubicación en lista de técnicos</td><td>Columna <code>Última ubicación</code> (<code>ultUbic()</code>)</td><td><code>js/vistas/catalogos-crud.js:413</code></td><td><span class="pill v">Verificado literal</span></td></tr>
@@ -4585,7 +4809,7 @@
               <tr><td><b>P34</b></td><td>Acciones de oficina para técnicos sin celular</td><td>Bloque <code>🏢 Acciones de oficina</code> (<code>woOficinaLlegada</code>)</td><td><code>js/vistas/wo.js:378</code></td><td><span class="pill v">Verificado literal</span></td></tr>
               <tr><td><b>P35</b></td><td>Terminar WO marcando fotos pendientes</td><td>Estado <code>Terminó · ⚠️ fotos pendientes</code></td><td><code>js/acciones/acciones-tecnico.js:430</code></td><td><span class="pill v">Verificado literal</span></td></tr>
               <tr><td><b>P36</b></td><td>Distribución formal de fotos</td><td>Botones <code>woCopiarFotos</code>, <code>woDescargarFotos</code>, <code>woCorreoFotos</code></td><td><code>js/vistas/wo.js:487</code></td><td><span class="pill v">Verificado literal</span></td></tr>
-              <tr><td><b>P37</b></td><td>Estimado a WO 'Transferir a programación'</td><td>Botón <code>data-a="estAgendar"</code> y pastilla <code>Con Thalia</code></td><td><code>js/vistas/comercial.js:513</code></td><td><span class="pill v">Verificado literal</span></td></tr>
+              <tr><td><b>P37</b></td><td>Estimado a WO y ciclo de facturación (Estado derivado)</td><td>Función <code>estEstadoDerivado()</code> y estados en tabla</td><td><code>js/helpers.js:117</code> y <code>js/vistas/comercial.js:501</code></td><td><span class="pill v">Verificado literal</span></td></tr>
             </tbody>
           </table>
         </div>
@@ -4620,7 +4844,7 @@
             <tr><td>P04</td><td>Supervisión</td><td>Servicios por categoría con opción 'Otro'</td><td>v84</td><td><span class="chip-status ok">✔ OK</span></td><td><label><input type="checkbox"> OK</label></td><td><input style="width:100%;border:1px solid #cbd5e1;border-radius:4px"></td></tr>
             <tr><td>P05</td><td>Supervisión</td><td>Repairs: texto único + fotos</td><td>v84</td><td><span class="chip-status ok">✔ OK</span></td><td><label><input type="checkbox"> OK</label></td><td><input style="width:100%;border:1px solid #cbd5e1;border-radius:4px"></td></tr>
             <tr><td>P06</td><td>Supervisión</td><td>Quitar condición general de la unidad</td><td>v84</td><td><span class="chip-status ok">✔ OK</span></td><td><label><input type="checkbox"> OK</label></td><td><input style="width:100%;border:1px solid #cbd5e1;border-radius:4px"></td></tr>
-            <tr><td>P07</td><td>Supervisión</td><td>Recomendaciones = Notas (no duplicar)</td><td>v84</td><td><span class="chip-status ok">✔ OK</span></td><td><label><input type="checkbox"> OK</label></td><td><input style="width:100%;border:1px solid #cbd5e1;border-radius:4px"></td></tr>
+            <tr><td>P07</td><td>Supervisión</td><td>Recomendaciones quitadas; notas aparte</td><td>v84</td><td><span class="chip-status ok">✔ OK</span></td><td><label><input type="checkbox"> OK</label></td><td><input style="width:100%;border:1px solid #cbd5e1;border-radius:4px"></td></tr>
             <tr><td>P08</td><td>Supervisión</td><td>Quitar que lo reciba Thalia y cliente</td><td>v84</td><td><span class="chip-status ok">✔ OK</span></td><td><label><input type="checkbox"> OK</label></td><td><input style="width:100%;border:1px solid #cbd5e1;border-radius:4px"></td></tr>
             <tr><td>P09</td><td>Supervisión</td><td>Solicitud de cliente como acción de Gustavo</td><td>v84</td><td><span class="chip-status ok">✔ OK</span></td><td><label><input type="checkbox"> OK</label></td><td><input style="width:100%;border:1px solid #cbd5e1;border-radius:4px"></td></tr>
             <tr><td>P10</td><td>Supervisión</td><td>Estado previo solo para técnicos</td><td>v84</td><td><span class="chip-status ok">✔ OK</span></td><td><label><input type="checkbox"> OK</label></td><td><input style="width:100%;border:1px solid #cbd5e1;border-radius:4px"></td></tr>
@@ -4662,7 +4886,7 @@
             <tr><td>P34</td><td>Work Orders</td><td>Estados manuales por oficina</td><td>v84</td><td><span class="chip-status ok">✔ OK</span></td><td><label><input type="checkbox"> OK</label></td><td><input style="width:100%;border:1px solid #cbd5e1;border-radius:4px"></td></tr>
             <tr><td>P35</td><td>Work Orders</td><td>Terminar WO sin fotos (aviso nómina)</td><td>v84</td><td><span class="chip-status ok">✔ OK</span></td><td><label><input type="checkbox"> OK</label></td><td><input style="width:100%;border:1px solid #cbd5e1;border-radius:4px"></td></tr>
             <tr><td>P36</td><td>Work Orders</td><td>Evidencias y correo (sin WhatsApp)</td><td>v80</td><td><span class="chip-status ok">✔ OK</span></td><td><label><input type="checkbox"> OK</label></td><td><input style="width:100%;border:1px solid #cbd5e1;border-radius:4px"></td></tr>
-            <tr><td>P37</td><td>Estimados</td><td>Estimado a WO y estado contable</td><td>v84</td><td><span class="chip-status ok">✔ OK</span></td><td><label><input type="checkbox"> OK</label></td><td><input style="width:100%;border:1px solid #cbd5e1;border-radius:4px"></td></tr>
+            <tr><td>P37</td><td>Estimados</td><td>Estimado a WO y ciclo de facturación (Estado derivado)</td><td>v93</td><td><span class="chip-status ok">✔ OK</span></td><td><label><input type="checkbox"> OK</label></td><td><input style="width:100%;border:1px solid #cbd5e1;border-radius:4px"></td></tr>
           </tbody>
         </table>
       </div>
@@ -4712,7 +4936,7 @@
 <!-- SCRIPT DE TRACKING LOCALSTORAGE -->
 <script>
   (function(){
-    const KEY = 'cps_req_final_progreso_v94';
+    const KEY = 'cps_progreso_manual_v94';
     const totalPuntos = 37;
     const totalContrato = 11;
 
