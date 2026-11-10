@@ -619,6 +619,38 @@
     }
 
     /* Print */
+    /* ── Pantallas pequeñas y celulares ── */
+    .menu-toggle { display: none; }
+    @media (max-width: 900px) {
+      html, body { overflow-x: hidden; }
+      .layout { flex-direction: column; }
+      .sidebar { position: fixed; left: 0; top: 0; height: 100vh; width: min(86vw, 320px); transform: translateX(-102%); transition: transform .2s ease; z-index: 1000; }
+      body.menu-abierto .sidebar { transform: none; }
+      body.menu-abierto::after { content: ""; position: fixed; inset: 0; background: rgba(15,23,42,.45); z-index: 900; }
+      .menu-toggle { display: flex; align-items: center; gap: 6px; position: fixed; top: 10px; left: 10px; z-index: 1100; padding: 8px 12px; border: 1px solid #1f4e79; background: #1f4e79; color: #fff; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+      .main-content { padding: 58px 12px 60px; max-width: 100%; width: 100%; }
+      .hero-card { padding: 20px 16px; }
+      .hero-card h1 { font-size: 22px; }
+      .point-card { padding: 14px 12px; }
+      .point-header { flex-wrap: wrap; gap: 8px; }
+      .point-title-wrap { flex-wrap: wrap; }
+      .mock-frame, .mock-viewport, .card { overflow-x: auto; max-width: 100%; }
+      .mock-url { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      table { display: block; max-width: 100%; overflow-x: auto; }
+      .quote-box, .route-bar, .code-ref-box, .steps-box, .result-box { overflow-wrap: anywhere; word-break: break-word; }
+      .route-bar { flex-wrap: wrap; }
+      .test-feedback-header { flex-direction: column; align-items: flex-start; }
+      img, svg { max-width: 100%; height: auto; }
+      .menu-section { padding: 12px 10px; }
+      .menu-grid { grid-template-columns: 1fr; }
+      .menu-item-card, .menu-item-top, .menu-item-badges { min-width: 0; max-width: 100%; }
+      .menu-item-name, .menu-item-sub { overflow-wrap: anywhere; }
+      a.btn, .btn { white-space: normal; max-width: 100%; box-sizing: border-box; }
+    }
+    @media (max-width: 480px) {
+      .main-content { padding: 58px 8px 50px; }
+      .hero-card h1 { font-size: 19px; }
+    }
     @media print {
       .sidebar { display: none; }
       .main-content { padding: 0; max-width: 100%; }
@@ -907,6 +939,7 @@
 <div class="layout">
 
   <!-- SIDEBAR CON SECCIONES Y CONTADOR -->
+  <button class="menu-toggle" id="menuToggle" type="button" aria-label="Abrir el menú de puntos">☰ Menú</button>
   <aside class="sidebar" id="menu-lateral">
     <div class="sidebar-brand">
       <span class="tag">CPS Operations v94</span>
@@ -1048,6 +1081,13 @@
     </section>
 
     <!-- MENÚ PRINCIPAL AGRUPADO -->
+    <section id="guardar-res" style="margin:0 0 18px;padding:14px 16px;background:#eff6ff;border:1px solid #93c5fd;border-radius:10px">
+      <div style="font-weight:700;color:#1e3a8a;margin-bottom:6px">📝 Tus resultados se guardan solos</div>
+      <div style="font-size:12.5px;color:#1e3a8a;margin-bottom:8px">Escribe tu nombre. Cada vez que marques «Funciona» o «Falla» en un punto, o escribas una nota, queda guardado para que el equipo lo revise. No hace falta enviar nada.</div>
+      <input id="resNombre" placeholder="Tu nombre" maxlength="80" style="width:100%;max-width:340px;box-sizing:border-box;padding:7px 9px;border:1px solid #93c5fd;border-radius:6px;font-size:13px">
+      <div id="resEstado" style="margin-top:8px;font-size:12.5px;color:#1e3a8a"></div>
+    </section>
+
     <section class="menu-section" id="menu-principal">
       <div class="menu-section-header">
         <h2 class="menu-section-title">☰ Menú de Navegación: Los 37 Puntos</h2>
@@ -2633,7 +2673,7 @@
           <ol class="steps-list">
             <li>En la ficha de Harbor Pointe, entra a la pestaña <strong>Documentos</strong>.</li>
             <li>Ubica la tabla de pólizas de seguro del certificado ACORD 25.</li>
-            <li>Verifica la fecha de vencimiento y el aviso relativo <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>: la pastilla ámbar muestra la fecha límite y el texto <code>en 14 días</code> configurado por <code>COI_AVISO_DIAS = 14</code>.</li>
+            <li>Verifica la fecha de vencimiento y el aviso relativo <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>: la fecha de vencimiento sale en una pastilla ámbar cuando la póliza vence dentro de los próximos 14 días, con el aviso de cuántos días faltan. Si faltan más de 14 días, la pastilla es verde; si ya venció, roja.</li>
           </ol>
         </div>
         <div class="result-box">
@@ -4167,10 +4207,10 @@
         <div class="steps-box">
           <h4>Pasos a realizar:</h4>
           <ol class="steps-list">
-            <li>En la barra de filtros de técnicos, escribe en el buscador <code>#tBus</code> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
-            <li>Selecciona una <strong>Zona</strong> específica en <code>#tFiltZ</code> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">2</span>.</li>
-            <li>Filtra por <strong>Especialidad</strong> en <code>#tFiltE</code> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">3</span>.</li>
-            <li>Aplica el filtro de <strong>Vínculo</strong> en <code>#tFiltV</code> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">4</span> y <strong>Estado</strong> en <code>#tFiltS</code> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">5</span> comprobando que los criterios se combinan de forma instantánea.</li>
+            <li>En la barra de filtros de técnicos, escribe un nombre o teléfono en el buscador («Buscar nombre o teléfono…») <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
+            <li>Selecciona una <strong>Zona</strong> específica en el filtro <strong>City / Zona</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">2</span>.</li>
+            <li>Filtra por <strong>Especialidad</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">3</span>.</li>
+            <li>Aplica el filtro de <strong>Vínculo</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">4</span> y <strong>Estado</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">5</span>, comprobando que los criterios se combinan de forma instantánea.</li>
           </ol>
         </div>
 
@@ -5000,6 +5040,60 @@
       });
       updateProgress();
     });
+  })();
+</script>
+
+<script>
+  (function(){
+    var t=document.getElementById('menuToggle'); if(!t) return;
+    t.addEventListener('click',function(){ document.body.classList.toggle('menu-abierto'); });
+    document.addEventListener('click',function(e){
+      if(!document.body.classList.contains('menu-abierto')) return;
+      if(e.target.closest('#menu-lateral a')|| (!e.target.closest('#menu-lateral') && !e.target.closest('#menuToggle'))) document.body.classList.remove('menu-abierto');
+    });
+  })();
+</script>
+<script>
+  (function(){
+    /* Los resultados se guardan en la tabla `manual_resultados` (ver db/manual_resultados.sql).
+       La llave es la misma «publishable» que ya usa el prototipo; esa tabla solo permite insertar. */
+    var URL_TABLA = 'https://mvirzipjjjllvisteslq.supabase.co/rest/v1/manual_resultados';
+    var LLAVE = 'sb_publishable_CxulQ_He5iek46EGvwF0sw_-xGZS03v';
+    var est = document.getElementById('resEstado');
+    var inNombre = document.getElementById('resNombre');
+    try { inNombre.value = localStorage.getItem('cps_manual_nombre') || ''; } catch(e){}
+    inNombre.addEventListener('change', function(){ try { localStorage.setItem('cps_manual_nombre', inNombre.value.trim()); } catch(e){} });
+    var cola = Promise.resolve();
+    function msg(t, ok){ est.textContent = t; est.style.color = ok === false ? '#b91c1c' : '#1e3a8a'; }
+    function nombre(){ var n = (inNombre.value || '').trim(); return n || 'Sin nombre'; }
+    function guardar(fila, etiqueta){
+      cola = cola.then(function(){
+        msg('Guardando ' + etiqueta + ' …');
+        return fetch(URL_TABLA, { method:'POST',
+          headers:{ 'Content-Type':'application/json', 'apikey': LLAVE, 'Authorization':'Bearer ' + LLAVE, 'Prefer':'return=minimal' },
+          body: JSON.stringify(fila) })
+          .then(function(r){ if (r.ok) msg('✓ Guardado: ' + etiqueta + '.'); else msg('No se pudo guardar ' + etiqueta + ' (' + r.status + '). Intenta de nuevo.', false); })
+          .catch(function(){ msg('No se pudo guardar ' + etiqueta + ': revisa tu conexión a internet.', false); });
+      });
+    }
+    function info(el){
+      var card = el.closest('.point-card'); if (!card) return null;
+      var pid = card.id.replace('p',''); var t = card.querySelector('.point-title'); var ta = card.querySelector('.test-feedback textarea');
+      var ch = card.querySelector('.point-check:checked');
+      return { punto: 'P' + (pid.length < 2 ? '0' + pid : pid), titulo: t ? t.textContent.trim().slice(0,200) : '', estado: ch ? ch.value : '', nota: ta ? ta.value.trim().slice(0,2000) : '' };
+    }
+    document.addEventListener('change', function(e){
+      var el = e.target; if (!el.matches) return;
+      var d;
+      if (el.matches('.point-check')){
+        d = info(el); if (!d) return;
+        guardar({ nombre: nombre(), punto: d.punto, titulo: d.titulo, estado: d.estado, nota: d.nota, origen: location.href.slice(0,300) }, d.punto);
+      } else if (el.matches('.test-feedback textarea')){
+        d = info(el); if (!d || !d.nota) return;
+        guardar({ nombre: nombre(), punto: d.punto, titulo: d.titulo, estado: 'nota', nota: d.nota, origen: location.href.slice(0,300) }, d.punto + ' (nota)');
+      }
+    });
+    window.__resDebug = { url: URL_TABLA };
   })();
 </script>
 </body>
