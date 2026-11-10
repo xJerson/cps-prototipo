@@ -150,7 +150,7 @@ function vCampoRep(){
         ${r.antesDe?`<div class="note w" style="margin:0 0 10px"><b>Antes de:</b> ${esc(r.antesDe)} — estas fotos documentan cómo estaba la unidad <b>antes</b> de que entrara nadie.</div>`:""}
         ${r.condUnidad?`<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:9px">
           <span class="pill ${r.condUnidad==="No se pudo ingresar"?"b":"g"}">Unidad ${esc(r.condUnidad.toLowerCase())}</span>
-          ${U(r.unidad)?`<span class="pill g">${esc(U(r.unidad).rooms)}</span>`:""}
+          ${(U(r.unidad)&&U(r.unidad).rooms)?`<span class="pill g">${esc(U(r.unidad).rooms)}</span>`:""}
           ${r.condGeneral?`<span class="pill ${r.condGeneral==="Mala"?"b":r.condGeneral==="Regular"?"a":"v"}">Condición ${esc(r.condGeneral.toLowerCase())}</span>`:""}
         </div>`:""}
 

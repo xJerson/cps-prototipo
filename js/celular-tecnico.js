@@ -452,11 +452,16 @@ function leerSup(){
   /* El bloque repetible: render() rehace la hoja entera, asi que hay que
      rescatar cada renglon antes de repintar o se le borra lo escrito. */
   (g.items||[]).forEach((it,i)=>{
-    const c=v("itC"+i), co=v("itCO"+i), t=v("itT"+i), u=v("itU"+i), q=v("itQ"+i),
+    const c=v("itC"+i), co=v("itCO"+i), u=v("itU"+i), q=v("itQ"+i),
           m=v("itM"+i), mt=v("itMt"+i), x=v("itX"+i);
-    if(c!==null)  it.cat=c;
-    if(co!==null) it.catOtro=co;
-    if(t!==null)  it.trabajo=t;
+    /* El select trae el servicio del catalogo ("Categoria::Servicio") o «Otro».
+       Con un servicio no se escribe nada; solo «Otro» abre una caja a mano. */
+    if(c!==null){
+      if(c==="__otro__"){ it.cat="__otro__"; it.servSel=""; it.trabajo=(it.catOtro||"").trim(); }
+      else if(c===""){ it.cat=""; it.servSel=""; it.catOtro=""; it.trabajo=""; }
+      else { const [cat,serv]=c.split("::"); it.cat=cat; it.servSel=c; it.catOtro=""; it.trabajo=serv; }
+    }
+    if(co!==null && it.cat==="__otro__"){ it.catOtro=co; it.trabajo=co.trim(); }
     if(u!==null)  it.ubic=u;
     if(q!==null)  it.cant=q;
     if(m!==null)  it.medidas=m;
@@ -594,7 +599,7 @@ function libresEse(fecha, prop){
   });
 }
 /* Una linea del relevamiento: es el borrador de una linea del estimado. */
-const itemVacio = () => ({cat:activos("categorias")[0], catOtro:"", trabajo:"", ubic:activos("ubicaciones")[0],
+const itemVacio = () => ({cat:"", servSel:"", catOtro:"", trabajo:"", ubic:activos("ubicaciones")[0],
                           cant:"1", medidas:"", mat:false, materiales:"", coment:"", fotos:0});
 
 /* La causa de la devolucion decide la plata. Sin esto, cada devolucion se
@@ -985,7 +990,7 @@ function gustavoScreenHTML(view){
       + ((tira, titulo) => tira.length ? `<div class="dl" style="margin-top:9px">${titulo}</div>` + tira.join("") : "")(
           Object.keys(REP).filter(k=>REP[k].mod).map(k=>fichaRep(k)), "O reportar de otra propiedad")
       + `<div class="dc" style="border-style:dashed"><div class="ds" style="text-align:center">
-         Todo lo que mandes le llega a <b>Claudia</b> al instante, con la propiedad, la hora y las fotos ordenadas por ambiente.</div></div>`;
+         Todo lo que mandes le llega a <b>Lydia</b> al instante, con la propiedad, la hora y las fotos ordenadas por ambiente.</div></div>`;
   }
 
   /* ── MI DÍA ──

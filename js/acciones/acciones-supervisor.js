@@ -391,7 +391,7 @@ Object.assign(ACC, {
 
   gRepNuevo: d => {
     const pr = S.propiedades.filter(x=>x.activa)[0];
-    S.gRep = {tipo:d.t, prop:pr.id, unidad:(S.unidades.filter(u=>u.prop===pr.id)[0]||{}).id||null, unidadTexto:"",
+    S.gRep = {tipo:d.t, prop:pr.id, unidad:null, unidadTexto:"",
               amb:activos("ubicaciones")[0], cond:d.t==="previo"?activos("condiciones")[0]:null,
               antesDe:activos("categorias")[0], servicios:[], lotes:[], nota:"", medidas:"", material:"",
               tipoVisita:TIPO_VISITA[1], estadoTrabajo:EST_TRABAJO[1],
@@ -409,7 +409,7 @@ Object.assign(ACC, {
     const pa = paradaDe(d.prop);
     const tipo = pa && pa.motivo==="Inspección para estimado" ? "relevamiento"
                : pa && pa.motivo==="Supervisar" ? "revision" : "relevamiento";
-    S.gRep = {tipo, prop:d.prop, desdeRuta:true, unidad:(S.unidades.filter(u=>u.prop===d.prop)[0]||{}).id||null, unidadTexto:"",
+    S.gRep = {tipo, prop:d.prop, desdeRuta:true, unidad:null, unidadTexto:"",
               amb:activos("ubicaciones")[0], cond:tipo==="previo"?activos("condiciones")[0]:null,
               antesDe:activos("categorias")[0],
               servicios:[], lotes:[], nota:"", medidas:"", material:"",
@@ -424,12 +424,7 @@ Object.assign(ACC, {
 
   /* Antes de repintar hay que rescatar lo escrito: render() rehace la hoja entera */
   gRepProp: () => { leerSup(); const pr=val("gP"); S.gRep.prop=pr;
-    S.gRep.unidad=(S.unidades.filter(u=>u.prop===pr)[0]||{}).id||null; render(); },
-  /* Sin esto, elegir Unidad no quedaba guardado: la siguiente vez que algo
-     volvia a pintar la hoja (elegir Ambiente, por ejemplo), el select volvia
-     solo a la primera unidad de la propiedad — Gustavo elegia una y "se le
-     iba para otro lado" sin que él tocara nada más. */
-  gRepUnidad: () => { leerSup(); S.gRep.unidad=val("gU"); render(); },
+    S.gRep.unidad=null; S.gRep.unidadTexto=""; render(); },
   /* El select "Estado del trabajo" tenía data-a="gRepEst" en el HTML pero
      nunca existió el handler — elegir "Requiere corrección" no mostraba el
      aviso rojo hasta que Gustavo tocaba otro campo cualquiera (leerSup() lo
@@ -506,12 +501,10 @@ Object.assign(ACC, {
       if(!conT.length && !(g.repairsTexto&&g.repairsTexto.trim())){ toast("Falta el trabajo","Escribe al menos un servicio con lo que hay que hacer.","r"); return; }
     }
     const utxt = (g.unidadTexto||"").trim();
-    if(utxt){
-      const uMatch = S.unidades.find(u=>u.prop===g.prop && (u.num||"").toLowerCase()===utxt.toLowerCase());
-      if(uMatch) g.unidad = uMatch.id;
-    }
-    if(!g.unidad && !utxt){ toast("Falta la unidad","Escribe o selecciona una unidad antes de enviar.","r"); return; }
-    const catItem = it => it.cat==="__otro__" ? ((it.catOtro||"").trim()||"Otro") : it.cat;
+    if(!utxt){ toast("Falta la unidad","Escribe la unidad antes de enviar.","r"); return; }
+    const uMatch = S.unidades.find(u=>u.prop===g.prop && (u.num||"").toLowerCase()===utxt.toLowerCase());
+    g.unidad = uMatch ? uMatch.id : null;
+    const catItem = it => it.cat==="__otro__" ? "Otro" : it.cat;
     const n = g.lotes.reduce((t,l)=>t+(l.fotosArr||[]).length,0);
     const r = {id:"R"+Date.now(), tipo:g.tipo, prop:g.prop, unidad:g.unidad, unidadTexto:utxt, wo:null,
       fecha:HOY_SUP, hora:hora(), quien:GUSTAVO,

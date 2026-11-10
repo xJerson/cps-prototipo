@@ -183,12 +183,18 @@ const recordatorioAlTecnico = r => r.tecnico!==false;
 /* Texto al técnico (en español, dentro de su app). */
 function textoRecordatorioTec(r){
   const w=W(r.wo); if(!w) return "";
-  return `WO-${w.id} · ${w.serv} · ${P(w.prop).nombre} ${U(w.unidad).num} — ${w.fecha} ${w.horaProg||"9:00"}`;
+  const horaTxt = (w.horaProg && w.horaFin)
+    ? ` ${w.horaProg}–${w.horaFin}`
+    : (w.horaProg ? ` ${w.horaProg}` : (w.horaFin ? ` hasta ${w.horaFin}` : ""));
+  return `WO-${w.id} · ${w.serv} · ${P(w.prop).nombre} ${U(w.unidad).num} — ${w.fecha}${horaTxt}`;
 }
 /* Texto al cliente (en inglés) del recordatorio de una WO en unidad ocupada. */
 function textoRecordatorio(r){
   const w=W(r.wo); if(!w) return "";
-  return `Hello, this is a reminder that work order WO-${w.id} (${w.serv}) at ${P(w.prop).nombre}, unit ${U(w.unidad).num}, is scheduled for ${w.fecha} at ${w.horaProg||"9:00"}. Please make sure our team can access the unit.`;
+  const horaTxt = (w.horaProg && w.horaFin)
+    ? ` between ${w.horaProg} and ${w.horaFin}`
+    : (w.horaProg ? ` at ${w.horaProg}` : (w.horaFin ? ` before ${w.horaFin}` : ""));
+  return `Hello, this is a reminder that work order WO-${w.id} (${w.serv}) at ${P(w.prop).nombre}, unit ${U(w.unidad).num}, is scheduled for ${w.fecha}${horaTxt}. Please make sure our team can access the unit.`;
 }
 /* Miniatura de un comprobante (foto real). */
 const miniRecibo = url => url ? `<a href="${url}" target="_blank"><img src="${url}" style="width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px solid var(--line);vertical-align:middle"></a>` : "";
@@ -680,8 +686,9 @@ function alertas(){
   const minProg = w => { const [h,m]=String(w.horaProg||"9:00").split(":").map(Number); return h*60+(m||0); };
   S.wos.filter(w=>w.tec && esAgendada(w.estado) && !asisDe(w.id) && w.fecha).forEach(w=>{
     const donde=`${P(w.prop).nombre} ${U(w.unidad).num}`;
+    const horaTxt = w.horaProg ? `programada ${w.horaProg}` : (w.horaFin ? `ventana hasta ${w.horaFin}` : "sin hora fija");
     if(w.fecha<HOY_SUP) A.push({t:"Técnico no se presentó",d:`WO-${w.id} · ${tecN(w.tec)} no marcó llegada el ${w.fecha} (${donde}). Confirma con el técnico o reasigna la WO.`,q:"Thalia · Gustavo",n:"r"});
-    else if(w.fecha===HOY_SUP && S.reloj>minProg(w)+10) A.push({t:"Sin marcar llegada",d:`WO-${w.id} · ${tecN(w.tec)} no ha marcado llegada (programada ${w.horaProg||"9:00"})`,q:"Thalia",n:"a"});
+    else if(w.fecha===HOY_SUP && w.horaProg && S.reloj>minProg(w)+10) A.push({t:"Sin marcar llegada",d:`WO-${w.id} · ${tecN(w.tec)} no ha marcado llegada (${horaTxt})`,q:"Thalia",n:"a"});
   });
   S.wos.filter(w=>w.tec && w.estado==="In progress" && w.fecha && w.fecha<HOY_SUP && asisDe(w.id)).forEach(w=>A.push({t:"Trabajo sin cerrar",
     d:`WO-${w.id} · ${tecN(w.tec)} llegó a las ${asisDe(w.id).horaReal} del ${w.fecha} y la WO sigue en curso sin cerrarse (${P(w.prop).nombre} ${U(w.unidad).num})`,q:"Gustavo · Thalia",n:"r"}));

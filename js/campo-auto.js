@@ -271,7 +271,7 @@ CAMPO_MANEJADORES.push({ id:"llegar",
     const w = W(it.wo); if(!w || asisDe(w.id) || woEspera(w)) return null;
     const pl = cPlan(w), prog = cMinHora(w.horaProg||"9:00");
     if(pl.llega == null) pl.llega = prog + (pl.tarde ? cRnd(15,30) : cRnd(-5,6));
-    return {paso:"llegada", oblig:true, titulo:"Llegada al sitio", desc:`Hora programada: ${w.horaProg||"9:00"}.`,
+    return {paso:"llegada", oblig:true, titulo:"Llegada al sitio", desc: w.horaProg ? `Hora programada: ${w.horaProg}.` : (w.horaFin ? `Ventana hasta: ${w.horaFin}.` : "Sin hora fija programada."),
       campos:[{id:"hora", label:"Hora a la que llegó", tipo:"hora", valor:cHM(pl.llega)}]};
   },
   responder:(it, d) => {
@@ -996,7 +996,7 @@ CAMPO_MANEJADORES.push({ id:"greporte",
     cConGustavo(()=>{
       ACC.gRepPro({prop:a.prop});
       const g = S.gRep; if(!g) return;
-      g.tipo = "relevamiento"; g.unidad = uni.id; g.condUnidad = d.cond==="Ocupada" ? "Ocupada" : "Desocupada";
+      g.tipo = "relevamiento"; g.unidad = uni.id; g.unidadTexto = uni.num; g.condUnidad = d.cond==="Ocupada" ? "Ocupada" : "Desocupada";
       g.nota = String(d.nota||"");
       g.items = items.map(x=>{ const o = Object.assign({}, x); delete o.nf; return o; });
       render();
@@ -1053,7 +1053,7 @@ CAMPO_MANEJADORES.push({ id:"grevision",
     cConGustavo(()=>{
       ACC.gRepPro({prop:a.prop});
       const g = S.gRep; if(!g) return;
-      g.tipo = "revision"; g.unidad = uni.id; g.tipoVisita = TIPO_VISITA.includes(d.tv) ? d.tv : TIPO_VISITA[1];
+      g.tipo = "revision"; g.unidad = uni.id; g.unidadTexto = uni.num; g.tipoVisita = TIPO_VISITA.includes(d.tv) ? d.tv : TIPO_VISITA[1];
       g.estadoTrabajo = ["No iniciado","En proceso","Terminado"].includes(d.est) ? d.est : "En proceso";
       g.servSup = String(d.sv||""); g.problemas = String(d.prob||""); g.nota = String(d.nota||"");
       render();

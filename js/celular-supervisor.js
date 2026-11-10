@@ -84,10 +84,7 @@ function hojaSup(g){
         : `<div class="sub" style="color:var(--ambar);margin:4px 0 0">No marcaste llegada aquí. Puedes reportar igual, pero queda sin hora de llegada.</div>`; })()}
 
     <label>Unidad</label>
-    <input id="gUT" value="${esc(g.unidadTexto||"")}" placeholder="Escribe la unidad (ej. 204, A-211…)" style="margin-bottom:5px">
-    <select id="gU" data-a="gRepUnidad">${us.length?us.map(u=>
-      `<option value="${u.id}" ${u.id===g.unidad?"selected":""}>${esc(u.num)} — ${esc(u.rooms)}</option>`).join("")
-      :`<option value="">— sin unidades —</option>`}</select>
+    <input id="gUT" value="${esc(g.unidadTexto||"")}" placeholder="Escribe la unidad (ej. 204, A-211…)">
 
     ${g.tipo==="previo"?`<label>Antes de qué trabajo</label>
       <select id="gA">${activos("categorias").map(c=>`<option ${c===g.antesDe?"selected":""}>${esc(c)}</option>`).join("")}</select>`:""}
@@ -118,16 +115,16 @@ function hojaSup(g){
 
       ${g.condUnidad!=="No se pudo ingresar"?`
       <label style="margin-top:11px">Qu\u00e9 hay que hacer</label>
-      <div class="sub" style="margin:-3px 0 7px">Un bloque por servicio. Claudia lo convierte en l\u00edneas del estimado sin volver a escribirlo.</div>
+      <div class="sub" style="margin:-3px 0 7px">Un bloque por servicio. Lydia lo convierte en l\u00edneas del estimado sin volver a escribirlo.</div>
       ${g.items.map((it,i)=>`<div class="adfila" style="display:block;padding:10px 11px">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:7px;margin-bottom:6px">
           <b style="font-size:11px;color:var(--azul)">Servicio ${i+1}</b>
           <button class="adx" data-a="gRepItemMenos" data-i="${i}" ${g.items.length===1?"disabled":""}>−</button></div>
-        <select id="itC${i}" data-a="gRepItemCat" data-i="${i}">${activos("categorias").filter(c=>c!=="Repair").map(c=>
-          `<option value="${esc(c)}" ${c===it.cat?"selected":""}>${esc(c)}</option>`).join("")}
+        <select id="itC${i}" data-a="gRepItemCat" data-i="${i}"><option value="">— Elige el servicio —</option>${activos("categorias").filter(c=>c!=="Repair").map(c=>{
+          const ss=servDe(c); return ss.length ? `<optgroup label="${esc(c)}">${ss.map(s=>
+            `<option value="${esc(c+"::"+s)}" ${it.servSel===c+"::"+s?"selected":""}>${esc(s)}</option>`).join("")}</optgroup>` : ""; }).join("")}
           <option value="__otro__" ${it.cat==="__otro__"?"selected":""}>Otro</option></select>
-        ${it.cat==="__otro__"?`<input id="itCO${i}" value="${esc(it.catOtro||"")}" placeholder="Escribe la categoría" style="margin-top:5px">`:""}
-        <input id="itT${i}" value="${esc(it.trabajo)}" placeholder="Qu\u00e9 trabajo hace falta" style="margin-top:5px">
+        ${it.cat==="__otro__"?`<input id="itCO${i}" value="${esc(it.catOtro||"")}" placeholder="Escribe el servicio" style="margin-top:5px">`:""}
         <div class="adnum" style="margin-top:5px">
           <label>D\u00f3nde<select id="itU${i}">${activos("ubicaciones").map(u=>
             `<option ${u===it.ubic?"selected":""}>${esc(u)}</option>`).join("")}</select></label>
@@ -192,7 +189,7 @@ function hojaSup(g){
       <label>Trabajo adicional recomendado</label>
       <textarea id="gAd" placeholder="Lo que conviene hacer y no estaba en la orden">${esc(g.adicional||"")}</textarea>
       ${g.adicional&&g.adicional.trim()?`<div class="dc" style="margin:5px 0 0;background:var(--verde-cl);border-color:transparent">
-        <div class="ds" style="color:var(--verde)">Al enviar, esto le llega a Claudia como <b>oportunidad de estimado</b>,
+        <div class="ds" style="color:var(--verde)">Al enviar, esto le llega a Lydia como <b>oportunidad de estimado</b>,
         no enterrado dentro del informe. As\u00ed se vende.</div></div>`:""}
 
       <label style="margin-top:11px">Firmas</label>
@@ -211,7 +208,7 @@ function hojaSup(g){
     `:""}
 
     <label>${g.tipo==="revision"?"Comentarios generales":"Nota"}</label>
-    <textarea id="gN" placeholder="Lo que Claudia necesita saber">${esc(g.nota||"")}</textarea>
+    <textarea id="gN" placeholder="Lo que Lydia necesita saber">${esc(g.nota||"")}</textarea>
 
     <button class="db p" style="margin-top:11px;background:${r.c}" data-a="gRepOK">Enviar a Lydia</button>
     <button class="db g" data-a="gRepBorrador">Guardar borrador y seguir despu\u00e9s</button>
@@ -530,7 +527,7 @@ function hojaCel(sh){
     <h4>No marcaste tu llegada</h4>
     <div class="sub">No te freno el cierre, pero necesito la hora. Queda registrada como <b>declarada</b>, no verificada.</div>
     <label>¿A qué hora llegaste?</label>
-    <input id="plH" value="${esc(w.horaProg||"9:00")}" inputmode="numeric">
+    <input id="plH" value="${esc(w.horaProg||"")}" placeholder="09:00" inputmode="numeric">
     <button class="db v" style="margin-top:11px" data-a="fLlegadaDecl" data-id="${sh.wo}">Registrar y cerrar</button>
     <button class="db g" data-a="fSheetNo">Cancelar</button>
   </div></div>`;
