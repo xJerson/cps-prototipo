@@ -174,7 +174,18 @@ function vCampoRep(){
           <div class="tr" style="margin:6px 0 0">Cada renglón se convierte en una línea del estimado sin volver a escribirlo.</div>
         </div>`:""}
 
-        ${r.repairsTexto?`<div class="note w" style="margin:0 0 10px"><b>Repairs (reparaciones):</b> ${esc(r.repairsTexto)}<div style="font-size:10.5px;color:var(--faint);margin-top:4px">No se generó línea de estimado automática para esto — agrégala a mano.</div></div>`:""}
+        ${(()=>{
+          const fotosRep = (r.lotes||[]).filter(l=>l.rep).reduce((arr,l)=>arr.concat(l.fotosArr||[]),[]);
+          if(!r.repairsTexto && !fotosRep.length) return "";
+          return `<div class="note w" style="margin:0 0 10px">
+            <b>Repairs (reparaciones):</b>${r.repairsTexto ? ` ${esc(r.repairsTexto)}` : ""}
+            ${fotosRep.length ? `<div class="glot-f" style="margin-top:7px">
+              ${fotosRep.slice(0,6).map(f=>`<a href="${f.url}" target="_blank" class="fmini" style="overflow:hidden;padding:0"><img src="${f.url}" style="width:100%;height:100%;object-fit:cover;display:block"></a>`).join("")}
+              ${fotosRep.length>6 ? `<div class="fmini mas">+${fotosRep.length-6}</div>` : ""}
+            </div>` : ""}
+            <div style="font-size:10.5px;color:var(--faint);margin-top:4px">No se generó línea de estimado automática para esto — agrégala a mano.</div>
+          </div>`;
+        })()}
 
         ${r.servSup?`<div style="margin-bottom:9px"><b style="font-size:11px;color:var(--faint);text-transform:uppercase">Servicio supervisado</b><br>
           <span class="pill a">${esc(r.servSup)}</span>
@@ -201,7 +212,7 @@ function vCampoRep(){
           ${r.servicios.map(x=>`<span class="pill a" style="margin:3px 3px 0 0">${esc(x)}</span>`).join("")}</div>`:""}
 
         <div class="galeria">
-        ${(r.lotes||[]).map(l=>{ const fs=l.fotosArr||[]; return `<div class="glot">
+        ${(r.lotes||[]).filter(l=>!l.rep).map(l=>{ const fs=l.fotosArr||[]; return `<div class="glot">
           <div class="glot-h"><b>${esc(l.amb)}</b>${l.etapa?` <span class="pill ${l.etapa==="Antes"?"a":l.etapa==="Final"?"v":"m"}" style="margin-left:4px">${esc(l.etapa)}</span>`:""}${l.cond?` <span style="color:var(--faint)">· ${esc(l.cond)}</span>`:""}
             <span class="pill g" style="float:right">${fs.length}</span>
             ${l.desc?`<div style="font-size:10.5px;color:var(--soft);font-weight:400;margin-top:3px">${esc(l.desc)}</div>`:""}</div>
@@ -279,7 +290,7 @@ function vPrevio(pid){
             <span style="color:var(--faint);font-size:11.5px">· ${r.fecha} ${esc(r.hora)} · ${esc(tecN(r.quien))}</span></div>
           <span class="pill v">${fotosDe(r)} fotos</span></div>
         <div class="galeria">
-        ${(r.lotes||[]).map(l=>{ const fs=l.fotosArr||[]; return `<div class="glot">
+        ${(r.lotes||[]).filter(l=>!l.rep).map(l=>{ const fs=l.fotosArr||[]; return `<div class="glot">
           <div class="glot-h"><b>${esc(l.amb)}</b>${l.etapa?` <span class="pill ${l.etapa==="Antes"?"a":l.etapa==="Final"?"v":"m"}" style="margin-left:4px">${esc(l.etapa)}</span>`:""}${l.cond?` <span style="color:var(--faint)">· ${esc(l.cond)}</span>`:""}
             <span class="pill g" style="float:right">${fs.length}</span>
             ${l.desc?`<div style="font-size:10.5px;color:var(--soft);font-weight:400;margin-top:3px">${esc(l.desc)}</div>`:""}</div>

@@ -66,7 +66,7 @@ function renderFonSup(){
 function hojaSup(g){
   const r = REP[g.tipo] || {n:g.tipo, d:"", c:"#8a5a00"};
   const us = S.unidades.filter(u=>u.prop===g.prop);
-  const total = g.lotes.reduce((t,l)=>t+(l.fotosArr||[]).length,0);
+  const total = (g.lotes||[]).filter(l=>!l.rep).reduce((t,l)=>t+(l.fotosArr||[]).length,0);
   return `<div class="fscrim" data-a="gRepNo"><div class="fsheet" data-stop>
     <div class="grab"></div>
     <h4 style="color:${r.c}">${r.n}</h4>
@@ -110,8 +110,10 @@ function hojaSup(g){
         ? `<div class="dc" style="margin:6px 0 0;background:var(--ambar-cl);border-color:transparent">
             <div class="ds" style="color:var(--ambar)">Queda registrado que fuiste y no se pudo entrar.
             Claudia decide si se reagenda.</div></div>`
-        : `<div class="sub" style="margin:5px 0 0">Tipo de unidad: <b>${esc(U(g.unidad)?U(g.unidad).rooms:"—")}</b>
-            — sale del expediente, no hace falta escribirlo.</div>`}
+        : (U(g.unidad) && U(g.unidad).rooms)
+        ? `<div class="sub" style="margin:5px 0 0">Tipo de unidad: <b>${esc(U(g.unidad).rooms)}</b>
+            — sale del expediente, no hace falta escribirlo.</div>`
+        : ""}
 
       ${g.condUnidad!=="No se pudo ingresar"?`
       <label style="margin-top:11px">Qu\u00e9 hay que hacer</label>
@@ -140,7 +142,14 @@ function hojaSup(g){
       </div>`).join("")}
       <button class="db g admas" data-a="gRepItemMas">+ Agregar otro servicio</button>
       <label>Repairs (reparaciones)</label>
-      <textarea id="gRepairs" placeholder="Escribe todas las reparaciones que hagan falta en esta unidad">${esc(g.repairsTexto||"")}</textarea>`:""}`:""}
+      <textarea id="gRepairs" placeholder="Escribe todas las reparaciones que hagan falta en esta unidad">${esc(g.repairsTexto||"")}</textarea>
+      ${(()=>{
+        const lRep = (g.lotes||[]).find(x=>x.rep);
+        const nRep = lRep ? (lRep.fotosArr||[]).length : 0;
+        return `<button class="gchip" style="width:100%;margin-top:6px" data-a="gRepRepairsFoto">
+          📷 ${nRep ? `${nRep} foto(s) de las reparaciones` : "Fotos de las reparaciones"}
+        </button>`;
+      })()}`:""}`:""}
 
     <label style="margin-top:11px">${g.tipo==="relevamiento"?"Fotos generales de la unidad":"Fotos"}${total?` · ${total} tomada(s)`:""}</label>
     <div class="sub" style="margin:-3px 0 7px">Elige el ambiente y dispara. Se agrupan solas para que Claudia las pueda revisar.</div>
@@ -158,7 +167,9 @@ function hojaSup(g){
       Tomar foto${g.amb?" · "+esc(g.amb):""}${g.tipo==="previo"&&g.cond?" · "+esc(g.cond):""}
     </button>
 
-    ${g.lotes.length?`<div class="glotes">${g.lotes.map((l,i)=>`
+    ${(g.lotes||[]).filter(l=>!l.rep).length?`<div class="glotes">${g.lotes.map((l,i)=>{
+      if(l.rep) return "";
+      return `
       <div style="border-bottom:1px solid var(--line);padding:7px 0">
         <div class="glote" style="border:none;padding:0">
           <span><b>${esc(l.amb)}</b>${l.etapa?` · <span style="color:var(--azul)">${esc(l.etapa)}</span>`:""}${l.cond?` · ${esc(l.cond)}`:""}</span>
@@ -166,8 +177,9 @@ function hojaSup(g){
             <button class="adx" style="height:23px;width:23px;font-size:14px;margin-left:5px" data-a="gRepQuita" data-i="${i}">−</button></span></div>
         ${(l.fotosArr||[]).length?`<div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">${l.fotosArr.map(f=>
           `<a href="${f.url}" target="_blank"><img src="${f.url}" style="width:44px;height:44px;object-fit:cover;border-radius:5px;border:1px solid var(--line)"></a>`).join("")}</div>`:""}
-        <input id="loD${i}" value="${esc(l.desc||"")}" placeholder="Qu\u00e9 se ve en estas fotos" style="margin-top:5px">
-      </div>`).join("")}
+        <input id="loD${i}" value="${esc(l.desc||"")}" placeholder="Qué se ve en estas fotos" style="margin-top:5px">
+      </div>`;
+    }).join("")}
       </div>`:`<div class="dc" style="border-style:dashed;margin-top:7px"><div class="ds" style="text-align:center">Sin fotos todavía</div></div>`}
 
     ${g.tipo==="material"?`<label>Qué falta</label><input id="gM" value="${esc(g.material||"")}" placeholder="Galón de pintura blanca, 2 rodillos…">`:""}

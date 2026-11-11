@@ -216,6 +216,24 @@
   .coach-mini:hover{opacity:1}
   body.po .coach,body.po .coach-mini{right:386px}   /* a la izquierda del celular (370px), sin taparlo */
 
+  /* Con una hoja abierta (.fsheet/.fscrim), el coach sube arriba para no tapar los botones de acción (.db p Guardar) */
+  body:has(.fsheet) .coach,
+  body:has(.fscrim) .coach,
+  #coachBox.sheet-open .coach{bottom:auto;top:16px;box-shadow:0 10px 30px -8px rgba(0,0,0,.3)}
+  body:has(.fsheet) .coach-mini,
+  body:has(.fscrim) .coach-mini,
+  #coachBox.sheet-open .coach-mini{bottom:auto;top:16px}
+  body.gmode:has(.fsheet) .coach,
+  body.gmode:has(.fscrim) .coach,
+  body.gmode #coachBox.sheet-open .coach{top:46px;bottom:auto}
+  body.gmode:has(.fsheet) .coach-mini,
+  body.gmode:has(.fscrim) .coach-mini,
+  body.gmode #coachBox.sheet-open .coach-mini{top:46px;bottom:auto}
+  @media (max-width:480px){
+    body.po .coach,body.po .coach-mini{right:16px}
+    .coach{max-width:calc(100vw - 32px)}
+  }
+
   /* el elemento que la ayuda te señala */
   .coach-target{position:relative;z-index:5;outline:2px solid var(--rojo);outline-offset:1px;animation:coachpulse 1.25s ease-in-out infinite;border-radius:6px}
   @keyframes coachpulse{0%,100%{box-shadow:0 0 0 3px var(--rojo-cl);outline-color:var(--rojo)}50%{box-shadow:0 0 0 6px var(--ambar-cl);outline-color:var(--ambar)}}

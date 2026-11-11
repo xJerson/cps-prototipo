@@ -481,14 +481,29 @@ Object.assign(ACC, {
     capturarFoto(url=>{
       /* El lote agrupa por ambiente + condicion + etapa: asi el antes y el
          despues del mismo bano no terminan en la misma pila. */
-      const l = g.lotes.find(x=>x.amb===g.amb && (x.cond||null)===(g.cond||null)
+      const l = (g.lotes||[]).find(x=>!x.rep && x.amb===g.amb && (x.cond||null)===(g.cond||null)
                                 && (x.etapa||null)===(g.etapa||null));
       const f = fotoNueva(url, GUSTAVO);
-      if(l) l.fotosArr.push(f); else g.lotes.push({amb:g.amb, cond:g.cond||null, etapa:g.etapa||null, desc:"", fotosArr:[f]});
+      if(l) l.fotosArr.push(f); else (g.lotes=g.lotes||[]).push({amb:g.amb, cond:g.cond||null, etapa:g.etapa||null, desc:"", fotosArr:[f]});
       S.reloj += 1;
       render();
     });
   },
+  gRepRepairsFoto: () => {
+    leerSup(); const g=S.gRep;
+    capturarFoto(url=>{
+      let l = (g.lotes||[]).find(x=>x.rep);
+      const f = fotoNueva(url, GUSTAVO);
+      if(l) {
+        (l.fotosArr=l.fotosArr||[]).push(f);
+      } else {
+        (g.lotes=g.lotes||[]).push({amb:"Repairs", rep:true, desc:"", fotosArr:[f]});
+      }
+      S.reloj += 1;
+      render();
+    });
+  },
+  gRepRepFoto: () => { ACC.gRepRepairsFoto(); },
   gRepQuita: d => { leerSup(); S.gRep.lotes.splice(+d.i,1); render(); },
 
   gRepOK: () => {

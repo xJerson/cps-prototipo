@@ -271,6 +271,7 @@ function ayudaContexto(){
 }
 function renderCoach(){
   const box = $("#coachBox"); if(!box) return;
+  box.classList.toggle("sheet-open", !!document.querySelector(".fsheet, .fscrim"));
   document.querySelectorAll(".coach-target").forEach(e=>e.classList.remove("coach-target"));
   /* Bajo la batería de pruebas (cada suite define window.__R) la ayuda no
      se pinta: su texto entraría en document.body.innerText y rompería los
