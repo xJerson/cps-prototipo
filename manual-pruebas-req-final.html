@@ -1083,7 +1083,7 @@
       <ul style="color:#92400e;padding-left:20px;font-size:13px;display:flex;flex-direction:column;gap:5px">
         <li><b>Recargar con fuerza:</b> Presiona <code>Ctrl + F5</code> dos veces seguidas para limpiar la memoria caché de tu navegador.</li>
         <li><b>Prefijo obligatorio de prueba:</b> Cada registro nuevo debe llamarse <code>ZZ-PRUEBA</code> (ejemplo: <i>ZZ-PRUEBA Carlos</i>).</li>
-        <li><b>No alterar datos reales:</b> No toques las propiedades reales (<i>Sevilla P107</i>, <i>Henssler CL902</i>, <i>P3</i>, <i>P104</i>) ni órdenes reales (<i>WO 1071</i> a <i>1073</i>).</li>
+        <li><b>No alterar datos reales:</b> Puedes abrir y mirar las propiedades reales (<i>Sevilla P107</i>, <i>Henssler CL902</i>, <i>P3</i>, <i>P104</i>) u órdenes reales (<i>WO 1071</i> a <i>1073</i>), pero <b>NO guardes cambios en ellas</b>. Para pruebas que requieran guardar o modificar datos, usa registros con el prefijo <code>ZZ-PRUEBA</code>.</li>
         <li><b>Simulación controlada:</b> Las descargas de PDF y almacenamiento de fotos operan de forma simulada para no consumir cuotas ni espacio.</li>
       </ul>
     </section>
@@ -1656,7 +1656,7 @@
         </div>
         <div class="quote-box">«Escribir la unidad (en lugar de seleccionar)  y quitar la hora» (Requerimiento de CPS)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
-          <strong>Cómo quedó:</strong> Se sustituyó el select de unidad por un input de texto libre (#gUT) con unidad: null por defecto, permitiendo reportar sin exigir hora fija ni forzar unidades previas.
+          <strong>Cómo quedó:</strong> Se sustituyó el select de unidad por un campo de texto libre con unidad sin valor por defecto, permitiendo reportar sin exigir hora fija ni forzar unidades previas.
         </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Supervisión &gt; Ver su celular &gt; Pestaña 'Reportar' &gt; Tarjeta 'Inspección para estimado' &gt; Campo 'Unidad'</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/celular-supervisor.js:87</code> y <code>js/acciones/acciones-supervisor.js:394,508</code></div>
@@ -1687,7 +1687,7 @@
           <h4>Pasos a realizar:</h4>
           <ol class="steps-list">
             <li>En el celular de Gustavo, ve a la pestaña <strong>Reportar</strong>.</li>
-            <li>Comprueba que el campo <strong>Unidad</strong> es un input de texto libre con placeholder <code>Escribe la unidad (ej. 204, A-211…)</code> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span> y que el selector desplegable previo fue completamente retirado.</li>
+            <li>Comprueba que el campo <strong>Unidad</strong> es un campo de texto libre con texto de ayuda <code>Escribe la unidad (ej. 204, A-211…)</code> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span> y que el selector desplegable previo fue completamente retirado.</li>
             <li>Verifica el aviso informativo <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">2</span>: <i>No marcaste llegada aquí. Puedes reportar igual, pero queda sin hora de llegada.</i></li>
             <li>Intenta enviar con el campo de unidad vacío y confirma el aviso de validación <em>«Falta la unidad: Escribe la unidad antes de enviar.»</em>. Si escribes una unidad existente (ej. 204) la enlaza al catálogo; si escribes una que no existe (ej. 999) viaja como texto libre sin arrojar error.</li>
           </ol>
@@ -1782,10 +1782,10 @@
         </div>
         <div class="quote-box">«En repairs debe estar todo junto. El supervisor prefiere tener el espacio para poner la info porque en una unidad con muchas reparaciones es muy tardado, buscamos que el pueda escribir todo  y queba las fotos.» (Requerimiento de CPS · v84)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
-          <strong>Cómo quedó:</strong> En relevamiento inicial se consolidaron las reparaciones en una sola área de texto abierto (#gRepairs) con soporte para adjuntar fotos por ambiente.
+          <strong>Cómo quedó:</strong> En la inspección para estimado, Repairs reúne en un mismo bloque el texto de <strong>«Repairs (reparaciones)»</strong> y su propio botón de <strong>«Fotos de las reparaciones»</strong> (con contador); sus fotos se excluyen del contador y galería de fotos generales, y se presentan integradas dentro del recuadro de reparaciones en la vista de oficina.
         </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Supervisión &gt; Ver su celular &gt; Pestaña 'Reportar' &gt; Tarjeta 'Inspección para estimado' &gt; Repairs (reparaciones)</div>
-        <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/celular-supervisor.js:145</code></div>
+        <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/celular-supervisor.js:142</code> y <code>js/acciones/acciones-supervisor.js:490</code></div>
 
         <div class="mock-frame">
           <div class="mock-topbar">
@@ -1799,6 +1799,12 @@
                 <textarea id="gRepairs" placeholder="Escribe todas las reparaciones que hagan falta en esta unidad" style="width:100%;height:60px;padding:7px;border:1px solid #cbd5e1;border-radius:6px;font-size:12px">Reparar zócalo de cocina y ajustar bisagra de puerta principal</textarea>
                 <div class="step-marker">1</div>
               </div>
+              <div class="highlight-target" style="width:100%;margin-top:6px">
+                <button class="gchip" style="width:100%;padding:7px 10px;border:1px solid #cbd5e1;border-radius:6px;background:#f8fafc;font-size:11.5px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer" data-a="gRepRepairsFoto">
+                  📷 2 foto(s) de las reparaciones
+                </button>
+                <div class="step-marker">2</div>
+              </div>
             </div>
           </div>
         </div>
@@ -1806,14 +1812,16 @@
         <div class="steps-box">
           <h4>Pasos a realizar:</h4>
           <ol class="steps-list">
-            <li>En la sección de relevamiento, ubica la etiqueta <strong>Repairs (reparaciones)</strong>.</li>
-            <li>Comprueba el textarea único con placeholder <code>Escribe todas las reparaciones que hagan falta en esta unidad</code> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
-            <li>Escribe múltiples reparaciones en un solo bloque y adjunta las fotos correspondientes.</li>
+            <li>En la pantalla del supervisor (o en la web: <strong>Supervisión &gt; Ver su celular</strong>), ve a la pestaña <strong>Reportar</strong> y abre la tarjeta <strong>«Inspección para estimado»</strong>.</li>
+            <li>Ubica la sección <strong>Repairs (reparaciones)</strong> y redacta las reparaciones necesarias en su área de texto único (texto de ayuda <code>Escribe todas las reparaciones que hagan falta en esta unidad</code>) <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
+            <li>Dentro de ese mismo bloque, presiona el botón <strong>«📷 Fotos de las reparaciones»</strong> para capturar las fotos específicas de las reparaciones <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">2</span>; comprueba que el botón incrementa su contador (ej. <em>2 foto(s) de las reparaciones</em>) sin alterar el contador de fotos generales.</li>
+            <li>Envía el reporte pulsando <strong>Enviar a Lydia</strong> y navega en la oficina a <strong>Supervisión &gt; De campo</strong>.</li>
+            <li>Abre el detalle del reporte y confirma que el recuadro <strong>Repairs (reparaciones)</strong> contiene el texto junto con las miniaturas de sus fotos debajo, mientras la galería general muestra únicamente las fotos de ambientes.</li>
           </ol>
         </div>
         <div class="result-box">
           <h5>Qué debe pasar:</h5>
-          <p>Todas las reparaciones quedan consolidadas en una sola área de texto sin requerir renglones separados.</p>
+          <p>En el celular del supervisor, Repairs concentra en un solo bloque el texto descriptivo y su captura fotográfica. Al recibirse en la oficina (Supervisión &gt; De campo), el recuadro de reparaciones muestra el texto junto con sus fotos asociadas directamente debajo (sin requerir líneas separadas de estimado), quedando completamente diferenciadas de las fotos generales de la unidad.</p>
         </div>
         <div class="test-feedback">
           <div class="test-feedback-header">
@@ -1897,7 +1905,7 @@
         </div>
         <div class="quote-box">«Recomendaciones adiciones es lo mismo de notas? Sino quitar.» (Requerimiento de CPS)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
-          <strong>Cómo quedó:</strong> En relevamiento inicial se conservan solo las notas generales, y en supervisión se mantiene el campo separado de trabajo adicional recomendado (#gAd) que genera solicitud a Lydia.
+          <strong>Cómo quedó:</strong> En relevamiento inicial se conservan solo las notas generales, y en supervisión se mantiene el campo separado de trabajo adicional recomendado que genera solicitud a Lydia.
         </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Supervisión &gt; Ver su celular &gt; Pestaña 'Reportar' &gt; Informe de supervisión</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/celular-supervisor.js:191</code> y <code>js/acciones/acciones-supervisor.js:571</code></div>
@@ -2305,7 +2313,7 @@
           <div class="point-title-wrap">
             <span class="point-badge">P14</span>
             <h3 class="point-title">Gustavo Celular: Ver otros técnicos en la misma propiedad</h3>
-            <div class="point-meta-chips"><span class="chip-v">v84</span><span class="chip-status ok">✔ Implementado</span></div>
+            <div class="point-meta-chips"><span class="chip-v">v84</span><span class="chip-status ok">✔ Implementado</span><span class="chip-status warn" style="background:#fffbeb;color:#b45309;border:1px solid #fde68a">⚠️ Requiere preparar datos</span></div>
           </div>
           <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?gustavo=1&ph=supervisor&phview=reportar">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
@@ -2313,8 +2321,8 @@
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
           <strong>Cómo quedó:</strong> En la hoja de relevamiento e inspección se muestran los nombres de los técnicos que tienen asignaciones en la misma propiedad y unidad.
         </div>
-        <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Supervisión &gt; Ver su celular &gt; Pestaña 'Reportar' &gt; Tarjeta 'Inspección para estimado' &gt; Subtexto de técnicos asignados</div>
-        <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/celular-supervisor.js:185</code></div>
+        <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Supervisión &gt; Ver su celular &gt; Pestaña 'Reportar' &gt; Tarjeta 'Inspección para estimado' &gt; Subtexto de técnicos asignados (y en 'Mi ruta' al coincidir técnicos en campo)</div>
+        <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/celular-supervisor.js:185</code> y <code>js/celular-tecnico.js:931</code></div>
 
         <div class="mock-frame">
           <div class="mock-topbar">
@@ -2331,6 +2339,16 @@
               </div>
             </div>
           </div>
+        </div>
+
+        <div class="note a" style="background:#fffbeb;border:1px solid #fde68a;border-left:4px solid #f59e0b;padding:10px 14px;border-radius:6px;margin:12px 0;font-size:12px;color:#92400e">
+          <strong>⚠️ Antes de probar (Requiere preparar datos):</strong>
+          <p style="margin:4px 0 8px">Este punto requiere que coincidan en el sistema técnicos activos en la misma propiedad o unidad para la fecha actual:</p>
+          <ol style="margin:0 0 0 18px;padding:0;line-height:1.5">
+            <li>Tener dos técnicos con Work Orders asignadas en la misma propiedad y fecha (en estado <code>In progress</code> o programada).</li>
+            <li>Tener una parada registrada para Gustavo en esa misma propiedad y fecha en su ruta.</li>
+            <li>Al abrir Gustavo su celular en <strong>Mi ruta</strong>, el sistema detecta a los técnicos y muestra: <em>«En la propiedad ahora: [Técnicos]»</em>. Asimismo, en la pestaña <strong>Reportar</strong> (Inspección para estimado / Supervisión), al ingresar la propiedad y unidad se muestra: <em>«Técnicos asignados a esta unidad: [Técnicos]»</em> (extraído automáticamente de las WOs).</li>
+          </ol>
         </div>
 
         <div class="steps-box">
@@ -2368,7 +2386,7 @@
         </div>
         <div class="quote-box">«Esto yo lo tengo que confirmar, aun no hacer el cambio: Tambien que pueda ver donde estan los tecnicos en el momento» (Requerimiento de CPS)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
-          <strong>Cómo quedó:</strong> Respetado sin cambios de GPS en tiempo real hasta confirmación del cliente. La columna estática 'Última ubicación' se retiró de la Lista de técnicos por ser redundante con P01 (<em>Técnicos en campo</em>, que ya muestra dónde está trabajando cada técnico hoy en vivo), y la última ubicación (<code>ultUbic()</code>) sigue usándose internamente solo para sugerir al técnico más cercano al asignar una Work Order nueva (sin mostrarse como columna visible en la tabla de técnicos).
+          <strong>Cómo quedó:</strong> Respetado sin cambios de GPS en tiempo real hasta confirmación del cliente. La columna estática 'Última ubicación' se retiró de la Lista de técnicos por ser redundante con P01 (<em>Técnicos en campo</em>, que ya muestra dónde está trabajando cada técnico hoy en vivo), y la última ubicación registrada sigue usándose internamente solo para sugerir al técnico más cercano al asignar una Work Order nueva (sin mostrarse como columna visible en la tabla de técnicos).
         </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Técnicos &gt; Pestaña 'Lista de técnicos' (sin columna redundante) y Work Orders &gt; Asignar técnico (sugerencia interna por cercanía)</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/vistas/catalogos-crud.js:297,413</code> · <code>js/helpers.js:610</code></div>
@@ -2393,7 +2411,6 @@
                   </tr>
                 </tbody>
               </table>
-              <div style="font-size:11px;color:var(--faint);margin-top:6px">La «última ubicación» es lo que UC-09 usa internamente para sugerir al técnico más cercano al asignar una WO. Sale sola de la llegada que él marca.</div>
             </div>
           </div>
         </div>
@@ -2403,7 +2420,6 @@
           <ol class="steps-list">
             <li>En la app web de oficina, dirígete a <strong>Técnicos</strong> &gt; <strong>Lista de técnicos</strong>.</li>
             <li>Verifica que la tabla principal <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span> no muestra la columna estática 'Última ubicación' (el estado en vivo del día se consulta en P01 / Hoy en campo).</li>
-            <li>Lee el pie explicativo: <code>ultUbic()</code> se conserva internamente para sugerir al técnico más cercano al asignar una Work Order, sin rastreo GPS continuo.</li>
           </ol>
         </div>
         <div class="result-box">
@@ -2429,7 +2445,7 @@
             <h3 class="point-title">Clientes: Estados Lead / Active / Inactive</h3>
             <div class="point-meta-chips"><span class="chip-v">v80</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=first-propiedad&tab=datos">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=P3&tab=datos">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Los estados seran» … «Lead» … «Active» … «Inactive» (Requerimiento de CPS · v80)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -2469,8 +2485,8 @@
         <div class="steps-box">
           <h4>Pasos a realizar:</h4>
           <ol class="steps-list">
-            <li>En la pestaña <strong>Propiedades</strong>, abre la ficha de <b>Harbor Pointe</b> y pulsa <strong>Editar datos</strong>.</li>
-            <li>Localiza el selector etiquetado <strong>Client Status</strong> (`#nEst`) <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
+            <li>En la pestaña <strong>Propiedades</strong>, abre la ficha de <b>Harbor Pointe</b> y pulsa <strong>Editar datos</strong> (ábrelo, comprueba y ciérralo con Cancelar, sin guardar cambios).</li>
+            <li>Localiza el selector etiquetado <strong>Client Status</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
             <li>Comprueba las tres opciones oficiales del catálogo: <code>Lead</code>, <code>Active</code> e <code>Inactive</code>.</li>
           </ol>
         </div>
@@ -2497,11 +2513,11 @@
             <h3 class="point-title">Propiedades: Ejecutivo de ventas (opcional)</h3>
             <div class="point-meta-chips"><span class="chip-v">v92</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=first-propiedad&tab=datos">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=P3&tab=datos">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Agregar quien lo consiguio en caso de que tengamos un catalogo de vendedores» (Requerimiento de CPS · v92)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
-          <strong>Cómo quedó:</strong> Se añadió el campo opcional 'Ejecutivo de ventas' (#nVend) vinculado al catálogo administrable de ejecutivos comerciales.
+          <strong>Cómo quedó:</strong> Se añadió el campo opcional 'Ejecutivo de ventas' vinculado al catálogo administrable de ejecutivos comerciales.
         </div>
         <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Propiedades &gt; Ficha de propiedad &gt; 'Editar datos' &gt; Selector 'Ejecutivo de ventas'</div>
         <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/acciones/catalogos-crud.js:100</code></div>
@@ -2534,8 +2550,8 @@
         <div class="steps-box">
           <h4>Pasos a realizar:</h4>
           <ol class="steps-list">
-            <li>En la ficha de Harbor Pointe, haz clic en <strong>Editar datos</strong>.</li>
-            <li>Ubica el campo <strong>Ejecutivo de ventas</strong> (`#nVend`) <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
+            <li>En la ficha de Harbor Pointe, haz clic en <strong>Editar datos</strong> (ábrelo, comprueba y ciérralo con Cancelar, sin guardar cambios).</li>
+            <li>Ubica el campo <strong>Ejecutivo de ventas</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
             <li>Comprueba el subtexto explicativo: <i>— opcional, responsable comercial de la cuenta</i> y el aviso de catálogo.</li>
           </ol>
         </div>
@@ -2627,7 +2643,7 @@
             <h3 class="point-title">Propiedades: Gate code en lugar de Door code</h3>
             <div class="point-meta-chips"><span class="chip-v">v80</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=first-propiedad&tab=datos">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=P3&tab=datos">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Door code seria gate code porque el door debe ser por unidad.» (Requerimiento de CPS · v80)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -2663,8 +2679,8 @@
         <div class="steps-box">
           <h4>Pasos a realizar:</h4>
           <ol class="steps-list">
-            <li>En la ficha de Harbor Pointe, pulsa <strong>Editar datos</strong>.</li>
-            <li>Ubica el campo de acceso etiquetado formalmente <strong>Gate code</strong> (`#nDC`) <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
+            <li>En la ficha de Harbor Pointe, pulsa <strong>Editar datos</strong> (ábrelo, comprueba y ciérralo con Cancelar, sin guardar cambios).</li>
+            <li>Ubica el campo de acceso etiquetado formalmente <strong>Gate code</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
             <li>Comprueba que el término 'Door code' quedó reservado únicamente para las puertas individuales de cada unidad.</li>
           </ol>
         </div>
@@ -2691,7 +2707,7 @@
             <h3 class="point-title">Propiedades: Alerta COI por vencer en 14 días</h3>
             <div class="point-meta-chips"><span class="chip-v">v80</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=first-propiedad&tab=documentos">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=P3&tab=documentos">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Dentro de la propiedad, en polizas sale notificaciones cuando este a 2 semanas que venza» (Requerimiento de CPS)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -2782,7 +2798,7 @@
             <h3 class="point-title">Propiedades: Tarifario completo y PDF selectivo</h3>
             <div class="point-meta-chips"><span class="chip-v">v86/87</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=first-propiedad&tab=precios">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«En la parte de estimado aprobado cambiarlo por tarifario completo, donde se meta de base de datos de los costos… De ese price list se pueda crear un PDF para mandarlo y que podamos seleccionar lo que queremos mandar» (Requerimiento de CPS)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -2822,7 +2838,7 @@
         <div class="steps-box">
           <h4>Pasos a realizar:</h4>
           <ol class="steps-list">
-            <li>En el Expediente de la propiedad, ubica la fila <strong>Lista de precios de la propiedad</strong>.</li>
+            <li>En Harbor Pointe la lista ya está completa; para ver los botones crea una propiedad de prueba: <strong>Propiedades → + Nueva propiedad → nombre ZZ-PRUEBA</strong> (sin lista inicial) y abre su pestaña <strong>Expediente</strong>, ubicando la fila <strong>Lista de precios de la propiedad</strong>.</li>
             <li>Prueba el botón <strong>Crear lista completa</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span> o <strong>Llenar precios</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">2</span>.</li>
             <li>En la pestaña <strong>Price List</strong>, selecciona filas y haz clic en <strong>Descargar PDF</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">3</span>.</li>
           </ol>
@@ -2850,7 +2866,7 @@
             <h3 class="point-title">Propiedades: Vigencia programada e historial de precios</h3>
             <div class="point-meta-chips"><span class="chip-v">v84</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=first-propiedad&tab=precios">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=P3&tab=precios">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Tenemos la duda de como podemos hacer en los casos en que queramos actualizar la tabla para nuevos precios, pero queremos trabajar ene so desde 3 mese antes pero que no afecte a los precios hasta que que se compla algun requisito de tiempo., y tambien quisieramos tener antecedentes» (Requerimiento de CPS)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -2899,8 +2915,8 @@
         <div class="steps-box">
           <h4>Pasos a realizar:</h4>
           <ol class="steps-list">
-            <li>En Price List de Harbor Pointe, haz clic en <strong>Preparar cambio de precios</strong>.</li>
-            <li>En el campo <code>Elige desde cuándo rige</code> (`#vigDesde`) <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>, prueba los botones rápidos <code>+1 mes</code> o <code>1 de enero</code> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">2</span>.</li>
+            <li>Haz esta prueba en una propiedad de prueba: Propiedades → + Nueva propiedad → nombre ZZ-PRUEBA (o puedes mirar la propiedad real sin guardar cambios). En su pestaña Price List (o en Harbor Pointe sin guardar), haz clic en <strong>Preparar cambio de precios</strong>.</li>
+            <li>En el campo <code>Elige desde cuándo rige</code> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>, prueba los botones rápidos <code>+1 mes</code> o <code>1 de enero</code> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">2</span>.</li>
             <li>Haz clic en <strong>Programar cambio</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">3</span> y verifica la fecha de activación programada.</li>
           </ol>
         </div>
@@ -2927,7 +2943,7 @@
             <h3 class="point-title">Propiedades: Pintura con 'una fila por superficie'</h3>
             <div class="point-meta-chips"><span class="chip-v">v92</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=first-propiedad&tab=datos">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=P3&tab=datos">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Que es lo de pintura que se agrega una fila por superficie?» (Requerimiento de CPS · v92)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -2995,7 +3011,7 @@
             <h3 class="point-title">Propiedades: Crédito dinero vs de servicio arriba de ficha</h3>
             <div class="point-meta-chips"><span class="chip-v">v92</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=first-propiedad&tab=datos">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=P107&tab=datos">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Y la diferencia del credito de ervicio y general.. El credito que aparezca arriba» (Requerimiento de CPS · v92)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -3025,7 +3041,7 @@
         <div class="steps-box">
           <h4>Pasos a realizar:</h4>
           <ol class="steps-list">
-            <li>Abre la ficha de <b>Harbor Pointe</b> en la app de oficina.</li>
+            <li>Abre la ficha de <b>Sevilla Apartments</b> en la app de oficina (solo para mirar, sin guardar cambios).</li>
             <li>Comprueba el banner verde superior de <strong>💳 Crédito disponible:</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
             <li>Verifica la distinción clara entre saldo monetario <code>General (dinero)</code> y servicios en especie <code>De servicio</code>.</li>
           </ol>
@@ -3053,7 +3069,7 @@
             <h3 class="point-title">Propiedades: Pestaña Comunicación y propósito</h3>
             <div class="point-meta-chips"><span class="chip-v">v84</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=first-propiedad&tab=com">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=P3&tab=com">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Que es la parte de comunicacion? Eso a donde se va o para que sive ??» (Requerimiento de CPS · v84)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -3126,7 +3142,7 @@
             <h3 class="point-title">Estimados: COI único bloqueo para transferir</h3>
             <div class="point-meta-chips"><span class="chip-v">v93</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=first-propiedad&tab=expediente">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=P3&tab=expediente">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Lo único que debe bloquear es el COI» (Requerimiento de CPS · v93)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -3167,15 +3183,15 @@
         <div class="steps-box">
           <h4>Pasos a realizar:</h4>
           <ol class="steps-list">
-            <li>Abre una propiedad sin COI vigente y accede a la pestaña <strong>Expediente</strong>.</li>
+            <li>Abre una propiedad sin COI vigente (como Harbor Pointe, P3) y accede a la pestaña <strong>Expediente</strong>.</li>
             <li>Observa el aviso oficial en rojo <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span> confirmando que el seguro es el único dato que bloquea.</li>
-            <li>Verifica que el botón <strong>Transferir a programación</strong> se encuentra deshabilitado (atributo <code>disabled</code>) <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">2</span>.</li>
-            <li>Comprueba en Comercial &gt; Estimados que los estimados aprobados de esta propiedad tampoco permiten la transferencia hasta registrar el COI.</li>
+            <li>Verifica que el botón <strong>Transferir a programación</strong> se encuentra deshabilitado (botón gris inactivo, que es el comportamiento esperado sin COI) <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">2</span>.</li>
+            <li>Comprueba en Comercial &gt; Estimados que los estimados aprobados de esta propiedad (p. ej. EST-2026-020 de Harbor Pointe) tampoco permiten la transferencia y muestran el botón en gris hasta registrar el COI.</li>
           </ol>
         </div>
         <div class="result-box">
           <h5>Qué debe pasar:</h5>
-          <p><b>Aviso del sistema:</b> <i>«Falta el COI vigente. Es lo único que bloquea: sin COI vigente no se puede transferir a programación. Los demás datos que faltan no bloquean, pero conviene completarlos.»</i> El seguro COI actúa como único bloqueo estricto; el botón <code>Transferir a programación</code> permanece deshabilitado (<code>disabled</code>) hasta registrar un COI válido.</p>
+          <p><b>Aviso del sistema:</b> <i>«Falta el COI vigente. Es lo único que bloquea: sin COI vigente no se puede transferir a programación. Los demás datos que faltan no bloquean, pero conviene completarlos.»</i> El seguro COI actúa como único bloqueo estricto; el botón <code>Transferir a programación</code> permanece deshabilitado (gris inactivo) hasta registrar un COI válido.</p>
         </div>
         <div class="test-feedback">
           <div class="test-feedback-header">
@@ -3239,7 +3255,7 @@
         <div class="steps-box">
           <h4>Pasos a realizar:</h4>
           <ol class="steps-list">
-            <li>Haz clic en <strong>Técnicos</strong> en el menú lateral y asegúrate de estar en la pestaña <strong>Hoy en campo</strong>.</li>
+            <li>Haz clic en <strong>Técnicos</strong> en el menú lateral y asegúrate de estar en la pestaña <strong>Hoy en campo</strong>. Si la tabla sale vacía es porque hoy no hay trabajos; cambia el filtro de fecha a un día con trabajos o crea una WO ZZ-PRUEBA para hoy.</li>
             <li>Cuenta y revisa las 8 columnas de la tabla <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>: <code>Técnico</code>, <code>WO</code>, <code>Propiedad</code>, <code>Unidad</code>, <code>Día</code>, <code>Tipo de servicio</code>, <code>Estado</code>, <code>Zona</code>.</li>
             <li>Verifica los filtros superiores por fecha, técnico, propiedad, estado y tipo de servicio.</li>
           </ol>
@@ -3304,7 +3320,7 @@
           <ol class="steps-list">
             <li>En la pantalla de agendamiento o edición de una orden, ubica el bloque horario <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
             <li>Comprueba los selectores de horario de inicio y fin con la etiqueta conectora <strong>Hasta</strong>.</li>
-            <li>Verifica que si una orden no tiene hora programada, el recordatorio al cliente (helpers.js:186) y la alerta de supervisión (helpers.js:690) no inventan las 9:00, sino que usan la ventana (o sin hora fija), y la alerta «Sin marcar llegada» no se dispara a las 9:10 si nunca tuvo hora asignada.</li>
+            <li>Verifica que si una orden no tiene hora programada, el texto del recordatorio al cliente y la alerta de supervisión no inventan las 9:00, sino que usan la ventana (o sin hora fija), y la alerta «Sin marcar llegada» no se dispara a las 9:10 si nunca tuvo hora asignada.</li>
           </ol>
         </div>
         <div class="result-box">
@@ -3829,7 +3845,7 @@
             <div class="steps-box" style="margin-top:10px">
               <h4>Pasos a realizar:</h4>
               <ol class="steps-list">
-                <li>En <strong>Adjuntar contrato firmado</strong>, selecciona un archivo (ej. <code>contrato_diego_firmado.pdf</code>) en el input <code>#tArch</code> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
+                <li>En <strong>Adjuntar contrato firmado</strong>, selecciona un archivo (ej. <code>contrato_diego_firmado.pdf</code>) en el campo de adjuntar archivo <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
                 <li>Haz clic en <strong>Guardar corrección</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">2</span>.</li>
               </ol>
             </div>
@@ -4045,7 +4061,7 @@
               <ol class="steps-list">
                 <li>Abre nuevamente la ficha del técnico Diego Ramírez y ve a <strong>Contrato con CPS</strong>.</li>
                 <li>Comprueba que la etiqueta cambió a <strong>Reemplazar contrato firmado</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
-                <li>Modifica otro campo (como el teléfono) sin subir ningún archivo en <code>#tArch</code> y guarda <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">2</span>.</li>
+                <li>Modifica otro campo (como el teléfono) sin subir ningún archivo nuevo y guarda <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">2</span>.</li>
                 <li>Verifica que el contrato firmado existente se preserva intacto sin ser borrado.</li>
               </ol>
             </div>
@@ -4445,7 +4461,7 @@
           <h4>Pasos a realizar:</h4>
           <ol class="steps-list">
             <li>Navega a <strong>Catálogos</strong> &gt; <strong>Tipos y servicios</strong>.</li>
-            <li>Observa el botón <strong>Nuevo servicio</strong> (<code>data-a="servAdd"</code>) <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span> y la estructura de categorías.</li>
+            <li>Observa el botón azul <strong>Nuevo servicio</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span> y la estructura de categorías.</li>
             <li>Comprueba en la tabla y en la nota informativa oficial <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">2</span> que no existen columnas de tarifas ni montos, confirmando que la fijación de precios reside exclusivamente en Tarifario y Price List.</li>
           </ol>
         </div>
@@ -4474,7 +4490,7 @@
             <h3 class="point-title">Acciones de oficina para técnicos sin celular o vendors externos</h3>
             <div class="point-meta-chips"><span class="chip-v">v93</span><span class="chip-status ok">✔ Auditoría oficina</span></div>
           </div>
-          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=wo&sub=first-wo">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=wo">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Tener la opcion de avanzar en los estados de los tecnicos manual porque a veces no quieren usar su celular o por algo no tienen. O para los vendors externos.» (Requerimiento de CPS · v93)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -4517,9 +4533,9 @@
         <div class="steps-box">
           <h4>Pasos a realizar:</h4>
           <ol class="steps-list">
-            <li>Abre una Work Order asignada a un técnico sin aplicación de campo o vendor externo.</li>
-            <li>En el bloque <strong>🏢 Acciones de oficina</strong>, haz clic en <strong>Marcar llegada en campo</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
-            <li>Prueba los botones <strong>Corroborar unidad</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">2</span> y <strong>Marcar WO terminada</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">3</span>.</li>
+            <li>Haz esta prueba en una orden de prueba: abre una WO programada desde la lista (o crea una WO nueva con prefijo ZZ-PRUEBA). En el detalle de la Work Order, ubica el bloque <strong>🏢 Acciones de oficina</strong>.</li>
+            <li>En el bloque <strong>🏢 Acciones de oficina</strong>, haz clic en <strong>Marcar llegada en campo</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span> y luego haz clic en <strong>Confirmar llegada</strong> en la ventana emergente.</li>
+            <li>Tras confirmar la llegada, la orden pasa al estado <em>In progress</em> y se habilitan los siguientes pasos: prueba <strong>Corroborar unidad</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">2</span> y <strong>Marcar WO terminada</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">3</span>.</li>
           </ol>
         </div>
 
@@ -4583,7 +4599,7 @@
         <div class="steps-box">
           <h4>Pasos a realizar:</h4>
           <ol class="steps-list">
-            <li>En el celular del técnico (o desde acciones de oficina), marca una Work Order terminada sin adjuntar fotografías.</li>
+            <li>En el celular del técnico (abre una WO programada, marca llegada y luego termina sin fotos; o bien hazlo desde acciones de oficina en una WO ZZ-PRUEBA).</li>
             <li>Observa el aviso de confirmación y procede a finalizar.</li>
             <li>Verifica en el detalle de la Work Order la presencia simultánea de las pastillas <strong>Completed</strong> y <strong>⚠️ fotos pendientes</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
             <li>Revisa la advertencia en la sección de fotos del trabajo <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">2</span>.</li>
@@ -4842,7 +4858,7 @@
         <div class="steps-box">
           <h4>Pasos a realizar:</h4>
           <ol class="steps-list">
-            <li>En el módulo <strong>Comercial</strong> &gt; <strong>Estimados</strong>, ubica un estimado aprobado y haz clic en <strong>Transferir a programación</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
+            <li>Haz esta prueba en un estimado de prueba (puedes crear un estimado ZZ-PRUEBA y aprobarlo, o puedes mirar los estimados existentes sin transferir el único aprobado). En el módulo <strong>Comercial</strong> &gt; <strong>Estimados</strong>, ubica un estimado aprobado y haz clic en <strong>Transferir a programación</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>. Si el botón sale gris, la propiedad no tiene COI vigente: regístralo en su Expediente («Registrar COI») y vuelve a Estimados.</li>
             <li>Observa que su estado pasa inmediatamente a <strong>Con Thalia</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">2</span>, quedando en manos del equipo de programación.</li>
             <li>Cuando Thalia agenda y asigna las Work Orders originadas a partir del estimado, abre nuevamente <strong>Estimados</strong> y comprueba que la columna <strong>Estado</strong> refleja dinámicamente el ciclo de las WO:
               <ul>
