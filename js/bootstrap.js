@@ -399,8 +399,37 @@ if(new URLSearchParams(location.search).get("gustavo")==="1"){
   ACC.verGustavoCel();
   const lm=document.createElement("link"); lm.rel="manifest"; lm.href="manifest.json";
   document.head.appendChild(lm);
-  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+  /* Service Worker desactivado temporalmente: en pruebas locales cacheaba versiones
+     viejas y tapaba cambios reales. Para producción (offline real en campo), volver
+     a poner navigator.serviceWorker.register("sw.js").catch(()=>{}). */
+  if("serviceWorker" in navigator) navigator.serviceWorker.getRegistrations()
+    .then(rs=>rs.forEach(r=>r.unregister()));
 }
+function aplicarDeepLink(){
+  const qs = new URLSearchParams(location.search);
+  if(qs.has("ir")){
+    S.mod = qs.get("ir");
+    if(qs.has("tab")) S.tab = qs.get("tab");
+    if(qs.has("sub")){
+      const raw = qs.get("sub");
+      /* first-wo abre la primera WO disponible en fichaWO (si hay alguna cargada) */
+      S.sub = raw==="first-propiedad" ? ((S.propiedades.find(p=>p.activa)||{}).id || null)
+            : raw==="first-tecnico"   ? ((S.tecnicos.find(t=>t.activo)||{}).id || null)
+            : raw==="first-wo"        ? ((S.wos[0]||{}).id || null)
+            : raw;
+    }
+  }
+  if(qs.has("ph")){
+    S.phone = true; S.phRol = qs.get("ph"); S.gRep = null;
+    if(qs.has("phview")) S.phView = qs.get("phview");
+    if(qs.has("phwo")){
+      const raw = qs.get("phwo");
+      S.phWO = raw==="first-progreso" ? ((S.wos.find(w=>w.estado==="In progress")||{}).id || null) : +raw;
+    }
+    if(qs.has("phtec")) S.phTec = qs.get("phtec");
+  }
+}
+aplicarDeepLink();
 
 /* ── PERSISTENCIA ── Prototipo sin backend: cada área va a probar sus propias
    operaciones, así que el estado completo se guarda en localStorage después
@@ -445,4 +474,4 @@ Object.keys(ACC).forEach(k=>{
 
 /* Primero se traen (o se siembran) los datos de la nube y recién ahí se dibuja;
    si no responde, se dibuja con lo guardado en este navegador. */
-nubeIniciar().finally(()=>render());
+nubeIniciar().finally(()=>{ aplicarDeepLink(); render(); });

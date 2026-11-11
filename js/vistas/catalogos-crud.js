@@ -410,11 +410,10 @@ const vTecLista = () => {
   </div></div>
 
   <div class="card"><table>
-    <thead><tr><th>Técnico</th><th>Vínculo y Acuerdos</th><th>Especialidad</th><th>Zona</th><th>Teléfono</th><th class="num" title="Work Orders asignadas a este técnico en la semana actual (${S.semana})">WO esta semana (sem. ${S.semana})</th><th>Última ubicación</th><th>Estado</th><th></th></tr></thead>
+    <thead><tr><th>Técnico</th><th>Vínculo y Acuerdos</th><th>Especialidad</th><th>Zona</th><th>Teléfono</th><th class="num" title="Work Orders asignadas a este técnico en la semana actual (${S.semana})">WO esta semana (sem. ${S.semana})</th><th>Estado</th><th></th></tr></thead>
     <tbody>${tecs.map(t=>{
       const n=S.wos.filter(w=>w.tec===t.id&&w.semana===S.semana).length;
       const b=S.disponibilidad.find(d=>d.tec===t.id&&d.estado==="Aprobado");
-      const u=ultUbic(t.id);
       return `<tr class="${fl("tec:"+t.id)}"><td style="font-weight:650">${esc(tecN(t.id))}
         <div style="font-size:10.5px;color:var(--faint)">${esc(t.dir)}</div></td>
         <td>
@@ -430,14 +429,12 @@ const vTecLista = () => {
         <td>${t.esp.map(e=>`<span class="pill g">${esc(e)}</span>`).join(" ")}</td>
         <td>${esc(t.zona)}</td><td class="mono">${esc(t.tel)}</td>
         <td class="num mono">${n}</td>
-        <td style="font-size:11.5px;color:var(--soft)">${u?esc(u):'<span style="color:var(--faint)">base: '+esc(t.zona)+'</span>'}</td>
         <td>${!t.activo?'<span class="pill g">Dado de baja</span>'
              :b?`<span class="pill r"><span class="dot"></span>${esc(b.motivo)} ${b.desde.slice(5)}–${b.hasta.slice(5)}</span>`
                :'<span class="pill v">Disponible</span>'}</td>
         <td style="text-align:right;white-space:nowrap">${t.contratoArchivo?`<button class="btn sm" data-a="tecContratoVer" data-id="${t.id}">Contrato</button> `:""}<button class="btn sm" data-a="tecNuevo" data-id="${t.id}">Editar</button>
           <button class="btn sm ${t.activo?"":"v"}" data-a="tecBaja" data-id="${t.id}">${t.activo?"Dar de baja":"Reactivar"}</button></td></tr>`;
-    }).join("")||`<tr><td colspan="9" class="empty">No hay técnicos que coincidan con la búsqueda</td></tr>`}</tbody></table></div>
-  <div class="tr">La «última ubicación» es lo que UC-09 usa para sugerir al técnico más cercano. Sale sola de la llegada que él marca.</div>`;
+    }).join("")||`<tr><td colspan="8" class="empty">No hay técnicos que coincidan con la búsqueda</td></tr>`}</tbody></table></div>`;
 };
 
 /* ── TARIFARIO ── Lista de precios ── */

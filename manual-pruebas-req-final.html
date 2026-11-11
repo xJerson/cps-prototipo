@@ -5,6 +5,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>CPS Prototipo — Manual de Pruebas: Requerimiento de CPS (37 Puntos · v94)</title>
+  <script>
+    /* Este archivo no carga bootstrap.js, así que si el Service Worker del
+       prototipo (sw.js) quedó registrado en este navegador por haber visitado
+       gustavo.html antes, seguía cacheando este manual también. Lo limpiamos
+       acá directo para no depender de abrir otra página primero. */
+    if("serviceWorker" in navigator) navigator.serviceWorker.getRegistrations()
+      .then(rs=>rs.forEach(r=>r.unregister()));
+  </script>
   <style>
     :root {
       --bg: #f1f5f9;
@@ -1215,7 +1223,7 @@
             <div class="menu-item-badges"><span class="chip-v">v92</span><span class="chip-status diff">● Explicado</span></div>
           </div>
           <div class="menu-item-name">Ubicación de técnicos</div>
-          <div class="menu-item-sub">Cliente pidió posponer GPS; resuelto con última ubicación reportada</div>
+          <div class="menu-item-sub">GPS sigue pospuesto; estado en vivo se ve en P01, última ubicación solo interna para asignar WO</div>
         </a>
       </div>
 
@@ -1442,7 +1450,7 @@
             <h3 class="point-title">Supervisión: Servicios en proceso (explicado)</h3>
             <div class="point-meta-chips"><span class="chip-v">v92</span><span class="chip-status diff">● Explicado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?gustavo=1&ph=supervisor&phview=proceso">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«¿Qué es Servicios en proceso?» (Requerimiento de CPS)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -1457,15 +1465,89 @@
             <div class="mock-url">https://xjerson.github.io/cps-prototipo/gustavo.html (Celular de Gustavo: Mi día)</div>
           </div>
           <div class="mock-viewport">
-            <div style="background:#0f172a;padding:12px;border-radius:8px;color:#fff;max-width:320px;margin:0 auto">
-              <div class="dl" style="font-size:11.5px;color:#94a3b8;margin-bottom:8px;font-weight:700">Lo que tengo hoy</div>
-              <div class="highlight-target" style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#1e293b;border-radius:8px">
-                <div>
-                  <div style="font-size:11px;color:#94a3b8">Técnicos en campo</div>
-                  <div style="font-size:20px;font-weight:700;color:#0d9488">2</div>
+            <div style="background:#fff;border:1px solid #cbd5e1;border-radius:10px;padding:14px;max-width:320px;margin:0 auto">
+              <div style="font-size:10.5px;font-weight:700;color:#5b6875;margin-bottom:8px;text-transform:uppercase">Lo que tengo hoy</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div class="highlight-target" style="position:relative;background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:9px 10px;border-left:3px solid #0d9488">
+                  <div style="display:flex;align-items:center;gap:5px">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="#0d9488" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:15px;height:15px;flex:none"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                    <div style="font-size:15px;font-weight:800;color:#0d9488;line-height:1">2</div>
+                    <span style="margin-left:auto;color:#94a3b8;font-size:13px">›</span>
+                  </div>
+                  <div style="font-size:10.5px;font-weight:600;color:#5b6875;margin-top:4px;line-height:1.25">Técnicos en campo</div>
+                  <div class="step-marker">1</div>
                 </div>
-                <div style="font-size:22px">👷</div>
+                <div style="background:#fff;border:1px solid #e2e8f0;border-radius:10px;padding:9px 10px;opacity:.4">
+                  <div style="font-size:10.5px;color:#94a3b8">(otras 7 tarjetas del panel…)</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mock-frame">
+          <div class="mock-topbar">
+            <div class="mock-dots"><span class="mock-dot r"></span><span class="mock-dot y"></span><span class="mock-dot g"></span></div>
+            <div class="mock-url">https://xjerson.github.io/cps-prototipo/gustavo.html (Celular de Gustavo: Técnicos en campo)</div>
+          </div>
+          <div class="mock-viewport">
+            <div style="background:#fff;border:1px solid #cbd5e1;border-radius:10px;padding:14px;max-width:320px;margin:0 auto">
+              <div style="font-size:11px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;border-radius:6px;padding:6px 8px;margin-bottom:8px">
+                <b>Solo lectura</b> — dónde está cada técnico hoy según la WO que tiene. Toca uno para ver el detalle de su WO.</div>
+              <div style="font-size:9px;font-weight:750;letter-spacing:.07em;text-transform:uppercase;color:#94a3b8;margin:8px 0 6px">Técnicos (1 trabajando ahora)</div>
+              <div class="highlight-target" style="position:relative;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:11px;margin-bottom:9px;border-left:3px solid #0d9488">
+                <div style="display:flex;justify-content:space-between;gap:6px;align-items:center">
+                  <div style="font-size:13.5px;font-weight:750">Carlos Mendoza</div>
+                  <span style="display:inline-block;font-size:9.5px;font-weight:750;padding:2px 7px;border-radius:100px;background:#0d9488;color:#fff">Trabajando</span></div>
+                <div style="font-size:11px;color:#5b6875;margin-top:3px"><b>Sunset Gardens</b> · 204</div>
+                <div style="font-size:11px;color:#5b6875;margin-top:2px">Full clean · WO-1042 · En proceso</div>
                 <div class="step-marker">1</div>
+              </div>
+              <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:11px;margin-bottom:9px;border-left:3px solid #8a97a4">
+                <div style="display:flex;justify-content:space-between;gap:6px;align-items:center">
+                  <div style="font-size:13.5px;font-weight:750">Luis Ramírez</div>
+                  <span style="display:inline-block;font-size:9.5px;font-weight:750;padding:2px 7px;border-radius:100px;background:#8a97a4;color:#fff">Aún no llega</span></div>
+                <div style="font-size:11px;color:#5b6875;margin-top:3px"><b>Riverside Court</b> · 112</div>
+                <div style="font-size:11px;color:#5b6875;margin-top:2px">Paint touch up · WO-1045 · No iniciado</div>
+              </div>
+              <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:11px;border-left:3px solid #1e5c3a">
+                <div style="display:flex;justify-content:space-between;gap:6px;align-items:center">
+                  <div style="font-size:13.5px;font-weight:750">Marco Gutiérrez</div>
+                  <span style="display:inline-block;font-size:9.5px;font-weight:750;padding:2px 7px;border-radius:100px;background:#1e5c3a;color:#fff">Terminó hoy</span></div>
+                <div style="font-size:11px;color:#5b6875;margin-top:2px">Último trabajo · llegó 08:15</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="mock-frame">
+          <div class="mock-topbar">
+            <div class="mock-dots"><span class="mock-dot r"></span><span class="mock-dot y"></span><span class="mock-dot g"></span></div>
+            <div class="mock-url">https://xjerson.github.io/cps-prototipo/gustavo.html (Detalle de WO-1042)</div>
+          </div>
+          <div class="mock-viewport">
+            <div style="background:#fff;border:1px solid #cbd5e1;border-radius:10px;padding:14px;max-width:320px;margin:0 auto">
+              <div style="font-size:11px;color:#1f4e79;font-weight:650;margin-bottom:8px">‹ Volver a los técnicos</div>
+              <div class="highlight-target" style="position:relative;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:11px;margin-bottom:9px;border-left:3px solid #0d9488">
+                <div style="display:flex;justify-content:space-between;gap:6px;align-items:center">
+                  <div style="font-size:12.5px;font-weight:750">WO-1042 · Full clean</div>
+                  <span style="display:inline-block;font-size:9.5px;font-weight:750;padding:2px 7px;border-radius:100px;background:#0d9488;color:#fff">En proceso</span></div>
+                <div style="font-size:11px;color:#5b6875;margin-top:4px"><b>Sunset Gardens</b> · 204</div>
+                <div style="font-size:11px;color:#5b6875;margin-top:2px">123 Palm Ave</div>
+                <div style="font-size:11px;color:#5b6875;margin-top:2px">Técnico: <b>Carlos Mendoza</b></div>
+                <div style="font-size:11px;color:#5b6875;margin-top:2px">Día 2026-11-10 · Llegó 09:05</div>
+                <div style="display:flex;align-items:center;gap:7px;margin-top:6px">
+                  <div style="flex:1;height:6px;background:#eef1f4;border-radius:99px;overflow:hidden"><div style="width:65%;height:100%;background:#0d9488"></div></div>
+                  <span style="display:inline-block;font-size:9.5px;font-weight:750;padding:2px 7px;border-radius:100px;background:#f0f2f4;color:#5b6875">65%</span></div>
+                <div style="font-size:11px;color:#8a5a00;margin-top:5px">«Terminando cocina, falta baño»</div>
+                <div style="font-size:10.5px;color:#5b6875;margin-top:4px">3 foto(s) del progreso</div>
+                <div class="step-marker">2</div>
+              </div>
+              <div style="background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:11px">
+                <div style="font-size:9px;font-weight:750;letter-spacing:.07em;text-transform:uppercase;color:#94a3b8;margin-bottom:5px">Movimientos de la WO</div>
+                <div style="font-size:11px;color:#5b6875;margin-top:3px"><b>10:10</b> · Actualizó avance a 65% — Carlos Mendoza</div>
+                <div style="font-size:11px;color:#5b6875;margin-top:3px"><b>09:20</b> · Subió foto de avance — Carlos Mendoza</div>
+                <div style="font-size:11px;color:#5b6875;margin-top:3px"><b>09:05</b> · Marcó llegada — Carlos Mendoza</div>
               </div>
             </div>
           </div>
@@ -1475,13 +1557,13 @@
           <h4>Pasos a realizar:</h4>
           <ol class="steps-list">
             <li>Abre la vista móvil de Gustavo desde el botón inferior <strong>Celular del técnico</strong> (o mediante <code>gustavo.html</code>).</li>
-            <li>En la pestaña <strong>Mi día</strong>, localiza la tarjeta de control operativo <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span>.</li>
-            <li>Observa que 'Servicios en proceso' fue sustituido formalmente por el contador y acceso a <strong>Técnicos en campo</strong>.</li>
+            <li>En la pestaña <strong>Mi día</strong>, toca la tarjeta de control operativo <strong>Técnicos en campo</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span> para abrir la lista de técnicos y ver quién está trabajando, quién aún no llega y quién terminó hoy.</li>
+            <li>Toca la tarjeta de un técnico con WO activa para ver el detalle <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">2</span>: progreso, llegada y movimientos.</li>
           </ol>
         </div>
         <div class="result-box">
           <h5>Qué debe pasar:</h5>
-          <p>La vista despliega la tarjeta 'Técnicos en campo' con conteo en vivo de técnicos activos con órdenes en estado <i>In progress</i>.</p>
+          <p>La vista despliega la tarjeta 'Técnicos en campo' con conteo en vivo de técnicos activos con órdenes en estado <i>In progress</i>, muestra la lista de técnicos con el estado de cada uno hoy, y al tocar un técnico con trabajo activo permite ver su progreso y movimientos en tiempo real.</p>
         </div>
         <div class="test-feedback">
           <div class="test-feedback-header">
@@ -1502,7 +1584,7 @@
             <h3 class="point-title">Gustavo Celular: Registro de gasto de gasolina (aviso a Lydia)</h3>
             <div class="point-meta-chips"><span class="chip-v">v80</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?gustavo=1&ph=supervisor&phview=panel">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Solo tener gasolina, lo de servicio y mantenimiento no.» … «Esto se envia a lydia no a thalia y Claudia tampoco» (Requerimiento de CPS · v80)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -1570,7 +1652,7 @@
             <h3 class="point-title">Gustavo Celular: Escribir unidad y quitar hora fija</h3>
             <div class="point-meta-chips"><span class="chip-v">v84</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?gustavo=1&ph=supervisor&phview=reportar">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Escribir la unidad (en lugar de seleccionar)  y quitar la hora» (Requerimiento de CPS)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -1633,7 +1715,7 @@
             <h3 class="point-title">Gustavo Celular: Servicios por categoría con opción 'Otro'</h3>
             <div class="point-meta-chips"><span class="chip-v">v84</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?gustavo=1&ph=supervisor&phview=reportar">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Los servicios debe ser por categoria y se pueden seleccionar otro para escribir» (Requerimiento de CPS · v84)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -1696,7 +1778,7 @@
             <h3 class="point-title">Gustavo Celular: Repairs texto único + fotos</h3>
             <div class="point-meta-chips"><span class="chip-v">v84</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?gustavo=1&ph=supervisor&phview=reportar">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«En repairs debe estar todo junto. El supervisor prefiere tener el espacio para poner la info porque en una unidad con muchas reparaciones es muy tardado, buscamos que el pueda escribir todo  y queba las fotos.» (Requerimiento de CPS · v84)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -1752,7 +1834,7 @@
             <h3 class="point-title">Gustavo Celular: Quitar condición general de la unidad</h3>
             <div class="point-meta-chips"><span class="chip-v">v84</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?gustavo=1&ph=supervisor&phview=reportar">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Quitar la condicion genera de la unidad.» (Requerimiento de CPS · v84)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -1811,7 +1893,7 @@
             <h3 class="point-title">Recomendaciones adicionales quitadas; las notas siguen aparte</h3>
             <div class="point-meta-chips"><span class="chip-v">v84</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?gustavo=1&ph=supervisor&phview=reportar">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Recomendaciones adiciones es lo mismo de notas? Sino quitar.» (Requerimiento de CPS)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -1881,7 +1963,7 @@
             <h3 class="point-title">Gustavo Celular: Quitar que lo reciba Thalia y cliente</h3>
             <div class="point-meta-chips"><span class="chip-v">v84</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?gustavo=1&ph=supervisor&phview=reportar">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Quitar que lo recibe thalia y tampoco el cliente» (Requerimiento de CPS · v84)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -1938,7 +2020,7 @@
             <h3 class="point-title">Gustavo Celular: Solicitud de cliente como acción de Gustavo</h3>
             <div class="point-meta-chips"><span class="chip-v">v84</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=supervision&tab=ruta">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Agregar en lo que puede hacer Gustavo: Solicitud de cliente. Cuando le piden que vaya a una propiedad» (Requerimiento de CPS · v84)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -1996,7 +2078,7 @@
             <h3 class="point-title">Estado previo solo para técnicos, no para Gustavo</h3>
             <div class="point-meta-chips"><span class="chip-v">v84</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?gustavo=1&ph=tecnico&phview=agenda">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«El estado previo debe ser para los tecnicos, pero a gustavo no le sirve» (Requerimiento de CPS · v84)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -2052,7 +2134,7 @@
             <h3 class="point-title">Gustavo Celular: Historial de returns visible</h3>
             <div class="point-meta-chips"><span class="chip-v">v84</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?gustavo=1&ph=supervisor&phview=devs">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Qu veea el historial de los returns, supongo que eso se ve en la pestana de returns no?» (Requerimiento de CPS · v84)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -2112,7 +2194,7 @@
             <h3 class="point-title">Gustavo Celular: Fotos de inspección por unidad, opcional</h3>
             <div class="point-meta-chips"><span class="chip-v">v84</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?gustavo=1&ph=supervisor&phview=reportar">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Cada que revisa una unidad subir fotos de que paso la inspección, aunque por el momento que sea opcional, estamos revisando esto porque seria mucho trabajo.» (Requerimiento de CPS · v84)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -2169,7 +2251,7 @@
             <h3 class="point-title">Gustavo Celular: Buscar por unidad y ver historial</h3>
             <div class="point-meta-chips"><span class="chip-v">v84</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?gustavo=1&ph=supervisor&phview=buscar">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Que tenga para buscar por unidad y vea el historial, por si le pregunta un manager» (Requerimiento de CPS · v84)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -2225,7 +2307,7 @@
             <h3 class="point-title">Gustavo Celular: Ver otros técnicos en la misma propiedad</h3>
             <div class="point-meta-chips"><span class="chip-v">v84</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?gustavo=1&ph=supervisor&phview=reportar">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Que en su ruta del dia si hay alguien en la misma propiedad que el vea el nombre. Por ejemplo le toca crossings, y el esta ahi, con los que estan ahi el pueda verlo.» (Requerimiento de CPS · v84)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -2282,14 +2364,14 @@
             <h3 class="point-title">Técnicos: Ubicación en tiempo real (explicado)</h3>
             <div class="point-meta-chips"><span class="chip-v">v92</span><span class="chip-status diff">● Explicado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=tecnicos&tab=lista">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Esto yo lo tengo que confirmar, aun no hacer el cambio: Tambien que pueda ver donde estan los tecnicos en el momento» (Requerimiento de CPS)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
-          <strong>Cómo quedó:</strong> Respetado sin cambios operativos: no hay seguimiento en tiempo real con GPS continuo hasta confirmación del cliente. Se informa la última ubicación a partir de las llegadas voluntarias marcadas.
+          <strong>Cómo quedó:</strong> Respetado sin cambios de GPS en tiempo real hasta confirmación del cliente. La columna estática 'Última ubicación' se retiró de la Lista de técnicos por ser redundante con P01 (<em>Técnicos en campo</em>, que ya muestra dónde está trabajando cada técnico hoy en vivo), y la última ubicación (<code>ultUbic()</code>) sigue usándose internamente solo para sugerir al técnico más cercano al asignar una Work Order nueva (sin mostrarse como columna visible en la tabla de técnicos).
         </div>
-        <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Técnicos &gt; Pestaña 'Lista de técnicos' &gt; Columna 'Última ubicación'</div>
-        <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/vistas/catalogos-crud.js:413</code></div>
+        <div class="route-bar">📍 <strong>Dónde está en la app:</strong> Técnicos &gt; Pestaña 'Lista de técnicos' (sin columna redundante) y Work Orders &gt; Asignar técnico (sugerencia interna por cercanía)</div>
+        <div class="code-ref-box" style="font-size:11.5px;color:#0369a1;background:#f0f9ff;border:1px solid #bae6fd;padding:6px 10px;border-radius:6px;margin:8px 0 12px">💻 <strong>Implementación en código:</strong> <code>js/vistas/catalogos-crud.js:297,413</code> · <code>js/helpers.js:610</code></div>
 
         <div class="mock-frame">
           <div class="mock-topbar">
@@ -2300,17 +2382,18 @@
             <div class="cps-card">
               <table class="cps-table">
                 <thead>
-                  <tr><th>Técnico</th><th class="highlight-target">Última ubicación<div class="step-marker">1</div></th><th>Estado</th></tr>
+                  <tr class="highlight-target"><th>Técnico</th><th>Zona</th><th>WO esta semana</th><th>Estado<div class="step-marker">1</div></th></tr>
                 </thead>
                 <tbody>
                   <tr>
                     <td><b>Diego Ramírez</b></td>
-                    <td>Harbor Pointe</td>
-                    <td><span class="pill v">Activo</span></td>
+                    <td>Pensacola</td>
+                    <td class="num mono">3</td>
+                    <td><span class="pill v">Disponible</span></td>
                   </tr>
                 </tbody>
               </table>
-              <div style="font-size:11px;color:var(--faint);margin-top:6px">La «última ubicación» es lo que UC-09 usa para sugerir al técnico más cercano. Sale sola de la llegada que él marca.</div>
+              <div style="font-size:11px;color:var(--faint);margin-top:6px">La «última ubicación» es lo que UC-09 usa internamente para sugerir al técnico más cercano al asignar una WO. Sale sola de la llegada que él marca.</div>
             </div>
           </div>
         </div>
@@ -2319,13 +2402,13 @@
           <h4>Pasos a realizar:</h4>
           <ol class="steps-list">
             <li>En la app web de oficina, dirígete a <strong>Técnicos</strong> &gt; <strong>Lista de técnicos</strong>.</li>
-            <li>Ubica la columna <strong>Última ubicación</strong> <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span> en la tabla principal.</li>
-            <li>Lee el pie explicativo oficial: la ubicación se registra a partir del check-in voluntario sin rastreo satelital invasivo.</li>
+            <li>Verifica que la tabla principal <span class="step-marker" style="position:static;display:inline-flex;width:18px;height:18px;font-size:10px">1</span> no muestra la columna estática 'Última ubicación' (el estado en vivo del día se consulta en P01 / Hoy en campo).</li>
+            <li>Lee el pie explicativo: <code>ultUbic()</code> se conserva internamente para sugerir al técnico más cercano al asignar una Work Order, sin rastreo GPS continuo.</li>
           </ol>
         </div>
         <div class="result-box">
           <h5>Qué debe pasar:</h5>
-          <p>La oficina conoce la última propiedad visitada sin comprometer la batería ni la privacidad del técnico con GPS continuo.</p>
+          <p>La Lista de técnicos queda limpia sin repetir información estática de ubicación, mientras que el seguimiento del día se centraliza en 'Técnicos en campo' (P01) y la sugerencia por cercanía al asignar una WO sigue funcionando con las llegadas marcadas.</p>
         </div>
         <div class="test-feedback">
           <div class="test-feedback-header">
@@ -2346,7 +2429,7 @@
             <h3 class="point-title">Clientes: Estados Lead / Active / Inactive</h3>
             <div class="point-meta-chips"><span class="chip-v">v80</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=first-propiedad&tab=datos">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Los estados seran» … «Lead» … «Active» … «Inactive» (Requerimiento de CPS · v80)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -2414,7 +2497,7 @@
             <h3 class="point-title">Propiedades: Ejecutivo de ventas (opcional)</h3>
             <div class="point-meta-chips"><span class="chip-v">v92</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=first-propiedad&tab=datos">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Agregar quien lo consiguio en caso de que tengamos un catalogo de vendedores» (Requerimiento de CPS · v92)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -2479,7 +2562,7 @@
             <h3 class="point-title">Propiedades: Columna City en tabla general</h3>
             <div class="point-meta-chips"><span class="chip-v">v80</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Se duplica la zona. Cuando agendamos ocupamos la city» (Requerimiento de CPS)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -2544,7 +2627,7 @@
             <h3 class="point-title">Propiedades: Gate code en lugar de Door code</h3>
             <div class="point-meta-chips"><span class="chip-v">v80</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=first-propiedad&tab=datos">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Door code seria gate code porque el door debe ser por unidad.» (Requerimiento de CPS · v80)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -2608,7 +2691,7 @@
             <h3 class="point-title">Propiedades: Alerta COI por vencer en 14 días</h3>
             <div class="point-meta-chips"><span class="chip-v">v80</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=first-propiedad&tab=documentos">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Dentro de la propiedad, en polizas sale notificaciones cuando este a 2 semanas que venza» (Requerimiento de CPS)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -2699,7 +2782,7 @@
             <h3 class="point-title">Propiedades: Tarifario completo y PDF selectivo</h3>
             <div class="point-meta-chips"><span class="chip-v">v86/87</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=first-propiedad&tab=precios">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«En la parte de estimado aprobado cambiarlo por tarifario completo, donde se meta de base de datos de los costos… De ese price list se pueda crear un PDF para mandarlo y que podamos seleccionar lo que queremos mandar» (Requerimiento de CPS)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -2767,7 +2850,7 @@
             <h3 class="point-title">Propiedades: Vigencia programada e historial de precios</h3>
             <div class="point-meta-chips"><span class="chip-v">v84</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=first-propiedad&tab=precios">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Tenemos la duda de como podemos hacer en los casos en que queramos actualizar la tabla para nuevos precios, pero queremos trabajar ene so desde 3 mese antes pero que no afecte a los precios hasta que que se compla algun requisito de tiempo., y tambien quisieramos tener antecedentes» (Requerimiento de CPS)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -2844,7 +2927,7 @@
             <h3 class="point-title">Propiedades: Pintura con 'una fila por superficie'</h3>
             <div class="point-meta-chips"><span class="chip-v">v92</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=first-propiedad&tab=datos">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Que es lo de pintura que se agrega una fila por superficie?» (Requerimiento de CPS · v92)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -2912,7 +2995,7 @@
             <h3 class="point-title">Propiedades: Crédito dinero vs de servicio arriba de ficha</h3>
             <div class="point-meta-chips"><span class="chip-v">v92</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=first-propiedad&tab=datos">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Y la diferencia del credito de ervicio y general.. El credito que aparezca arriba» (Requerimiento de CPS · v92)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -2970,7 +3053,7 @@
             <h3 class="point-title">Propiedades: Pestaña Comunicación y propósito</h3>
             <div class="point-meta-chips"><span class="chip-v">v84</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=first-propiedad&tab=com">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Que es la parte de comunicacion? Eso a donde se va o para que sive ??» (Requerimiento de CPS · v84)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -3043,7 +3126,7 @@
             <h3 class="point-title">Estimados: COI único bloqueo para transferir</h3>
             <div class="point-meta-chips"><span class="chip-v">v93</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=propiedades&sub=first-propiedad&tab=expediente">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Lo único que debe bloquear es el COI» (Requerimiento de CPS · v93)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -3113,7 +3196,7 @@
             <h3 class="point-title">Técnicos: Vista 'Hoy en campo' con 8 columnas exactas</h3>
             <div class="point-meta-chips"><span class="chip-v">v88</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=tecnicos&tab=campo">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Lo que debe aparecer en hoy en campo:  (debe tener filtros igual)» … «Tecnico, WO propiedad, unidad, dia, tipo de servicio, estado y zona» (Requerimiento de CPS · v88)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -3184,7 +3267,7 @@
             <h3 class="point-title">Work Orders: Ventana horaria Desde/Hasta sin 9:00 forzada</h3>
             <div class="point-meta-chips"><span class="chip-v">v89</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=wo&sub=first-wo">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«No se puede agendar por hora, mejor por rango.» (Requerimiento de CPS)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -3247,7 +3330,7 @@
             <h3 class="point-title">Técnicos: Columna 'WO esta semana'</h3>
             <div class="point-meta-chips"><span class="chip-v">v84</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=tecnicos&tab=lista">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«En tecnicos, que es lo de WO semana??» (Requerimiento de CPS · v84)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -3319,7 +3402,7 @@
             <h3 class="point-title">Registro del técnico + Contrato (Flujo Completo E1 al E11)</h3>
             <div class="point-meta-chips"><span class="chip-v">v94</span><span class="chip-status ok">✔ 11 Escenarios con Mockups Reales</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=tecnicos&tab=lista">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Debe aparecer otros datos. Te mando el formulario que ellos llenan para tener su registro y adjuntar su contrato/ acuerdo» (Requerimiento de CPS · v94)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -3393,7 +3476,7 @@
               </div>
               <div class="mock-viewport">
                 <div class="card"><table>
-                  <thead><tr><th>Técnico</th><th>Vínculo y Acuerdos</th><th>Especialidad</th><th>Zona</th><th>Teléfono</th><th class="num" title="Work Orders asignadas a este técnico en la semana actual (sem. 46)">WO esta semana (sem. 46)</th><th>Última ubicación</th><th>Estado</th><th></th></tr></thead>
+                  <thead><tr><th>Técnico</th><th>Vínculo y Acuerdos</th><th>Especialidad</th><th>Zona</th><th>Teléfono</th><th class="num" title="Work Orders asignadas a este técnico en la semana actual (sem. 46)">WO esta semana (sem. 46)</th><th>Estado</th><th></th></tr></thead>
                   <tbody>
                     <tr>
                       <td style="font-weight:650">Diego Ramírez<div style="font-size:10.5px;color:var(--faint)">Pensacola FL</div></td>
@@ -3414,7 +3497,6 @@
                       <td>Pensacola</td>
                       <td class="mono">(850) 232-4911</td>
                       <td class="num mono">3</td>
-                      <td style="font-size:11.5px;color:var(--soft)">Harbor Pointe C-8</td>
                       <td><span class="pill v">Disponible</span></td>
                       <td style="text-align:right;white-space:nowrap">
                         <div class="highlight-target" style="display:inline-block">
@@ -3785,7 +3867,7 @@
               </div>
               <div class="mock-viewport">
                 <div class="card"><table>
-                  <thead><tr><th>Técnico</th><th>Vínculo y Acuerdos</th><th>Especialidad</th><th>Zona</th><th>Teléfono</th><th class="num" title="Work Orders asignadas a este técnico en la semana actual (sem. 46)">WO esta semana (sem. 46)</th><th>Última ubicación</th><th>Estado</th><th></th></tr></thead>
+                  <thead><tr><th>Técnico</th><th>Vínculo y Acuerdos</th><th>Especialidad</th><th>Zona</th><th>Teléfono</th><th class="num" title="Work Orders asignadas a este técnico en la semana actual (sem. 46)">WO esta semana (sem. 46)</th><th>Estado</th><th></th></tr></thead>
                   <tbody>
                     <tr>
                       <td style="font-weight:650">Diego Ramírez<div style="font-size:10.5px;color:var(--faint)">Pensacola FL</div></td>
@@ -3806,7 +3888,6 @@
                       <td>Pensacola</td>
                       <td class="mono">(850) 232-4911</td>
                       <td class="num mono">3</td>
-                      <td style="font-size:11.5px;color:var(--soft)">Harbor Pointe C-8</td>
                       <td><span class="pill v">Disponible</span></td>
                       <td style="text-align:right;white-space:nowrap">
                         <div class="highlight-target" style="display:inline-block">
@@ -4077,7 +4158,7 @@
               </div>
               <div class="mock-viewport">
                 <div class="card"><table>
-                  <thead><tr><th>Técnico</th><th>Vínculo y Acuerdos</th><th>Especialidad</th><th>Zona</th><th>Teléfono</th><th class="num" title="Work Orders asignadas a este técnico en la semana actual (sem. 46)">WO esta semana (sem. 46)</th><th>Última ubicación</th><th>Estado</th><th></th></tr></thead>
+                  <thead><tr><th>Técnico</th><th>Vínculo y Acuerdos</th><th>Especialidad</th><th>Zona</th><th>Teléfono</th><th class="num" title="Work Orders asignadas a este técnico en la semana actual (sem. 46)">WO esta semana (sem. 46)</th><th>Estado</th><th></th></tr></thead>
                   <tbody>
                     <tr>
                       <td style="font-weight:650">Carlos Mendoza<div style="font-size:10.5px;color:var(--faint)">Pensacola FL</div></td>
@@ -4096,7 +4177,6 @@
                       <td>Pensacola</td>
                       <td class="mono">(850) 555-0144</td>
                       <td class="num mono">0</td>
-                      <td style="font-size:11.5px;color:var(--soft)"><span style="color:var(--faint)">base: Pensacola</span></td>
                       <td><span class="pill v">Disponible</span></td>
                       <td style="text-align:right;white-space:nowrap">
                         <div class="highlight-target" style="display:inline-block">
@@ -4157,7 +4237,7 @@
             <h3 class="point-title">Filtros combinables en técnicos: texto, zona, especialidad, vínculo y estado</h3>
             <div class="point-meta-chips"><span class="chip-v">v93</span><span class="chip-status ok">✔ 5 filtros</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=tecnicos&tab=lista">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Falta en tecnicos para buscar / filtrar» (Requerimiento de CPS · v93)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -4238,7 +4318,7 @@
             <h3 class="point-title">Pestaña Asistencia retirada; solo 'Hoy en campo' y 'Lista de técnicos'</h3>
             <div class="point-meta-chips"><span class="chip-v">v93</span><span class="chip-status ok">✔ 2 pestañas oficiales</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=tecnicos&tab=lista">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«No sentimos que deba venir lo de historial de asistencia» (Requerimiento de CPS · v93)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -4303,7 +4383,7 @@
             <h3 class="point-title">Catálogo maestro de servicios sin precios; precios en Tarifario y Price List</h3>
             <div class="point-meta-chips"><span class="chip-v">v93</span><span class="chip-status ok">✔ Separación de precios</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=catalogos">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Lo de catalo nos referimos solo a los servicios y tipos de servicios pero ahi aparecen precios y esos precios son los del tarifario, son lo que son pro propiedad. Esta bien solo quitar los precios. Ese mismo catalogo es lo que van a tener como tarif alas propiedades.» (Requerimiento de CPS · v93)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -4394,7 +4474,7 @@
             <h3 class="point-title">Acciones de oficina para técnicos sin celular o vendors externos</h3>
             <div class="point-meta-chips"><span class="chip-v">v93</span><span class="chip-status ok">✔ Auditoría oficina</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=wo&sub=first-wo">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Tener la opcion de avanzar en los estados de los tecnicos manual porque a veces no quieren usar su celular o por algo no tienen. O para los vendors externos.» (Requerimiento de CPS · v93)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -4467,7 +4547,7 @@
             <h3 class="point-title">Permitir terminar sin fotos marcando 'fotos pendientes' con advertencia</h3>
             <div class="point-meta-chips"><span class="chip-v">v93</span><span class="chip-status ok">✔ Fotos pendientes</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?gustavo=1&ph=tecnico&phview=agenda">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«El estado de terminar lo podrian poner en cuanto acaben pero no condicionado a que suban fotos, pero si que haya como un pendiente o recordatorio de que para la nomina o para cerrar la semana que suban sus fotos pero puede ser en su casa.» (Requerimiento de CPS · v93)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -4534,7 +4614,7 @@
             <h3 class="point-title">Distribución de fotos: copiar link, descargar o enviar por correo</h3>
             <div class="point-meta-chips"><span class="chip-v">v93</span><span class="chip-status ok">✔ Canales corporativos</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=wo&sub=first-wo">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«En el tema de las aprobaciones, Thalia necesita descargar las imagenes y mandarlas por correo o mensaje, hay formra de vicnularlo con mensajes? O como seria mas facil?» (Requerimiento de CPS · v93)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -4617,7 +4697,7 @@
             <h3 class="point-title">Estimado a Work Order y ciclo de facturación (Estado derivado)</h3>
             <div class="point-meta-chips"><span class="chip-v">v93</span><span class="chip-status ok">✔ Implementado</span></div>
           </div>
-          <a href="#menu-principal" class="back-btn">↑ Volver al menú</a>
+          <div style="display:flex;gap:6px;align-items:center;flex:none"><a class="back-btn" style="background:var(--azul);color:#fff;border-color:var(--azul)" target="_blank" href="index.html?ir=estimados">▶ Ver en el prototipo</a><a href="#menu-principal" class="back-btn">↑ Volver al menú</a></div>
         </div>
         <div class="quote-box">«Que se cree el estimado y que se mande a WO y de ahí se sigue el flujo natural para el invoice y su estado debería ser si ya se convirtió en WO, si ya se facturó etc.» (Requerimiento de CPS)</div>
         <div style="font-size:12px;color:var(--soft);margin:-6px 0 10px;padding:6px 10px;background:var(--surface-2);border-radius:6px;border-left:3px solid var(--azul)">
@@ -4827,7 +4907,7 @@
               <tr><td><b>P12</b></td><td>Fotos de inspección por unidad opcionales</td><td>Sección <code>Fotos generales de la unidad</code></td><td><code>js/celular-supervisor.js:148</code></td><td><span class="pill v">Verificado literal</span></td></tr>
               <tr><td><b>P13</b></td><td>Técnico: buscar unidad y ver historial</td><td>Input <code>#gBusqQ</code> (<code>Buscar unidad y ver historial</code>)</td><td><code>js/celular-tecnico.js:1289</code></td><td><span class="pill v">Verificado literal</span></td></tr>
               <tr><td><b>P14</b></td><td>Relevamiento muestra técnicos asignados de WO</td><td>Texto dinámico <code>Técnicos asignados a esta unidad:</code></td><td><code>js/celular-supervisor.js:185</code></td><td><span class="pill a">Plantilla dinámica</span></td></tr>
-              <tr><td><b>P15</b></td><td>Última ubicación en lista de técnicos</td><td>Columna <code>Última ubicación</code> (<code>ultUbic()</code>)</td><td><code>js/vistas/catalogos-crud.js:413</code></td><td><span class="pill v">Verificado literal</span></td></tr>
+              <tr><td><b>P15</b></td><td>Ubicación de técnicos (sin columna redundante en lista)</td><td>Función <code>ultUbic()</code> usada al asignar técnico (<code>candidatosTec()</code>)</td><td><code>js/vistas/catalogos-crud.js:297,413</code></td><td><span class="pill v">Verificado literal</span></td></tr>
               <tr><td><b>P16</b></td><td>Estado del cliente: Lead, Active, Inactive</td><td>Select <code>#nEst</code> con label <code>Client Status</code></td><td><code>js/acciones/catalogos-crud.js:98</code></td><td><span class="pill v">Verificado literal</span></td></tr>
               <tr><td><b>P17</b></td><td>Ejecutivo de ventas asignado a la propiedad</td><td>Select <code>#nVend</code> con label <code>Ejecutivo de ventas</code></td><td><code>js/acciones/catalogos-crud.js:100</code></td><td><span class="pill v">Verificado literal</span></td></tr>
               <tr><td><b>P18</b></td><td>City visible en lista de propiedades</td><td>Columna <code>&lt;th&gt;City&lt;/th&gt;</code> y función <code>ciudadProp()</code></td><td><code>js/vistas/catalogos-crud.js:9</code></td><td><span class="pill a">Plantilla dinámica</span></td></tr>
