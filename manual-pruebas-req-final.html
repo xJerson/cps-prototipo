@@ -453,6 +453,12 @@
     .test-feedback-header { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 24px; margin-bottom: 10px; }
     .test-feedback-title { font-weight: 700; font-size: 13.5px; color: var(--azul); }
     .test-feedback-header label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+    .fb-fila { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 8px; min-height: 30px; }
+    .fb-enviar { padding: 6px 12px; border: 1px solid #1f4e79; background: #1f4e79; color: #fff; border-radius: 6px; font-size: 12.5px; font-weight: 700; cursor: pointer; }
+    .fb-enviar:disabled { opacity: .6; cursor: default; }
+    .fb-estado { font-size: 13px; font-weight: 600; color: #475569; }
+    .fb-estado.ok { color: #15803d; }
+    .fb-estado.err { color: #b91c1c; }
     .test-feedback textarea { display: block; width: 100%; min-height: 64px; box-sizing: border-box; padding: 8px 10px; border: 1px solid #cbd5e1; border-radius: 6px; font: inherit; font-size: 13px; resize: vertical; background: #fff; }
     .mock-viewport {
       padding: 16px;
@@ -654,6 +660,15 @@
       .menu-item-card, .menu-item-top, .menu-item-badges { min-width: 0; max-width: 100%; }
       .menu-item-name, .menu-item-sub { overflow-wrap: anywhere; }
       a.btn, .btn { white-space: normal; max-width: 100%; box-sizing: border-box; }
+      /* Maquetas de la pantalla: nada debe salirse ni pisarse en celular */
+      .mock-viewport { padding: 10px; }
+      .mock-viewport .ph { flex-wrap: wrap; gap: 8px; }
+      .mock-viewport .tabs { flex-wrap: wrap; }
+      .mock-viewport .highlight-target { display: block; max-width: 100%; box-sizing: border-box; }
+      .mock-viewport .highlight-target[style*="inline-flex"] { display: flex !important; flex-wrap: wrap; width: 100%; }
+      .mock-viewport input, .mock-viewport select, .mock-viewport textarea { max-width: 100%; box-sizing: border-box; }
+      .mock-viewport input[id="tBus"] { width: 100% !important; }
+      .mock-viewport .card > div[style*="flex-wrap"] { gap: 10px; }
     }
     @media (max-width: 480px) {
       .main-content { padding: 58px 8px 50px; }
@@ -1085,6 +1100,12 @@
         <li><b>Es un prototipo:</b> puedes probar, crear y cambiar lo que quieras; todos los datos son de demostración.</li>
         <li><b>Simulación controlada:</b> Las descargas de PDF y almacenamiento de fotos operan de forma simulada para no consumir cuotas ni espacio.</li>
       </ul>
+    </section>
+
+    <section id="alcance-prototipo" style="margin:0 0 18px;padding:16px 18px;background:#f0f9ff;border:1px solid #7dd3fc;border-left:5px solid #0284c7;border-radius:10px">
+      <div style="font-weight:700;color:#075985;margin-bottom:6px">Alcance de esta etapa</div>
+      <p style="margin:0 0 8px;font-size:13px;line-height:1.55;color:#0c4a6e">Este prototipo reproduce la operación tal como se ejecuta actualmente. Por esa razón, algunos formularios y pantallas presentan un volumen alto de campos y pasos: constituyen el levantamiento del proceso vigente y son la base funcional para el desarrollo.</p>
+      <p style="margin:0;font-size:13px;line-height:1.55;color:#0c4a6e">En la fase de desarrollo se optimizará cada flujo para que sea más eficiente: se reducirán campos, pasos y tiempos de captura mediante valores predeterminados, validaciones y automatizaciones. En esta evaluación se solicita verificar que cada punto refleje correctamente la operación; la simplificación se definirá en la siguiente etapa.</p>
     </section>
 
     <!-- MENÚ PRINCIPAL AGRUPADO -->
@@ -5161,14 +5182,23 @@
     var cola = Promise.resolve();
     function msg(t, ok){ est.textContent = t; est.style.color = ok === false ? '#b91c1c' : '#1e3a8a'; }
     function nombre(){ var n = (inNombre.value || '').trim(); return n || 'Sin nombre'; }
-    function guardar(fila, etiqueta){
+    function estadoDe(el){
+      var f = el.closest('.test-feedback'); if (!f) return null;
+      var s = f.querySelector('.fb-estado'); return s;
+    }
+    function poner(s, t, clase){ if (!s) return; s.textContent = t; s.className = 'fb-estado' + (clase ? ' ' + clase : ''); }
+    function guardar(fila, etiqueta, s, btn){
+      poner(s, 'Enviando…'); if (btn) btn.disabled = true;
       cola = cola.then(function(){
         msg('Guardando ' + etiqueta + ' …');
         return fetch(URL_TABLA, { method:'POST',
           headers:{ 'Content-Type':'application/json', 'apikey': LLAVE, 'Authorization':'Bearer ' + LLAVE, 'Prefer':'return=minimal' },
           body: JSON.stringify(fila) })
-          .then(function(r){ if (r.ok) msg('✓ Guardado: ' + etiqueta + '.'); else msg('No se pudo guardar ' + etiqueta + ' (' + r.status + '). Intenta de nuevo.', false); })
-          .catch(function(){ msg('No se pudo guardar ' + etiqueta + ': revisa tu conexión a internet.', false); });
+          .then(function(r){
+            if (r.ok){ msg('✓ Guardado: ' + etiqueta + '.'); poner(s, '✓ Enviado correctamente. Ya lo recibimos.', 'ok'); return true; }
+            msg('No se pudo guardar ' + etiqueta + ' (' + r.status + '). Intenta de nuevo.', false); poner(s, '✗ No se pudo enviar (' + r.status + '). Vuelve a intentarlo.', 'err'); return false; })
+          .catch(function(){ msg('No se pudo guardar ' + etiqueta + ': revisa tu conexión a internet.', false); poner(s, '✗ No se pudo enviar: revisa tu internet y vuelve a intentarlo.', 'err'); return false; })
+          .then(function(ok){ if (btn) btn.disabled = false; return ok; });
       });
     }
     function info(el){
@@ -5177,15 +5207,32 @@
       var ch = card.querySelector('.point-check:checked');
       return { punto: 'P' + (pid.length < 2 ? '0' + pid : pid), titulo: t ? t.textContent.trim().slice(0,200) : '', estado: ch ? ch.value : '', nota: ta ? ta.value.trim().slice(0,2000) : '' };
     }
+    function enviarNota(ta, btn){
+      var d = info(ta), s = estadoDe(ta); if (!d) return;
+      if (!d.nota){ poner(s, 'Escribe algo en la caja antes de enviar.', 'err'); return; }
+      if (ta.dataset.enviada === d.nota){ poner(s, '✓ Esta nota ya se había enviado.', 'ok'); return; }
+      ta.dataset.enviada = d.nota;
+      guardar({ nombre: nombre(), punto: d.punto, titulo: d.titulo, estado: 'nota', nota: d.nota, origen: location.href.slice(0,300) }, d.punto + ' (nota)', s, btn);
+    }
+    /* Cada punto muestra un aviso propio de «enviando / enviado» y un botón para enviar la nota */
+    Array.prototype.forEach.call(document.querySelectorAll('.test-feedback'), function(f){
+      var ta = f.querySelector('textarea'); if (!ta) return;
+      var fila = document.createElement('div'); fila.className = 'fb-fila';
+      var btn = document.createElement('button'); btn.type = 'button'; btn.className = 'fb-enviar'; btn.textContent = 'Enviar nota';
+      var s = document.createElement('span'); s.className = 'fb-estado'; s.setAttribute('role','status'); s.setAttribute('aria-live','polite');
+      s.textContent = 'Al marcar «Funciona» o «Falla» se envía solo. La nota se envía al salir de la caja o con el botón.';
+      fila.appendChild(btn); fila.appendChild(s); ta.insertAdjacentElement('afterend', fila);
+      btn.addEventListener('click', function(){ enviarNota(ta, btn); });
+      ta.addEventListener('input', function(){ if (ta.dataset.enviada !== ta.value.trim()) poner(s, '✏️ Todavía no enviado. Sal de la caja o pulsa «Enviar nota».'); });
+    });
     document.addEventListener('change', function(e){
       var el = e.target; if (!el.matches) return;
       var d;
       if (el.matches('.point-check')){
         d = info(el); if (!d) return;
-        guardar({ nombre: nombre(), punto: d.punto, titulo: d.titulo, estado: d.estado, nota: d.nota, origen: location.href.slice(0,300) }, d.punto);
+        guardar({ nombre: nombre(), punto: d.punto, titulo: d.titulo, estado: d.estado, nota: d.nota, origen: location.href.slice(0,300) }, d.punto, estadoDe(el));
       } else if (el.matches('.test-feedback textarea')){
-        d = info(el); if (!d || !d.nota) return;
-        guardar({ nombre: nombre(), punto: d.punto, titulo: d.titulo, estado: 'nota', nota: d.nota, origen: location.href.slice(0,300) }, d.punto + ' (nota)');
+        if (el.value.trim()) enviarNota(el, el.closest('.test-feedback').querySelector('.fb-enviar'));
       }
     });
     window.__resDebug = { url: URL_TABLA };
