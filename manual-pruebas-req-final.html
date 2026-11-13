@@ -669,7 +669,15 @@
       .mock-viewport input, .mock-viewport select, .mock-viewport textarea { max-width: 100%; box-sizing: border-box; }
       /* Tablas simuladas: no se aplastan letra por letra; se desplazan de lado dentro de su marco */
       .mock-viewport table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
-      .mock-viewport table th, .mock-viewport table td { white-space: nowrap; }
+      .mock-viewport table th, .mock-viewport table td { white-space: nowrap; padding: 5px 7px; font-size: 11.5px; }
+      .mock-viewport table.tm { display: block; overflow: visible; }
+      .tm thead, .tm tbody, .tm tr { display: block; }
+      .tm thead tr { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; border: 0; }
+      .tm thead th { display: inline-block; white-space: normal; padding: 3px 9px; border: 1px solid var(--line); border-radius: 12px; background: #f1f5f9; font-size: 10.5px; text-align: left; }
+      .tm thead th:empty { display: none; }
+      .tm tbody tr { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; margin-bottom: 8px; background: #fff; }
+      .tm td { display: flex; justify-content: space-between; align-items: center; gap: 12px; white-space: normal; padding: 4px 0; border: 0; font-size: 12px; text-align: right; }
+      .tm td::before { content: attr(data-label); font-weight: 700; color: var(--faint); text-transform: uppercase; font-size: 10px; text-align: left; flex: none; }
       .mock-viewport .btn, .mock-viewport button { white-space: nowrap; }
       .mock-viewport .tabs button, .mock-viewport .tab { white-space: nowrap; }
       .mock-viewport input[id="tBus"] { width: 100% !important; }
@@ -5241,6 +5249,20 @@
       }
     });
     window.__resDebug = { url: URL_TABLA };
+  })();
+</script>
+<script>
+  /* En celular, las tablas simuladas se muestran como tarjetas (cada fila apilada con su etiqueta) para leerse sin deslizar */
+  (function(){
+    Array.prototype.forEach.call(document.querySelectorAll('.mock-viewport table'), function(t){
+      var hr = t.querySelectorAll('thead tr'); if (!hr.length) return;
+      var ths = hr[hr.length-1].children, labels = [];
+      Array.prototype.forEach.call(ths, function(th){ labels.push((th.childNodes[0] && th.childNodes[0].textContent || th.textContent).replace(/\s+/g,' ').trim()); });
+      Array.prototype.forEach.call(t.querySelectorAll('tbody tr'), function(tr){
+        Array.prototype.forEach.call(tr.children, function(td, i){ if (labels[i]) td.setAttribute('data-label', labels[i]); });
+      });
+      t.classList.add('tm');
+    });
   })();
 </script>
 </body>
