@@ -667,6 +667,11 @@
       .mock-viewport .highlight-target { display: block; max-width: 100%; box-sizing: border-box; }
       .mock-viewport .highlight-target[style*="inline-flex"] { display: flex !important; flex-wrap: wrap; width: 100%; }
       .mock-viewport input, .mock-viewport select, .mock-viewport textarea { max-width: 100%; box-sizing: border-box; }
+      /* Tablas simuladas: no se aplastan letra por letra; se desplazan de lado dentro de su marco */
+      .mock-viewport table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
+      .mock-viewport table th, .mock-viewport table td { white-space: nowrap; }
+      .mock-viewport .btn, .mock-viewport button { white-space: nowrap; }
+      .mock-viewport .tabs button, .mock-viewport .tab { white-space: nowrap; }
       .mock-viewport input[id="tBus"] { width: 100% !important; }
       .mock-viewport .card > div[style*="flex-wrap"] { gap: 10px; }
     }
