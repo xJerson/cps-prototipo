@@ -656,7 +656,8 @@
       .test-feedback-header { flex-direction: column; align-items: flex-start; }
       img, svg { max-width: 100%; height: auto; }
       .menu-section { padding: 12px 10px; }
-      .menu-grid { grid-template-columns: 1fr; }
+      .menu-grid { grid-template-columns: minmax(0, 1fr); }
+      .menu-grid > * { grid-column: 1 / -1 !important; min-width: 0; }
       .menu-item-card, .menu-item-top, .menu-item-badges { min-width: 0; max-width: 100%; }
       .menu-item-name, .menu-item-sub { overflow-wrap: anywhere; }
       a.btn, .btn { white-space: normal; max-width: 100%; box-sizing: border-box; }
@@ -670,11 +671,13 @@
       /* Tablas simuladas: no se aplastan letra por letra; se desplazan de lado dentro de su marco */
       .mock-viewport table { display: block; overflow-x: auto; -webkit-overflow-scrolling: touch; max-width: 100%; }
       .mock-viewport table th, .mock-viewport table td { white-space: nowrap; padding: 5px 7px; font-size: 11.5px; }
-      .mock-viewport table.tm { display: block; overflow: visible; }
+      table.tm { display: block; overflow: visible; }
       .tm thead, .tm tbody, .tm tr { display: block; }
       .tm thead tr { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; border: 0; }
       .tm thead th { display: inline-block; white-space: normal; padding: 3px 9px; border: 1px solid var(--line); border-radius: 12px; background: #f1f5f9; font-size: 10.5px; text-align: left; }
       .tm thead th:empty { display: none; }
+      .tm td > .tm-v { min-width: 0; overflow-wrap: anywhere; text-align: right; }
+      .menu-section-header { flex-direction: column; align-items: flex-start; gap: 4px; }
       .tm tbody tr { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; margin-bottom: 8px; background: #fff; }
       .tm td { display: flex; justify-content: space-between; align-items: center; gap: 12px; white-space: normal; padding: 4px 0; border: 0; font-size: 12px; text-align: right; }
       .tm td::before { content: attr(data-label); font-weight: 700; color: var(--faint); text-transform: uppercase; font-size: 10px; text-align: left; flex: none; }
@@ -5254,12 +5257,12 @@
 <script>
   /* En celular, las tablas simuladas se muestran como tarjetas (cada fila apilada con su etiqueta) para leerse sin deslizar */
   (function(){
-    Array.prototype.forEach.call(document.querySelectorAll('.mock-viewport table'), function(t){
+    Array.prototype.forEach.call(document.querySelectorAll('.main-content table'), function(t){
       var hr = t.querySelectorAll('thead tr'); if (!hr.length) return;
       var ths = hr[hr.length-1].children, labels = [];
       Array.prototype.forEach.call(ths, function(th){ labels.push((th.childNodes[0] && th.childNodes[0].textContent || th.textContent).replace(/\s+/g,' ').trim()); });
       Array.prototype.forEach.call(t.querySelectorAll('tbody tr'), function(tr){
-        Array.prototype.forEach.call(tr.children, function(td, i){ if (labels[i]) td.setAttribute('data-label', labels[i]); });
+        Array.prototype.forEach.call(tr.children, function(td, i){ if (labels[i]) td.setAttribute('data-label', labels[i]); var s = document.createElement('span'); s.className = 'tm-v'; while (td.firstChild) s.appendChild(td.firstChild); td.appendChild(s); });
       });
       t.classList.add('tm');
     });
