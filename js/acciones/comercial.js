@@ -207,8 +207,8 @@ Object.assign(ACC, {
     estSnap();
     const prop=val("eProp");
     if(prop!==S.estHdr.prop){ S.estHdr.prop=prop;   // cambiar de propiedad reinicia los contactos marcados
-      const cs = contactosDe(prop);
-      S.estHdr.contactos = cs.length? [cs[0].id] : [];
+      const def = conDefEst(prop);   // Primary contact for Approvals, o el primero
+      S.estHdr.contactos = def? [def] : [];
     }
     modalEst();
   },
@@ -224,7 +224,7 @@ Object.assign(ACC, {
     estSnap();
     const h=S.estHdr; h.modo=d.m;
     if(d.m==="prospecto") S.draftEst.forEach(l=>{ l.unidad=null; delete l.enTarifario; });   // un prospecto no tiene unidades
-    else if(!h.prop){ h.prop=(S.propiedades[0]||{}).id||""; const cs=contactosDe(h.prop); h.contactos=cs.length?[cs[0].id]:[]; }
+    else if(!h.prop){ h.prop=(S.propiedades[0]||{}).id||""; const def=conDefEst(h.prop); h.contactos=def?[def]:[]; }
     modalEst();
   },
   estDepositoToggle: () => { estSnap(); modalEst(); },
@@ -359,7 +359,7 @@ Object.assign(ACC, {
     const e=by(S.estimados,d.id);
     e.envAsunto=val("envAsunto");
     e.correoTexto=val("envCuerpo");
-    e.estado="Enviado";
+    e.estado="Enviado"; e.enviadoFecha=hoyReal(); e.enviadoQuien=S.usuario;   // Communication Log
     cm();
     toast("✓ Estimado enviado",`<b>${esc(e.num)}</b> se mandó a ${contactosEst(e).map(c=>esc(c.nombre)).join(", ")}, con el Invoice adjunto.`,"v");
     render();

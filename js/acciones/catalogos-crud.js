@@ -123,7 +123,10 @@ Object.assign(ACC, {
           <div class="fld"><label>Código del shop <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><input id="nShopCode" class="mono" value="${p?esc(p.shopCode):""}"></div></div>
         <div class="fld"><label>Horario <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><input id="nHorario" value="${p?esc(p.horario):""}" placeholder="Oficina abre 8:00 · unidades disponibles desde 8:30"></div>
         <div class="fld"><label>Información de pintura <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— parte del Expediente, sin esto no se puede transferir a programación</span></label><input id="nPaint" value="${p?esc(p.notasPaint):""}" placeholder="Sherwin ProMar 200, eggshell. Techos blanco plano."></div>
-        <div class="fld"><label>Al terminar <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><input id="nFinalExp" value="${p?esc(p.finalExp):""}" placeholder="Ventanas por dentro y por fuera. Filtros de A/C cambiados."></div>
+        <div class="fld"><label>Final Expectations — general <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional, para todos los trabajos</span></label><input id="nFinalExp" value="${p?esc(p.finalExp):""}" placeholder="Dejar la llave en la oficina"></div>
+        <div class="fld"><label>Final Expectations — por tipo de trabajo <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— el técnico ve solo la del tipo de su WO</span></label>
+          <div id="feRows">${(p&&p.finalExpTipo||[]).map(f=>feFila(f.tipo,f.nota)).join("")}</div>
+          <button class="btn sm" type="button" data-a="propFEAdd">+ Agregar por tipo de trabajo</button></div>
         <div class="fld" style="margin-bottom:0"><label>Ojo <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional, advertencias</span></label><input id="nOjo" value="${p?esc(p.notasTec):""}" placeholder="Estacionarse en visitas, no en la entrada principal"></div>
       </div>
       ${p?"":`<div class="note">Las unidades no hace falta cargarlas aquí: se van registrando solas cuando crees Work Orders o Estimados de esta propiedad.</div>`}
@@ -139,6 +142,7 @@ Object.assign(ACC, {
     if(marcaFalta(["nP","nD"])){ toast("Faltan datos","Nombre y dirección son obligatorios.","r"); return; }
     const credTxt = val("nCred").trim(), cred = credTxt==="" ? 30 : Number(credTxt);
     if(!Number.isInteger(cred)||cred<0){ document.getElementById("nCred").parentElement.classList.add("bad"); toast("Crédito inválido","Los días de crédito deben ser un número entero, 0 o más.","r"); return; }
+    const fe = feLeer(); if(fe===null) return;
     const yo = d&&d.id ? P(d.id) : null;
     const cliVal = document.getElementById("nC") ? val("nC") : (yo ? (yo.cliente||"") : "");
     if(yo) return guardarEdicion(yo, {...(yo.diasCredito!=null||cred!==diasCreditoProp(yo.id)?{diasCredito:cred}:{}),nombre:val("nP"),zona:val("nCiudad"),cliente:cliVal,dir:val("nD"),
@@ -148,7 +152,7 @@ Object.assign(ACC, {
       mailAP1:val("nAP1"),mailAP2:val("nAP2"),
       notas:val("nNT"),
       shop:val("nShop"),shopCode:val("nShopCode"),horario:val("nHorario"),notasPaint:val("nPaint"),
-      finalExp:val("nFinalExp"),notasTec:val("nOjo")}, "Propiedades", yo.nombre, null, "prop:"+yo.id);
+      finalExp:val("nFinalExp"),finalExpTipo:fe,notasTec:val("nOjo")}, "Propiedades", yo.nombre, null, "prop:"+yo.id);
     const id="P"+nid("p");
     flash("prop:"+id);
     S.propiedades.push({id,nombre:val("nP"),zona:val("nCiudad"),cliente:val("nC"),dir:val("nD"),
@@ -157,7 +161,7 @@ Object.assign(ACC, {
       activa:true,door:val("nDC"),aprob:val("nAP"),pref:val("nPR"),
       mailAP1:val("nAP1"),mailAP2:val("nAP2"),polizas:[],diasCredito:cred,
       shop:val("nShop"),shopCode:val("nShopCode"),horario:val("nHorario"),notasPaint:val("nPaint"),
-      finalExp:val("nFinalExp"),notasTec:val("nOjo")});
+      finalExp:val("nFinalExp"),finalExpTipo:fe,notasTec:val("nOjo")});
     const np = P(id);
     /* Antes, "propiedad nueva" en Solicitud Comercial y Visita Comercial era
        solo un nombre escrito a mano — nunca una Propiedad real, y siempre
@@ -293,18 +297,49 @@ Object.assign(ACC, {
     const pid = c ? c.prop : d.prop;
     modal(`<div class="mh"><h3>${c?"Editar contacto":"Nuevo contacto"}</h3><p>${esc(P(pid).nombre)}</p></div>
     <div class="mb">
-      <div class="fld"><label>Contact Type <span class="req">*</span></label><select id="cT">
+      <div class="fld"><label>Contact Type <span class="req">*</span></label><select id="cT" data-a="conTipoReq">
         ${["Property Manager","Assistant Manager","Maintenance Supervisor","Accounts Payable","Regional Manager","Other"].map(t=>`<option ${c&&c.tipo===t?"selected":""}>${t}</option>`).join("")}</select></div>
       <div class="fld"><label>Full Name <span class="req">*</span></label><input id="cN" value="${c?esc(c.nombre):""}"></div>
       <div class="fld"><label>Position</label><input id="cPos" value="${c?esc(c.cargo):""}"></div>
-      <div class="fg c2"><div class="fld"><label>Email Address <span class="req">*</span></label><input id="cM" value="${c?esc(c.mail):""}"></div>
-        <div class="fld"><label>Phone Number</label><input id="cP" class="mono" value="${c?esc(c.tel):""}"></div></div>
+      ${(()=>{ const mant = (c?c.tipo:"Property Manager")==="Maintenance Supervisor";
+        return `<div class="fg c2"><div class="fld"><label>Email Address <span class="req" id="cMreq" style="${mant?"display:none":""}">*</span></label><input id="cM" value="${c?esc(c.mail):""}">
+          <div class="hint" id="cMhint" style="margin:2px 0 0;${mant?"":"display:none"}">Opcional para Maintenance: basta con teléfono o correo, uno de los dos.</div></div>
+        <div class="fld"><label>Phone Number</label><input id="cP" class="mono" value="${c?esc(c.tel):""}"></div></div>`; })()}
       <div class="fg c2">
         <div class="fld"><label>Preferred Contact Method</label><select id="cPref">${activos("medios").filter(m=>m!=="Enlace digital").map(m=>`<option ${c&&c.pref===m?"selected":""}>${m}</option>`).join("")}</select></div>
-        <div class="fld"><label>Primary Contact</label><select id="cPrim">${["Yes","No"].map(y=>`<option ${c&&c.primario===y?"selected":""}>${y}</option>`).join("")}</select></div></div>
+        <div class="fld"><label>Primary contact for</label>
+          ${PRIM_ROLES.map(r=>`<label style="display:flex;gap:6px;align-items:center;font-weight:500;text-transform:none;letter-spacing:0;margin:2px 0"><input type="checkbox" class="cPrimR" value="${r}" ${c&&(c.primarioPara||[]).includes(r)?"checked":""}> ${r}</label>`).join("")}
+          <div class="hint" style="margin:2px 0 0">Scheduling: a quien se le manda la agenda. Approvals: quien autoriza estimados y trabajos. Uno por rol en la propiedad.</div></div></div>
     </div>
     <div class="mf"><button class="btn" data-a="conCancelar">Cancelar</button>
       <button class="btn p" data-a="conGuardar" data-prop="${pid}" data-id="${c?c.id:""}">${c?"Guardar corrección":"Guardar"}</button></div>`); },
+  propFEAdd: () => { const box=document.getElementById("feRows"); if(box) box.insertAdjacentHTML("beforeend", feFila("","")); },
+  propFEDel: d => { const r=document.getElementById(d.r); if(r) r.remove(); },
+  /* Inactivar contacto (REQ 19/11 punto 8): ya no está en la propiedad. No se borra
+     (queda en su historial), deja de recibir avisos y se puede reactivar. */
+  conInactivar: d => { const c = by(S.contactos,d.id); if(!c) return;
+    const otros = contactosDe(c.prop).filter(x=>x.id!==c.id);
+    modal(`<div class="mh"><h3>Inactivar contacto</h3><p>${esc(c.nombre)} · ${esc(c.tipo)} · ${esc(P(c.prop).nombre)}</p></div>
+    <div class="mb"><div class="note">No se borra: queda en «Inactivos» con su historial, deja de recibir avisos y ya no sale para elegir en estimados ni agenda. Se puede reactivar.</div>
+      <div class="fld"><label>Motivo</label><select id="ciM">${["Ya no trabaja en la propiedad","Cambió de puesto","Otro"].map(x=>`<option>${x}</option>`).join("")}</select></div>
+      ${otros.length?"":`<div class="note r">Es el único contacto activo de la propiedad: después agrega al nuevo con «+ Contacto».</div>`}</div>
+    <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
+      <button class="btn p" data-a="conInactivarOK" data-id="${c.id}">Inactivar</button></div>`); },
+  conInactivarOK: d => { const c = by(S.contactos,d.id); if(!c) return;
+    c.inactivo = true; c.inactivoFecha = hoyReal(); c.inactivoQuien = S.usuario; c.inactivoMotivo = val("ciM");
+    const p = P(c.prop);
+    S.comunicaciones.push({id:"CM"+nid("cm"), prop:c.prop, fecha:hoyReal(), medio:"Interno", contacto:c.nombre, quien:S.usuario,
+      nota:`Contacto inactivado (${c.tipo}): ${c.inactivoMotivo}`});
+    /* El vendedor de la cuenta se entera para presentarse al nuevo contacto */
+    const vend = p.vendedor || (typeof crmDueno==="function" ? crmDueno(p) : "");
+    if(vend && vend!==S.usuario) avisar(vend, "Cambió un contacto", `${esc(p.nombre)}: ${esc(c.nombre)} (${esc(c.tipo)}) ya no está. Preséntate al nuevo.`, "a");
+    cm(); flash("con:"+c.id);
+    toast("✓ Contacto inactivado", contactosDe(c.prop).length ? `${esc(c.nombre)} ya no recibe avisos.` : "La propiedad quedó sin contactos activos: agrega al nuevo con «+ Contacto».", contactosDe(c.prop).length?"v":"a");
+    render(); },
+  conReactivar: d => { const c = by(S.contactos,d.id); if(!c) return;
+    delete c.inactivo; delete c.inactivoFecha; delete c.inactivoQuien; delete c.inactivoMotivo;
+    S.comunicaciones.push({id:"CM"+nid("cm"), prop:c.prop, fecha:hoyReal(), medio:"Interno", contacto:c.nombre, quien:S.usuario, nota:`Contacto reactivado (${c.tipo})`});
+    flash("con:"+c.id); toast("✓ Contacto reactivado", `${esc(c.nombre)} vuelve a recibir avisos.`, "v"); render(); },
   // Igual que propCancelar: si se llegó aquí desde Solicitud o Visita
   // Comercial, cancelar no debe perder lo que ya se llevaba escrito ahí.
   conCancelar: () => {
@@ -312,14 +347,26 @@ Object.assign(ACC, {
     if(S.solComDraft){ const dr=S.solComDraft; S.solComDraft=null; volverASolComDraft(dr); return; }
     cm();
   },
+  /* REQ 19/11 punto 7: Maintenance no tiene correo; para ese tipo el obligatorio es el teléfono */
+  conTipoReq: () => { const mant = val("cT")==="Maintenance Supervisor";
+    const set=(id,show)=>{ const e=document.getElementById(id); if(e) e.style.display=show?"":"none"; };
+    set("cMreq",!mant); set("cMhint",mant);
+    ["cM","cP"].forEach(i=>{ const e=document.getElementById(i); if(e) e.parentElement.classList.remove("bad"); }); },
   conGuardar: d => {
-    if(marcaFalta(["cN","cM"])){ toast("Faltan datos","El nombre y el correo son obligatorios — sin correo no se le puede mandar nada.","r"); return; }
+    if(val("cT")==="Maintenance Supervisor"){
+      const sinDato = !val("cM") && !val("cP");
+      if(marcaFalta(sinDato?["cN","cP"]:["cN"])){ toast("Faltan datos","Para Maintenance van el nombre y un teléfono o correo — el correo es opcional.","r"); return; }
+    } else if(marcaFalta(["cN","cM"])){ toast("Faltan datos","El nombre y el correo son obligatorios — sin correo no se le puede mandar nada.","r"); return; }
     const yo = d&&d.id ? by(S.contactos,d.id) : null;
     const datos = {tipo:val("cT"),nombre:val("cN"),mail:val("cM"),tel:val("cP"),
-      cargo:val("cPos"),pref:val("cPref"),primario:val("cPrim")};
-    if(yo) return guardarEdicion(yo, datos, "Propiedades", P(yo.prop).nombre+" · "+yo.nombre, null, "con:"+yo.id);
+      cargo:val("cPos"),pref:val("cPref"),
+      primarioPara:[...document.querySelectorAll(".cPrimR:checked")].map(x=>x.value)};
+    /* Uno por rol: si este contacto toma Scheduling o Approvals, se le quita al anterior */
+    const tomarRoles = (pid, yoId) => S.contactos.filter(x=>x.prop===pid && x.id!==yoId && (x.primarioPara||[]).length)
+      .forEach(x=>{ x.primarioPara = x.primarioPara.filter(r=>!datos.primarioPara.includes(r)); });
+    if(yo){ tomarRoles(yo.prop, yo.id); return guardarEdicion(yo, datos, "Propiedades", P(yo.prop).nombre+" · "+yo.nombre, null, "con:"+yo.id); }
     const nk = {id:"C"+nid("c"),prop:d.prop, ...datos};
-    S.contactos.push(nk); flash("con:"+nk.id);
+    S.contactos.push(nk); tomarRoles(d.prop, nk.id); flash("con:"+nk.id);
     // Mismo mecanismo que propGuardar: si el contacto se creó desde adentro
     // de Solicitud o Visita Comercial porque la propiedad no tenía ninguno,
     // se vuelve con este ya elegido — sin perder lo demás que ya llevaba
@@ -551,38 +598,38 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
     const catIni = v("cat")||activos("categorias")[0]||"Clean";
     const servIni = v("serv")||(servDe(catIni)[0]||"");
     modal(`<div class="mh"><h3>${t?"Editar precio":"Add Item"}</h3>
-      <p>${t?"Un precio mal tecleado se arrastra a cada Work Order. Corrígelo aquí; el cambio queda en la Bitácora.":"Los mismos campos con los que ella registra un precio."}</p></div>
+      <p>${t?"Un precio mal tecleado se arrastra a cada Work Order. Corrígelo aquí; el cambio queda en la Bitácora.":"Mismos campos que el Add Item del sistema de CPS."}</p></div>
     <div class="mb">
       <div class="note" style="margin:0 0 12px">${propId?`Precio exclusivo de <b>${esc(P(propId).nombre)}</b>`:"<b>General</b> — aplica a todas las propiedades"}</div>
-      ${propId?`<div class="fld"><label>Unidad de referencia <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— para ver su composición real y no adivinar el Detail/Piso</span></label>
+      ${propId?`<div class="fld"><label>Reference unit <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional: muestra el Detail y el Floor reales de una unidad</span></label>
         <select id="rUnidad" data-a="tarUnidadDetalle">
           <option value="">— sin unidad de referencia —</option>
           ${S.unidades.filter(u=>u.prop===propId).map(u=>`<option value="${u.id}">${esc(u.num)}</option>`).join("")}
         </select>
         <div id="rUnidadDetalle"></div></div>`:""}
-      <div class="fld"><label>Name <span class="req">*</span> <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— se arma solo abajo</span></label>
+      <div class="fld"><label>Name <span class="req">*</span> <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— se arma con Type of Service + Detail</span></label>
         <input id="rNom" readonly style="background:var(--surface-2)" value="${esc(v("nombre")||(propId?`${P(propId).nombre} - `:"")+(servIni+" "+(v("variante")||"")).trim())}">
         <label style="display:flex;align-items:center;gap:6px;margin:6px 0 0;text-transform:none;font-weight:500;font-size:11.5px;color:var(--soft)">
           <input type="checkbox" id="rNomEdit" data-a="tarNomLock" style="width:auto"> Editar el Name a mano</label></div>
       <div class="fld"><label>Description <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><input id="rD" value="${esc(v("desc")||"")}"></div>
       <div class="fg c2">
-        <div class="fld"><label>Tipo de servicio <span class="req">*</span></label><select id="rC" data-a="tarCat">${op(activos("categorias"), catIni)}</select></div>
-        <div class="fld"><label>Servicio <span class="req">*</span></label><select id="rS" data-a="tarNomBuild">${op(servDe(catIni), servIni)}</select></div></div>
-      <div class="fld"><label>Detail <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— ej. «2 bedroom», o «Per trailer» si no aplica por tamaño</span></label>
+        <div class="fld"><label>Service <span class="req">*</span></label><select id="rC" data-a="tarCat">${op(activos("categorias"), catIni)}</select></div>
+        <div class="fld"><label>Type of Service <span class="req">*</span></label><select id="rS" data-a="tarNomBuild">${op(servDe(catIni), servIni)}</select></div></div>
+      <div class="fld"><label>Detail</label>
         <input id="rDet" data-a="tarNomBuild" list="rDetList" value="${esc(v("variante")||"")}">
         <datalist id="rDetList">${activos("rooms").map(r=>`<option value="${esc(r)}">`).join("")}</datalist>
-        <div class="hint">Sugiere los tipos de unidad reales (Rooms) para que calce con las unidades — pero puedes escribir otra cosa si el servicio no se cobra por tamaño de unidad.</div></div>
+        <div class="hint">Lo que cambia el precio: el tamaño de la unidad (1 bedroom, 2 bedroom) o la forma de cobro (Per trailer). Vacío = mismo precio para cualquier tamaño. La cantidad no va aquí: va en Quantity.</div></div>
       <div class="fg c2">
-        <div class="fld"><label>Piso <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— solo si el precio cambia según el piso</span></label>
+        <div class="fld"><label>Floor <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— solo si el precio cambia por piso</span></label>
           <select id="rPiso">
-            <option value="" ${!v("pisos")?"selected":""}>— cualquier piso —</option>
+            <option value="" ${!v("pisos")?"selected":""}>Any floor</option>
             ${activos("pisos").map(p=>`<option value="${p}" ${String(v("pisos"))===String(p)?"selected":""}>Floor ${p}</option>`).join("")}
           </select></div>
-        <div class="fld"><label>Baños <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional, de referencia</span></label>
+        <div class="fld"><label>Bathrooms <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label>
           <input id="rBanos" type="number" min="0" class="mono" placeholder="ej. 2" value="${esc(v("banos")??"")}">
-          <div class="hint">Solo para verlo aquí y en el Detail de la unidad — hoy el precio no cambia por baños, solo por Rooms/Piso.</div></div></div>
+          <div class="hint">Informativo: no cambia el precio.</div></div></div>
       <div class="fg c3">
-        <div class="fld"><label>Price (excl. tax) <span class="req">*</span></label><input id="rP" class="mono" placeholder="0.00" value="${esc(v("precio")??"")}"></div>
+        <div class="fld"><label>Price (Tax excluded) <span class="req">*</span></label><input id="rP" class="mono" placeholder="0.00" value="${esc(v("precio")??"")}"></div>
         <div class="fld"><label>Pago al técnico</label><input id="rG" class="mono" placeholder="0.00" value="${esc(v("pago")??"")}"></div>
         <div class="fld"><label>Tax</label><select id="rTax">
           <option value="">— no tax —</option>
@@ -761,7 +808,7 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
         <div class="fld"><label>Detail <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— ej. «2 bedroom»</span></label>
           <input id="ptDet" list="ptDetList"><datalist id="ptDetList">${activos("rooms").map(r=>`<option value="${esc(r)}">`).join("")}</datalist></div>
         <div class="fld"><label>Piso <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— solo si aplica</span></label>
-          <select id="ptPiso"><option value="">— cualquier piso —</option>${activos("pisos").map(p=>`<option value="${p}">Floor ${p}</option>`).join("")}</select></div></div>
+          <select id="ptPiso"><option value="">Any floor</option>${activos("pisos").map(p=>`<option value="${p}">Floor ${p}</option>`).join("")}</select></div></div>
       <div class="fld"><label>Pago a este técnico <span class="req">*</span></label><input id="ptPago" class="mono" placeholder="0.00"></div>
       <div class="fld"><label>Motivo <span class="req">*</span></label><textarea id="ptMot" rows="2" placeholder="Por qué este técnico cobra distinto"></textarea></div>
     </div>
@@ -894,12 +941,12 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
       + (tocados?`, y los <b>${tocados} registro(s)</b> que lo usaban ya lo dicen así.`:"."),"v");
     render();
   },
-  servAdd: d => modal(`<div class="mh"><h3>Nuevo servicio</h3><p>Cada servicio cuelga de un tipo. Así el desplegable se filtra solo al agendar.</p></div>
+  servAdd: d => modal(`<div class="mh"><h3>New Type of Service</h3><p>Cada Type of Service pertenece a un Service (ej. Deep clean → Clean).</p></div>
     <div class="mb">
-      <div class="fld"><label>Tipo de servicio <span class="req">*</span></label>
+      <div class="fld"><label>Service <span class="req">*</span></label>
         <select id="sT">${activos("categorias").concat(CAT.tiposCO||[]).map(c=>`<option ${d&&d.t===c?"selected":""}>${esc(c)}</option>`).join("")}</select></div>
-      <div class="fld"><label>Nombre del servicio <span class="req">*</span></label><input id="sN" placeholder="Full paint, Deep clean…"></div>
-      <div class="note">Después hay que darle tarifa en el Tarifario, si no saldrá como «NA» y levantará una excepción.</div></div>
+      <div class="fld"><label>Type of Service <span class="req">*</span></label><input id="sN" placeholder="Ej. Deep clean, Baseboard paint"></div>
+      <div class="note">Después ponle precio en Tarifario. Sin precio, la Work Order que lo use queda como excepción hasta que alguien lo ponga.</div></div>
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="servSave">Agregar</button></div>`),
   servSave: () => {
     const n = val("sN"), t = val("sT");
@@ -1093,9 +1140,10 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
     render();
   },
   /* La comunicación vive en la Propiedad, no en el Management — ver pestaña "Comunicación" de fichaProp. */
+  comFiltro: d => { S.comFiltro = d.f; render(); },
   propComAdd: d => {
     if(marcaFalta(["cmN"])){ toast("Falta la nota","Sin decir qué se habló, no sirve de registro.","r"); return; }
-    S.comunicaciones.push({id:"CM"+nid("cm"),prop:d.id,fecha:"2026-08-21",
+    S.comunicaciones.push({id:"CM"+nid("cm"),prop:d.id,fecha:hoyReal(),
       medio:val("cmM"),contacto:val("cmC"),quien:S.usuario,nota:val("cmN")});
     toast("✓ Comunicación registrada","Queda en el historial de esta propiedad.","v");
     render();
@@ -1117,3 +1165,18 @@ Correo: scheduling@cordovaps.com | www.cordovapropertyservices.com`;
     prop.cliente = nc.id; flash("prop:"+prop.id);
     cm(); toast("✓ Registrado",`<b>${esc(nc.nombre)}</b> vinculado a <b>${esc(prop.nombre)}</b>.`,"v"); render();
   },});
+
+/* Final Expectations por tipo de trabajo: filas del formulario de propiedad */
+function feFila(tipo, nota){
+  const rid = "feR"+Math.random().toString(36).slice(2,8);
+  return `<div class="fe-row" id="${rid}" style="display:grid;grid-template-columns:170px 1fr auto;gap:6px;margin-bottom:6px">
+    <select>${feTipos().concat(tipo && !feTipos().includes(tipo) ? [tipo] : []).map(t=>`<option ${t===tipo?"selected":""}>${esc(t)}</option>`).join("")}</select>
+    <input value="${esc(nota||"")}" placeholder="Ej. Paint: devolver la pintura al shop, código 3030">
+    <button class="btn sm" type="button" data-a="propFEDel" data-r="${rid}" title="Quitar">✕</button></div>`;
+}
+function feLeer(){
+  const fs = [...document.querySelectorAll("#feRows .fe-row")].map(r=>({tipo:r.querySelector("select").value, nota:r.querySelector("input").value.trim()})).filter(f=>f.nota);
+  const rep = fs.map(f=>f.tipo).find((t,i,a)=>a.indexOf(t)!==i);
+  if(rep){ toast("Tipo repetido",`«${esc(rep)}» tiene dos Final Expectations. Deja una sola por tipo de trabajo.`,"r"); return null; }
+  return fs;
+}

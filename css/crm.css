@@ -1,0 +1,92 @@
+/* ══════════ CRM · VENTAS ══════════
+   El pipeline es la pieza central: columnas por etapa (en el orden real del proceso) y tarjetas
+   cuyo borde izquierdo cuenta la urgencia: azul al día, ámbar estancado, rojo con la próxima
+   acción vencida, verde ya activa. Todo lo demás usa los mismos tokens de la app. */
+.crm-filtro{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--soft);font-weight:650}
+.crm-filtro select{font:inherit;font-size:12.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:6px 8px}
+.kpi .v small{font-size:12px;font-weight:600;color:var(--faint)}
+.crm-bar{height:6px;background:var(--surface-3);border-radius:3px;margin-top:8px;overflow:hidden}
+.crm-bar i{display:block;height:100%;background:var(--azul);border-radius:3px}
+.crm-meta .v.g + .crm-bar i{background:var(--verde)}
+.crm-sub{font-size:11px;color:var(--faint);margin-top:4px}
+.crm-dia{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;align-items:start}
+.crm-list{list-style:none;margin:0;padding:0}
+.crm-list li{display:flex;align-items:center;gap:10px;padding:10px 15px;border-bottom:1px solid var(--line);font-size:12.5px}
+.crm-list li:last-child{border-bottom:none}
+.crm-list li.venc{background:var(--rojo-cl)}
+.crm-li-main{flex:1;min-width:0}
+.crm-li-sub{font-size:11px;color:var(--faint);margin-top:2px;font-weight:500}
+.crm-when{font-size:11px;font-weight:700;color:var(--soft);white-space:nowrap}
+.crm-list li.venc .crm-when{color:var(--rojo)}
+.crm-aviso{border-top:1px solid var(--line);font-size:12px;color:var(--ambar)}
+.lnk{background:none;border:none;padding:0;color:var(--azul);font:inherit;font-weight:650;text-decoration:underline;cursor:pointer}
+.crm-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px}
+.crm-dot.v{background:var(--verde)} .crm-dot.w{background:var(--ambar)} .crm-dot.r{background:var(--rojo)}
+.crm-txt-r{color:var(--rojo);font-weight:700} .crm-txt-v{color:var(--verde);font-weight:700}
+.crm-de{color:var(--faint);font-weight:500}
+
+.crm-board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(186px,1fr);gap:10px;overflow-x:auto;padding-bottom:10px;margin-bottom:14px;scroll-snap-type:x proximity}
+.crm-col{background:var(--surface-2);border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;min-height:300px;scroll-snap-align:start;transition:border-color .15s,background .15s}
+.crm-col.over{border-color:var(--azul);background:var(--azul-cl)}
+.crm-col header{padding:10px 11px 9px;border-bottom:1px solid var(--line)}
+.crm-col-t{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:750}
+.crm-col-n{width:18px;height:18px;border-radius:50%;background:var(--surface-3);color:var(--soft);font-size:10px;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.crm-col-c{margin-left:auto;font-size:11px;color:var(--soft);background:var(--surface);border:1px solid var(--line);border-radius:100px;padding:0 7px}
+.crm-col-v{font-size:15px;font-weight:750;margin-top:4px;font-variant-numeric:tabular-nums}
+.crm-col-r{font-size:10.5px;color:var(--faint);margin-top:3px;line-height:1.35}
+.crm-col-b{padding:8px;display:flex;flex-direction:column;gap:8px;flex:1}
+.crm-vacio{font-size:11.5px;color:var(--faint);text-align:center;padding:18px 6px;border:1px dashed var(--line);border-radius:8px}
+.crm-card{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--azul);border-radius:8px;padding:9px 10px;box-shadow:var(--sh);cursor:grab}
+.crm-card.est{border-left-color:var(--ambar)}
+.crm-card.venc{border-left-color:var(--rojo)}
+.crm-card[draggable="false"]{cursor:default;border-left-color:var(--verde)}
+.crm-card.drag{opacity:.45}
+.crm-card-t{background:none;border:none;padding:0;font:inherit;font-size:13px;font-weight:750;color:var(--ink);text-align:left;cursor:pointer}
+.crm-card-t:hover{color:var(--azul);text-decoration:underline}
+.crm-card-m{font-size:11px;color:var(--faint);margin-top:1px}
+.crm-card-k{display:flex;justify-content:space-between;font-size:11.5px;font-weight:650;margin:7px 0 6px;font-variant-numeric:tabular-nums}
+.crm-card-x{font-size:11px;color:var(--verde);font-weight:650}
+.crm-card-f{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:10.5px;color:var(--faint)}
+.crm-dias{white-space:nowrap}
+.crm-card.est .crm-dias{color:var(--ambar);font-weight:700}
+.crm-card-m b{color:var(--soft);font-weight:700}
+.crm-own{background:var(--surface-3);border-radius:100px;padding:0 6px;color:var(--soft);font-weight:650}
+.crm-mv{margin-left:auto;display:flex;gap:3px}
+.crm-mv .btn{padding:1px 8px;font-size:13px;line-height:1.2}
+.crm-prox{display:inline-block;font-size:11px;font-weight:700;color:var(--azul-s);background:var(--azul-cl);border-radius:5px;padding:2px 6px}
+.crm-prox.hoy{color:var(--ambar);background:var(--ambar-cl)}
+.crm-prox.venc{color:var(--rojo);background:var(--rojo-cl)}
+.crm-sinprox{font-size:11px;font-weight:700;color:var(--rojo)}
+
+.crm-funnel{display:flex;flex-direction:column;gap:8px}
+.crm-fr{display:grid;grid-template-columns:96px 1fr 30px 40px;align-items:center;gap:8px;font-size:12px}
+.crm-fb{height:14px;background:var(--surface-3);border-radius:4px;overflow:hidden}
+.crm-fb i{display:block;height:100%;background:var(--azul);border-radius:4px}
+.crm-fn{font-weight:750;text-align:right;font-variant-numeric:tabular-nums}
+.crm-fp{font-size:11px;color:var(--faint);text-align:right}
+.crm-in{width:90px;font:inherit;font-size:12.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:6px 8px}
+
+.crm-steps{display:flex;list-style:none;margin:0 0 12px;padding:0;gap:4px;flex-wrap:wrap}
+.crm-steps li{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:650;color:var(--faint);padding:4px 8px 4px 4px;border-radius:100px;background:var(--surface-2);border:1px solid var(--line)}
+.crm-steps li span{width:17px;height:17px;border-radius:50%;background:var(--surface-3);display:inline-flex;align-items:center;justify-content:center;font-size:10px}
+.crm-steps li.ok{color:var(--verde)} .crm-steps li.ok span{background:var(--verde);color:#fff}
+.crm-steps li.on{color:var(--azul-s);border-color:var(--azul);background:var(--azul-cl)} .crm-steps li.on span{background:var(--azul);color:#fff}
+.crm-ficha{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:18px;margin-top:12px}
+.crm-ficha h4,.crm-h4{font-size:12px;margin:4px 0 8px;color:var(--ink)}
+.crm-dl{display:grid;grid-template-columns:82px 1fr;gap:5px 10px;margin:0 0 12px;font-size:12.5px}
+.crm-dl dt{color:var(--faint);font-weight:600}
+.crm-dl dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.crm-dl select{font:inherit;font-size:12.5px;border:1px solid var(--line);border-radius:6px;padding:3px 6px;background:var(--surface);color:var(--ink)}
+.crm-exp{list-style:none;margin:0 0 4px;padding:0;font-size:12px;color:var(--soft)}
+.crm-exp li{padding:2px 0} .crm-exp li.ok{color:var(--verde)}
+.crm-acc{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.crm-tl{list-style:none;margin:0;padding:0 0 0 2px;border-left:2px solid var(--line);font-size:12px;max-height:230px;overflow-y:auto}
+.crm-tl li{padding:5px 0 5px 12px;position:relative}
+.crm-tl li::before{content:"";position:absolute;left:-6px;top:10px;width:8px;height:8px;border-radius:50%;background:var(--azul)}
+.crm-tl-f{display:inline-block;min-width:42px;color:var(--faint);font-variant-numeric:tabular-nums}
+.crm-card-t:focus-visible,.lnk:focus-visible{outline:2px solid var(--azul);outline-offset:2px}
+@media (max-width:900px){
+  .crm-dia,.crm-ficha{grid-template-columns:1fr}
+  .crm-board{grid-auto-columns:minmax(78vw,1fr)}
+}
+@media (prefers-reduced-motion:reduce){.crm-col{transition:none}}

@@ -3,13 +3,14 @@
    no solo el índice, o si no la app queda vacía sin internet: index.html
    carga pero sus <script src> no resuelven. Sube CACHE_V cuando cambies
    algo de estos archivos para que el celular baje la versión nueva. */
-const CACHE_V = "gustavo-v106";
+const CACHE_V = "gustavo-v107";
 const SHELL = [
   "index.html?gustavo=1",
   "gustavo.html",
   "manifest.json",
   "icon-gustavo.svg",
   "css/estilos.css",
+  "css/crm.css",
   "js/catalogos.js",
   "js/datos.js",
   "js/helpers.js",
@@ -23,6 +24,7 @@ const SHELL = [
   "js/vistas/nomina-facturacion.js",
   "js/vistas/reportes.js",
   "js/vistas/acciones-supervisor.js",
+  "js/vistas/crm.js",
   "js/acciones/nucleo.js",
   "js/acciones/wo.js",
   "js/acciones/catalogos-crud.js",

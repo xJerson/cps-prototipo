@@ -164,7 +164,8 @@ function renderFon(){
       ${dato("Dónde está el shop", p.shop)}
       ${dato("Código del shop", p.shopCode)}
       ${dato("Horario", p.horario)}
-      ${dato("Al terminar", p.finalExp)}
+      ${dato("Final Expectations", p.finalExp)}
+      ${dato("Final Expectations ("+(w.cat||"")+")", feDeWO(p, w))}
       ${dato("Ojo", p.notasTec)}
       ${dato("Regla de la propiedad", p.notas)}
       ${w.notasTec?dato("Nota de esta orden", w.notasTec):""}
@@ -572,7 +573,9 @@ const ETAPAS = ["Antes","Durante","Final"];
    se ve igual que una que ni intento. */
 const EST_PARADA = ["Pendiente","En camino","Visitada","No completada"];
 
-const contactosDe  = pid => S.contactos.filter(c=>c.prop===pid);
+/* Solo los contactos activos: a un contacto inactivado (ya no está en la propiedad)
+   no se le manda nada ni se le ofrece en estimados, agenda o confirmaciones. */
+const contactosDe  = pid => S.contactos.filter(c=>c.prop===pid && !c.inactivo);
 /* Lo que se puede elegir al armar un estimado: las tarifas generales (siempre
    cargadas) mas las exclusivas de la propiedad elegida (esas si cambian cada
    vez que se cambia de propiedad). */

@@ -8,7 +8,7 @@ VIEWS.propiedades = () => {
   <div class="card"><table>
     <thead><tr><th>Propiedad</th><th>City</th><th>Cliente (Management)</th><th class="num">Unidades</th><th class="num">Contactos</th><th>COI</th><th>Estado</th></tr></thead>
     <tbody>${S.propiedades.map(p=>{
-      const nu=S.unidades.filter(u=>u.prop===p.id).length, nc=S.contactos.filter(c=>c.prop===p.id).length;
+      const nu=S.unidades.filter(u=>u.prop===p.id).length, nc=contactosDe(p.id).length;
       const sMon=saldoCredito(p.id), sd=credServSaldos(p.id);
       return `<tr class="cl${fl("prop:"+p.id)}" data-a="propVer" data-id="${p.id}">
         <td style="font-weight:650">${esc(p.nombre)}${sMon>0?` <span class="pill v" style="font-size:10px" title="Crédito a favor: ${money(sMon)}">💳 ${money(sMon)}</span>`:sd.length?` <span class="pill a" style="font-size:10px" title="Servicios a favor">💳 Servicios</span>`:""}<div style="font-size:10.5px;color:var(--faint)">${esc(p.dir)}</div></td>
@@ -22,7 +22,7 @@ VIEWS.propiedades = () => {
 
 function fichaProp(id){
   const p=P(id), t=S.tab||"datos";
-  const us=S.unidades.filter(u=>u.prop===id), cs=S.contactos.filter(c=>c.prop===id);
+  const us=S.unidades.filter(u=>u.prop===id), cs=contactosDe(id), csI=S.contactos.filter(c=>c.prop===id && c.inactivo);
   const ws=S.wos.filter(w=>w.prop===id);
   const tf=S.tarifas.filter(x=>x.prop===id && !tarOculta(x)), nTf=tf.filter(tarActiva).length, nVacios=tf.length-nTf;
   const coms=S.comunicaciones.filter(m=>m.prop===id);
@@ -31,7 +31,7 @@ function fichaProp(id){
   <div class="ph"><div>
     <button class="btn sm" data-a="ir" data-m="propiedades" style="margin-bottom:7px">‹ Propiedades</button>
     <h2>${esc(p.nombre)} ${p.activa?"":'<span class="pill g" style="vertical-align:middle">Dada de baja</span>'}</h2>
-    <p>${esc(ciudadProp(p))} · ${p.cliente?esc(CLI(p.cliente).nombre):'<span style="color:var(--faint)">sin management</span>'} · ${esc(p.dir)}</p></div>
+    <p>${esc(ciudadProp(p))} · ${p.cliente?esc(CLI(p.cliente).nombre):'<span style="color:var(--faint)">sin management</span>'} · ${esc(p.dir)}</p>${p.modPor?`<div>${modPorHTML(p)}</div>`:""}</div>
     <div class="act"><button class="btn" data-a="propNueva" data-id="${id}">Editar datos</button>
       <button class="btn ${p.activa?"":"v"}" data-a="propBaja" data-id="${id}">
       ${p.activa?"Dar de baja":"Reactivar"}</button></div></div>
@@ -44,7 +44,7 @@ function fichaProp(id){
       </div>
       <div><button class="btn sm" data-a="tab" data-t="datos">Ver tarjetas de crédito ↓</button></div>
     </div>` : ""}
-  <div class="tabs">${[["datos","Datos"],["expediente",`Expediente ${expedienteCompleto(id)?"✓":"— incompleto"}`],["documentos","Documentos"],["unidades",`Unidades (${us.length})`],["contactos",`Contactos (${cs.length})`],["com",`Comunicación (${coms.length})`],["precios",`Price List (${nTf})`],["previo",`Informes de campo (${S.reportes.filter(r=>r.prop===id).length})`],["hist",`Historial (${ws.length})`]]
+  <div class="tabs">${[["datos","Datos"],["expediente",`Expediente ${expedienteCompleto(id)?"✓":"— incompleto"}`],["documentos","Documentos"],["unidades",`Unidades (${us.length})`],["contactos",`Contactos (${cs.length})`],["com",`Communication Log (${comunicacionProp(id).length})`],["precios",`Price List (${nTf})`],["previo",`Field Reports (${S.reportes.filter(r=>r.prop===id).length})`],["hist",`Historial (${ws.length})`]]
     .map(([k,n])=>`<button class="tab ${t===k?"on":""}" data-a="tab" data-t="${k}">${n}</button>`).join("")}</div>
 
   ${t==="expediente"?(()=>{
@@ -61,7 +61,7 @@ function fichaProp(id){
       <td>${c.ok?'<span class="pill v">✓</span>':'<span class="pill r">—</span>'}</td>
       <td style="font-weight:${c.ok?"500":"700"}">${esc(c.n)}</td>
       <td style="color:${c.ok?"var(--soft)":"var(--rojo)"}">${c.ok
-        ? esc(c.k==="contacto" ? S.contactos.filter(x=>x.prop===id).length+" contacto(s)"
+        ? esc(c.k==="contacto" ? contactosDe(id).length+" contacto(s)"
             : c.k==="coi" ? p.polizas.length+" póliza(s)"
             : c.k==="tarifario" ? (()=>{
                 const tfAll = S.tarifas.filter(t=>t.prop===id && !tarOculta(t));
@@ -151,7 +151,8 @@ function fichaProp(id){
     <tr><td style="color:var(--faint)">Código del shop</td><td class="mono">${esc(p.shopCode)||"—"}</td></tr>
     <tr><td style="color:var(--faint)">Horario</td><td>${esc(p.horario)||"—"}</td></tr>
     <tr><td style="color:var(--faint)">Información de pintura</td><td>${p.notasPaint?esc(p.notasPaint):(S.pinturas||[]).some(x=>x.prop===id)?'<span style="color:var(--soft)">ver la tarjeta Pinturas de abajo</span>':'<span style="color:var(--rojo)">— falta, bloquea el Expediente —</span>'}</td></tr>
-    <tr><td style="color:var(--faint)">Al terminar</td><td>${esc(p.finalExp)||"—"}</td></tr>
+    <tr><td style="color:var(--faint)">Final Expectations (general)</td><td>${esc(p.finalExp)||"—"}</td></tr>
+    ${(p.finalExpTipo||[]).map(f=>`<tr><td style="color:var(--faint)">Final Expectations · ${esc(f.tipo)}</td><td>${esc(f.nota)}</td></tr>`).join("")}
     <tr><td style="color:var(--faint)">Ojo</td><td>${esc(p.notasTec)||"—"}</td></tr>
     <tr><td style="color:var(--faint)">Activa</td><td>${p.activa?'<span class="pill v">Sí</span>':'<span class="pill g">No</span>'}</td></tr>
   </tbody></table></div>
@@ -196,27 +197,36 @@ function fichaProp(id){
     <span class="s">Manager · Assistant · Maintenance</span>
     <span class="r"><button class="btn sm p" data-a="conNuevo" data-prop="${id}">+ Contacto</button></span></div>
     ${cs.length?`<table><thead><tr><th>Tipo</th><th>Nombre</th><th>Correo</th><th>Teléfono</th><th></th></tr></thead><tbody>
-    ${cs.map(c=>`<tr class="${fl("con:"+c.id)}"><td><span class="pill a">${esc(c.tipo)}</span></td><td style="font-weight:650">${esc(c.nombre)}</td>
+    ${cs.map(c=>`<tr class="${fl("con:"+c.id)}"><td><span class="pill a">${esc(c.tipo)}</span></td><td style="font-weight:650">${esc(c.nombre)}${(c.primarioPara||[]).map(r=>` <span class="pill v" style="font-size:10px">Primary · ${esc(r)}</span>`).join("")}${c.modPor?`<div>${modPorHTML(c)}</div>`:""}</td>
       <td>${esc(c.mail)}</td><td class="mono">${esc(c.tel)}</td>
-      <td style="text-align:right"><button class="btn sm" data-a="conNuevo" data-id="${c.id}">Editar</button></td></tr>`).join("")}
-    </tbody></table>`:`<div class="empty">Sin contactos</div>`}
+      <td style="text-align:right;white-space:nowrap"><button class="btn sm" data-a="conNuevo" data-id="${c.id}">Editar</button>
+        <button class="btn sm" data-a="conInactivar" data-id="${c.id}" title="Ya no está en la propiedad: deja de recibir avisos, no se borra">Inactivar</button></td></tr>`).join("")}
+    </tbody></table>`:`<div class="empty">Sin contactos activos${csI.length?" — agrega al nuevo contacto con «+ Contacto»":""}</div>`}
+    ${csI.length?`<div class="cp" style="border-top:1px solid var(--line)">
+      <div style="font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);margin-bottom:6px">Inactivos (${csI.length}) — ya no están en la propiedad, no reciben avisos</div>
+      <table><tbody>${csI.map(c=>`<tr class="${fl("con:"+c.id)}" style="opacity:.7"><td><span class="pill g">${esc(c.tipo)}</span></td><td style="font-weight:650">${esc(c.nombre)}</td>
+        <td>${esc(c.mail)}</td><td style="font-size:11.5px;color:var(--soft)">Inactivo desde ${esc(c.inactivoFecha||"—")} · ${esc(c.inactivoQuien||"")}${c.inactivoMotivo?" · "+esc(c.inactivoMotivo):""}</td>
+        <td style="text-align:right"><button class="btn sm v" data-a="conReactivar" data-id="${c.id}">Reactivar</button></td></tr>`).join("")}</tbody></table></div>`:""}
     <div class="cp" style="border-top:1px solid var(--line)"><div class="tr" style="margin:0">Hoy son 9 columnas fijas (Manager/Mail/Phone, Assistant/Mail/Phone, Maintenance/Mail/Phone). Si una propiedad tiene dos managers, no cabe.</div></div></div>`:""}
 
-  ${t==="com"?`<div class="card"><div class="chd"><h3>Comunicación con el cliente</h3>
-    <span class="s">Bitácora interna manual de oficina — registro de llamadas, mensajes y correos con el cliente (no envía correos automáticos).</span></div>
-    ${coms.length?`<table><thead><tr><th>Fecha</th><th>Medio</th><th>Con quién</th><th>Registró</th><th>Nota</th></tr></thead>
-    <tbody>${coms.slice().reverse().map(m=>`<tr><td class="mono">${esc(m.fecha)}</td><td>${esc(m.medio)}</td>
+  ${t==="com"?(()=>{ const todo=comunicacionProp(id), fsel=COM_FILTROS[S.comFiltro]?S.comFiltro:"All", lin=fsel==="All"?todo:todo.filter(m=>COM_FILTROS[fsel].includes(m.origen));
+    return `<div class="note v" style="margin-bottom:12px"><b>Para qué sirve</b> — Todo lo que se habló o se le mandó al cliente de esta propiedad, en orden. Si el cliente no se enteró, no va aquí. No avisa a nadie.</div>
+  <div class="card"><div class="chd"><h3>Communication Log</h3>
+    <span class="r" style="display:flex;gap:5px;flex-wrap:wrap">${Object.keys(COM_FILTROS).map(k=>{ const n=k==="All"?todo.length:todo.filter(m=>COM_FILTROS[k].includes(m.origen)).length;
+      return `<button class="btn sm ${fsel===k?"p":""}" data-a="comFiltro" data-f="${esc(k)}">${esc(k)} (${n})</button>`; }).join("")}</span></div>
+    ${lin.length?`<table><thead><tr><th>Date</th><th>Source</th><th>Channel</th><th>Contact</th><th>Logged by</th><th>Notes</th></tr></thead>
+    <tbody>${lin.map(m=>`<tr><td class="mono">${esc(m.fecha)}</td><td><span class="pill ${m.origen==="Office"?"g":["CRM","Sales visit"].includes(m.origen)?"a":"v"}">${esc(m.origen)}</span></td><td>${esc(canalEN(m.medio))}</td>
       <td>${esc(m.contacto)}</td><td>${esc(m.quien)}</td><td>${esc(m.nota)}</td></tr>`).join("")}</tbody></table>`
-    :`<div class="empty">Sin comunicaciones registradas todavía</div>`}
-    <div class="cp" style="border-top:1px solid var(--line)">
-      <div style="font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);margin-bottom:8px">Registrar contacto</div>
+    :`<div class="empty">No entries yet</div>`}
+    <div class="cp ro-hide" style="border-top:1px solid var(--line)">
+      <div style="font-size:11px;font-weight:750;text-transform:uppercase;letter-spacing:.05em;color:var(--faint);margin-bottom:8px">New entry</div>
       <div class="fg c2">
-        <div class="fld" style="margin:0"><label>Medio</label><select id="cmM">${["Llamada","Correo","Mensaje","Visita"].map(x=>`<option>${x}</option>`).join("")}</select></div>
-        <div class="fld" style="margin:0"><label>Con quién</label><input id="cmC" value=""></div></div>
-      <div class="fld" style="margin-top:9px"><label>Nota <span class="req">*</span></label>
-        <input id="cmN" placeholder="Qué se dijo o acordó"></div>
-      <button class="btn p sm" style="margin-top:9px" data-a="propComAdd" data-id="${id}">+ Agregar</button>
-    </div></div>`:""}
+        <div class="fld" style="margin:0"><label>Channel</label><select id="cmM">${["Call","Email","Text","Visit"].map(x=>`<option>${x}</option>`).join("")}</select></div>
+        <div class="fld" style="margin:0"><label>Contact</label><select id="cmC">${contactosDe(id).map(c=>`<option>${esc(c.nombre)}</option>`).join("")}<option value="">— Other —</option></select></div></div>
+      <div class="fld" style="margin-top:9px"><label>Notes <span class="req">*</span></label>
+        <input id="cmN" placeholder="Qué se habló o acordó"></div>
+      <button class="btn p sm" style="margin-top:9px" data-a="propComAdd" data-id="${id}">+ Add entry</button>
+    </div></div>`; })():""}
 
   ${t==="previo"?vPrevio(id):""}
 
@@ -234,9 +244,9 @@ function fichaProp(id){
       ${puede("tarifario")?`<button class="btn sm ${nTf?"":"p"}" data-a="preciosDesdeGeneral" data-id="${id}" title="Trae la tarifa general y los servicios del catálogo que faltan; no duplica nada">Crear lista completa</button>
       <button class="btn sm" data-a="precLlenar" data-id="${id}">Llenar precios</button>
       <button class="btn sm ${nTf?"p":""}" data-a="tarNueva" data-prop="${id}">+ Nuevo precio</button>`:""}</span></div>
-    ${tf.length?`<table><thead><tr>${nTf?`<th style="width:30px"><input type="checkbox" data-a="precMarcaTodos" data-id="${id}" title="Marcar o desmarcar todos" ${nSel===nTf?"checked":""}></th>`:""}<th>Tipo</th><th>Servicio</th><th>Detail</th><th>Piso</th><th>Baños</th><th>Description</th><th class="num">Price</th>${puede("tarifario")?"<th></th>":""}</tr></thead><tbody>
+    ${tf.length?`<table><thead><tr>${nTf?`<th style="width:30px"><input type="checkbox" data-a="precMarcaTodos" data-id="${id}" title="Marcar o desmarcar todos" ${nSel===nTf?"checked":""}></th>`:""}<th>Service</th><th>Type of Service</th><th>Detail</th><th>Floor</th><th>Bathrooms</th><th>Description</th><th class="num">Price</th>${puede("tarifario")?"<th></th>":""}</tr></thead><tbody>
     ${filas.map(x=>`<tr class="${fl("tar:"+x.id)}">${nTf?`<td>${tarActiva(x)?`<input type="checkbox" data-a="tarMarca" data-id="${x.id}" ${marcado(x)?"checked":""}>`:""}</td>`:""}<td>${esc(x.cat)||"—"}</td><td>${esc(x.serv)||"—"}</td><td>${esc(x.variante)||"—"}</td>
-      <td>${x.pisos!=null?"Floor "+x.pisos:'<span class="pill g">cualquiera</span>'}</td>
+      <td>${x.pisos!=null?"Floor "+x.pisos:'<span class="pill g">Any</span>'}</td>
       <td>${x.banos!=null?x.banos:'<span class="pill g">—</span>'}</td><td>${esc(x.desc)||"—"}</td>
       <td class="num mono">${tarActiva(x)?money(x.precio)+vigPillCambia(x):'<span class="pill g">por llenar</span>'}</td>
       ${puede("tarifario")?`<td style="text-align:right"><button class="btn sm" data-a="tarNueva" data-id="${x.id}">Editar</button></td>`:""}</tr>`).join("")}
@@ -259,7 +269,7 @@ function fichaProp(id){
 function vAltaGuiada(id){
   const p=P(id);
   const us=S.unidades.filter(u=>u.prop===id).length;
-  const cs=S.contactos.filter(c=>c.prop===id).length;
+  const cs=contactosDe(id).length;
   const tfAll=S.tarifas.filter(t=>t.prop===id && !tarOculta(t)), tf=tfAll.filter(tarActiva).length, porLlenar=tfAll.length-tf;
   const venceMin=(p.polizas||[]).reduce((a,x)=>!a||x.vence<a.vence?x:a,null);
   const es=S.estimados.filter(e=>e.prop===id).length;
@@ -515,7 +525,7 @@ function pdfListaPrecios(propId, ts, rige, luego){
   </style></head><body>
   <div class="cab"><div><h1>Cordova Property Services LLC</h1><div>${esc(nomProp)}</div></div>
     <div class="d"><b>Price List</b><br>${rige?"Rige desde "+esc(rige):esc(HOY_SUP)}</div></div>
-  ${Object.entries(porTipo).map(([cat,fs])=>`<h2>${esc(cat)}</h2><table><thead><tr><th>Servicio</th><th>Detail</th>${conPiso?"<th>Piso</th>":""}<th class="n">Price</th></tr></thead><tbody>
+  ${Object.entries(porTipo).map(([cat,fs])=>`<h2>${esc(cat)}</h2><table><thead><tr><th>Type of Service</th><th>Detail</th>${conPiso?"<th>Floor</th>":""}<th class="n">Price</th></tr></thead><tbody>
     ${fs.map(t=>`<tr><td>${esc(t.serv||cat)}${t.desc?`<div class="s">${esc(t.desc)}</div>`:""}</td><td>${esc(t.variante)||"—"}</td>${conPiso?`<td>${t.pisos!=null?"Floor "+esc(t.pisos):"—"}</td>`:""}<td class="n">${money(t.precio)}</td></tr>`).join("")}
     </tbody></table>`).join("")}
   <div class="pie">Cordova Property Services LLC · Pensacola, FL · scheduling@cordovaps.com · (469) 219-6869</div>
@@ -592,12 +602,12 @@ VIEWS.tarifario = () => {
     <button class="btn p" data-a="tarEnviar" ${sel.length?"":"disabled"}>Enviar lista de precios${sel.length?` (${sel.length})`:""}</button>
   </div></div>
   <div class="card"><table>
-    <thead><tr><th style="width:30px"><input type="checkbox" data-a="tarMarcaTodos" title="Marcar o desmarcar todos los que se ven" ${ts.length&&sel.length===ts.length?"checked":""}></th><th>Tipo</th><th>Servicio</th><th>Detail</th><th>Piso</th><th>Baños</th><th>Description</th>${fp?"<th>Origen</th>":""}<th class="num">Price</th><th></th></tr></thead>
+    <thead><tr><th style="width:30px"><input type="checkbox" data-a="tarMarcaTodos" title="Marcar o desmarcar todos los que se ven" ${ts.length&&sel.length===ts.length?"checked":""}></th><th>Service</th><th>Type of Service</th><th>Detail</th><th>Floor</th><th>Bathrooms</th><th>Description</th>${fp?"<th>Origen</th>":""}<th class="num">Price</th><th></th></tr></thead>
     <tbody>${ts.map(t=>{
       return `<tr class="${fl('tar:'+t.id)}">
       <td><input type="checkbox" data-a="tarMarca" data-id="${t.id}" ${(S.tarOff||[]).includes(String(t.id))?"":"checked"}></td>
       <td>${esc(t.cat)||"—"}</td><td>${esc(t.serv)||"—"}</td><td>${esc(t.variante)||"—"}</td>
-      <td>${t.pisos!=null?"Floor "+t.pisos:'<span class="pill g">cualquiera</span>'}</td>
+      <td>${t.pisos!=null?"Floor "+t.pisos:'<span class="pill g">Any</span>'}</td>
       <td>${t.banos!=null?t.banos:'<span class="pill g">—</span>'}</td><td>${esc(t.desc)||"—"}</td>
       ${fp?`<td><span class="pill ${t.prop?"a":"g"}">${t.prop?"Propia":"General"}</span></td>`:""}
       <td class="num mono">${money(t.precio)}${vigPillCambia(t)}</td>
@@ -623,13 +633,11 @@ VIEWS.tarifario = () => {
     </tbody></table>`:`<div class="empty">Sin pagos diferenciados todavía.</div>`}
     <button class="btn" style="margin-top:10px" data-a="pagoTecNuevo">+ Nuevo pago diferenciado</button>
     </div></div>
-  <div class="note" style="margin-top:12px"><b>Cómo resuelve el precio</b> — la misma llave de su Tabla Maestra (Rooms + Pisos + Servicio), en cuatro pasos:
-    primero la tarifa negociada de esa propiedad para esos pisos; si no, la de la propiedad para cualquier piso;
-    si no, la general para esos pisos; si no, la general para cualquier piso. Si no hay ninguna, levanta una
-    <b>excepción</b> en vez de inventar un número.</div>
-  <div class="note w" style="margin-top:9px"><b>Para evitar vueltas:</b> dejar los pisos en <i>«cualquiera»</i> cuando el precio no cambia por pisos.
-    Así se carga una fila por servicio en vez de tres. Solo se especifica el piso donde de verdad cambia el precio, como en Studio.</div>
-  <div class="tr" style="margin-top:8px">El técnico solo ve la columna <b>«se paga»</b> — nunca el precio al cliente. Al enviar una lista solo sale el precio al cliente.</div>`;
+  <div class="note" style="margin-top:12px"><b>Cómo se pone el precio en la WO</b> — busca por Service + Type of Service + Detail (= Rooms de la unidad) + Floor, en este orden:
+    1) Price List de la propiedad para ese Floor · 2) de la propiedad para Any floor · 3) general para ese Floor · 4) general para Any floor.
+    Si no encuentra ninguno, marca una <b>excepción</b> para que se ponga el precio a mano.</div>
+  <div class="note w" style="margin-top:9px"><b>Floor:</b> deja <i>«Any floor»</i> salvo que el precio cambie por piso. Así es una fila por servicio en vez de tres.</div>
+  <div class="tr" style="margin-top:8px">El técnico solo ve el <b>Pago al técnico</b>, nunca el Price. La lista que se envía al cliente solo lleva el Price.</div>`;
 };
 
 /* ── CATÁLOGOS ── cada lista es una tabla, no una constante del código ── */
@@ -658,7 +666,9 @@ const REFS = {
                   {tar:true, a:()=>S.tarifas,    c:"variante",n:"tarifa(s)"}],
   especialidades:[{a:()=>S.tecnicos,   c:"esp",     n:"técnico(s)", lista:true}],
   tiendas:       [{a:()=>S.movs,       c:"tienda",  n:"movimiento(s) de inventario"}],
-  vendedores:    [{a:()=>S.propiedades,c:"vendedor",n:"propiedad(es)"}],
+  vendedores:    [{a:()=>S.propiedades,c:"vendedor",n:"propiedad(es)"},
+                  {a:()=>(S.crm?S.crm.opps:[]),c:"owner",n:"trato(s) del CRM"},
+                  {a:()=>(S.crm?S.crm.acts:[]),c:"quien",n:"actividad(es) del CRM"}],
   pisos:         [{a:()=>S.unidades,   c:"pisos",   n:"unidad(es)"},
                   {tar:true, a:()=>S.tarifas,    c:"pisos",   n:"tarifa(s)"}],
   folder:        [],
@@ -678,6 +688,9 @@ function renombrarCat(k, viejo, nuevo){
   }));
   /* La ciudad de la propiedad se guarda también en zona; al renombrar, las dos se mantienen iguales. */
   if(k==="zonas") S.propiedades.forEach(p=>{ if(p.ciudad===viejo) p.ciudad=nuevo; });
+  /* Un vendedor renombrado conserva sus metas del CRM y su usuario de Ventas pasa al nombre nuevo. */
+  if(k==="vendedores" && S.crm && S.crm.metas[viejo]){ S.crm.metas[nuevo]=S.crm.metas[viejo]; delete S.crm.metas[viejo]; }
+  if(k==="vendedores" && ROLES[viejo] && ROLES[viejo].r==="Ventas"){ delete ROLES[viejo]; if(S.usuario===viejo) S.usuario=nuevo; }
   if(S.bajas[k]) S.bajas[k]=S.bajas[k].map(x=>x===viejo?nuevo:x);
   const m=(CAT.meta||{})[k]; if(m && m[String(viejo)]){ m[String(nuevo)]=m[String(viejo)]; delete m[String(viejo)]; }
   return tocados;
@@ -708,7 +721,7 @@ const LISTAS = [
   {k:"folder",        n:"Estado de carpeta",  d:"En qué quedó la carpeta de fotos de cada trabajo."}
 ];
 const CAT_VISTAS = {
-  tys:{n:"Tipos y servicios", d:"Catálogo maestro de servicios y categorías. Los precios se gestionan en Tarifario y en el Price List de cada propiedad.",
+  tys:{n:"Services & Types of Service", d:"Los servicios que hace CPS: el Service (ej. Clean) y sus Types of Service (ej. Full clean, Heavy clean). Es la misma lista del Excel «Services» de CPS.",
        cuenta:()=>CAT.servicios.filter(s=>!s.baja).length},
   estados:{n:"Estados", d:"Las etapas por las que pasa una Work Order, de agendada a terminada.", cuenta:()=>CAT.estados.length}
 };
@@ -723,7 +736,7 @@ const CAT_INDICE = [
   {g:"Comercial", ks:["vendedores"]},
   {g:"Work Orders", ks:["estados","folder"]}
 ];
-const catNombre = k => (CAT_VISTAS[k]||{}).n || ({categorias:"Tipos de servicio",servicios:"Servicios"})[k] || k;
+const catNombre = k => (CAT_VISTAS[k]||{}).n || ({categorias:"Services",servicios:"Types of Service"})[k] || k;
 /* «Se usan en 4 Work Order(s), 69 tarifa(s)»: lo que hay que saber antes de renombrar o dar de baja. */
 const usoN = (k,v) => usosDe(k,v).reduce((a,u)=>a+u.c,0);
 function resumenUsos(k, valores){
@@ -739,28 +752,36 @@ function catVistaTys(){
   const ss=CAT.servicios.filter(s=>s.tipo===t), act=ss.filter(s=>!s.baja), baja=ss.filter(s=>s.baja);
   const iTipo=CAT.categorias.indexOf(t), tiposBaja=CAT.categorias.filter(c=>debaja("categorias",c));
   return `
-  <div class="cat-cab"><div><h3>Tipos y servicios</h3><p>${esc(CAT_VISTAS.tys.d)}</p>
-    <div class="cat-uso">${tipos.length} tipos · ${CAT.servicios.filter(s=>!s.baja).length} servicios · ${resumenUsos("servicios",CAT.servicios.filter(s=>!s.baja).map(s=>s.nombre))}</div></div>
-    <div class="cat-acc"><button class="btn" data-a="catAdd" data-k="categorias" data-n="Tipos de servicio">Nuevo tipo</button></div></div>
+  ${notaProto("cómo se agrega un servicio nuevo",[
+    "Elige el <b>Service</b> a la izquierda (ej. <b>Clean</b>). Si es un servicio que CPS no hacía, crea uno con «New Service».",
+    "Toca <b>«New Type of Service»</b> y escribe el nombre (ej. <b>Deep clean</b>).",
+    "Aparece en la lista con <b>«Sin precio»</b>. Toca <b>«Poner precio»</b>: te lleva a Tarifario ya filtrado.",
+    "En Tarifario usa <b>«+ Nueva tarifa»</b> y pon el precio por Detail (1 bedroom, 2 bedroom…).",
+    "Listo: ya sale para elegir en Work Orders y estimados, y en el Price List de las propiedades. Ejemplos: <b>Clean → Deep clean</b> (con precio), <b>Paint → Baseboard paint</b> (sin precio), <b>Repair → Door replacement</b> (cobro «Per door»)."])}
+  <div class="cat-cab"><div><h3>Services & Types of Service</h3><p>${esc(CAT_VISTAS.tys.d)}</p>
+    <div class="cat-uso">${tipos.length} Services · ${CAT.servicios.filter(s=>!s.baja).length} Types of Service · ${resumenUsos("servicios",CAT.servicios.filter(s=>!s.baja).map(s=>s.nombre))}</div></div>
+    <div class="cat-acc"><button class="btn" data-a="catAdd" data-k="categorias" data-n="Services">New Service</button></div></div>
   <div class="cat-tys">
-    <div class="cat-tipos" role="tablist" aria-label="Tipos de servicio">${tipos.map(c=>
+    <div class="cat-tipos" role="tablist" aria-label="Services">${tipos.map(c=>
       `<button class="cat-tipo ${c===t?"on":""}" role="tab" aria-selected="${c===t}" data-a="catTipo" data-t="${esc(c)}"><span>${esc(c)}</span><span class="n">${servDe(c).length}</span></button>`).join("")}</div>
     <div class="cat-tys-det">
       <div class="cat-tipo-cab"><h3>${esc(t)}</h3>
-        <div class="cat-acc"><button class="btn sm" data-a="catRen" data-k="categorias" data-i="${iTipo}">Editar tipo</button>
-          <button class="btn sm p" data-a="servAdd" data-t="${esc(t)}">Nuevo servicio</button></div></div>
+        <div class="cat-acc"><button class="btn sm" data-a="catRen" data-k="categorias" data-i="${iTipo}">Edit Service</button>
+          <button class="btn sm p" data-a="servAdd" data-t="${esc(t)}">New Type of Service</button></div></div>
       ${catBuscador(act.length,"Buscar en "+t)}
-      <table><thead><tr><th>Servicio</th><th></th></tr></thead>
-      <tbody>${act.map(s=>
-        `<tr class="${fl("serv:"+s.id)}" data-q="${esc(s.nombre.toLowerCase())}"><td>${esc(s.nombre)}</td>
-          <td class="cat-fila-acc"><button class="cat-lnk suave" data-a="servRen" data-id="${s.id}">Editar</button></td></tr>`).join("")
-        ||`<tr><td colspan="2" class="empty">Este tipo todavía no tiene servicios: agrega uno para poder agendarlo.</td></tr>`}</tbody></table>
-      <div class="note" style="margin-top:10px"><b>Catálogo vs Tarifario:</b> Aquí se definen los nombres de servicios y categorías. Las tarifas por propiedad y por tamaño de unidad se gestionan en <b>Tarifario</b> o en el <b>Price List</b> de la propiedad.</div>
-      ${baja.length?`<details class="cat-bajas"><summary>${baja.length} servicio(s) dado(s) de baja en ${esc(t)}</summary><table><tbody>
+      <table><thead><tr><th>Type of Service</th><th>General price</th><th></th></tr></thead>
+      <tbody>${act.map(s=>{ const ps=S.tarifas.filter(x=>!x.prop && x.cat===t && x.serv===s.nombre && tarActiva(x)).map(x=>+x.precio).filter(n=>!isNaN(n));
+        const mn=Math.min(...ps), mx=Math.max(...ps);
+        return `<tr class="${fl("serv:"+s.id)}" data-q="${esc(s.nombre.toLowerCase())}"><td>${esc(s.nombre)}</td>
+          <td>${ps.length?`<span class="mono">${money(mn)}${mx>mn?" – "+money(mx):""}</span> <button class="cat-lnk suave" data-a="tarVerServ" data-c="${esc(t)}" data-s="${esc(s.nombre)}">Ver precios</button>`
+            :`<span class="pill w">Sin precio</span> <button class="cat-lnk" data-a="tarVerServ" data-c="${esc(t)}" data-s="${esc(s.nombre)}">Poner precio</button>`}</td>
+          <td class="cat-fila-acc"><button class="cat-lnk suave" data-a="servRen" data-id="${s.id}">Editar</button></td></tr>`; }).join("")
+        ||`<tr><td colspan="3" class="empty">Este Service todavía no tiene Types of Service: agrega uno para poder agendarlo.</td></tr>`}</tbody></table>
+      ${baja.length?`<details class="cat-bajas"><summary>${baja.length} Type(s) of Service dados de baja en ${esc(t)}</summary><table><tbody>
         ${baja.map(s=>`<tr><td>${esc(s.nombre)}</td><td class="cat-fila-acc"><button class="cat-lnk" data-a="servAlta" data-id="${s.id}">Reactivar</button></td></tr>`).join("")}</tbody></table></details>`:""}
     </div>
   </div>
-  ${tiposBaja.length?`<details class="cat-bajas"><summary>${tiposBaja.length} tipo(s) dado(s) de baja</summary><table><tbody>
+  ${tiposBaja.length?`<details class="cat-bajas"><summary>${tiposBaja.length} Service(s) dados de baja</summary><table><tbody>
     ${tiposBaja.map(c=>`<tr><td>${esc(c)}</td><td class="cat-fila-acc"><button class="cat-lnk" data-a="catAlta" data-k="categorias" data-i="${CAT.categorias.indexOf(c)}">Reactivar</button></td></tr>`).join("")}</tbody></table></details>`:""}`;
 }
 
@@ -832,7 +853,8 @@ VIEWS.catalogos = () => {
   const det = sel==="tys" ? catVistaTys() : sel==="estados" ? catVistaEstados() : sel==="adicionales" ? catVistaCO() : catVistaLista(CAT_VISTAS[sel]);
   return `
   <div class="ph"><div><h2>Catálogos</h2>
-    <p>Las listas de opciones que aparecen en los formularios del sistema. Elige una para ver qué tiene y dónde se usa.</p></div></div>
+    <p>Las listas de opciones de los formularios. Aquí se define <b>qué existe</b>; el <b>precio</b> de cada servicio va en Tarifario.</p></div>
+    <div class="act"><button class="btn" data-a="tarVerServ">Ir a Tarifario →</button></div></div>
   <select class="cat-movil" id="catSel" data-a="catVerSel" aria-label="Elegir catálogo">${CAT_INDICE.map(g=>`<optgroup label="${esc(g.g)}">`
     + g.ks.map(k=>`<option value="${k}" ${k===sel?"selected":""}>${esc(CAT_VISTAS[k].n)} (${CAT_VISTAS[k].cuenta()})</option>`).join("")+`</optgroup>`).join("")}</select>
   <div class="card cat-det">${det}</div>`;

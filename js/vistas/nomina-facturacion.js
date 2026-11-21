@@ -445,7 +445,7 @@ function modalMedio(sol, lid){
 function modalTarifaExc(woId, xid){
   const w=W(woId), u=U(w.unidad);
   const pidioPrecio = !!w.pidioPrecio;
-  const puedeDefinir = !pidioPrecio || S.usuario==="Claudia";
+  const puedeDefinir = !pidioPrecio || esAdmin();
   modal(`<div class="mh"><h3>Definir tarifa faltante</h3><p>${esc(w.serv)} · ${esc(u.rooms)} · ${u.pisos} piso(s) · ${esc(P(w.prop).nombre)}</p></div>
   <div class="mb">
     <div class="note w"><b>Erika:</b> «que salga NA, que no se sabe, porque son cosas súper atípicas». Aquí se decide una vez y deja de ser atípica.</div>
@@ -468,9 +468,9 @@ function modalTarifaExc(woId, xid){
         <option value="prop">Solo para ${esc(P(w.prop).nombre)}</option></select>
         <div class="hint">La de la propiedad manda sobre la general.</div></div>
       <div class="fld"><label>¿Y los pisos?</label><select id="tPi">
-        <option value="">Cualquier piso — una sola fila</option>
+        <option value="">Any floor — una sola fila</option>
         <option value="${u.pisos}">Solo ${u.pisos} piso(s)</option></select>
-        <div class="hint">Deja «cualquiera» salvo que el precio cambie por pisos.</div></div></div>`
+        <div class="hint">Deja «Any floor» salvo que el precio cambie por piso.</div></div></div>`
     : `<div class="note r" style="margin-top:12px"><b>Esto le toca definir a Claudia.</b> El manager preguntó el precio antes de aprobar, y es ella quien lo ajusta caso por caso — a veces mueve los números para que la unidad entre en el presupuesto. Avísale para que lo cierre desde su sesión.</div>`}
   </div>
   <div class="mf"><button class="btn" data-a="cm">Cancelar</button>

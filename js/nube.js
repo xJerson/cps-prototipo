@@ -35,7 +35,9 @@ const NUBE_TABLAS = {
 const NUBE_CONFIG = ["cierreAgendamiento","cat","aprobadoresSol","bajas","excCreadas","excAsignaciones","audSeq",
   /* Estos cuatro no existen al arrancar: nacen con la primera acción (aprobar una nómina, enviar una
      disponibilidad, mandar una lista de precios) y desde ahí se comparten igual que los demás. */
-  "nomAprob","dispSemana","listasPrecio","correosPropiedad"];
+  "nomAprob","dispSemana","listasPrecio","correosPropiedad",
+  /* CRM de Ventas: oportunidades, actividades y metas en un solo valor compartido (ver js/vistas/crm.js). */
+  "crm"];
 
 /* Listas a las que el prototipo agrega registros AL PRINCIPIO (unshift). Su posición se guarda contando desde el final:
    así un registro nuevo no cambia la posición de los anteriores y solo se sube la fila nueva (antes, cada aviso nuevo

@@ -19,7 +19,7 @@ function expedienteDe(pid){
   const p=P(pid);
   return EXPEDIENTE.map(c=>({
     ...c,
-    ok: c.k==="contacto" ? S.contactos.some(x=>x.prop===pid)
+    ok: c.k==="contacto" ? contactosDe(pid).length>0
       : c.k==="coi" ? coiVigente(pid)
       : c.k==="tarifario" ? (()=>{
           const tfAll = S.tarifas.filter(t=>t.prop===pid && !tarOculta(t));
@@ -161,7 +161,7 @@ function estInicializarBorrador(prop, solicitudId, directo){
   // Si la Solicitud ya dice con quién habló Lydia, es ese contacto el que
   // sale marcado — Claudia no tiene que volver a elegir con quién fue.
   const sol = solicitudId ? by(S.solicitudesComerciales,solicitudId) : null;
-  const preferido = sol && cs.some(c=>c.id===sol.contactoId) ? sol.contactoId : (cs[0]&&cs[0].id);
+  const preferido = sol && cs.some(c=>c.id===sol.contactoId) ? sol.contactoId : conDefEst(prop);
   S.estHdr={prop,contactos:preferido?[preferido]:[], solicitudId:solicitudId||null,
     modo:"cliente", directo:!!directo, prospecto:{nombre:"",correo:"",propiedad:""}, origen:solicitudId||"Directo",
     label:"Estimate", num:estSiguienteNum(), issueDate:hoy, expDate:sumarDias(hoy,30),

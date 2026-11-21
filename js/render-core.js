@@ -3,14 +3,21 @@
 const VIEWS = {};
 const ACC = {};
 function render(){
-  const R = ROLES[S.usuario];
-  if(!puede(S.mod)) S.mod = "tablero";
+  if(typeof crmRoles==="function") crmRoles();   /* vendedores del catálogo → usuarios Ventas */
+  if(typeof crmSync==="function" && S.crm) crmSync();   /* estimado aprobado en la oficina → Alta en el CRM, aunque nadie abra el CRM */
+  const R = ROLES[S.usuario] || ROLES.Claudia;
+  /* Un rol sin Tablero (Ventas) cae en su primer módulo permitido */
+  if(!puede(S.mod)) S.mod = puede("tablero") ? "tablero" : ((MODS.find(m=>m.id && puede(m.id))||{}).id || "tablero");
   $("#wkChip").textContent = "Semana "+S.semana+" · 2026";
   $("#av").textContent = R.i; $("#rtag").textContent = R.r;
-  $("#usel").innerHTML = Object.keys(ROLES).map(n=>`<option ${n===S.usuario?"selected":""}>${n}</option>`).join("");
+  /* Cada usuario con su rol al lado, para saber con qué perfil se entra: «Claudia (Admin)», «Daniela (Ventas · CRM)» */
+  const rolCorto = n => n==="Claudia" ? "Admin" : ROLES[n].r==="Ventas" ? "Ventas · CRM" : ROLES[n].r.split(/\s*[·/]\s*/)[0];
+  $("#usel").innerHTML = Object.keys(ROLES).map(n=>`<option value="${esc(n)}" ${n===S.usuario?"selected":""}>${esc(n)} (${esc(rolCorto(n))})</option>`).join("");
   const nA = alertas().length;
   $("#side").innerHTML = MODS.map(m=>{
-    if(m.g) return MODS.filter(x=>x.id&&puede(x.id)).length? `<div class="slbl">${m.g}</div>`:"";
+    /* El título del grupo solo sale si el rol puede ver al menos un módulo de ESE grupo */
+    if(m.g){ const i=MODS.indexOf(m), fin=MODS.findIndex((x,k)=>k>i&&x.g);
+      return MODS.slice(i+1, fin<0?MODS.length:fin).some(x=>x.id&&puede(x.id)) ? `<div class="slbl">${m.g}</div>` : ""; }
     if(!puede(m.id)) return "";
     const c = m.id==="alertas" ? nA : m.id==="excepciones" ? excPend().length : m.id==="devoluciones" ? devAbiertas().length : 0;
     return `<button class="nav ${S.mod===m.id?"on":""}" data-a="ir" data-m="${m.id}">
@@ -25,7 +32,10 @@ function render(){
   + `<a class="nav" href="mapa.html" target="_blank" rel="noopener" style="text-decoration:none;color:inherit">
       <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14"/><path d="M15 6v14"/></svg>
       <span class="lb">Mapa del prototipo</span></a>`; */
-  $("#main").innerHTML = mapaVistaHTML() + notaVistaHTML() + (VIEWS[S.mod]||(()=>"<div class='empty'>En construcción</div>"))();
+  $("#main").innerHTML = (soloVerMod() ? `<div class="note" style="margin-bottom:12px"><b>Solo lectura</b> — puedes consultar todo aquí, pero no modificar. Los cambios los hace administración (Claudia o Lydia).</div>` : "")
+    + mapaVistaHTML() + notaVistaHTML() + (VIEWS[S.mod]||(()=>"<div class='empty'>En construcción</div>"))();
+  /* Solo lectura: se ocultan los botones que modifican y los bloques de captura */
+  if(soloVerMod()) $("#main").querySelectorAll("[data-a], .ro-hide").forEach(e=>{ if(e.classList.contains("ro-hide") || !NAV_RO.includes(e.dataset.a)) e.style.display="none"; });
   // Traer al centro lo que se acaba de tocar, y apagar la marca sola
   if(S.flash){
     const marcado = $("#main").querySelector(".flash");
@@ -47,6 +57,7 @@ function render(){
    que le falta completar ahí para poder seguir. Si la pantalla no tiene
    nada pendiente, no molesta. */
 function ayudaContexto(){
+  if(soloVerMod()) return null;   // solo lectura: no hay nada que completar
   const hayModal = $("#mroot").innerHTML.trim() !== "";
 
   /* A · Modal abierto → señalar el campo que hay que llenar */
@@ -308,6 +319,11 @@ function renderCoach(){
    verla) con el paso concreto a seguir — distinta de "¿Qué es esta
    pantalla?" de abajo, que es la explicación general y queda a demanda.
    No se muestra en el celular ni adentro de una ficha/detalle (S.sub). */
+/* Notas «Solo prototipo — cómo se hace»: guían a CPS mientras revisa el prototipo.
+   Al pasar a desarrollo se apagan todas con NOTAS_PROTO = false. */
+const NOTAS_PROTO = true;
+const notaProto = (titulo, pasos) => NOTAS_PROTO && !soloVerMod() ? `<div class="note w nota-proto" style="margin:0 0 12px"><b>Solo prototipo — ${titulo}</b>
+  <ol style="margin:6px 0 0 18px;padding:0">${pasos.map(p=>`<li style="margin:2px 0">${p}</li>`).join("")}</ol></div>` : "";
 const NOTA_VISTA = {
   tablero:"Revisa «Lo que necesita tu atención» y resuelve primero lo más urgente.",
   wo:"Crea la Work Order con «+ Nueva Work Order», asígnale técnico y seguila hasta Completed.",
@@ -316,7 +332,7 @@ const NOTA_VISTA = {
   propiedades:"Crea la propiedad con «+ Nueva propiedad» y completa su «Expediente» antes de poder agendarla.",
   tecnicos:"Dalos de alta con «+ Nuevo técnico» y mantén sus datos al día.",
   tarifario:"Carga los precios generales con «+ Nueva tarifa» antes de armar Work Orders.",
-  catalogos:"Agrega o quita aquí los valores que después llenan los desplegables del sistema.",
+  catalogos:"Aquí se define qué existe (servicios, ciudades, rooms…). El precio de cada servicio se pone en Tarifario.",
   clientes:"Registra la Management con «+ Nuevo» y completa su ficha — de ahí cuelgan sus propiedades.",
   solicitudes:"Registra la solicitud del cliente con «+ Nueva solicitud» y contéstala dentro de las 24 h.",
   estimados:"Crea el estimado, arma sus líneas y mándalo — al aprobarse se puede transferir a programación.",
@@ -336,7 +352,7 @@ const NOTA_VISTA = {
   gustavoweb:"Vista de referencia — las acciones reales se hacen desde el celular de Gustavo."
 };
 function notaVistaHTML(){
-  if(S.phone || S.sub) return "";
+  if(S.phone || S.sub || soloVerMod()) return "";
   const texto = NOTA_VISTA[S.mod];
   if(!texto) return "";
   return `<div class="note v" style="margin-bottom:12px"><b>Qué hacer aquí</b> — ${texto}</div>`;

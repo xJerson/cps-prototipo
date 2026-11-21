@@ -15,6 +15,7 @@ document.addEventListener("click", e=>{
      esta protección y cualquier clic que no cayera justo en un botón lo
      sacaba del formulario entero. */
   if((el.classList.contains("scrim")||el.classList.contains("fscrim")) && e.target!==el) return;
+  if(soloVerMod() && el.closest("#main") && !NAV_RO.includes(a)){ e.preventDefault(); toast("Solo lectura","Aquí puedes consultar, no modificar.","w"); return; }
   if(ACC[a]){ e.preventDefault(); ACC[a](el.dataset); }
 });
 /* Buscador de Propiedad/Unidad en la WO: sugerencias en vivo mientras se
@@ -33,6 +34,7 @@ document.addEventListener("input", e=>{
 });
 document.addEventListener("change", e=>{
   const sel = e.target.closest("select[data-a], input[data-a], textarea[data-a]");
+  if(sel && soloVerMod() && sel.closest("#main") && !NAV_RO.includes(sel.dataset.a)) return;
   if(sel && ACC[sel.dataset.a]){ ACC[sel.dataset.a](sel.dataset); return; }
   if(e.target.id==="usel"){ S.usuario=e.target.value; S.mod="tablero";
     toast("Sesión cambiada",`Ahora operas como <b>${S.usuario}</b> — ${ROLES[S.usuario].r}. El menú se ajusta a lo que tu rol puede tocar.`);

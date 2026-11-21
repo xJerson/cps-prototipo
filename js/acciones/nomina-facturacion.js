@@ -65,7 +65,7 @@ function aplicarPagoFacturaAdicional(l, w, s, cobrar){
   return {pagoTec:montoPago, cobroCliente};
 }
 function puedeResolverExc(ex){
-  if(!ex || S.usuario==="Claudia") return true;
+  if(!ex || esAdmin()) return true;
   const resp = ex.assignedTo || ex.aprueba;
   return !resp || resp===S.usuario;
 }

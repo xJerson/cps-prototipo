@@ -333,7 +333,7 @@ const CAMPOS = {
   precio:"Se cobra al cliente", pago:"Se paga al técnico",
   desc:"Description", tax:"Tax", descuento:"Total Discount", cantidad:"Quantity",
   unidad:"Unidad", fecha:"Fecha", horaProg:"Hora", semana:"Semana",
-  cant:"Cantidad", po:"PO", notasTec:"Notas al técnico", notasOficina:"Notas internas de oficina",
+  cant:"Cantidad", po:"PO", finalExp:"Final Expectations (general)", finalExpTipo:"Final Expectations por tipo de trabajo", primarioPara:"Primary contact for", notasTec:"Notas al técnico", notasOficina:"Notas internas de oficina",
   ubic:"Ubicación del trabajo", ubicDetalle:"Detalle de ubicación", dependeDe:"Va después de"
 };
 /* Un id crudo («P3», «T2») no le dice nada a nadie leyendo la bitácora */
@@ -341,6 +341,7 @@ function legible(k,v){
   if(v===null||v===undefined||v==="") return "—";
   // Ordenado: que el técnico tenga las mismas especialidades en otro orden no
   // es una corrección, y no tiene por qué ensuciar la bitácora.
+  if(Array.isArray(v) && v.some(x=>x && typeof x==="object")) return v.map(x=>`${x.tipo}: ${x.nota}`).sort().join(" | ")||"—";
   if(Array.isArray(v)) return v.slice().sort().join(", ")||"—";
   if(v===true) return "Sí";
   if(v===false) return "No";
@@ -372,6 +373,7 @@ function guardarEdicion(obj, nuevos, modulo, ref, extra, marca){
     return 0;
   }
   Object.assign(obj, nuevos);
+  obj.modPor = {quien:S.usuario, fecha:HOY_SUP, hora:hora()};   // REQ 19/11 punto 12: Last modified by
   if(marca) flash(marca);
   if(extra) extra(obj, cambios);
   S.bitacora.unshift({ n:++S.audSeq, fecha:HOY_SUP, hora:hora(),

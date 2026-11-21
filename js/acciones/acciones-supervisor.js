@@ -78,7 +78,7 @@ Object.assign(ACC, {
     render();
   },
   supAgendar: d => {
-    if(S.usuario!=="Claudia"){ toast("Solo Claudia agenda","Ella decide en qué día de la ruta entra la visita.","w"); return; }
+    if(!esAdmin()){ toast("Solo administración agenda","Claudia o Lydia deciden en qué día de la ruta entra la visita.","w"); return; }
     const s=by(S.solicitudesSup,d.id);
     if(!s || s.estado!=="Por agendar") return;
     const f=val("sag-"+s.id)||s.fechaTentativa;
@@ -93,7 +93,7 @@ Object.assign(ACC, {
     render();
   },
   supMover: d => {
-    if(S.usuario!=="Claudia"){ toast("Solo Claudia acomoda","Ella decide en qué día va cada parada.","w"); return; }
+    if(!esAdmin()){ toast("Solo administración acomoda","Claudia o Lydia deciden en qué día va cada parada.","w"); return; }
     const a=by(S.agendaSup,d.id), f=val("smv-"+d.id);
     if(!a || !f) { toast("Falta el día","Elige la nueva fecha de la parada.","r"); return; }
     if(f===a.fecha) return;

@@ -301,7 +301,7 @@ function fichaWO(id){
     <button class="btn sm" data-a="ir" data-m="wo" style="margin-bottom:7px">‹ Work Orders</button>
     <h2>WO-${w.id} · ${esc(p.nombre)} ${esc(u.num)}</h2>
     <p>${esc(w.cat)} → ${esc(w.serv)} · ${esc(u.rooms)} · ${w.fecha||'<span class="pill w">sin fecha — falta coordinarla con el cliente</span>'}${w.semana!=null?` ·
-      <a href="#" data-a="verEnAgenda" data-id="${w.id}" style="color:var(--azul);font-weight:650">semana ${w.semana} — ver en la agenda</a>`:""}</p></div>
+      <a href="#" data-a="verEnAgenda" data-id="${w.id}" style="color:var(--azul);font-weight:650">semana ${w.semana} — ver en la agenda</a>`:""}</p>${w.modPor?`<div>${modPorHTML(w)}</div>`:""}</div>
     <div class="act">
       ${woEditable(w)?`<button class="btn" data-a="woEditar" data-id="${w.id}">Editar datos</button>`:""}
       ${esAgendada(w.estado)

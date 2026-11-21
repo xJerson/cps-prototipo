@@ -258,14 +258,12 @@ function vPrevio(pid){
   const rs = S.reportes.filter(r=>r.prop===pid).slice().reverse();
   const us = S.unidades.filter(u=>u.prop===pid);
   return `
-  <div class="note w" style="margin-bottom:14px"><b>Para qué sirve esto.</b>
-    Todo lo que Gustavo reportó de esta propiedad queda aquí, <b>pegado a la unidad</b>: el estado previo
-    antes de empezar, las supervisiones con sus fotos de antes, durante y final, y las inspecciones para
-    estimado. Si dentro de dos años el manager reclama un daño, la foto está con su fecha, su hora y
-    quién la tomó — sin tener que recordar qué día fue. <b>Nunca se borra.</b></div>
+  <div class="note w" style="margin-bottom:14px"><b>Field Reports</b> — reportes del Field Supervisor de esta propiedad, por unidad:
+    Pre-existing condition, Supervisions, Inspections y Returns. Fotos con fecha, hora y autor. No se borran.
+    La información de ventas va en Communication Log.</div>
 
   ${(()=>{ const dv = S.devoluciones.filter(d=>d.prop===pid);
-    return dv.length?`<div class="card"><div class="chd"><h3>Returns de esta propiedad</h3>
+    return dv.length?`<div class="card"><div class="chd"><h3>Returns</h3>
       <span class="s">${dv.filter(d=>d.estado!=="Cerrada").length} abierta(s) de ${dv.length}</span></div>
       <table><thead><tr><th>Unidad</th><th>Área y problema</th><th>Causa</th><th>Corrige</th>
         <th>Reportada</th><th>Estado</th></tr></thead>
@@ -281,7 +279,7 @@ function vPrevio(pid){
   ${us.map(u=>{
     const propias = rs.filter(r=>r.unidad===u.id);
     if(!propias.length) return "";
-    return `<div class="card"><div class="chd"><h3>Unidad ${esc(u.num)}</h3>
+    return `<div class="card"><div class="chd"><h3>Unit ${esc(u.num)}</h3>
       <span class="s">${esc(u.rooms)} · ${u.pisos} piso(s)</span>
       <span class="r"><span class="pill m">${propias.reduce((t,r)=>t+fotosDe(r),0)} fotos en ${propias.length} registro(s)</span></span></div>
       ${propias.map(r=>`<div class="cp" style="border-top:1px solid var(--line)">
@@ -310,7 +308,7 @@ function vPrevio(pid){
 /* Calendario semanal de Gustavo: Thalia pide visitas, Claudia las agenda y las acomoda por día. */
 function vCalGustavo(){
   const sem = S.supSem || 33, dias = diasDeSemana(sem);
-  const esClaudia = S.usuario==="Claudia";
+  const esClaudia = esAdmin();
   const pend = (S.solicitudesSup||[]).filter(s=>s.estado==="Por agendar");
   const hechas = (S.solicitudesSup||[]).filter(s=>s.estado!=="Por agendar");
   const pilE = {"Visitada":"v","En camino":"a","No completada":"w","Pendiente":"g"};

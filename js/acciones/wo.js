@@ -25,6 +25,8 @@ function wosElegiblesCierre(fecha){
   return S.wos.filter(w=>w.fecha===fecha && ["Scheduled","Confirmed"].includes(w.estado) && !!w.tec);
 }
 function contactosConfirmacion(prop){
+  /* Si la propiedad tiene Primary contact for Scheduling con correo, la agenda va a esa persona */
+  const prim=primarioDe(prop,"Scheduling"); if(prim && prim.mail) return [{id:prim.id,nombre:prim.nombre,mail:prim.mail}];
   const directos=(contactosDe(prop)||[]).filter(c=>c.mail).map(c=>({id:c.id,nombre:c.nombre,mail:c.mail}));
   if(directos.length) return directos;
   const cli=CLI(P(prop).cliente);

@@ -137,11 +137,13 @@ const opcionesCO = t => t===CO_PEND ? activos("adicionales") : servDe(t);
 /* ══════════ ROLES — quién ve qué (UC del módulo que le toca) ══════════ */
 const ROLES = {
   "Claudia":{i:"CV",r:"Administración / Estimados",m:"*"},
-  "Lydia":  {i:"LC",r:"Comercial",     m:["tablero","clientes","solicitudes","estimados","propiedades","wo","calendario","excepciones","reportes","alertas"]},
+  "Lydia":  {i:"LC",r:"Administración / Calidad y agendamiento",m:"*"},   // REQ 19/11 punto 12: administradora, igual que Claudia
   "Thalia": {i:"TM",r:"Programación",  m:["tablero","wo","calendario","despacho","devoluciones","supervision","propiedades","tecnicos","catalogos","excepciones","reportes","alertas"]},
   "Gustavo":{i:"GA",r:"Supervisión",   m:["tablero","wo","calendario","supervision","gustavoweb","inventario","tecnicos","excepciones","reportes","alertas"]},
-  "Erika":  {i:"EM",r:"Administración",m:["tablero","wo","devoluciones","nomina","facturacion","cobranza","tarifario","inventario","finanzas","excepciones","reportes","buscar","alertas","bitacora"]}
+  "Erika":  {i:"EM",r:"Administración",m:["tablero","wo","propiedades","catalogos","devoluciones","nomina","facturacion","cobranza","tarifario","inventario","finanzas","excepciones","reportes","buscar","alertas","bitacora"]}
   ,"Contador":{i:"CT",r:"Contabilidad · solo lectura",m:["tablero","finanzas","inventario","reportes"]}
+  /* Ventas (CRM): solo su panel comercial. No ve precios, nómina, WO ni Requests; la oficina sigue operando igual. */
+  ,"Daniela":{i:"DV",r:"Ventas",m:["crm"]}
 };
 /* Teléfono que se le da al cajero cuando el técnico compra material en
    tienda con la tarjeta de la empresa — lo usa la tarjeta "Compra de
@@ -161,6 +163,7 @@ const MODS = [
   {id:"reportes",  n:"Reportes",              ic:'<path d="M3 3v18h18"/><path d="M7 15l4-5 3 3 5-7"/>'},
   {id:"buscar",    n:"Buscar",               ic:'<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>'},
   {g:"Comercial"},
+  {id:"crm",       n:"CRM · Ventas",         ic:'<path d="M3 4h18l-7 8v6l-4 2v-8z"/>'},
   {id:"clientes",  n:"Management",ic:'<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/>'},
   {id:"solicitudes",n:"Solicitudes",         ic:'<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>'},
   {id:"estimados", n:"Estimados",            ic:'<path d="M9 11H5a2 2 0 0 0-2 2v7h18v-7a2 2 0 0 0-2-2h-4M9 11V4h6v7M9 11h6"/>'},

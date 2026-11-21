@@ -36,6 +36,66 @@ const ESTCOL = {Lead:"w",Active:"v",Inactive:"r",Prospect:"w",Onboarding:"w","On
 const ESTADO_PROP_LEGADO = {Prospect:"Lead",Onboarding:"Lead","On Hold":"Inactive"};
 const estadoProp = p => { const e=p&&p.estado; return ESTADO_PROP_LEGADO[e]||e||""; };
 /* La ciudad es el único dato de ubicación; las propiedades viejas solo traían zona. */
+/* Final Expectations (columna del Excel de CPS): una general de la propiedad + una por tipo de trabajo.
+   El técnico ve la general y solo la del tipo de su WO (w.cat). */
+const feTipos = () => activos("categorias").filter(c=>!["Estimate","Inspection"].includes(c));
+const feDeWO = (p, w) => { const x = (p&&p.finalExpTipo||[]).find(f=>f.tipo===(w&&w.cat)); return x ? x.nota : ""; };
+/* Primary contact for (REQ 19/11 punto 6): Scheduling = a quien se le manda la agenda;
+   Approvals = quien autoriza estimados y trabajos. Uno por rol en cada propiedad. */
+const PRIM_ROLES = ["Scheduling","Approvals"];
+const primarioDe = (pid, rol) => contactosDe(pid).find(c=>(c.primarioPara||[]).includes(rol)) || null;
+/* Destinatario por defecto de un estimado: el de Approvals; si no hay, el primero como antes */
+/* Solo cuenta quien tiene correo: un Maintenance sin correo (punto 7) no puede recibir el estimado */
+const conDefEst = pid => { const a=primarioDe(pid,"Approvals"); if(a && a.mail) return a.id; const cs=contactosDe(pid); const m=cs.find(c=>c.mail)||cs[0]; return m?m.id:null; };
+/* REQ 19/11 punto 10: Comunicación de la propiedad = oficina + CRM del vendedor + visitas comerciales.
+   Las actividades del CRM que ya se copiaron con «[Ventas]» no se repiten. Más reciente primero. */
+/* Channel en inglés para el Communication Log (los registros viejos se guardaron en español) */
+const canalEN = m => ({Llamada:"Call",Correo:"Email",Mensaje:"Text","Mensaje de texto":"Text",Visita:"Visit",Reunión:"Meeting",Nota:"Note",Interno:"Internal",WhatsApp:"WhatsApp"}[m] || m || "—");
+function comunicacionProp(pid){
+  const out = (S.comunicaciones||[]).filter(m=>m.prop===pid).map(m=>{
+    const v = /^\[Ventas\] /.test(m.nota||"");
+    return {fecha:m.fecha, origen:v?"CRM":"Office", medio:m.medio, contacto:m.contacto, quien:m.quien, nota:v?m.nota.slice(9):m.nota};
+  });
+  const ya = new Set(out.filter(m=>m.origen==="CRM").map(m=>m.fecha+"|"+m.nota));
+  const opps = (S.crm&&S.crm.opps)||[];
+  ((S.crm&&S.crm.acts)||[]).forEach(a=>{
+    const prop = a.prop || ((opps.find(o=>o.id===a.opp)||{}).prop);
+    if(prop!==pid || ya.has(a.fecha+"|"+a.nota)) return;
+    const o = opps.find(x=>x.id===a.opp);
+    out.push({fecha:a.fecha, origen:"CRM", medio:a.tipo, contacto:o&&o.contacto?o.contacto.nombre||"":"", quien:a.quien, nota:a.nota});
+  });
+  (S.visitas||[]).filter(v=>v.tipo==="Comercial" && v.prop===pid).forEach(v=>
+    out.push({fecha:v.fecha, origen:"Sales visit", medio:"Visita", contacto:v.contacto, quien:v.quien,
+      nota:[v.notas, v.resultado?"Resultado: "+v.resultado:""].filter(Boolean).join(" · ")}));
+  /* Línea de tiempo del cliente: lo que se le mandó o lo que nos dijo, desde cada módulo (solo lectura) */
+  const d10 = f => String(f||"").slice(0,10);
+  (S.solicitudesComerciales||[]).filter(s=>s.prop===pid).forEach(s=>
+    out.push({fecha:d10(s.fecha), origen:"Request", medio:s.origen==="Correo"?"Email":"—", contacto:s.contacto, quien:s.quien,
+      nota:"Pidió estimado: "+(s.alcance||"")}));
+  /* Estimados: «sent» si salió de Borrador; «approved» si el cliente lo aprobó */
+  (S.estimados||[]).filter(e=>e.prop===pid && e.estado!=="Borrador").forEach(e=>{
+    const para = (typeof contactosEst==="function" ? contactosEst(e) : []).map(c=>c.nombre).join(", ");
+    out.push({fecha:d10(e.enviadoFecha||e.fecha), origen:"Estimate", medio:"Email", contacto:para, quien:e.enviadoQuien||"", nota:`${e.num} sent`});
+    if(e.aprob) out.push({fecha:d10(e.aprob.fecha), origen:"Estimate", medio:canalEN(e.aprob.medio), contacto:e.aprob.quien, quien:"", nota:`${e.num} approved by the client`});
+  });
+  (S.confirmacionesAgendamiento||[]).filter(x=>x.prop===pid).forEach(x=>
+    out.push({fecha:d10(x.fechaCierre), origen:"Scheduling", medio:canalEN(x.medio), contacto:(x.contactos||[]).map(c=>c.nombre||c.mail).join(", "), quien:x.quien,
+      nota:`Agenda ${x.fechaAgenda}: `+(x.wos||[]).map(id=>{ const w=W(id); return w?"Unit "+U(w.unidad).num:"WO-"+id; }).join(", ")}));
+  (S.comunicacionesWO||[]).filter(c=>(c.prop||(W(c.wo)||{}).prop)===pid).forEach(c=>
+    out.push({fecha:d10(c.fecha), origen:"WO notice", medio:canalEN(c.medio), contacto:"", quien:c.quien, nota:`WO-${c.wo} pending: ${c.motivo||""}`}));
+  (S.revisionesCliente||[]).filter(r=>r.prop===pid).forEach(r=>{
+    out.push({fecha:d10(r.enviado||r.creado), origen:"Client review", medio:"Email", contacto:r.correo, quien:r.quien||"", nota:`WO-${r.wo} · Unit ${r.unidad}: fotos enviadas para revisión`});
+    if(r.respondido) out.push({fecha:d10(r.respondido.fecha), origen:"Client review", medio:canalEN(r.respondido.canal||"Email"), contacto:r.correo, quien:r.respondido.quien,
+      nota:`WO-${r.wo} · respuesta: ${r.estado}${r.respondido.nota?" — "+r.respondido.nota:""}`});
+  });
+  (S.listasPrecio||[]).filter(x=>x.prop===pid).forEach(x=>
+    out.push({fecha:d10(x.fecha), origen:"Price List", medio:"Email", contacto:(x.para||[]).join(", "), quien:x.quien, nota:`Price List enviada (${x.tipo}, ${x.filas} precios)`}));
+  return out.sort((x,y)=>String(y.fecha).localeCompare(String(x.fecha)));
+}
+/* Filtros del Communication Log: cada uno agrupa una o más Source */
+const COM_FILTROS = {All:null, Office:["Office"], Scheduling:["Scheduling","WO notice"], Estimates:["Request","Estimate","Price List"], "Client review":["Client review"], Sales:["CRM","Sales visit"]};
+/* «Last modified by» de una ficha (lo marca guardarEdicion) */
+const modPorHTML = o => o && o.modPor ? `<span class="mod-por" style="font-size:11px;color:var(--faint)">Last modified by ${esc(o.modPor.quien)} · ${esc(o.modPor.fecha)} ${esc(o.modPor.hora||"")}</span>` : "";
 const ciudadProp = p => (p&&(p.ciudad||p.zona))||"";
 const tecN = id => { const t=T(id); return t? t.nombre+" "+t.apellido : "sin asignar"; };
 const W = id => by(S.wos,id);
@@ -44,28 +104,36 @@ const diasCreditoProp = prop => { const p=P(prop); const n=p&&parseInt(p.diasCre
 const sumarDias = (iso,n) => { const d=new Date(iso+"T00:00:00Z"); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); };
 const money = n => { const v=Math.round(n*100)/100; return (v<0?"-":"")+"$"+Math.abs(v).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2}); };
 const hora = () => { const h=Math.floor(S.reloj/60),m=S.reloj%60; return h+":"+String(m).padStart(2,"0"); };
+/* REQ 19/11 punto 12: administradoras con los mismos permisos (Lydia = Claudia) */
+const ADMINS = ["Claudia","Lydia"];
+const esAdmin = () => ADMINS.includes(S.usuario);
 const puede = m => { const r=ROLES[S.usuario]; return r.m==="*" || r.m.includes(m); };
 /* Los datos financieros sensibles (utilidad, costos y pagos) solo los ven
    Claudia y Erika. El ingreso del tablero es un dato operativo más amplio:
    también lo puede consultar Lydia. */
-const puedeVerUtilidad = () => ["Claudia","Erika"].includes(S.usuario);
+const puedeVerUtilidad = () => esAdmin() || S.usuario==="Erika";
 const puedeVerIngreso = () => ["Lydia","Erika","Claudia"].includes(S.usuario);
 /* Contabilidad solo mira y descarga: ninguna acción de captura le aparece. */
 const soloLectura = () => S.usuario==="Contador";
+/* Módulos que un usuario puede consultar pero no modificar (REQ 19/11: Erika ve Propiedades y Catálogos).
+   Ahí solo funcionan las acciones de navegación; el resto se oculta y se bloquea. */
+const SOLO_VER = {Erika:["propiedades","catalogos"]};
+const NAV_RO = ["propVer","tab","catTipo","catVerSel","comFiltro","tarVerServ","woVer","ir","irEstimados"];
+const soloVerMod = () => (SOLO_VER[S.usuario]||[]).includes(S.mod);
 /* Quién puede tener o aprobar un Request: el Contador solo consulta, no resuelve nada. */
 const usuariosQueResuelven = () => Object.keys(ROLES).filter(u=>u!=="Contador");
 /* Quién avisa a clientes por WO pendientes y envía recordatorios: programación y administración. */
-const puedeAvisarPend = () => ["Thalia","Claudia","Erika"].includes(S.usuario);
+const puedeAvisarPend = () => esAdmin() || ["Thalia","Erika"].includes(S.usuario);
 /* Aprobar o rechazar un adicional desde la WO: programación y administración. Hoy todos ayudan (pedido de Erika);
    el responsable de fondo sigue siendo programación. */
 const puedeDecidirAdicional = () => puedeAvisarPend();
 /* Nómina de cada técnico por semana: la aprueba el aprobador (Claudia) antes de que el técnico responda Conforme u Observación.
    No frena el pago (pedido de Erika). S.nomAprob["T1|33"] = {por, hora, conf:"Pendiente"|"Conforme"|"Observada", obs}. */
-const puedeAprobarNomina = () => S.usuario==="Claudia";
+const puedeAprobarNomina = () => esAdmin();
 /* Cambiar el monto de una factura ya emitida: administración lo PREPARA con un motivo y el aprobador lo aprueba o lo rechaza
    (así se evitan los cambios por WhatsApp). El aprobador también puede editar directo. Único lugar donde se nombra a la persona. */
 const APROBADOR_CAMBIO_MONTO = "Claudia";
-const puedeAprobarCambioMonto = () => S.usuario===APROBADOR_CAMBIO_MONTO;
+const puedeAprobarCambioMonto = () => esAdmin();   // el pedido le llega a Claudia; Lydia también puede aprobarlo
 /* Nota de crédito por un return sobre una WO ya facturada: la factura original nunca se toca,
    se emite una nueva en negativo, vinculada. Exclusivo de Operations — hoy Thalia, que ya lleva Returns. */
 const OPERATIONS_MASTER = "Thalia";
@@ -81,7 +149,7 @@ const puedeEmitirNotaCredito = () => S.usuario===OPERATIONS_MASTER;
 const sellarPrecio = () => ({origen:"definido", por:S.usuario, fecha:HOY_SUP, hora:hora()});
 const precioFijadoWO = w => { if(w.precio!=null) return w.precioFijado||null; const t=tarifaWO(w); return (t&&t.precioFijado)||null; };
 /* Solo se bloquea el precio que fijó el aprobador (pedido de Erika); el que fija administración sigue editable por administración. */
-const precioBloqueado = pf => !!pf && pf.origen==="definido" && pf.por===APROBADOR_CAMBIO_MONTO && !puedeAprobarCambioMonto();
+const precioBloqueado = pf => !!pf && pf.origen==="definido" && ADMINS.includes(pf.por) && !puedeAprobarCambioMonto();
 const precioOrigenTxt = pf => pf && pf.origen==="definido" ? `Fijado por ${pf.por} el ${pf.fecha}${pf.hora?" "+pf.hora:""}` : "Tarifario";
 const precioEtqWO = w => (w.precio!=null && !w.precioFijado) ? "Precio manual" : precioOrigenTxt(precioFijadoWO(w));
 /* Precio fijado de una línea del borrador de factura: las líneas de WO y de Sub-WO lo heredan de su origen; las manuales no tienen. */
@@ -108,7 +176,7 @@ const respuestasVencidas = () => (S.comunicacionesWO||[]).filter(c=>c.estado!=="
 /* Pago al técnico y factura al cliente se aprueban por separado (w.aprobPago / w.aprobFactura).
    w.validada queda como "las dos" y como marca de las WO anteriores a este cambio: por eso los
    helpers la aceptan — nómina y facturación leen siempre estos dos, nunca w.validada directo. */
-const puedeValidar = () => ["Claudia","Erika"].includes(S.usuario);
+const puedeValidar = () => esAdmin() || S.usuario==="Erika";
 const aprobPagoOK = w => !w.fotosPend && !!(w.aprobPago || w.validada);
 const aprobFacturaOK = w => !w.fotosPend && !!(w.aprobFactura || w.validada);
 /* Una corrección o un cambio en la WO invalida las dos aprobaciones, no solo la marca general. */
