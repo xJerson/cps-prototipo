@@ -1585,7 +1585,7 @@ VIEWS.auditoria = vAuditoriaFinanciera;
 /* Activos no consumibles (se registran y editan a mano) y material reservado para una WO. */
 const INV_ACTIVOS = ["Herramientas y equipos","Muebles / activos"];
 const INV_ESTADOS = ["Operativa","En reparación","Baja"];
-const reservaTxt = p => { const id=p.reservadoWO||((/WO-(\d+)/.exec(p.reservadoPara||"")||[])[1]), w=id&&W(+id);
+const reservaTxt = p => { const id=p.reservadoWO||((/WO-(\d+)/.exec(p.reservadoPara||"")||[])[1]), w=id&&W(id);
   return w ? `WO-${w.id} · ${P(w.prop).nombre} · ${U(w.unidad).num}` : (p.reservadoPara||""); };
 const puedeEditarInv = p => !soloLectura() && (INV_ACTIVOS.includes(p.cat) || p.cat==="Material para instalación");
 VIEWS.inventario = () => `

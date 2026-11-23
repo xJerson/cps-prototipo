@@ -213,7 +213,7 @@ Object.assign(ACC, {
   },
   /* Salir de aquí sin decidir deja al técnico parado en la propiedad. Antes se
      cerraba en silencio y no había forma de saber por qué seguía frenada. */
-  medioNo: d => { const w=W(+d.wo); cm();
+  medioNo: d => { const w=W(d.wo); cm();
     toast("⚠ Quedó sin decidir",
       `El adicional de WO-${w.id} sigue sin resolverse — <b>${esc(tecN(w.tec))}</b> puede seguir con lo programado, pero esa WO no se paga ni se factura hasta que decidas.
        La tienes en <b>Excepciones</b>.`,"w");
@@ -415,7 +415,7 @@ Object.assign(ACC, {
   pagarSemana: () => pagarNomina(null),
   /* Pago parcial por WO (p. ej. externos en proyectos grandes): crea su propio registro y baja el saldo. */
   parcialModal: d => {
-    const w=W(+d.id); if(!w||!woPagable(w)) return;
+    const w=W(d.id); if(!w||!woPagable(w)) return;
     const sal=saldoTecWO(w); S._recibo=null;
     modal(`<div class="mh"><h3>Pago parcial</h3><p>WO-${w.id} · ${esc(tecN(w.tec))} · saldo ${money(sal)}${pagadoTecWO(w)>0?` de ${money(egresoWO(w))}`:""}</p></div>
     <div class="mb"><div class="fg c2"><div class="fld"><label>Monto <span class="req">*</span></label><input id="pcM" type="number" min="0.01" max="${sal}" step="0.01"></div>
@@ -424,7 +424,7 @@ Object.assign(ACC, {
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="parcialOK" data-id="${w.id}">Pagar</button></div>`);
   },
   parcialOK: d => {
-    const w=W(+d.id); if(!w||!woPagable(w)){ S.audOmitir=true; cm(); return; }
+    const w=W(d.id); if(!w||!woPagable(w)){ S.audOmitir=true; cm(); return; }
     const sal=saldoTecWO(w), m=Math.round(parseFloat(val("pcM"))*100)/100;
     if(!(m>0)){ S.audOmitir=true; marcaFalta(["pcM"]); toast("Falta el monto","Escribe cuánto se le paga ahora.","r"); return; }
     if(m>=sal-0.004){ S.audOmitir=true; toast("Es el saldo completo","Para pagar todo usa «Marcar pagado».","r"); return; }
@@ -1310,7 +1310,7 @@ Object.assign(ACC, {
     let t;
     if(d.k){ const b=S.facturaBorrador, l=b&&(b.lineas||[]).find(x=>x.clave===d.k); if(!l||!l.wo) return;
       t={tipo:l.tipo==="Sub-WO"?"sub":"wo", wo:l.wo, subwo:l.subwo||null, clave:l.clave, nombre:l.nombre||"", cant:+l.cantidad||1, escala:"unidad", antes:+l.precio||0, desde:"factura", pf:precioFijadoLinea(l)}; }
-    else { const w=W(+d.wo); if(!w) return; leerValDraft(w);
+    else { const w=W(d.wo); if(!w) return; leerValDraft(w);
       const tot=ingresoBaseWO(w); if(tot===null) return;
       t={tipo:"wo", wo:w.id, subwo:null, clave:"wo:"+w.id, nombre:w.serv, cant:w.cant||1, escala:"total", antes:tot, desde:"validar", pf:precioFijadoWO(w)}; }
     if(S.excepciones.some(x=>x.tipo==="Cambio de precio fijado"&&x.estado==="Pendiente"&&x.cambioPrecio&&x.cambioPrecio.clave===t.clave)){
@@ -1387,24 +1387,24 @@ Object.assign(ACC, {
   facCambiarMonto: d => abrirCambioMonto(d),
   facEditarBorrador: d => { const f=by(S.facturas,d.id); if(f&&f.estado==="Borrador") abrirBorradorFactura(f.prop,f.id); },
   /* Retener factura: la WO ya validada sale de los candidatos del borrador; la nómina no se toca. */
-  facRetener: d => { const w=W(+d.id); if(!w||w.facturada) return;
+  facRetener: d => { const w=W(d.id); if(!w||w.facturada) return;
     modal(`<div class="mh"><h3>Retener WO-${w.id}</h3><p>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)} · ${esc(w.serv)}</p></div>
     <div class="mb"><div class="fld"><label>Motivo <span class="req">*</span></label><textarea id="rtMot"></textarea></div>
       <div class="hint">No entra a ningún borrador hasta que la liberes. La nómina sigue igual.</div></div>
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="facRetenerOK" data-id="${w.id}">Retener</button></div>`); },
-  facRetenerOK: d => { const w=W(+d.id), m=val("rtMot");
+  facRetenerOK: d => { const w=W(d.id), m=val("rtMot");
     if(!m){ S.audOmitir=true; marcaFalta(["rtMot"]); toast("Falta el motivo","Escribe por qué se retiene.","r"); return; }
     w.facRetenida={motivo:m, quien:S.usuario, hora:hora(), fecha:HOY_SUP};
     w.hist.push([hora(),`Factura retenida · ${m}`,S.usuario]);
     cm(); toast("Retenida",`WO-${w.id} no entra a factura hasta que la liberes.`,"w"); render(); },
-  facLiberar: d => { const w=W(+d.id); if(!w||!w.facRetenida) return;
+  facLiberar: d => { const w=W(d.id); if(!w||!w.facRetenida) return;
     delete w.facRetenida; w.hist.push([hora(),"Factura liberada",S.usuario]);
     toast("Liberada",`WO-${w.id} vuelve a estar disponible para facturar.`,"v"); render(); },
   /* Nota de crédito: exclusiva de OPERATIONS_MASTER. La factura original de la WO con el return ya
      facturado nunca se toca (no se edita ni se borra) — se emite una factura nueva, en negativo,
      vinculada por facturaOrigen. Pedido puntual del cliente para el caso de returns. */
   notaCreditoModal: d => {
-    const w=W(+d.id); if(!w||!puedeEmitirNotaCredito()) return;
+    const w=W(d.id); if(!w||!puedeEmitirNotaCredito()) return;
     const dv=devAbiertaDeWO(w.id), f=S.facturas.find(x=>x.lineas&&x.lineas.includes(w.id));
     if(!dv||!f) return;
     const concepto=(f.conceptos||[]).find(c=>c.tipo==="WO"&&c.wo===w.id), tope=concepto?concepto.importe:f.total;
@@ -1418,7 +1418,7 @@ Object.assign(ACC, {
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="notaCreditoOK" data-id="${w.id}">Emitir</button></div>`);
   },
   notaCreditoOK: d => {
-    const w=W(+d.id); if(!w||!puedeEmitirNotaCredito()) return;
+    const w=W(d.id); if(!w||!puedeEmitirNotaCredito()) return;
     const dv=devAbiertaDeWO(w.id), f=S.facturas.find(x=>x.lineas&&x.lineas.includes(w.id));
     if(!dv||!f) return;
     const concepto=(f.conceptos||[]).find(c=>c.tipo==="WO"&&c.wo===w.id), tope=concepto?concepto.importe:f.total;
@@ -1437,24 +1437,24 @@ Object.assign(ACC, {
   },
   /* «Revisar Work Order y verificar: servicios realizados, adicionales, materiales, observaciones»
      Erika valida antes de que se pueda facturar o pagar (Proceso de Facturación y Nómina) */
-  validarModal: d => { S._valDraft=null; modalValidar(W(+d.id)); },
+  validarModal: d => { S._valDraft=null; modalValidar(W(d.id)); },
   /* Regresa la WO al cuadro «Solo estas necesitan tu revisión» y abre su revisión para corregirla. */
   editarRevision: d => {
-    const w=W(+d.id);
+    const w=W(d.id);
     if(!w||!revisionEditable(w)){ toast("🚫 Ya no se puede editar","Esta WO ya se pagó al técnico o entró a una factura.","r"); return; }
     desvalidar(w);
     w.hist.push([hora(),"Revisión reabierta: vuelve a «Solo estas necesitan tu revisión»",S.usuario]);
     flash("wo:"+w.id); render();
     S._valDraft=null; modalValidar(w);
   },
-  valMatModal: d => { const w=W(+d.id); if(!w) return; leerValDraft(w); S._valMatDraft=null; modalMaterialesVal(w); },   // siempre parte de lo guardado: lo no guardado se descarta
-  valMatAgregar: d => { const w=W(+d.id); leerValMatDraft(); const f=S._valMatDraft&&S._valMatDraft.filas;
+  valMatModal: d => { const w=W(d.id); if(!w) return; leerValDraft(w); S._valMatDraft=null; modalMaterialesVal(w); },   // siempre parte de lo guardado: lo no guardado se descarta
+  valMatAgregar: d => { const w=W(d.id); leerValMatDraft(); const f=S._valMatDraft&&S._valMatDraft.filas;
     if(!w||!f) return; const p=S.productos.find(x=>x.consumible!==false&&x.cat!=="Suministros de oficina");
     f.push({id:null,prod:p?p.id:"",cant:"1",costo:p?String(p.costo||0):"0"}); modalMaterialesVal(w); },
-  valMatQuitar: d => { const w=W(+d.id); leerValMatDraft(); const f=S._valMatDraft&&S._valMatDraft.filas;
+  valMatQuitar: d => { const w=W(d.id); leerValMatDraft(); const f=S._valMatDraft&&S._valMatDraft.filas;
     if(!w||!f) return; f.splice(+d.i,1); modalMaterialesVal(w); },
-  valMatVolver: d => { const w=W(+d.id); if(!w) return; leerValMatDraft(); modalValidar(w); },
-  valMatGuardar: d => { const w=W(+d.id); if(!w) return; leerValMatDraft(); const filas=(S._valMatDraft&&S._valMatDraft.filas)||[];
+  valMatVolver: d => { const w=W(d.id); if(!w) return; leerValMatDraft(); modalValidar(w); },
+  valMatGuardar: d => { const w=W(d.id); if(!w) return; leerValMatDraft(); const filas=(S._valMatDraft&&S._valMatDraft.filas)||[];
     const actuales=S.movs.filter(m=>m.wo===w.id&&m.tipo==="salida"&&!m.cliente), disponibles={};
     S.productos.forEach(p=>{ disponibles[p.id]=stock(p.id); });
     actuales.forEach(m=>{ disponibles[m.prod]=(disponibles[m.prod]||0)+m.cant; });
@@ -1473,17 +1473,17 @@ Object.assign(ACC, {
     desvalidar(w); w.hist.push([hora(),`Materiales ajustados (${limpias.length} línea(s))`,S.usuario]);
     S._valMatDraft=null; modalValidar(w); toast("✓ Materiales ajustados",`WO-${w.id}: inventario y utilidad actualizados. Se deben aprobar pago y factura nuevamente.`,"v"); render();
   },
-  valGuardar: d => { const w=W(+d.id); leerValDraft(w); if(!aplicarEdicionVal(w)) return;
+  valGuardar: d => { const w=W(d.id); leerValDraft(w); if(!aplicarEdicionVal(w)) return;
     desvalidar(w);
     S._valDraft=null; toast("✓ Guardado",`WO-${w.id} · cambios guardados. Sigue sin validar.`,"v"); modalValidar(w); render(); },
-  valAjAgregar: d => { const w=W(+d.id); leerValDraft(w);
+  valAjAgregar: d => { const w=W(d.id); leerValDraft(w);
     const conc=val("vaConc"), monto=parseFloat(val("vaMonto")), tipo=val("vaTipo");
     if(!conc||!(monto>0)){ S.audOmitir=true; marcaFalta(["vaConc","vaMonto"]); toast("Falta información","Escribe concepto y un monto mayor a 0.","r"); return; }
     (w.ajustesVal=w.ajustesVal||[]).push({id:"AJ"+Date.now(), tipo, concepto:conc, monto, quien:S.usuario, hora:hora()});
     desvalidar(w);
     w.hist.push([hora(),`Ajuste ${tipo}: ${conc} · ${money(monto)}`,S.usuario]);
     S._valDraft.conc=""; S._valDraft.monto=""; modalValidar(w); render(); },
-  valAjQuitar: d => { const w=W(+d.id); leerValDraft(w);
+  valAjQuitar: d => { const w=W(d.id); leerValDraft(w);
     const a=(w.ajustesVal||[]).find(x=>x.id===d.aid); if(!a) return;
     w.ajustesVal=w.ajustesVal.filter(x=>x!==a);
     desvalidar(w);
@@ -1491,9 +1491,9 @@ Object.assign(ACC, {
     modalValidar(w); render(); },
   /* Pago y factura se aprueban por separado; «Validar» aprueba las dos. w.validada solo queda en true
      cuando las dos están aprobadas, para que lo demás que la lee siga igual. */
-  validarOK: d => aprobarWO(W(+d.id),"ambos"),
-  aprobPago: d => aprobarWO(W(+d.id),"pago"),
-  aprobFactura: d => aprobarWO(W(+d.id),"factura"),
+  validarOK: d => aprobarWO(W(d.id),"ambos"),
+  aprobPago: d => aprobarWO(W(d.id),"pago"),
+  aprobFactura: d => aprobarWO(W(d.id),"factura"),
   /* El lote es una excepción manual: solo suma las líneas coincidentes a la
      factura indicada. Nunca deselecciona ni reasigna las que no coincidieron. */
   facAsignarLote: () => {
@@ -1522,7 +1522,7 @@ Object.assign(ACC, {
   /* El comprobante (foto real) vive en S._recibo mientras el modal está abierto; se pinta sin rearmar el formulario. */
   reciboFoto: () => capturarFoto(url=>{ S._recibo=url; const e=document.getElementById("recPrev"); if(e) e.innerHTML=miniRecibo(url); }),
   pedirInfo: d => {
-    const w=W(+d.id);
+    const w=W(d.id);
     /* Sin esta marca, la solicitud vivía solo en un aviso de texto: Erika no
        tenía lista de lo pedido y el técnico no tenía dónde responder.
        La tarifa la define oficina (no el técnico): al técnico solo se le pide evidencia. */
@@ -1547,7 +1547,7 @@ Object.assign(ACC, {
   /* El técnico completa lo que le pidieron, desde el celular. No se le
      reabre el trabajo: solo lo que falta. */
   fCompletaInfo: d => {
-    const w = W(+d.id);
+    const w = W(d.id);
     if(!w.infoPedida) return;
     const f = w.infoPedida.falta;
     if(f.includes("evidencia") && !w.evid){
@@ -1780,7 +1780,7 @@ Object.assign(ACC, {
     const p=by(S.productos,d.id); if(!p||!puedeEditarInv(p)) return;
     const cambios=[], cambia=(etq,antes,despues)=>{ if(String(antes||"")!==String(despues||"")) cambios.push(`${etq}: ${antes||"—"} → ${despues||"—"}`); };
     if(p.cat==="Material para instalación"){
-      const id=val("invW"), w=id&&W(+id), antes=reservaTxt(p);
+      const id=val("invW"), w=id&&W(id), antes=reservaTxt(p);
       cambia("Reservado para",antes,w?`WO-${w.id} · ${P(w.prop).nombre} · ${U(w.unidad).num}`:"");
       p.reservadoWO=w?w.id:null; p.reservadoPara=w?"WO-"+w.id:"";
     } else {

@@ -86,7 +86,7 @@ Object.assign(ACC, {
     toast(resto?"✓ Avance guardado":"✓ Sub-WO terminada",resto?`${resto} pendiente(s) quedaron disponibles para reasignar a otro técnico.`:"Oficina ya recibió el cierre y la evidencia.","v"); render();
   },
   fLlegue: d => {
-    const w=W(+d.id), p=P(w.prop);
+    const w=W(d.id), p=P(w.prop);
     if(woEspera(w)){ toast("En espera",`Falta terminar WO-${woEspera(w).id} para poder empezar.`,"w"); return; }
     S.reloj += 23;
     const prog = w.horaProg || null;
@@ -107,7 +107,7 @@ Object.assign(ACC, {
        Míralo en <b>Técnicos › Hoy en campo</b>.`, tarde?"w":"v");
     render();
   },
-  fFoto: d => { const w=W(+d.id); S.reloj+=5;
+  fFoto: d => { const w=W(d.id); S.reloj+=5;
     capturarFoto(url=>{
       (w.evidFotos=w.evidFotos||[]).push(fotoNueva(url, T(w.tec).nombre));
       w.evid=w.evidFotos.length;
@@ -125,7 +125,7 @@ Object.assign(ACC, {
     });
   },
   // "Antes" es como se encontró la unidad — separado de evidFotos/evid, no cuenta para cerrar el trabajo.
-  fFotoAntes: d => { const w=W(+d.id); S.reloj+=5;
+  fFotoAntes: d => { const w=W(d.id); S.reloj+=5;
     capturarFoto(url=>{
       (w.antesFotos=w.antesFotos||[]).push(fotoNueva(url, T(w.tec).nombre));
       w.hist.push([hora(),"Cargó foto del antes",T(w.tec).nombre]);
@@ -157,7 +157,7 @@ Object.assign(ACC, {
   fAyudaOpc: d => { leerAyuda(); S.phSheet.opc=AYUDA_OPC[+d.i]; render(); },
   fAyudaFoto: () => { leerAyuda(); capturarFoto(url=>{ S.phSheet.foto=url; render(); }); },
   fAyudaOK: d => {
-    const sh=leerAyuda(), w=W(+d.id); if(!sh||sh.t!=="ayuda"||!w) return;
+    const sh=leerAyuda(), w=W(d.id); if(!sh||sh.t!=="ayuda"||!w) return;
     const txt=(sh.txt||"").trim();
     if(!sh.opc){ toast("Elige qué pasa","Marca una opción para que oficina sepa por dónde empezar.","r"); return; }
     if(sh.opc==="Otro" && !txt){ toast("Contanos qué pasa","Con «Otro» hace falta una línea de texto.","r"); return; }
@@ -183,10 +183,10 @@ Object.assign(ACC, {
      verdad — el campo (w.notas) ya existía en el dato y hasta se mostraba
      en la validación de nómina, pero nunca hubo un cuadro para llenarlo.
      Se guarda directo, sin abrir una hoja aparte — es solo texto libre. */
-  fNotaTrabajo: d => { const w=W(+d.id);
+  fNotaTrabajo: d => { const w=W(d.id);
     w.notas = document.querySelector(`textarea[data-a="fNotaTrabajo"][data-id="${d.id}"]`).value;
   },
-  fMaterial: d => { const w=W(+d.id);
+  fMaterial: d => { const w=W(d.id);
     S.phSheet={t:"material", wo:+d.id, obs:w.obsTec||"",
       filas:[{prod:S.productos[0]?S.productos[0].id:"", cant:"1"}]}; render(); },
   fMaterialMas: () => { leerMaterial();
@@ -196,7 +196,7 @@ Object.assign(ACC, {
   fMaterialMenos: d => { leerMaterial(); S.phSheet.filas.splice(+d.i,1); render(); },
   fMaterialOK: d => {
     leerMaterial();
-    const w=W(+d.id), sh=S.phSheet, tec=T(w.tec);
+    const w=W(d.id), sh=S.phSheet, tec=T(w.tec);
     let n=0;
     sh.filas.forEach(f=>{
       const cant=parseFloat(f.cant); const p=by(S.productos,f.prod);
@@ -240,7 +240,7 @@ Object.assign(ACC, {
      hay total, oficina reparte mirando la foto. */
   fCompraOK: d => {
     leerCompra();
-    const sh=S.phSheet, w=W(+d.id), tec=T(w.tec), quien=tec?tec.nombre:S.usuario, round2=x=>Math.round(x*100)/100;
+    const sh=S.phSheet, w=W(d.id), tec=T(w.tec), quien=tec?tec.nombre:S.usuario, round2=x=>Math.round(x*100)/100;
     const filas=sh.filas.map(f=>Object.assign({},f,{nombre:(f.nombre||"").trim()})).filter(f=>f.nombre);
     if(!filas.length){ toast("Falta decir qué compraste","Escribe al menos un producto.","r"); return; }
     for(const f of filas){
@@ -284,7 +284,7 @@ Object.assign(ACC, {
   },
   fSheetNo: () => { S.phSheet=null; render(); },
   fPrevio: d => {
-    const w = d && d.wo ? W(+d.wo) : null;
+    const w = d && d.wo ? W(d.wo) : null;
     const pr = w ? P(w.prop) : S.propiedades.filter(x=>x.activa)[0];
     const uid = w ? w.unidad : ((S.unidades.filter(u=>u.prop===pr.id)[0]||{}).id||null);
     S.phSheet = {t:"previo", wo:w?w.id:null, prop:pr.id, unidad:uid,
@@ -364,7 +364,7 @@ Object.assign(ACC, {
   },
   fAdicOK: d => {
     leerAdic();
-    const w=W(+d.id), sh=S.phSheet;
+    const w=W(d.id), sh=S.phSheet;
     if(!sh.desc.trim()){ toast("Falta decir qué encontraste","Con la foto sola oficina no puede decidir.","r"); return; }
     const ya=new Set();
     for(const f of sh.filas){
@@ -408,7 +408,7 @@ Object.assign(ACC, {
     avisar("Thalia","Adicional esperando aprobación",`WO-${w.id} · ${lista}. Revisa el alcance y aprueba o reasigna la solicitud.`,"r");
     render(); },
   fTermine: d => {
-    const w=W(+d.id);
+    const w=W(d.id);
     if(woEspera(w)){ toast("En espera",`Falta terminar WO-${woEspera(w).id} para poder empezar.`,"w"); return; }
     /* Un adicional pendiente ya NO frena que el técnico cierre lo que tenía
        programado — el pago/factura de esta WO igual queda frenado por la
@@ -454,7 +454,7 @@ Object.assign(ACC, {
     toast(sinEvidencia ? "⚠️ Work Order terminada (fotos pendientes)" : "✓ Work Order terminada",
       sinEvidencia ? `WO-${w.id} quedó terminada en campo. Recuerda subir las fotos antes del cierre de nómina.` : `WO-${w.id} quedó lista. Pasa a supervisión de Gustavo.`, sinEvidencia ? "w" : "v"); render(); },
   fLlegadaDecl: d => {
-    const w=W(+d.id), p=P(w.prop);
+    const w=W(d.id), p=P(w.prop);
     const hDecl = val("plH") || w.horaProg || hora();
     S.asistencias.push({id:"A"+Date.now(), wo:w.id, tec:w.tec, fecha:w.fecha,
       horaProg:w.horaProg||"—", horaReal:hDecl,

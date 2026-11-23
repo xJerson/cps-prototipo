@@ -98,7 +98,12 @@ const COM_FILTROS = {All:null, Office:["Office"], Scheduling:["Scheduling","WO n
 const modPorHTML = o => o && o.modPor ? `<span class="mod-por" style="font-size:11px;color:var(--faint)">Last modified by ${esc(o.modPor.quien)} · ${esc(o.modPor.fecha)} ${esc(o.modPor.hora||"")}</span>` : "";
 const ciudadProp = p => (p&&(p.ciudad||p.zona))||"";
 const tecN = id => { const t=T(id); return t? t.nombre+" "+t.apellido : "sin asignar"; };
-const W = id => by(S.wos,id);
+/* Busca la WO por su ID tal cual; si no, compara como texto (el ID llega como "1063" desde data-id,
+   y hay WOs con ID de texto como "WO-P14-1"). */
+/* Toda WO debe tener historial: hay WOs cargadas sin «hist» y el sistema le agrega renglones en muchos lados. */
+const woSanas = () => (S.wos||[]).forEach(w => { if(w && !Array.isArray(w.hist)) w.hist = []; });
+woSanas();
+const W = id => by(S.wos,id) || (id==null || id==="" ? undefined : S.wos.find(w=>w.id!=null && String(w.id)===String(id)));
 /* Plazo de cobranza: días de crédito de la propiedad (30 si no tiene) y suma de días en UTC para que la zona horaria no mueva la fecha. */
 const diasCreditoProp = prop => { const p=P(prop); const n=p&&parseInt(p.diasCredito,10); return Number.isFinite(n)&&n>=0 ? n : 30; };
 const sumarDias = (iso,n) => { const d=new Date(iso+"T00:00:00Z"); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); };
@@ -400,6 +405,19 @@ const diasEntre = (a, b) => Math.round((Date.UTC(+b.slice(0,4),+b.slice(5,7)-1,+
 const fechaTarifaWO = w => (w && w.fecha) || hoyReal();
 /* Una fila «por llenar» y una versión programada o reemplazada no son tarifas vigentes. */
 const tarActiva = t => tarBase(t) && tarVigente(t);
+/* REQ 19/11 punto 14: Quantity siempre vale 1 o más; vacío o inválido = 1. */
+const cantOK = v => Math.max(1, parseInt(v,10)||1);
+/* Tarifa que se cobra por pieza (Detail «Per door», «Per trailer»…): ahí sí importa la Quantity.
+   Gana la de la propiedad; si no hay, la general. */
+const tarPorPieza = (prop, cat, serv) => {
+  const m = S.tarifas.filter(t => tarActiva(t) && t.cat===cat && t.serv===serv && /^per\s/i.test(t.variante||""));
+  return m.find(t => t.prop===prop) || m.find(t => !t.prop) || null; };
+/* Aviso bajo Quantity: solo sale cuando el servicio se cobra por pieza. */
+const cantAvisoHTML = (prop, cat, serv, cant) => {
+  const t = serv ? tarPorPieza(prop, cat, serv) : null;
+  if(!t) return `<div class="hint">Déjalo en 1. Cámbialo solo si se cobra por pieza.</div>`;
+  const n = cantOK(cant);
+  return `<div class="note w" style="margin:6px 0 0">Se cobra <b>${esc(t.variante)}</b>${puedeVerUtilidad()?`: ${money(t.precio)} × ${n} = <b>${money(t.precio*n)}</b>`:""}. Pon cuántas.</div>`; };
 function tarifa(propId, cat, serv, variante, pisos, fechaRef){
   fechaRef = fechaRef || hoyReal();
   /* variante vacía = «cualquier tamaño» (así se guarda un precio que se pasó
@@ -408,7 +426,8 @@ function tarifa(propId, cat, serv, variante, pisos, fechaRef){
     const m = S.tarifas.filter(t => tarEn(t, fechaRef) &&
       t.prop === p && t.cat === cat && t.serv === serv &&
       (pi === null ? (t.pisos == null) : t.pisos === pi));
-    return m.find(t => t.variante === variante) || m.find(t => !t.variante);
+    /* Un cobro por pieza (Per door, Per trailer) vale para cualquier tamaño de unidad. */
+    return m.find(t => t.variante === variante) || m.find(t => !t.variante) || m.find(t => /^per\s/i.test(t.variante||""));
   };
   let t;
   if((t = busca(propId, pisos))) return {...t, nivel:"Propiedad", detalle:`${variante} · ${pisos} piso(s)`};
@@ -490,7 +509,7 @@ function pagoTecnicoWO(w){
     const m = (S.pagosTecnico||[]).filter(x =>
       x.tec===w.tec && x.prop===p && x.cat===w.cat && x.serv===w.serv &&
       (pi===null ? (x.pisos==null) : x.pisos===pi));
-    return m.find(x=>x.variante===u.rooms) || m.find(x=>!x.variante);
+    return m.find(x=>x.variante===u.rooms) || m.find(x=>!x.variante) || m.find(x=>/^per\s/i.test(x.variante||""));
   };
   let x;
   if((x=busca(w.prop, u.pisos))) return x;

@@ -809,7 +809,7 @@ function modalSubWO(woId){
         <select id="swUbic">${activos("ubicaciones").map(u2=>`<option>${esc(u2)}</option>`).join("")}</select></div>
     </div>
     <div class="fg c2">
-      <div class="fld"><label>Cantidad (Quantity) <span class="req">*</span></label><input id="swCant" value="1" class="mono"></div>
+      <div class="fld"><label>Quantity</label><input id="swCant" type="number" min="1" step="1" data-a="subwoCant" value="1" class="mono"><div id="swCantAviso"></div></div>
       <div class="fld"><label>Precio <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><input id="swPrecio" class="mono" placeholder="0.00"></div>
     </div>
     <div id="swSpecs"></div>
@@ -832,10 +832,12 @@ function modalSubWO(woId){
    definidas, no se agrega nada (el campo Notas alcanza). */
 function refSubWO(){
   const caja=document.getElementById("swSpecs"); if(!caja) return;
-  const w=W(+val("swWo")), u=w&&U(w.unidad), cat=val("swCat"), tipo=val("swTipo");
+  const w=W(val("swWo")), u=w&&U(w.unidad), cat=val("swCat"), tipo=val("swTipo");
   const ref = w && u ? (cat===CO_PEND ? adicionalCatalogo(tipo) : tarifa(w.prop, cat, tipo, u.rooms, u.pisos, w.fecha)) : null;
   const inpP = document.getElementById("swPrecio");
   if(inpP) inpP.value = ref && ref.precio!=null ? ref.precio : "";
+  const avisoC = document.getElementById("swCantAviso");
+  if(avisoC) avisoC.innerHTML = w && cat!==CO_PEND ? cantAvisoHTML(w.prop, cat, tipo, val("swCant")) : "";
   const campos = SUBWO_SPECS[tipo] || [];
   caja.innerHTML = campos.length ? `<div class="fg c${Math.min(campos.length,3)}" style="margin:-4px 0 12px">
     ${campos.map((c,i)=>`<div class="fld" style="margin-bottom:0"><label>${esc(c)}</label>
@@ -1005,7 +1007,7 @@ function modalWO(w){
       <div class="fld"><label>Fecha <span class="req">*</span> <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">· hora opcional (Desde / Hasta)</span></label><div style="display:flex;gap:7px;align-items:center"><input type="date" id="wFecha" data-a="woFecha" value="${w?esc(w.fecha||""):""}" style="flex:2"><input type="time" id="wHora" data-a="woFecha" value="${w?esc(w.horaProg||""):""}" class="mono" style="flex:1" placeholder="08:00"><span style="font-size:11px;color:var(--faint);font-weight:600">Hasta</span><input type="time" id="wHoraFin" data-a="woFecha" value="${w?esc(w.horaFin||""):""}" class="mono" style="flex:1" placeholder="17:00"></div><div id="wAgendaDisponibilidad"></div></div>
     </div>
     <div class="fg c2">
-      <div class="fld"><label>Cantidad <span class="req">*</span></label><input id="wCant" value="${w?(w.cant||1):""}" placeholder="1" class="mono"></div>
+      <div class="fld"><label>Quantity</label><input id="wCant" type="number" min="1" step="1" data-a="woCant" value="${w?cantOK(w.cant):1}" class="mono"><div id="wCantAviso"></div></div>
       <div class="fld"><label>PO</label><input id="wPO" placeholder="opcional" value="${w?esc(w.po||""):""}"></div>
     </div>
     <div class="fld"><label>Va después de</label><select id="wDep" data-yo="${w?w.id:""}" data-value="${w&&w.dependeDe?w.dependeDe:""}"></select>
@@ -1073,7 +1075,7 @@ function refWO(){
   if(selD){
     const prevD=selD.value||selD.dataset.value||"", yoId=+selD.dataset.yo||null;
     const ops=(uid&&uid!=="__new__")?woOpcionesDepende(uid,yoId):[];
-    if(prevD && !ops.some(x=>String(x.id)===String(prevD)) && W(+prevD)) ops.push(W(+prevD));
+    if(prevD && !ops.some(x=>String(x.id)===String(prevD)) && W(prevD)) ops.push(W(prevD));
     selD.innerHTML=`<option value="">—</option>`+ops.map(x=>`<option value="${x.id}" ${String(x.id)===String(prevD)?"selected":""}>WO-${x.id} · ${esc(x.serv)}</option>`).join("");
     selD.dataset.value="";
   }
@@ -1228,6 +1230,8 @@ function refAgendaNuevaWO(){
 function refTarifa(){
   const caja = document.getElementById("wTarifa");
   if(!caja) return;
+  const avisoC = document.getElementById("wCantAviso");
+  if(avisoC) avisoC.innerHTML = cantAvisoHTML(val("wProp"), val("wCat"), val("wServ"), val("wCant"));
   /* La tarifa no forma parte de crear una WO para operación. Solo Claudia y
      Erika pueden ver el preview — los demás guardan la orden sin números ni
      mensajes sobre si existe o falta una tarifa. */
