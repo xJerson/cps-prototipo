@@ -1359,9 +1359,9 @@ function campoAplicar(P, d){
   const it = P.it, m = CAMPO_MANEJADORES.find(x=>x.id===it.h);
   if(!m.detect().some(x=>x.k===it.k)){ toast("Campo automático","Ese paso ya estaba respondido.","w"); render(); campoSeguir(P.op); return; }
   let r = null;
-  _campoEnMotor = true; _campoPor = "oficina";
+  _campoEnMotor = true; _campoPor = "oficina"; window._toastMudo = true;
   try{ r = m.responder(it, d, P.prop) || null; } catch(e){ console.warn("Campo automático:", it.k, e); }
-  finally { _campoEnMotor = false; }
+  finally { _campoEnMotor = false; window._toastMudo = false; }
   if(r){
     if(r.estado!=="omitido") _campoDec.delete(it.k);
     _campoOmitidos.delete(it.k);
@@ -1408,13 +1408,16 @@ async function campoCorrer(op){
         fallidas.add(it.k); continue;
       }
       let txt = null;
+      window._toastMudo = true;                         // los avisos de la app van a la campanita; se ve uno solo por fase
       try{ txt = campoResponder(it, op.forzar); } catch(e){ console.warn("Campo automático:", it.k, e); }
+      finally{ window._toastMudo = false; }
       if(!txt){ fallidas.add(it.k); continue; }
       if(typeof txt === "string") txt = {texto:txt};
       cLog(it.wo, it.tec, txt.paso || it.h, txt.estado || "hecho", txt.oblig === true, txt.texto, "auto");
       pasos++; log.push(txt.texto);
       if(txt.estado === "omitido"){ render(); continue; }
-      toast("Técnico (auto)", esc(txt.texto), "v"); render();
+      if(!op.forzar) toast("Técnico (auto)", esc(txt.texto), "v");   // el botón de una WO muestra un solo aviso al final
+      render();
       if(!op.forzar){ unPaso = true; break; }          // una fase a la vez: la siguiente en CAMPO_PASO_SEG
       if(!op.sinPausa && CA().pausa>0) await cSleep(CA().pausa*1000);
     }
@@ -1463,7 +1466,9 @@ Object.assign(ACC, {
   campoAutoPerfil: () => { const s = document.querySelector('#campoAutoBox select[data-a="campoAutoPerfil"]'); if(s) CA().perfil = s.value; render(); },
   campoResponderWO: d => {
     if(_campoCorriendo || _campoPreg){ toast("Campo automático", _campoPreg ? "Ya hay una pregunta abierta." : "Ya hay una respuesta en curso.","w"); return; }
-    campoCorrer({wo:woId(d.id), forzar:true}).then(r=>{ if(!r.pasos && !r.pregunto && !r.ocupado) toast("Campo automático","El técnico no tiene nada pendiente en esta WO.","w"); });
+    campoCorrer({wo:woId(d.id), forzar:true}).then(r=>{
+      if(r.pasos) toast("Técnico (auto) · "+woN(woId(d.id)), r.pasos+" paso(s): "+esc(r.log[r.log.length-1]||""), "v");
+      else if(!r.pregunto && !r.ocupado) toast("Campo automático","El técnico no tiene nada pendiente en esta WO.","w"); });
   },
   campoPregRegistrar: () => { const P = _campoPreg; if(!P) return; const d = cLeeCampos(P.prop); _campoPreg = null; cm(); campoAplicar(P, d); },
   campoPregOmitir: () => { const P = _campoPreg; if(!P) return; _campoPreg = null; cm(); campoPregOmitida(P); render(); campoSeguir(P.op); },

@@ -346,6 +346,7 @@ const avisosDe = u => S.avisos.filter(a => a.para ? a.para===u : a.quien===u);
 function toast(t,b,k){
   S.avisos.unshift({t,b,k:k||"",hora:hora(),leido:false,quien:S.usuario});
   if(S.avisos.length>400) S.avisos.length=400;
+  if(window._toastMudo){ const c=$("#campBadge"); if(c) c.style.display="block"; return; }   // campo automático: queda en la campanita, sin ventana
   const e=document.createElement("div"); e.className="toast "+(k||"");
   e.innerHTML=`<div class="t">${t}</div><div class="b">${b}</div>`; $("#toasts").appendChild(e);
   setTimeout(()=>{e.style.transition="opacity .4s";e.style.opacity="0";setTimeout(()=>e.remove(),400);},5000);
