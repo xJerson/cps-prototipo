@@ -1459,7 +1459,7 @@ Object.assign(ACC, {
   campoAutoPerfil: () => { const s = document.querySelector('#campoAutoBox select[data-a="campoAutoPerfil"]'); if(s) CA().perfil = s.value; render(); },
   campoResponderWO: d => {
     if(_campoCorriendo || _campoPreg){ toast("Campo automático", _campoPreg ? "Ya hay una pregunta abierta." : "Ya hay una respuesta en curso.","w"); return; }
-    campoCorrer({wo:+d.id, forzar:true}).then(r=>{ if(!r.pasos && !r.pregunto && !r.ocupado) toast("Campo automático","El técnico no tiene nada pendiente en esta WO.","w"); });
+    campoCorrer({wo:woId(d.id), forzar:true}).then(r=>{ if(!r.pasos && !r.pregunto && !r.ocupado) toast("Campo automático","El técnico no tiene nada pendiente en esta WO.","w"); });
   },
   campoPregRegistrar: () => { const P = _campoPreg; if(!P) return; const d = cLeeCampos(P.prop); _campoPreg = null; cm(); campoAplicar(P, d); },
   campoPregOmitir: () => { const P = _campoPreg; if(!P) return; _campoPreg = null; cm(); campoPregOmitida(P); render(); campoSeguir(P.op); },
@@ -1490,7 +1490,7 @@ function campoLogModal(){
 }
 /* Tarjeta en el detalle de la WO: lo que hizo el campo, en orden cronológico */
 function campoLogWOHtml(id){
-  const L = cLogArr().filter(e=>e.wo===+id).reverse();
+  const L = cLogArr().filter(e=>String(e.wo)===String(id)).reverse();
   if(!L.length) return "";
   return `<div class="card"><div class="chd"><h3>Lo que hizo el campo en esta WO</h3><span class="s">${L.length} paso${L.length===1?"":"s"}</span></div>
     <div style="padding:8px 15px 10px">${L.map(e=>`<div style="display:flex;gap:9px;align-items:baseline;padding:3px 0;font-size:12px">

@@ -129,12 +129,12 @@ Object.assign(ACC, {
   woPendienteEnviar: d => { const w=W(d.id), motivo=val("pcReason"), detalle=val("pcDetail").trim(), medio=val("pcMedium"), msg=`Hello, work order WO-${w.id} is pending because ${motivo.toLowerCase()}${detalle?`. ${detalle}`:""}. Please let us know when the unit is ready for service.`; S.comunicacionesWO=(S.comunicacionesWO||[]); S.comunicacionesWO.unshift({id:"CW"+(S.comunicacionesWO.length+1),wo:w.id,medio,fecha:HOY_SUP,quien:S.usuario,motivo,mensaje:msg,estado:"Sent"}); w.hist.push([hora(),`Cliente notified by ${medio}: ${motivo}`,S.usuario]); cm(); toast("✓ Customer notified",`The ${medio} message was recorded in English with a follow-up for WO-${w.id}.`,"v"); render(); },
 
 
-  woVer: d => { S.mod="wo"; S.sub=+d.id; render(); },
+  woVer: d => { S.mod="wo"; S.sub=woId(d.id); render(); },
   /* Desde la lista general: abre la WO y deja resaltada la Sub-WO que se tocó, ahí están sus fotos y botones. */
-  woVerSub: d => { S.mod="wo"; S.sub=+d.id; flash("sub:"+d.lid); render(); },
+  woVerSub: d => { S.mod="wo"; S.sub=woId(d.id); flash("sub:"+d.lid); render(); },
   /* Desplegar o plegar las Sub-WO de una WO en la lista general. */
-  woSubToggle: d => { const a=S.woAbiertas||(S.woAbiertas=[]), id=+d.id, i=a.indexOf(id); if(i>-1){ a.splice(i,1); S.subRecienAbierta=null; } else { a.push(id); S.subRecienAbierta=id; } render(); },
-  woVerDesdeModal: d => { cm(); S.mod="wo"; S.sub=+d.id; render(); },
+  woSubToggle: d => { const a=S.woAbiertas||(S.woAbiertas=[]), id=woId(d.id), i=a.indexOf(id); if(i>-1){ a.splice(i,1); S.subRecienAbierta=null; } else { a.push(id); S.subRecienAbierta=id; } render(); },
+  woVerDesdeModal: d => { cm(); S.mod="wo"; S.sub=woId(d.id); render(); },
   woNueva: () => modalWO(),
   woFotoRefAgregar: () => {
     capturarFoto(url=>{
@@ -383,11 +383,11 @@ Object.assign(ACC, {
     const m = val("dpMot");
     if(!m){ S.audOmitir=true; marcaFalta(["dpMot"]); toast("Falta el motivo","Escribe por qué se crea otra igual.","r"); return; }
     const fn = S._woPendienteGuardar; S._woPendienteGuardar = null; if(!fn) return;
-    S._woDupInfo = {tipo:"nueva", orig:+d.id, motivo:m}; fn();
+    S._woDupInfo = {tipo:"nueva", orig:woId(d.id), motivo:m}; fn();
   },
 
   /* ── COORDINAR LA FECHA CON EL CLIENTE ──────────────────────── */
-  progCliente: d => { S.progF = null; modalProg(+d.id); },
+  progCliente: d => { S.progF = null; modalProg(woId(d.id)); },
   /* Cambiar la fecha sin salir del modal: antes habia que ir a corregir la
      Work Order y volver a entrar. */
   asigFecha: d => {
@@ -633,8 +633,8 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     /* Las WO que nacen de un estimado no traen fecha: primero se coordina con el cliente, y recién ahí se asigna técnico
        (la disponibilidad y el cupo dependen del día). */
     if(w && !w.fecha){ toast("Falta la fecha","Esta Work Order todavía no tiene fecha. Primero coordínala con el cliente («Coordinar fecha con el cliente») y después asigna técnico.","r"); return; }
-    if(w && hayNotasAsig(w)) modalNotasAsig(w,"asignar"); else modalAsig(+d.id); },
-  asigNotasOK: d => d.destino==="reasignar" ? modalReasignar(+d.id) : modalAsig(+d.id),
+    if(w && hayNotasAsig(w)) modalNotasAsig(w,"asignar"); else modalAsig(woId(d.id)); },
+  asigNotasOK: d => d.destino==="reasignar" ? modalReasignar(woId(d.id)) : modalAsig(woId(d.id)),
   woFiltroSemana: () => { S.woFs = val("woFsSel"); render(); },
   woFiltroTipo: () => { S.woFt = val("woFtSel"); render(); },
   woFiltroZona: () => { S.woFz = val("woFzSel"); render(); },
@@ -1044,7 +1044,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
      El descuento siempre apunta al que hizo mal el trabajo, no al que corrige.
      Mismo patrón de un clic que Asignar (asigSi/asigNo): la tarjeta ya viene
      deshabilitada si no puede, así que aquí solo falta el caso "mismo técnico". */
-  woReasignar: d => { const w=W(d.id); if(w && hayNotasAsig(w)) modalNotasAsig(w,"reasignar"); else modalReasignar(+d.id); },
+  woReasignar: d => { const w=W(d.id); if(w && hayNotasAsig(w)) modalNotasAsig(w,"reasignar"); else modalReasignar(woId(d.id)); },
 
   woReasignarNo: d => {
     const w=W(d.id), b=bloqueo(d.tec,w.fecha);
@@ -1149,7 +1149,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     w.hist.push([hora(),"Corroboró la unidad antes de empezar",T(w.tec).nombre]);
     render();
   },
-  woCorroboraNo: d => { S.phSheet={t:"corrobNo", wo:+d.id}; render(); },
+  woCorroboraNo: d => { S.phSheet={t:"corrobNo", wo:woId(d.id)}; render(); },
   woCorroboraNoOK: d => {
     const w=W(d.id), u=U(w.unidad), txt=val("cnTxt");
     const pisos=parseInt(val("cnPisos")), ocupObs=val("cnOcup"),
@@ -1189,7 +1189,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     render();
   },
 
-  excTarifa: d => modalTarifaExc(+d.wo, d.id),
+  excTarifa: d => modalTarifaExc(woId(d.wo), d.id),
   tarifaPidio: d => { const w=W(d.wo); w.pidioPrecio = d.v==="1"; modalTarifaExc(+d.wo, d.x); },
   tarifaAvisarClaudia: d => { const w=W(d.wo);
     avisar("Claudia","Falta definir una tarifa",
@@ -1229,7 +1229,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     if(el) el.innerHTML = causaDe(val("dvC")).ex;
   },
 
-  subwoNueva: d => modalSubWO(+d.id),
+  subwoNueva: d => modalSubWO(woId(d.id)),
   subwoTipoRef: () => refSubWO(),
   /* El servicio depende del tipo: se rellena sin repintar el modal, para no perder lo ya escrito. */
   subwoCat: () => { const s=document.getElementById("swTipo"); if(!s) return;
@@ -1242,7 +1242,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
   /* Cambiar la fecha recalcula quién está disponible ese día. */
   subwoFecha: d => { const w=W(d.id), f=val("swFecha")||val("sgFecha"), c=document.getElementById("swCand"); if(!w||!c) return;
     c.innerHTML=subwoCandidatos(w,f); subwoMarcar(); },
-  clienteExpediente: d => modalClienteExpediente(+d.id),
+  clienteExpediente: d => modalClienteExpediente(woId(d.id)),
   clienteExpedienteEnviar: d => {
     const w=W(d.id), p=w&&P(w.prop), mail=val("crMail"); if(!w||!mail){ toast("Falta el correo","Indica el correo del cliente para enviar el expediente.","r"); return; }
     const items=solsDe(w.id).flatMap(s=>s.lineas).filter(a=>a.estado==="Aprobado").map(a=>({
@@ -1393,7 +1393,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     S.fotoModal={tipo:"subwoHallazgo", id:a.id};
     modalFotos();
   },
-  materialAgregar: d => modalMaterial(+d.id),
+  materialAgregar: d => modalMaterial(woId(d.id)),
   materialOrigen: () => refMaterial(),
   materialClienteRef: () => refMaterial(),
   materialGuardar: d => {
@@ -1469,7 +1469,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     cm(); toast("✓ Seguimiento anotado",`WO-${r.wo} · ${esc(resultado)}.`,resultado==="Va en camino"?"v":"w"); render(); },
 
   /* ── WO pendientes: selección en lote, aviso por propiedad y seguimiento de la respuesta ── */
-  pendSel: d => { const id=+d.id, l=S.pendSel||(S.pendSel=[]);
+  pendSel: d => { const id=woId(d.id), l=S.pendSel||(S.pendSel=[]);
     S.pendSel = l.includes(id) ? l.filter(x=>x!==id) : l.concat(id); render(); },
   pendAvisar: () => { if(!puedeAvisarPend()) return;
     const ws=(S.pendSel||[]).map(W).filter(w=>w&&ESTADOS_PEND.includes(w.estado));

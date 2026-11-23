@@ -101,6 +101,8 @@ const tecN = id => { const t=T(id); return t? t.nombre+" "+t.apellido : "sin asi
 /* Busca la WO por su ID tal cual; si no, compara como texto (el ID llega como "1063" desde data-id,
    y hay WOs con ID de texto como "WO-P14-1"). */
 /* Toda WO debe tener historial: hay WOs cargadas sin «hist» y el sistema le agrega renglones en muchos lados. */
+/* ID real de una WO a partir de lo que llega de data-id (siempre texto): número si la WO es numérica, texto si es de texto. */
+const woId = v => { const w = W(v); return w ? w.id : (v!=="" && !isNaN(+v) ? +v : v); };
 const woSanas = () => (S.wos||[]).forEach(w => { if(w && !Array.isArray(w.hist)) w.hist = []; });
 woSanas();
 const W = id => by(S.wos,id) || (id==null || id==="" ? undefined : S.wos.find(w=>w.id!=null && String(w.id)===String(id)));

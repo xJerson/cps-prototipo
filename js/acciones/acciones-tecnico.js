@@ -24,9 +24,9 @@ Object.assign(ACC, {
     if(["panel","ruta","dia","reportar","devs","buscar","proceso"].includes(d.v)) S.gvTab=d.v;
     S.gTecWO=null;
     render(); },
-  gTecWO: d => { S.gTecWO=+d.id; render(); },
+  gTecWO: d => { S.gTecWO=woId(d.id); render(); },
   gTecWOCerrar: () => { S.gTecWO=null; render(); },
-  fAbrir: d => { S.phView="wo"; S.phWO=+d.id; render(); },
+  fAbrir: d => { S.phView="wo"; S.phWO=woId(d.id); render(); },
   fSubAbrir: d => { S.phView="subwo"; S.phSub=+d.id; render(); },
   fSubIniciar: d => {
     const a=S.adicionales.find(x=>x.id===+d.id); if(!a) return;
@@ -134,7 +134,7 @@ Object.assign(ACC, {
   },
   /* Arranca VACÍA: antes traía un texto de ejemplo ("Hueco en el sheetrock…") y un toque en Enviar creaba un adicional falso. */
   fAdic: d => { const t=tiposCO()[0]||"";
-    S.phSheet={t:"adic", wo:+d.id,
+    S.phSheet={t:"adic", wo:woId(d.id),
     desc:"",
     ubic:activos("ubicaciones")[0]||"", filas:[{t, c:opcionesCO(t)[0]||"", q:"1"}]}; render(); },
   /* Cambiar el tipo cambia la lista de servicios: arranca en el primero del tipo nuevo. */
@@ -153,7 +153,7 @@ Object.assign(ACC, {
 
   /* «Necesito ayuda»: pedido a oficina que NO frena pago ni factura de la WO
      (ver woBloqueada). Entra a Requests como "Ayuda en sitio", con SLA de 20 min. */
-  fAyuda: d => { S.phSheet={t:"ayuda", wo:+d.id, opc:"", txt:"", foto:null}; render(); },
+  fAyuda: d => { S.phSheet={t:"ayuda", wo:woId(d.id), opc:"", txt:"", foto:null}; render(); },
   fAyudaOpc: d => { leerAyuda(); S.phSheet.opc=AYUDA_OPC[+d.i]; render(); },
   fAyudaFoto: () => { leerAyuda(); capturarFoto(url=>{ S.phSheet.foto=url; render(); }); },
   fAyudaOK: d => {
@@ -187,7 +187,7 @@ Object.assign(ACC, {
     w.notas = document.querySelector(`textarea[data-a="fNotaTrabajo"][data-id="${d.id}"]`).value;
   },
   fMaterial: d => { const w=W(d.id);
-    S.phSheet={t:"material", wo:+d.id, obs:w.obsTec||"",
+    S.phSheet={t:"material", wo:woId(d.id), obs:w.obsTec||"",
       filas:[{prod:S.productos[0]?S.productos[0].id:"", cant:"1"}]}; render(); },
   fMaterialMas: () => { leerMaterial();
     const ya=S.phSheet.filas.map(f=>f.prod);
@@ -226,7 +226,7 @@ Object.assign(ACC, {
       vehiculo:sh.veh,evidencia:true,foto:sh.foto,notas:sh.nota||"",asignaciones:[],quien:"Gustavo"});
     avisar("Lydia","Recibo de gasolina de Gustavo",`${sh.veh||"Vehiculo"}: ${money(monto)}${sh.nota?" — "+esc(sh.nota):""}.`,"v");
     S.phSheet=null; toast("✓ Guardado",`${esc(sh.tipo)} · ${money(monto)}. Enviado a Lydia.`,"v"); render(); },
-  fCompraMaterial: d => { S.phSheet={t:"compra", wo:+d.id, tienda:CAT.tiendas[0], filas:[filaCompra()], total:"", foto:null}; render(); },
+  fCompraMaterial: d => { S.phSheet={t:"compra", wo:woId(d.id), tienda:CAT.tiendas[0], filas:[filaCompra()], total:"", foto:null}; render(); },
   fCompraFoto: () => { leerCompra(); const sh=S.phSheet; if(!sh||sh.t!=="compra") return;
     capturarFoto(url=>{ sh.foto=url; render(); }); },
   fCompraMas: () => { leerCompra(); const sh=S.phSheet; if(!sh||sh.t!=="compra") return; sh.filas.push(filaCompra()); render(); },
