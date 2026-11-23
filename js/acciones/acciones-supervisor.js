@@ -323,7 +323,7 @@ Object.assign(ACC, {
     leerDev(); const g=S.gDev, d=DV(g.id);
     if(!g.lotes.length){ toast("Faltan las fotos del despu\u00e9s","Sin ellas no se puede dar por corregida.","r"); return; }
     if(d.touchup && W(d.touchup) && W(d.touchup).estado!=="Completed" && W(d.touchup).estado!=="Canceled"){
-      toast("Return fix en curso",`La WO-${d.touchup} de return fix sigue ${W(d.touchup).estado}. Term\u00ednala o canc\u00e9lala antes de verificar el return.`,"w"); return; }
+      toast("Return fix en curso",`La ${woN(d.touchup)} de return fix sigue ${W(d.touchup).estado}. Term\u00ednala o canc\u00e9lala antes de verificar el return.`,"w"); return; }
     S.reloj += 12;
     d.lotesDespues = g.lotes.slice();
     d.estado = "Corregida";
@@ -345,7 +345,7 @@ Object.assign(ACC, {
   devCerrar: d => {
     const dv=DV(d.id); if(!dv||dv.estado!=="Corregida"||!puede("devoluciones")) return;
     if(dv.touchup && W(dv.touchup) && W(dv.touchup).estado!=="Completed" && W(dv.touchup).estado!=="Canceled"){
-      toast("Return fix pendiente",`La WO-${dv.touchup} de return fix a\u00fan est\u00e1 en estado ${W(dv.touchup).estado}.`,"r"); return; }
+      toast("Return fix pendiente",`La ${woN(dv.touchup)} de return fix a\u00fan est\u00e1 en estado ${W(dv.touchup).estado}.`,"r"); return; }
     dv.estado="Cerrada"; dv.fechaCierre=HOY_SUP; dv.cerro={quien:S.usuario,fecha:HOY_SUP,hora:hora()};
     dv.hist.push([hora(),"Cerrada por la oficina",S.usuario]);
     const wOrig = dv.wo ? W(dv.wo) : null;
@@ -363,7 +363,7 @@ Object.assign(ACC, {
     const dv = DV(d.id);
     if(!dv || dv.estado!=="Corregida") return;      // solo se cierra un return ya verificado con fotos del después
     if(dv.touchup && W(dv.touchup) && W(dv.touchup).estado!=="Completed" && W(dv.touchup).estado!=="Canceled"){
-      toast("Return fix pendiente",`La WO-${dv.touchup} de return fix a\u00fan est\u00e1 en estado ${W(dv.touchup).estado}.`,"r"); return; }
+      toast("Return fix pendiente",`La ${woN(dv.touchup)} de return fix a\u00fan est\u00e1 en estado ${W(dv.touchup).estado}.`,"r"); return; }
     S.reloj += 3;
     dv.estado = "Cerrada";
     dv.verifica = GUSTAVO;

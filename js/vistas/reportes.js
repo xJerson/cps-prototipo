@@ -283,7 +283,7 @@ VIEWS.buscar = () => {
   : `<div class="card" style="overflow-x:auto"><div class="chd"><h3>Work Orders</h3><span class="s">${T.n} encontrada(s)${T.n>BUSQ_MAX?` · mostrando ${BUSQ_MAX}`:""}</span></div>
     <table><thead><tr><th>WO</th><th>Fecha</th><th>Propiedad</th><th>Unidad</th><th>Servicio</th><th>Técnico</th><th class="num">Ingreso</th><th class="num">Egreso</th><th class="num">Material</th><th class="num">Utilidad</th></tr></thead>
     <tbody>${filas.slice(0,BUSQ_MAX).map(f=>{const w=f.w; return `<tr class="cl" data-a="woVer" data-id="${w.id}">
-      <td class="mono" style="font-weight:700">WO-${w.id}</td><td class="mono">${esc(w.fecha||"—")}</td>
+      <td class="mono" style="font-weight:700">${woN(w.id)}</td><td class="mono">${esc(w.fecha||"—")}</td>
       <td>${esc(P(w.prop).nombre)}</td><td>${esc(U(w.unidad).num)}</td><td>${esc(w.serv)}</td>
       <td>${w.tec?esc(tecN(w.tec)):"—"}</td>
       <td class="num mono">${m$(f.cobro)}</td><td class="num mono">${m$(f.pago)}</td><td class="num mono">${money(f.mat)}</td>

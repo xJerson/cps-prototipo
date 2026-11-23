@@ -20,7 +20,7 @@ Object.assign(ACC, {
           <table style="border:1px solid var(--line);border-radius:8px;overflow:hidden">
             <thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Servicio</th><th>Fecha</th><th>Técnico</th></tr></thead>
             <tbody>${arr.map(w=>`<tr class="cl" data-a="woVer" data-id="${w.id}">
-              <td class="mono" style="font-weight:700">WO-${w.id}</td>
+              <td class="mono" style="font-weight:700">${woN(w.id)}</td>
               <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}
                 <div style="font-size:10.5px;color:var(--faint)">${esc(P(w.prop).dir)}</div></td>
               <td>${esc(w.serv)}</td><td class="mono">${w.fecha.slice(5)} ${esc(w.horaProg||"")}</td>

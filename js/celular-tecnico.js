@@ -82,9 +82,9 @@ function renderFon(){
             `${esc(w.fecha.slice(5))} · ${esc(w.serv)}${pagadoTecWO(w)>0?` · Pagado parcial ${money(pagadoTecWO(w))} de ${money(egresoWO(w))}`:""}`,
             egresoWO(w)!==null?money(montoNomWO(w)):"Por definir", egresoWO(w)===null?"var(--ambar)":"")).join("")}</div>`:""}
       ${extra.length?`<div class="dc"><div class="dl" style="margin:0 0 2px">Pagos adicionales aprobados</div>
-        ${extra.map(x=>fila(`Adicional · WO-${x.wo}`,esc((x.motivo||"").slice(0,60)),"+"+money(x.monto),"var(--verde)")).join("")}</div>`:""}
+        ${extra.map(x=>fila(`Adicional · ${woN(x.wo)}`,esc((x.motivo||"").slice(0,60)),"+"+money(x.monto),"var(--verde)")).join("")}</div>`:""}
       ${desc.length?`<div class="dc"><div class="dl" style="margin:0 0 2px">Descuentos</div>
-        ${desc.map(x=>fila(esc(x.concepto||x.motivo||"Descuento"),[x.wo?`WO-${x.wo}`:"",x.desc?esc(x.desc):""].filter(Boolean).join(" · "),"−"+money(x.monto),"var(--rojo)")).join("")}</div>`:""}
+        ${desc.map(x=>fila(esc(x.concepto||x.motivo||"Descuento"),[x.wo?`${woN(x.wo)}`:"",x.desc?esc(x.desc):""].filter(Boolean).join(" · "),"−"+money(x.monto),"var(--rojo)")).join("")}</div>`:""}
       ${ws.some(w=>egresoWO(w)===null)?`<div class="ds" style="text-align:center;margin-top:4px">"Por definir": oficina todavía no carga el pago de ese trabajo.</div>`:""}`;
   }
   else if(S.phView==="subwo" && S.phSub){
@@ -95,7 +95,7 @@ function renderFon(){
     const specs=Object.entries(a.specs||{}).filter(([,v])=>v).map(([k,v])=>`<div class="ds"><b>${esc(k)}:</b> ${esc(v)}</div>`).join("");
     h=`<button class="db g" style="margin:5px 0 9px;padding:7px;font-size:11.5px" data-a="fView" data-v="agenda">‹ Mi agenda</button>
       <div class="dc"><div style="display:flex;justify-content:space-between;gap:7px">
-        <div><div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--azul)">SUB-WO · WO-${w.id}</div>
+        <div><div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--azul)">SUB-WO · ${woN(w.id)}</div>
         <div class="dh">${esc(a.concepto)}</div><div class="ds">${esc(p.nombre)} · Unidad ${esc(u.num)}</div></div>
         <span class="dtag" style="background:${col}22;color:${col};height:fit-content">${esc(estado)}</span></div>
         <div style="margin-top:9px;padding-top:9px;border-top:1px solid var(--line)">
@@ -252,7 +252,7 @@ function renderFon(){
       (espera && w.tec
         ? `<div class="dc" style="background:var(--ambar-cl);border-color:var(--ambar)">
              <div class="dh" style="color:var(--ambar)">En espera</div>
-             <div class="ds" style="margin-top:3px">Falta terminar WO-${espera.id} (${esc(espera.serv)}). Te avisamos cuando puedas empezar.</div></div>
+             <div class="ds" style="margin-top:3px">Falta terminar ${woN(espera.id)} (${esc(espera.serv)}). Te avisamos cuando puedas empezar.</div></div>
            <button class="db p" disabled>${icBtn('<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>')}Ya llegué</button>` : "")
     + (esAgendada(w.estado) && w.tec && !espera
         ? `<button class="db p" data-a="fLlegue" data-id="${w.id}">
@@ -305,7 +305,7 @@ function renderFon(){
            <button class="db g" disabled>${icBtn(IC_FOTO)}Foto de cómo quedó</button>
            <button class="db g" disabled>${icBtn(IC_ALERTA)}Necesito aprobación</button>
            <button class="db v" disabled>${icBtn(IC_CHECK)}Terminé</button>
-           <div class="ds" style="text-align:center;margin-top:2px">${espera?`En espera — falta terminar WO-${espera.id}`:"Marca tu llegada para poder cerrar el trabajo"}</div>` : "")
+           <div class="ds" style="text-align:center;margin-top:2px">${espera?`En espera — falta terminar ${woN(espera.id)}`:"Marca tu llegada para poder cerrar el trabajo"}</div>` : "")
     /* Oficina le pidió lo que faltaba. No se le reabre el trabajo: solo
        aparece lo que falta, y al enviarlo le avisa a quien se lo pidió. */
     + (w.infoPedida
@@ -354,7 +354,7 @@ function renderFon(){
             <div class="ds">${esc(U(w.unidad).num)} · ${esc(w.serv)}</div>
             <div class="ds" style="font-size:10px">${w.fecha}${w.horaProg?` · ${esc(w.horaFin?`${w.horaProg}–${w.horaFin}`:w.horaProg)}`:""}</div></div>
           <span class="dtag" style="background:${col}22;color:${col};flex:none;height:fit-content">${esc(estadoTec(w))}</span></div>
-        ${woEspera(w)?`<div class="ds" style="margin-top:5px;color:var(--ambar);font-weight:700">En espera — falta terminar WO-${woEspera(w).id} (${esc(woEspera(w).serv)})</div>`:""}
+        ${woEspera(w)?`<div class="ds" style="margin-top:5px;color:var(--ambar);font-weight:700">En espera — falta terminar ${woN(woEspera(w).id)} (${esc(woEspera(w).serv)})</div>`:""}
         ${a?`<div class="ds" style="margin-top:5px;color:var(--verde)">Llegaste ${a.horaReal} · ${esc(a.puntualidad)}</div>`:""}
         ${(w.fotosPrevias||[]).length?`<div class="ds" style="margin-top:5px;color:var(--azul);font-weight:700">📷 ${(w.fotosPrevias||[]).length} foto(s) para prepararte antes de ir</div>`:""}
         <div class="ds" style="margin-top:6px;color:var(--azul);font-weight:650">Abrir ›</div></div>`;
@@ -363,7 +363,7 @@ function renderFon(){
       const col={Unassigned:"#8a97a4",Assigned:"#1f4e79","In progress":"#8a5a00",Completed:"#1e5c3a"}[estado]||"#8a97a4";
       return `<div class="dc" data-a="fSubAbrir" data-id="${a.id}" style="cursor:pointer;border-left:4px solid var(--azul)">
         <div style="display:flex;justify-content:space-between;gap:7px"><div style="min-width:0">
-          <div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--azul);margin-bottom:2px">SUB-WO · WO-${w.id}</div>
+          <div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--azul);margin-bottom:2px">SUB-WO · ${woN(w.id)}</div>
           <div class="dh">${esc(p.nombre)}</div><div class="ds">${esc(u.num)} · ${esc(a.concepto)}</div>
           <div class="ds" style="font-size:10px">${esc(fechaSubWO(a)||"Sin fecha")}${a.ubic?` · ${esc(a.ubic)}`:""}</div></div>
           <span class="dtag" style="background:${col}22;color:${col};height:fit-content">${esc(estado)}</span></div>
@@ -1106,7 +1106,7 @@ function gustavoScreenHTML(view){
         <div style="display:flex;justify-content:space-between;gap:6px;align-items:center">
           <div class="dh">${esc(P(d.prop).nombre)} · ${U(d.unidad)?esc(U(d.unidad).num):"—"}</div>
           <span class="dtag" style="background:${d.estado==="Cerrada"?"var(--verde)":"var(--ambar)"};color:#fff;flex:none">${esc(d.estado)}</span></div>
-        <div class="ds" style="margin-top:4px">Área: <b>${esc(devAreasTxt(d))}</b>${d.wo?` · WO-${d.wo}`:""}</div>
+        <div class="ds" style="margin-top:4px">Área: <b>${esc(devAreasTxt(d))}</b>${d.wo?` · ${woN(d.wo)}`:""}</div>
         <div class="ds" style="margin-top:5px;color:var(--tinta)">${esc(d.desc)}</div>
       </div>
 
@@ -1136,7 +1136,7 @@ function gustavoScreenHTML(view){
       ${(()=>{ const tu=touchupDe(d.id); if(!tu) return "";
         return `<div class="dl" style="margin-top:10px">Qui\u00e9n la est\u00e1 corrigiendo</div>
           <div class="dc" style="border-left:3px solid var(--azul)">
-            <div class="dh">WO-${tu.id} · ${esc(tecN(tu.tec))}</div>
+            <div class="dh">${woN(tu.id)} · ${esc(tecN(tu.tec))}</div>
             <div class="ds" style="margin-top:3px">${esc(tu.serv)} · ${tu.fecha} · <b>${esc(tu.estado)}</b></div>
             <div class="ds" style="margin-top:3px;color:var(--faint)">${
               tu.tec===tu.tecOriginal
@@ -1171,7 +1171,7 @@ function gustavoScreenHTML(view){
       h = `<button class="db g" style="margin:5px 0 9px;padding:7px;font-size:11.5px" data-a="gTecWOCerrar">‹ Volver a los técnicos</button>
         <div class="dc" style="border-left:3px solid ${e.c}">
           <div style="display:flex;justify-content:space-between;gap:6px;align-items:center">
-            <div class="dh" style="font-size:12.5px">WO-${wSel.id} · ${esc(wSel.serv)}</div>
+            <div class="dh" style="font-size:12.5px">${woN(wSel.id)} · ${esc(wSel.serv)}</div>
             <span class="dtag" style="background:${e.c};color:#fff;flex:none">${esc(e.n)}</span></div>
           <div class="ds" style="margin-top:4px"><b>${esc(P(wSel.prop).nombre)}</b> · ${U(wSel.unidad)?esc(U(wSel.unidad).num):"—"}</div>
           <div class="ds" style="margin-top:2px">${esc(P(wSel.prop).dir||"")}</div>
@@ -1210,7 +1210,7 @@ function gustavoScreenHTML(view){
               <div class="dh" style="font-size:12.5px">${esc(tecN(f.t.id))}</div>
               <span class="dtag" style="background:${f.col};color:#fff;flex:none">${esc(f.est)}</span></div>
             ${f.wo?`<div class="ds" style="margin-top:3px"><b>${esc(P(f.wo.prop).nombre)}</b> · ${U(f.wo.unidad)?esc(U(f.wo.unidad).num):"—"}</div>
-              <div class="ds" style="margin-top:2px">${esc(f.wo.serv)} · WO-${f.wo.id} · ${esc(estadoSup(f.wo).n)}</div>`:""}
+              <div class="ds" style="margin-top:2px">${esc(f.wo.serv)} · ${woN(f.wo.id)} · ${esc(estadoSup(f.wo).n)}</div>`:""}
             ${f.nota?`<div class="ds" style="margin-top:2px;color:var(--faint)">${esc(f.nota)}</div>`:""}
             ${f.n>1?`<div class="ds" style="margin-top:2px;font-size:10.5px">${f.n} trabajos hoy</div>`:""}
           </div>`).join("")
@@ -1240,7 +1240,7 @@ function gustavoScreenHTML(view){
           const col={g:"#8a97a4",a:"#1f4e79",m:"#5b21b6",w:"#8a5a00",v:"#1e5c3a",r:"#9b2226"}[estP(w.estado)]||"#8a97a4";
           return `<div class="dc" style="border-left:3px solid ${col}">
             <div style="display:flex;justify-content:space-between;gap:6px;align-items:center">
-              <div class="dh" style="font-size:12px">WO-${w.id} · ${esc(w.serv)}</div>
+              <div class="dh" style="font-size:12px">${woN(w.id)} · ${esc(w.serv)}</div>
               <span class="dtag" style="background:${col}22;color:${col};flex:none">${esc(w.estado)}</span></div>
             <div class="ds" style="margin-top:3px">${esc(w.fecha||"—")} · ${w.tec?esc(tecN(w.tec)):"Sin técnico"}${w.evid?` · ${w.evid} foto(s)`:""}</div>
             ${w.notas?`<div class="ds" style="margin-top:3px;color:var(--tinta)">«${esc(w.notas)}»</div>`:""}

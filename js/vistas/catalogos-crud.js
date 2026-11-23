@@ -256,7 +256,7 @@ function fichaProp(id){
   ${t==="hist"?`<div class="card"><div class="chd"><h3>Historial de la propiedad</h3>
     <span class="s">lo que Lydia necesita para atender sin transferir la llamada</span></div>
     ${ws.length?`<table><thead><tr><th>WO</th><th>Fecha</th><th>Unidad</th><th>Servicio</th><th>Técnico</th><th>Estado</th></tr></thead><tbody>
-    ${ws.map(w=>`<tr class="cl${fl("wo:"+w.id)}" data-a="woVer" data-id="${w.id}"><td class="mono" style="font-weight:700">WO-${w.id}</td><td class="mono">${w.fecha.slice(5)}</td>
+    ${ws.map(w=>`<tr class="cl${fl("wo:"+w.id)}" data-a="woVer" data-id="${w.id}"><td class="mono" style="font-weight:700">${woN(w.id)}</td><td class="mono">${w.fecha.slice(5)}</td>
       <td>${esc(U(w.unidad).num)}</td><td>${esc(w.serv)}</td><td>${w.tec?esc(tecN(w.tec)):"—"}</td>
       <td><span class="pill ${estP(w.estado)}">${w.estado}</span></td></tr>`).join("")}
     </tbody></table>`:`<div class="empty">Sin trabajos registrados</div>`}</div>`:""}`;
@@ -378,7 +378,7 @@ function vCampo(){
       <tbody>${hoy.map(w=>{
         return `<tr class="cl${fl("wo:"+w.id)}" data-a="woVer" data-id="${w.id}">
           <td style="font-weight:650">${esc(tecN(w.tec))}</td>
-          <td class="mono" style="font-weight:700">WO-${w.id}</td>
+          <td class="mono" style="font-weight:700">${woN(w.id)}</td>
           <td>${esc(P(w.prop).nombre)}</td>
           <td>${esc(U(w.unidad).num)}</td>
           <td>${esc(w.fecha)}</td>

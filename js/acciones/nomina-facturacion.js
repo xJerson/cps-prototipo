@@ -26,7 +26,7 @@ function asignarApprovalRequest(id, quien){
   // Antes nadie se enteraba: la fila salía de «Unassigned» y parecía desaparecer.
   const x=excTodas().find(e=>e.id===id)||destino;
   if(quien!==S.usuario) avisar(quien,"Te asignaron un Request",
-    `${esc(x.tipo||"Request")}${x.wo?` · WO-${x.wo}`:""} — asignado por ${esc(S.usuario)}. Lo ves en Requests → «Mine».`,"a");
+    `${esc(x.tipo||"Request")}${x.wo?` · ${woN(x.wo)}`:""} — asignado por ${esc(S.usuario)}. Lo ves en Requests → «Mine».`,"a");
   toast("Request assigned", quien===S.usuario
     ? `Ahora es tuyo: lo ves en la pestaña <b>Mine</b>.`
     : `<b>${esc(quien)}</b> ya tiene el aviso. Salió de «Unassigned»: lo ves en <b>All</b>, y ${esc(quien)} en su <b>Mine</b>.`,"v");
@@ -98,14 +98,14 @@ Object.assign(ACC, {
       fecha:HOY_SUP, creada:{quien:S.usuario,hora:hora(),minuto:S.reloj,fecha:HOY_SUP},
       historial:[{evento:"Created",quien:S.usuario,hora:hora(),fecha:HOY_SUP}], resol:null};
     S.excepciones.push(nx); flash("exc:"+nx.id);
-    cm(); toast("Request created",`It is <b>Unassigned</b>. Assign an owner before starting work. WO-${nx.wo} no se paga ni se factura hasta resolverla.`,"w"); render();
+    cm(); toast("Request created",`It is <b>Unassigned</b>. Assign an owner before starting work. ${woN(nx.wo)} no se paga ni se factura hasta resolverla.`,"w"); render();
   },
   excFiltro: d => { S.excFiltro=d.f; render(); },
   excAsignarYo: d => asignarApprovalRequest(d.id,S.usuario),
   excAsignarModal: d => {
     const x=excTodas().find(y=>y.id===d.id); if(!x) return;
     const usuarios=usuariosQueResuelven();
-    modal(`<div class="mh"><h3>Assign Request</h3><p>${esc(x.tipo)}${x.wo?` · WO-${x.wo}`:""}</p></div>
+    modal(`<div class="mh"><h3>Assign Request</h3><p>${esc(x.tipo)}${x.wo?` · ${woN(x.wo)}`:""}</p></div>
       <div class="mb"><div class="fld"><label>Assigned to</label><select id="excAsignada">${usuarios.map(u=>`<option ${u===x.assignedTo?"selected":""}>${esc(u)}</option>`).join("")}</select></div>
       <div class="hint">The assigned person owns the approval follow-up. First-line approval defaults to Thalia; Gustavo or another person can take it when it is outside Thalia's scope.</div></div>
       <div class="mf"><button class="btn" data-a="cm">Cancel</button><button class="btn p" data-a="excAsignarGuardar" data-id="${x.id}">Assign</button></div>`);
@@ -115,7 +115,7 @@ Object.assign(ACC, {
      nota de qué se hizo y le llega un aviso al técnico. No toca pago ni factura. */
   excAyudaResolver: d => {
     const x=by(S.excepciones,d.id); if(!x) return;
-    modal(`<div class="mh"><h3>Resolver ayuda</h3><p>${esc(x.motivo)}${x.wo?` · WO-${x.wo}`:""}</p></div>
+    modal(`<div class="mh"><h3>Resolver ayuda</h3><p>${esc(x.motivo)}${x.wo?` · ${woN(x.wo)}`:""}</p></div>
       <div class="mb"><div class="fld"><label>¿Qué se hizo? <span class="req">*</span></label><textarea id="ayN" placeholder="Ej. Gustavo le llevó la llave"></textarea></div></div>
       <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="excAyudaOK" data-id="${x.id}">Resolver</button></div>`);
   },
@@ -127,7 +127,7 @@ Object.assign(ACC, {
     registrarHistorialApproval(x,"Resolved",nota);
     const w=W(x.wo);
     if(w) w.hist.push([hora(),`Ayuda en sitio resuelta: ${nota}`,S.usuario]);
-    noti(`Ayuda en WO-${x.wo}`,`Ayuda: ${nota}`);
+    noti(`Ayuda en ${woN(x.wo)}`,`Ayuda: ${nota}`);
     cm(); flash("exc:"+x.id);
     toast("✓ Ayuda resuelta","Le avisamos al técnico en su celular.","v"); render();
   },
@@ -215,7 +215,7 @@ Object.assign(ACC, {
      cerraba en silencio y no había forma de saber por qué seguía frenada. */
   medioNo: d => { const w=W(d.wo); cm();
     toast("⚠ Quedó sin decidir",
-      `El adicional de WO-${w.id} sigue sin resolverse — <b>${esc(tecN(w.tec))}</b> puede seguir con lo programado, pero esa WO no se paga ni se factura hasta que decidas.
+      `El adicional de ${woN(w.id)} sigue sin resolverse — <b>${esc(tecN(w.tec))}</b> puede seguir con lo programado, pero esa WO no se paga ni se factura hasta que decidas.
        La tienes en <b>Excepciones</b>.`,"w");
     render(); },
   medioOK: d => {
@@ -293,10 +293,10 @@ Object.assign(ACC, {
     toast(no.length ? (ok.length?"Adicional aprobado en parte":"Adicional no aprobado") : "✓ Adicional aprobado",
       `${ok.length?`Sí: <b>${esc(nom(ok))}</b>. `:""}${no.length?`No: <b>${esc(nom(no))}</b>. `:""}${sustento}${plata}${notaPrecio} `
       + (quedan
-          ? `<br><br><b>Ojo: el pago/factura de WO-${w.id} sigue frenado</b> — hay otra solicitud del técnico sin decidir.`
+          ? `<br><br><b>Ojo: el pago/factura de ${woN(w.id)} sigue frenado</b> — hay otra solicitud del técnico sin decidir.`
           : sinPrecio.length
-          ? `<br><br>El pago/factura de WO-${w.id} sigue frenado hasta definir el precio.`
-          : `<br><br>El pago/factura de WO-${w.id} ya puede seguir su curso.`),
+          ? `<br><br>El pago/factura de ${woN(w.id)} sigue frenado hasta definir el precio.`
+          : `<br><br>El pago/factura de ${woN(w.id)} ya puede seguir su curso.`),
       (no.length||quedan||sinPrecio.length)?"w":"v");
     noti(no.length ? (ok.length?"Adicional aprobado en parte":"Adicional NO aprobado") : "Adicional aprobado",
       `${ok.length?`Haz: ${nom(ok)}. `:""}${no.length?`NO hagas: ${nom(no)}. `:""}Lo decidió ${S.usuario} (${d.medio.toLowerCase()}).`, false);
@@ -417,7 +417,7 @@ Object.assign(ACC, {
   parcialModal: d => {
     const w=W(d.id); if(!w||!woPagable(w)) return;
     const sal=saldoTecWO(w); S._recibo=null;
-    modal(`<div class="mh"><h3>Pago parcial</h3><p>WO-${w.id} · ${esc(tecN(w.tec))} · saldo ${money(sal)}${pagadoTecWO(w)>0?` de ${money(egresoWO(w))}`:""}</p></div>
+    modal(`<div class="mh"><h3>Pago parcial</h3><p>${woN(w.id)} · ${esc(tecN(w.tec))} · saldo ${money(sal)}${pagadoTecWO(w)>0?` de ${money(egresoWO(w))}`:""}</p></div>
     <div class="mb"><div class="fg c2"><div class="fld"><label>Monto <span class="req">*</span></label><input id="pcM" type="number" min="0.01" max="${sal}" step="0.01"></div>
       <div class="fld"><label>Cheque #</label><input id="pcCh" placeholder="Opcional" autocomplete="off"></div></div>
       <div class="fld"><label>Nota</label><input id="pcN" placeholder="Ej. anticipo del proyecto"></div>${campoRecibo("Comprobante")}</div>
@@ -432,7 +432,7 @@ Object.assign(ACC, {
     S.nomina.push({id,semana:S.semana,periodo:{...S.periodo},tec:w.tec,wos:[w.id],total:m,tipo:"Parcial",nota,cheque,foto,quien:S.usuario,fecha:HOY_SUP,hora:hora()});
     (w.pagosTec=w.pagosTec||[]).push({monto:m,fecha:HOY_SUP,quien:S.usuario,nota,nomina:id});
     w.hist.push([hora(),`Pago parcial al técnico · ${money(m)} de ${money(egresoWO(w))}`,S.usuario]);
-    cm(); toast("✓ Pago parcial",`${esc(tecN(w.tec))} · WO-${w.id} · ${money(m)}. Le quedan ${money(sal-m)}.`,"v"); render();
+    cm(); toast("✓ Pago parcial",`${esc(tecN(w.tec))} · ${woN(w.id)} · ${money(m)}. Le quedan ${money(sal-m)}.`,"v"); render();
   },
   /* Historial de nómina: filtros, detalle y comprobante que se adjunta después. */
   nomFiltro: () => { const f=filtroNom();
@@ -459,7 +459,7 @@ Object.assign(ACC, {
     modal(`<div class="mh"><h3>Descuento</h3><p>${esc(tecN(d.tec))} · ${esc(periodoTexto(S.periodo))}</p></div>
     <div class="mb"><div class="fg c2"><div class="fld"><label>Monto <span class="req">*</span></label><input id="dmM" type="number" min="0.01" step="0.01"></div>
       <div class="fld"><label>Concepto <span class="req">*</span></label><input id="dmC" placeholder="Ej. trabajo mal hecho" maxlength="60" autocomplete="off"></div></div>
-      <div class="fg c2"><div class="fld"><label>WO</label><select id="dmWO"><option value="">— ninguna —</option>${ws.map(w=>`<option value="${w.id}">WO-${w.id} · ${esc(w.fecha.slice(5))} · ${esc(P(w.prop).nombre)} ${U(w.unidad)?esc(U(w.unidad).num):""}</option>`).join("")}</select></div>
+      <div class="fg c2"><div class="fld"><label>WO</label><select id="dmWO"><option value="">— ninguna —</option>${ws.map(w=>`<option value="${w.id}">${woN(w.id)} · ${esc(w.fecha.slice(5))} · ${esc(P(w.prop).nombre)} ${U(w.unidad)?esc(U(w.unidad).num):""}</option>`).join("")}</select></div>
       <div class="fld"><label>Otra WO #</label><input id="dmWOt" type="number" min="1" placeholder="Opcional"></div></div>
       <div class="fld"><label>Descripción</label><input id="dmD" placeholder="Breve — el técnico la ve" maxlength="90" autocomplete="off"></div></div>
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="descManualOK" data-tec="${d.tec}">Aplicar</button></div>`);
@@ -499,7 +499,7 @@ Object.assign(ACC, {
     const x = by(S.descuentos,d.id);
     if(!x || x.estado!=="Por decidir") return;
     modal(`<div class="mh"><h3>No aplicar descuento</h3>
-      <p>${esc(tecN(x.tec))} · ${money(x.monto)} · WO-${x.wo}</p></div>
+      <p>${esc(tecN(x.tec))} · ${money(x.monto)} · ${woN(x.wo)}</p></div>
     <div class="mb"><div class="fld"><label>Motivo <span class="req">*</span></label>
       <input id="dnM" placeholder="Ej. no fue su culpa, el daño ya estaba"></div>
       <div class="note">Queda registrado con tu nombre. El técnico no ve este descuento en su pago.</div></div>
@@ -561,7 +561,7 @@ function pagarNomina(tec, ext){
 function aprobarWO(w, que){
   if(!w) return;
   if(!puedeValidar()){ S.audOmitir=true; toast("Sin permiso","Solo Claudia o Erika pueden validar Work Orders.","r"); return; }
-  if(w.estado!=="Completed"){ S.audOmitir=true; toast("No está terminada",`WO-${w.id} está en «${esc(w.estado)}». Solo se validan Work Orders terminadas.`,"r"); return; }
+  if(w.estado!=="Completed"){ S.audOmitir=true; toast("No está terminada",`${woN(w.id)} está en «${esc(w.estado)}». Solo se validan Work Orders terminadas.`,"r"); return; }
   leerValDraft(w); if(!aplicarEdicionVal(w)) return;
   const falta = [];
   if(!w.evid && !w.evidExcusada) falta.push("evidencia del trabajo");
@@ -570,7 +570,7 @@ function aprobarWO(w, que){
   if(clienteRevisionPendienteDeWO(w.id)) falta.push("confirmación del cliente");
   if(falta.length){
     S.audOmitir=true;
-    toast("🚫 Falta información",`No se puede validar WO-${w.id}: falta <b>${esc(falta.join(", "))}</b>.`,"r");
+    toast("🚫 Falta información",`No se puede validar ${woN(w.id)}: falta <b>${esc(falta.join(", "))}</b>.`,"r");
     return;
   }
   const sello={quien:S.usuario,hora:hora(),fecha:HOY_SUP};
@@ -580,7 +580,7 @@ function aprobarWO(w, que){
   S._valDraft=null; cm();
   w.hist.push([hora(),que==="ambos"?"Work Order validada para facturación y nómina":que==="pago"?"Pago aprobado (nómina)":"Factura aprobada",S.usuario]);
   toast(que==="ambos"?"✓ Work Order validada":que==="pago"?"✓ Pago aprobado":"✓ Factura aprobada",
-    `WO-${w.id} ${que==="ambos"?"pasa a nómina y facturación":que==="pago"?"pasa a nómina":"pasa a facturación"}. Por ${S.usuario}.`,"v"); render();
+    `${woN(w.id)} ${que==="ambos"?"pasa a nómina y facturación":que==="pago"?"pasa a nómina":"pasa a facturación"}. Por ${S.usuario}.`,"v"); render();
 }
 /* Validar con dinero (Claudia/Erika): edita Cobro y Pago técnico y agrega ajustes. */
 function modalValidar(w){
@@ -599,7 +599,7 @@ function modalValidar(w){
     if(subsPend.length) falta.push(`${subsPend.length} Sub-WO sin terminar o sin evidencia`);
     if(clienteRevisionPendienteDeWO(w.id)) falta.push("confirmación del cliente");
     const faltaBase=!w.evid && !w.evidExcusada;
-    modal(`<div class="mh"><h3>Validar WO-${w.id}</h3>
+    modal(`<div class="mh"><h3>Validar ${woN(w.id)}</h3>
       <p>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)} · ${esc(tecN(w.tec))}</p></div>
     <div class="mb">
       <table><tbody>
@@ -712,7 +712,7 @@ function modalMaterialesVal(w){
     .map(m=>({id:m.id,prod:m.prod,cant:String(m.cant),costo:String(m.costo)}))};
   S._valMatDraft=d;
   const prods=S.productos.filter(p=>p.consumible!==false&&p.cat!=="Suministros de oficina");
-  modal(`<div class="mh"><h3>Ajustar materiales · WO-${w.id}</h3><p>Cambia lo usado o agrega un material. El inventario y la utilidad se actualizan.</p></div>
+  modal(`<div class="mh"><h3>Ajustar materiales · ${woN(w.id)}</h3><p>Cambia lo usado o agrega un material. El inventario y la utilidad se actualizan.</p></div>
     <div class="mb">${d.filas.length?d.filas.map((f,i)=>`<div class="adfila"><select id="vmP${i}">${prods.map(p=>`<option value="${p.id}" ${p.id===f.prod?"selected":""}>${esc(p.nombre)} · ${esc(p.um)}</option>`).join("")}</select><button class="adx" data-a="valMatQuitar" data-id="${w.id}" data-i="${i}">−</button><div class="adnum"><label>Cant.<input id="vmC${i}" value="${esc(f.cant)}" inputmode="decimal"></label><label>Costo<input id="vmT${i}" value="${esc(f.costo)}" inputmode="decimal"></label></div></div>`).join(""):`<div class="hint">Sin materiales registrados.</div>`}
       <button class="btn sm" data-a="valMatAgregar" data-id="${w.id}">+ Agregar</button>
       <div class="hint" style="margin-top:8px">El costo es el total usado en esta WO. Guardar vuelve a abrir la validación.</div></div>
@@ -1331,14 +1331,14 @@ Object.assign(ACC, {
     const cp={tipo:t.tipo, wo:t.wo, subwo:t.subwo, clave:t.clave, nombre:t.nombre, cant:t.cant, escala:t.escala, antes:r2(t.antes), despues:r2(nuevo), motivo:mot,
       fijadoPor:t.pf?t.pf.por:null};
     const x={id:"X"+Date.now(), tipo:"Cambio de precio fijado", wo:t.wo, subwo:t.subwo||undefined,
-      motivo:`WO-${t.wo} · ${t.nombre}: ${money(cp.antes)} → ${money(cp.despues)} — Motivo: ${mot}`, monto:null, pide:S.usuario, aprueba:APROBADOR_CAMBIO_MONTO,
+      motivo:`${woN(t.wo)} · ${t.nombre}: ${money(cp.antes)} → ${money(cp.despues)} — Motivo: ${mot}`, monto:null, pide:S.usuario, aprueba:APROBADOR_CAMBIO_MONTO,
       estado:"Pendiente", assignedTo:null, assignedBy:null, assignedAt:null, workStatus:"Unassigned",
       fecha:HOY_SUP, creada:{quien:S.usuario,hora:hora(),minuto:S.reloj,fecha:HOY_SUP},
       historial:[{evento:"Created",quien:S.usuario,hora:hora(),fecha:HOY_SUP}], resol:null, cambioPrecio:cp};
     S.excepciones.push(x);
     w.hist.push([hora(),`Pidió cambiar el precio fijado: ${money(cp.antes)} → ${money(cp.despues)} · ${mot}`,S.usuario]);
-    avisar(APROBADOR_CAMBIO_MONTO,"Cambio de precio fijado",`WO-${t.wo} · ${t.nombre}: ${money(cp.antes)} → ${money(cp.despues)}. Lo pidió ${S.usuario}: ${mot}`,"w");
-    S._audPrecio=`WO-${t.wo} · ${t.nombre} · ${money(cp.antes)} → ${money(cp.despues)}`;
+    avisar(APROBADOR_CAMBIO_MONTO,"Cambio de precio fijado",`${woN(t.wo)} · ${t.nombre}: ${money(cp.antes)} → ${money(cp.despues)}. Lo pidió ${S.usuario}: ${mot}`,"w");
+    S._audPrecio=`${woN(t.wo)} · ${t.nombre} · ${money(cp.antes)} → ${money(cp.despues)}`;
     flash("exc:"+x.id); S._pcTarget=null;
     toast("Pedido enviado",`Le llegó a <b>${esc(APROBADOR_CAMBIO_MONTO)}</b> con el antes y el después. El precio no cambia hasta que lo apruebe.`,"v");
     if(t.desde==="factura"&&S.facturaBorrador) modalLineaFactura(t.clave);
@@ -1356,10 +1356,10 @@ Object.assign(ACC, {
     if(!aplicarPrecioFijado(c, c.escala==="total"?c.despues/(c.cant||1):c.despues)){ S.audOmitir=true; toast("No se puede aplicar","No se encontró el concepto. Rechaza este pedido.","r"); return; }
     x.estado="Aprobada"; x.resol={quien:S.usuario,hora:hora(),nota:`Precio: ${money(c.antes)} → ${money(c.despues)}`};
     registrarHistorialApproval(x,"Approved",`Precio: ${money(c.antes)} → ${money(c.despues)}`);
-    avisar(x.pide,"Cambio de precio aprobado",`WO-${c.wo} · ${c.nombre}: ${money(c.antes)} → ${money(c.despues)}.`,"v");
-    S._audPrecio=`WO-${c.wo} · ${c.nombre} · ${money(c.antes)} → ${money(c.despues)}`;
+    avisar(x.pide,"Cambio de precio aprobado",`${woN(c.wo)} · ${c.nombre}: ${money(c.antes)} → ${money(c.despues)}.`,"v");
+    S._audPrecio=`${woN(c.wo)} · ${c.nombre} · ${money(c.antes)} → ${money(c.despues)}`;
     flash("exc:"+x.id); cm();
-    toast("✓ Cambio aprobado",`WO-${c.wo} · ${esc(c.nombre)}: ${money(c.antes)} → ${money(c.despues)}. Queda fijado por ${esc(S.usuario)}.`,"v"); render();
+    toast("✓ Cambio aprobado",`${woN(c.wo)} · ${esc(c.nombre)}: ${money(c.antes)} → ${money(c.despues)}. Queda fijado por ${esc(S.usuario)}.`,"v"); render();
   },
   precioCambioRechazar: d => {
     const x=by(S.excepciones,d.id); if(!x||!x.cambioPrecio||x.estado!=="Pendiente") return;
@@ -1377,10 +1377,10 @@ Object.assign(ACC, {
     x.estado="Rechazada"; x.resol={quien:S.usuario,hora:hora(),nota:mot};
     registrarHistorialApproval(x,"Rejected",mot);
     if(w) w.hist.push([hora(),`Cambio de precio rechazado (${money(c.antes)} → ${money(c.despues)}) · ${mot}`,S.usuario]);
-    avisar(x.pide,"Cambio de precio rechazado",`WO-${c.wo} · ${c.nombre}: ${mot}`,"w");
-    S._audPrecio=`WO-${c.wo} · ${c.nombre} · ${mot}`;
+    avisar(x.pide,"Cambio de precio rechazado",`${woN(c.wo)} · ${c.nombre}: ${mot}`,"w");
+    S._audPrecio=`${woN(c.wo)} · ${c.nombre} · ${mot}`;
     flash("exc:"+x.id); cm();
-    toast("Cambio rechazado",`El precio de WO-${c.wo} sigue igual. Se le avisó a ${esc(x.pide)}.`,"w"); render();
+    toast("Cambio rechazado",`El precio de ${woN(c.wo)} sigue igual. Se le avisó a ${esc(x.pide)}.`,"w"); render();
   },
   /* Abre el editor de una factura ya emitida: el aprobador aplica directo; los demás preparan el cambio (ver facCambioEnviar). */
   facEditarEmitida: d => abrirCambioMonto(d),
@@ -1388,7 +1388,7 @@ Object.assign(ACC, {
   facEditarBorrador: d => { const f=by(S.facturas,d.id); if(f&&f.estado==="Borrador") abrirBorradorFactura(f.prop,f.id); },
   /* Retener factura: la WO ya validada sale de los candidatos del borrador; la nómina no se toca. */
   facRetener: d => { const w=W(d.id); if(!w||w.facturada) return;
-    modal(`<div class="mh"><h3>Retener WO-${w.id}</h3><p>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)} · ${esc(w.serv)}</p></div>
+    modal(`<div class="mh"><h3>Retener ${woN(w.id)}</h3><p>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)} · ${esc(w.serv)}</p></div>
     <div class="mb"><div class="fld"><label>Motivo <span class="req">*</span></label><textarea id="rtMot"></textarea></div>
       <div class="hint">No entra a ningún borrador hasta que la liberes. La nómina sigue igual.</div></div>
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="facRetenerOK" data-id="${w.id}">Retener</button></div>`); },
@@ -1396,10 +1396,10 @@ Object.assign(ACC, {
     if(!m){ S.audOmitir=true; marcaFalta(["rtMot"]); toast("Falta el motivo","Escribe por qué se retiene.","r"); return; }
     w.facRetenida={motivo:m, quien:S.usuario, hora:hora(), fecha:HOY_SUP};
     w.hist.push([hora(),`Factura retenida · ${m}`,S.usuario]);
-    cm(); toast("Retenida",`WO-${w.id} no entra a factura hasta que la liberes.`,"w"); render(); },
+    cm(); toast("Retenida",`${woN(w.id)} no entra a factura hasta que la liberes.`,"w"); render(); },
   facLiberar: d => { const w=W(d.id); if(!w||!w.facRetenida) return;
     delete w.facRetenida; w.hist.push([hora(),"Factura liberada",S.usuario]);
-    toast("Liberada",`WO-${w.id} vuelve a estar disponible para facturar.`,"v"); render(); },
+    toast("Liberada",`${woN(w.id)} vuelve a estar disponible para facturar.`,"v"); render(); },
   /* Nota de crédito: exclusiva de OPERATIONS_MASTER. La factura original de la WO con el return ya
      facturado nunca se toca (no se edita ni se borra) — se emite una factura nueva, en negativo,
      vinculada por facturaOrigen. Pedido puntual del cliente para el caso de returns. */
@@ -1408,7 +1408,7 @@ Object.assign(ACC, {
     const dv=devAbiertaDeWO(w.id), f=S.facturas.find(x=>x.lineas&&x.lineas.includes(w.id));
     if(!dv||!f) return;
     const concepto=(f.conceptos||[]).find(c=>c.tipo==="WO"&&c.wo===w.id), tope=concepto?concepto.importe:f.total;
-    modal(`<div class="mh"><h3>Emitir nota de crédito</h3><p>WO-${w.id} · ${esc(f.num)} · ${esc(P(w.prop).nombre)}</p></div>
+    modal(`<div class="mh"><h3>Emitir nota de crédito</h3><p>${woN(w.id)} · ${esc(f.num)} · ${esc(P(w.prop).nombre)}</p></div>
     <div class="mb">
       <div class="note w" style="margin-bottom:12px">La factura <b>${esc(f.num)}</b> no se modifica. Esto crea una factura nueva, en negativo, vinculada a ella.</div>
       <div class="fg c2"><div class="fld"><label>Facturado por esta WO</label><div class="mono" style="padding:6px 0">${money(tope)}</div></div>
@@ -1471,11 +1471,11 @@ Object.assign(ACC, {
     limpias.forEach(f=>{ const m=f.id&&porId.get(f.id); if(m) Object.assign(m,{prod:f.prod,cant:f.cant,costo:f.costo});
       else S.movs.push({id:"M"+nid("mv"),prod:f.prod,tipo:"salida",cant:f.cant,fecha:w.fecha,wo:w.id,costo:f.costo,tienda:"",quien:S.usuario,evid:false}); });
     desvalidar(w); w.hist.push([hora(),`Materiales ajustados (${limpias.length} línea(s))`,S.usuario]);
-    S._valMatDraft=null; modalValidar(w); toast("✓ Materiales ajustados",`WO-${w.id}: inventario y utilidad actualizados. Se deben aprobar pago y factura nuevamente.`,"v"); render();
+    S._valMatDraft=null; modalValidar(w); toast("✓ Materiales ajustados",`${woN(w.id)}: inventario y utilidad actualizados. Se deben aprobar pago y factura nuevamente.`,"v"); render();
   },
   valGuardar: d => { const w=W(d.id); leerValDraft(w); if(!aplicarEdicionVal(w)) return;
     desvalidar(w);
-    S._valDraft=null; toast("✓ Guardado",`WO-${w.id} · cambios guardados. Sigue sin validar.`,"v"); modalValidar(w); render(); },
+    S._valDraft=null; toast("✓ Guardado",`${woN(w.id)} · cambios guardados. Sigue sin validar.`,"v"); modalValidar(w); render(); },
   valAjAgregar: d => { const w=W(d.id); leerValDraft(w);
     const conc=val("vaConc"), monto=parseFloat(val("vaMonto")), tipo=val("vaTipo");
     if(!conc||!(monto>0)){ S.audOmitir=true; marcaFalta(["vaConc","vaMonto"]); toast("Falta información","Escribe concepto y un monto mayor a 0.","r"); return; }
@@ -1540,7 +1540,7 @@ Object.assign(ACC, {
       `<b>${esc(tecN(w.tec))}</b> tiene que completar <b>${esc(falta.join(" y "))}</b>.<br><br>`
       + `Le aparece en su celular con solo lo que falta. Cuando lo complete, te avisa.`,"w");
     noti("Te falta completar un trabajo",
-      `WO-${w.id} · ${P(w.prop).nombre}: ${falta.join(" y ")}. Sin eso no entra a tu pago.`);
+      `${woN(w.id)} · ${P(w.prop).nombre}: ${falta.join(" y ")}. Sin eso no entra a tu pago.`);
     render();
   },
 
@@ -1558,7 +1558,7 @@ Object.assign(ACC, {
     S.reloj += 4;
     toast("✓ Enviado",`Ya quedó completo. <b>${esc(quien)}</b> lo va a revisar y entra a tu pago.`,"v");
     avisar(quien,"Un técnico completó lo que faltaba",
-      `WO-${w.id} · ${esc(P(w.prop).nombre)} — ${esc(tecN(w.tec))} ya subió lo pedido. Se puede validar.`,"v");
+      `${woN(w.id)} · ${esc(P(w.prop).nombre)} — ${esc(tecN(w.tec))} ya subió lo pedido. Se puede validar.`,"v");
     render();
   },
   facVer: d => modalFactura(d.id,false),
@@ -1693,7 +1693,7 @@ Object.assign(ACC, {
   movSalida: () => modal(`<div class="mh"><h3>Registrar salida a una Work Order</h3><p>Así se sabe cuánto material cuesta cada servicio.</p></div>
     <div class="mb">
       <div class="fld"><label>Producto <span class="req">*</span></label><select id="mP">${S.productos.map(p=>`<option value="${p.id}">${esc(p.nombre)} — quedan ${stock(p.id)}</option>`).join("")}</select></div>
-      <div class="fld"><label>Work Order <span class="req">*</span></label><select id="mW">${S.wos.map(w=>`<option value="${w.id}">WO-${w.id} · ${esc(P(w.prop).nombre)} ${esc(U(w.unidad).num)}</option>`).join("")}</select></div>
+      <div class="fld"><label>Work Order <span class="req">*</span></label><select id="mW">${S.wos.map(w=>`<option value="${w.id}">${woN(w.id)} · ${esc(P(w.prop).nombre)} ${esc(U(w.unidad).num)}</option>`).join("")}</select></div>
       <div class="fg c2">
         <div class="fld"><label>Cantidad <span class="req">*</span></label><input id="mC" class="mono"></div>
         <div class="fld"><label>Costo <span class="req">*</span></label><input id="mT" class="mono"></div></div></div>
@@ -1717,7 +1717,7 @@ Object.assign(ACC, {
     <div class="mb">
       <div class="fld"><label>Tienda</label><input value="${esc(m.tienda)||"—"}" disabled></div>
       <div class="fld"><label>Quién compró</label><input value="${esc(m.quien)}" disabled></div>
-      <div class="fld"><label>Work Order</label><input value="${w?`WO-${w.id}`:"—"}" disabled></div>
+      <div class="fld"><label>Work Order</label><input value="${w?`${woN(w.id)}`:"—"}" disabled></div>
       <div class="fld"><label>Foto del ticket</label>${m.recibo
         ?`<img src="${m.recibo}" style="max-width:100%;border-radius:6px">`
         :`<div class="hint">Sin foto del ticket</div>`}</div>
@@ -1781,8 +1781,8 @@ Object.assign(ACC, {
     const cambios=[], cambia=(etq,antes,despues)=>{ if(String(antes||"")!==String(despues||"")) cambios.push(`${etq}: ${antes||"—"} → ${despues||"—"}`); };
     if(p.cat==="Material para instalación"){
       const id=val("invW"), w=id&&W(id), antes=reservaTxt(p);
-      cambia("Reservado para",antes,w?`WO-${w.id} · ${P(w.prop).nombre} · ${U(w.unidad).num}`:"");
-      p.reservadoWO=w?w.id:null; p.reservadoPara=w?"WO-"+w.id:"";
+      cambia("Reservado para",antes,w?`${woN(w.id)} · ${P(w.prop).nombre} · ${U(w.unidad).num}`:"");
+      p.reservadoWO=w?w.id:null; p.reservadoPara=w?woN(w.id):"";
     } else {
       cambia("Responsable",respN(p.responsable),respN(val("invR"))); cambia("Estado",p.estado||"Operativa",val("invE")); cambia("Ubicación",p.ubicacion,val("invU"));
       p.responsable=val("invR"); p.estado=val("invE"); p.ubicacion=val("invU");
@@ -1801,5 +1801,5 @@ function selResponsable(id, actual){
 const reservaId = p => p.reservadoWO || ((/WO-(\d+)/.exec(p.reservadoPara||"")||[])[1]) || null;
 function woAbiertasOpts(actual){
   return S.wos.filter(w=>!["Completed","Canceled","Invoiced","Paid"].includes(w.estado) || String(w.id)===String(actual))
-    .map(w=>`<option value="${w.id}" ${String(w.id)===String(actual)?"selected":""}>WO-${w.id} · ${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</option>`).join("");
+    .map(w=>`<option value="${w.id}" ${String(w.id)===String(actual)?"selected":""}>${woN(w.id)} · ${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</option>`).join("");
 }

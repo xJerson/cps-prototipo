@@ -264,11 +264,11 @@ const fotosConRelleno = (arr, n) => {
    se trata; fotoModalAgregar sabe en qué array de cada una hay que guardar. */
 function fotoModalInfo(m){
   if(m.tipo==="woEvid"){ const w=W(m.id);
-    return {titulo:`Evidencia del trabajo — WO-${w.id}`, sub:"Lo que el técnico cargó al cerrar.", arr:(w.evidFotos=w.evidFotos||[])}; }
+    return {titulo:`Evidencia del trabajo — ${woN(w.id)}`, sub:"Lo que el técnico cargó al cerrar.", arr:(w.evidFotos=w.evidFotos||[])}; }
   if(m.tipo==="woPrevia"){ const w=W(m.id);
-    return {titulo:`Fotos de referencia — WO-${w.id}`, sub:"Lo que hay que hacer, en foto — no en texto.", arr:(w.fotosPrevias=w.fotosPrevias||[])}; }
+    return {titulo:`Fotos de referencia — ${woN(w.id)}`, sub:"Lo que hay que hacer, en foto — no en texto.", arr:(w.fotosPrevias=w.fotosPrevias||[])}; }
   if(m.tipo==="woAntes"){ const w=W(m.id);
-    return {titulo:`Antes — WO-${w.id}`, sub:"Cómo se encontró la unidad — no cuenta como evidencia de cierre.", arr:(w.antesFotos=w.antesFotos||[])}; }
+    return {titulo:`Antes — ${woN(w.id)}`, sub:"Cómo se encontró la unidad — no cuenta como evidencia de cierre.", arr:(w.antesFotos=w.antesFotos||[])}; }
   if(m.tipo==="subwoRef"){ const a=by(S.adicionales,m.id);
     return {titulo:"Fotos de referencia", sub:esc(a.concepto), arr:(a.fotosRefArr=a.fotosRefArr||[])}; }
   if(m.tipo==="subwoEvid"){ const a=by(S.adicionales,m.id);
@@ -350,7 +350,7 @@ function legible(k,v){
   if(k==="unidad")  return U(v)?U(v).num:String(v);
   if(k==="sup"||k==="tec") return tecN(v)||String(v);
   if(k==="precio"||k==="pago") return money(v);
-  if(k==="dependeDe") return "WO-"+v;
+  if(k==="dependeDe") return woN(v);
   return String(v);
 }
 function diffCampos(antes, despues){

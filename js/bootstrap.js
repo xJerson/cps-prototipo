@@ -226,7 +226,7 @@ const AUD = {
 /* El descuento recién decidido (lo fija la acción en acciones/nomina-facturacion.js). */
 const descRef = () => { const x=by(S.descuentos,ultimoDescDecidido); return x ? tecN(x.tec)+(x.wo?" · WO-"+x.wo:"") : ""; };
 const AUD_POST = {
-  woGuardar:   () => S.wos.length     ? "WO-"+S.wos[S.wos.length-1].id : "",
+  woGuardar:   () => S.wos.length     ? woN(S.wos[S.wos.length-1].id) : "",
   propGuardar: () => S.propiedades.length ? S.propiedades[S.propiedades.length-1].nombre : "",
   uniGuardar:  () => S.unidades.length    ? "Unidad "+S.unidades[S.unidades.length-1].num : "",
   conGuardar:  () => S.contactos.length   ? S.contactos[S.contactos.length-1].nombre : "",
@@ -256,7 +256,7 @@ const AUD_POST = {
   facAjusteAplicar: () => S._audAj || "",
   facAjusteQuitar:  () => S._audAj || "",
   notaCreditoOK:    () => S._audNotaCredito || "",
-  woDupNueva:  () => S.wos.length ? "WO-"+S.wos[S.wos.length-1].id : "",
+  woDupNueva:  () => S.wos.length ? woN(S.wos[S.wos.length-1].id) : "",
   tarGuardar:  () => { const t=S.tarifas[S.tarifas.length-1]; return t? (t.nombre||t.serv+" · "+t.variante) : ""; },
   pagoTecGuardar: () => { const x=(S.pagosTecnico||[])[S.pagosTecnico.length-1]; return x? tecN(x.tec)+" · "+x.serv+" · "+money(x.pago) : ""; },
   catSave:     () => "",
@@ -273,8 +273,8 @@ const AUD_POST = {
   descAplicar:     () => descRef(),
   descNoAplicarOK: () => descRef(),
   excGuardar:  () => S.excepciones.length ? S.excepciones[S.excepciones.length-1].tipo : "",
-  subwoFotoRef:  () => ultimoSubwoTocado!=null ? "WO-"+ultimoSubwoTocado : "",
-  subwoFotoEvid: () => ultimoSubwoTocado!=null ? "WO-"+ultimoSubwoTocado : "",
+  subwoFotoRef:  () => ultimoSubwoTocado!=null ? woN(ultimoSubwoTocado) : "",
+  subwoFotoEvid: () => ultimoSubwoTocado!=null ? woN(ultimoSubwoTocado) : "",
   estMedioOK:    () => ultimoEstTocado || "",
   estLineaGuardar: () => S.estHdr&&S.estHdr.num ? S.estHdr.num : "",
   estDelLinea:   () => S.estHdr&&S.estHdr.num ? S.estHdr.num : "",
@@ -289,8 +289,8 @@ const AUD_POST = {
 };
 function refDe(d){
   if(!d) return "";
-  if(d.id && /^\d+$/.test(d.id)) return "WO-"+d.id;
-  if(d.wo) return "WO-"+d.wo;
+  if(d.id && /^\d+$/.test(d.id)) return woN(d.id);
+  if(d.wo) return woN(d.wo);
   if(d.prop) return P(d.prop).nombre;
   if(d.tec) return tecN(d.tec);
   if(d.n) return d.n;

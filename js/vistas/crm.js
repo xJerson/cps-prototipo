@@ -295,7 +295,7 @@ function crmVDia(){
         ${(recientes.length||cartera.length)?`<ul class="crm-list">
           ${recientes.map(o=>{ const w=crmWOsProp(o.prop).find(x=>x.estado==="Completed");
             return `<li><div class="crm-li-main"><span class="pill v">Activa</span> ${esc(o.nombre)}
-              <div class="crm-li-sub">${w?`Primer trabajo terminado (WO-${esc(w.id)}). Llama al manager para saber cómo quedó.`:"Ya tiene su primera WO agendada."}</div></div>
+              <div class="crm-li-sub">${w?`Primer trabajo terminado (${woN(esc(w.id))}). Llama al manager para saber cómo quedó.`:"Ya tiene su primera WO agendada."}</div></div>
               <button class="btn sm" data-a="crmAbrir" data-id="${o.id}">Seguimiento</button></li>`;}).join("")}
           ${cartera.map(({p,h})=>`<li><div class="crm-li-main"><span class="crm-dot ${h.s}" aria-hidden="true"></span>${esc(p.nombre)}
               <div class="crm-li-sub">${esc(h.why.join("; "))}</div></div>

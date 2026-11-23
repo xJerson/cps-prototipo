@@ -177,7 +177,7 @@ function ayudaContexto(){
     if(sol) return {sel:`[data-a="solProgramar"][data-id="${sol.id}"]`,
       txt:`«${esc(P(sol.prop).nombre)}» llegó de un estimado aprobado. Toca «Programar» para crear las Work Orders.`};
     const w = S.wos.find(x=>!x.tec && esAgendada(x.estado));
-    if(w) return {sel:`tr[data-a="woVer"][data-id="${w.id}"]`, txt:w.fecha?`La WO-${w.id} todavía no tiene técnico. Entra para asignarlo.`:`La WO-${w.id} todavía no tiene fecha. Entra y coordínala con el cliente antes de asignar técnico.`};
+    if(w) return {sel:`tr[data-a="woVer"][data-id="${w.id}"]`, txt:w.fecha?`La ${woN(w.id)} todavía no tiene técnico. Entra para asignarlo.`:`La ${woN(w.id)} todavía no tiene fecha. Entra y coordínala con el cliente antes de asignar técnico.`};
     return null;
   }
   if(S.mod==="wo" && S.sub){
@@ -197,7 +197,7 @@ function ayudaContexto(){
     if(S.periodoCal.tipo!=="semana") return null;
     const sw = S.wos.find(w=>!w.tec && w.estado!=="Canceled" && w.semana===S.periodoCal.sem);
     if(sw) return {sel:`[data-a="woVer"][data-id="${sw.id}"]`,
-      txt:`La WO-${sw.id} tiene fecha pero no técnico (fila «Sin asignar»). Tocala para asignarlo.`};
+      txt:`La ${woN(sw.id)} tiene fecha pero no técnico (fila «Sin asignar»). Tocala para asignarlo.`};
     return null;
   }
 
@@ -223,7 +223,7 @@ function ayudaContexto(){
   /* H · Nómina / Facturación */
   if(S.mod==="nomina"){
     const wv = S.wos.find(w=>w.estado==="Completed" && !w.validada);
-    if(wv) return {sel:`[data-a="validarModal"][data-id="${wv.id}"]`, txt:`Falta validar la WO-${wv.id}. Toca «Revisar y validar».`};
+    if(wv) return {sel:`[data-a="validarModal"][data-id="${wv.id}"]`, txt:`Falta validar la ${woN(wv.id)}. Toca «Revisar y validar».`};
     if(S.periodo.tipo==="semana"){
       const tecs = S.tecnicos.filter(t=>t.activo!==false && nominaCalc(t.id).ws.length);
       if(puedeAprobarNomina()){
@@ -249,7 +249,7 @@ function ayudaContexto(){
   if(S.mod==="supervision"){
     const ws = S.wos.find(w=>w.estado==="Completed" && !w.supervisada && w.evid);
     if(ws) return {sel:`[data-a="woVer"][data-id="${ws.id}"],[data-a="supervisar"][data-id="${ws.id}"]`,
-      txt:`La WO-${ws.id} está terminada y falta revisarla.`};
+      txt:`La ${woN(ws.id)} está terminada y falta revisarla.`};
     return null;
   }
 

@@ -125,8 +125,8 @@ Object.assign(ACC, {
       :`Quedó registrado que la agenda del ${esc(fecha)} se envió por <b>${esc(medio.toLowerCase())}</b> a <b>${esc(P(prop).nombre)}</b>. El cierre de las 4 PM no la repetirá.`,"v"); render();
   },
   agendaConfirmacionVer: d => { const x=by(S.confirmacionesAgendamiento||[],d.id); if(!x) return; modal(`<div class="mh"><h3>Confirmación de agendamiento</h3><p>${esc(P(x.prop).nombre)} · ${esc(x.fechaAgenda)}</p></div><div class="mb"><div class="fld"><label>To</label><input readonly value="${esc((x.contactos||[]).map(c=>c.mail).filter(Boolean).join(", ")||"No email registered")}"></div><div class="fld"><label>Subject</label><input readonly value="${esc(x.asunto)}"></div><div class="fld"><label>Message</label><textarea readonly rows="12">${esc(x.mensaje)}</textarea></div><div class="note">${esc(textoAvisoAgenda(x))}. Simulated send in this prototype.</div></div><div class="mf"><button class="btn" data-a="cm">Close</button></div>`); },
-  woPendienteCliente: d => { const w=W(d.id), p=P(w.prop), c=(contactosDe(w.prop)||[])[0]||CLI(p.cliente); modal(`<div class="mh"><h3>Notify customer — WO-${w.id}</h3><p>Customer-facing message is generated in English.</p></div><div class="mb"><div class="fld"><label>Reason <span class="req">*</span></label><select id="pcReason"><option>Unit does not have electricity</option><option>Unit does not have water</option><option>Pest control is required</option><option>No access to the unit</option><option>Other</option></select></div><div class="fld"><label>Detail</label><input id="pcDetail" placeholder="Optional detail for the customer"></div><div class="fld"><label>Send by</label><select id="pcMedium"><option>Email</option><option>SMS</option></select></div><div class="note">To: ${esc(c.nombre||"Property contact")} · ${esc(c.mail||c.tel||"—")}. This prototype records a simulated send and follow-up; it does not send a real message.</div></div><div class="mf"><button class="btn" data-a="cm">Cancel</button><button class="btn p" data-a="woPendienteEnviar" data-id="${w.id}">Send and record follow-up</button></div>`); },
-  woPendienteEnviar: d => { const w=W(d.id), motivo=val("pcReason"), detalle=val("pcDetail").trim(), medio=val("pcMedium"), msg=`Hello, work order WO-${w.id} is pending because ${motivo.toLowerCase()}${detalle?`. ${detalle}`:""}. Please let us know when the unit is ready for service.`; S.comunicacionesWO=(S.comunicacionesWO||[]); S.comunicacionesWO.unshift({id:"CW"+(S.comunicacionesWO.length+1),wo:w.id,medio,fecha:HOY_SUP,quien:S.usuario,motivo,mensaje:msg,estado:"Sent"}); w.hist.push([hora(),`Cliente notified by ${medio}: ${motivo}`,S.usuario]); cm(); toast("✓ Customer notified",`The ${medio} message was recorded in English with a follow-up for WO-${w.id}.`,"v"); render(); },
+  woPendienteCliente: d => { const w=W(d.id), p=P(w.prop), c=(contactosDe(w.prop)||[])[0]||CLI(p.cliente); modal(`<div class="mh"><h3>Notify customer — ${woN(w.id)}</h3><p>Customer-facing message is generated in English.</p></div><div class="mb"><div class="fld"><label>Reason <span class="req">*</span></label><select id="pcReason"><option>Unit does not have electricity</option><option>Unit does not have water</option><option>Pest control is required</option><option>No access to the unit</option><option>Other</option></select></div><div class="fld"><label>Detail</label><input id="pcDetail" placeholder="Optional detail for the customer"></div><div class="fld"><label>Send by</label><select id="pcMedium"><option>Email</option><option>SMS</option></select></div><div class="note">To: ${esc(c.nombre||"Property contact")} · ${esc(c.mail||c.tel||"—")}. This prototype records a simulated send and follow-up; it does not send a real message.</div></div><div class="mf"><button class="btn" data-a="cm">Cancel</button><button class="btn p" data-a="woPendienteEnviar" data-id="${w.id}">Send and record follow-up</button></div>`); },
+  woPendienteEnviar: d => { const w=W(d.id), motivo=val("pcReason"), detalle=val("pcDetail").trim(), medio=val("pcMedium"), msg=`Hello, work order ${woN(w.id)} is pending because ${motivo.toLowerCase()}${detalle?`. ${detalle}`:""}. Please let us know when the unit is ready for service.`; S.comunicacionesWO=(S.comunicacionesWO||[]); S.comunicacionesWO.unshift({id:"CW"+(S.comunicacionesWO.length+1),wo:w.id,medio,fecha:HOY_SUP,quien:S.usuario,motivo,mensaje:msg,estado:"Sent"}); w.hist.push([hora(),`Cliente notified by ${medio}: ${motivo}`,S.usuario]); cm(); toast("✓ Customer notified",`The ${medio} message was recorded in English with a follow-up for ${woN(w.id)}.`,"v"); render(); },
 
 
   woVer: d => { S.mod="wo"; S.sub=woId(d.id); render(); },
@@ -289,7 +289,7 @@ Object.assign(ACC, {
           cm(); toast("✓ Unidad actualizada",`Los datos de <b>${esc(uNueva.num)}</b> quedaron guardados para las próximas Work Orders.`,"v"); render(); return;
         }
         return guardarEdicion(yo, datosWO,
-          "Work Orders", "WO-"+yo.id,
+          "Work Orders", woN(yo.id),
           (o,cambios)=>{
             flash("wo:"+o.id);
             if(llaveTarifa(o)!==llaveAntes){ delete o.tarifaCongelada; const tc=tarifaWO(o); if(tc) o.tarifaCongelada=tc; }   // cambió lo que se cobra: toma la tarifa que rige en su fecha de servicio
@@ -297,7 +297,7 @@ Object.assign(ACC, {
             o.hist.push([hora(), "Datos corregidos: "+cambios.map(c=>c.campo).join(", "), S.usuario]);
             // Si ya hay técnico, el cambio le llega: si no, se entera al llegar
             if(o.tec && !o.porEnviar) noti("Tu trabajo cambió",
-              `WO-${o.id}: ${cambios.map(c=>`${c.campo} ahora es ${c.a}`).join(". ")}. Revísalo antes de salir.`, false);
+              `${woN(o.id)}: ${cambios.map(c=>`${c.campo} ahora es ${c.a}`).join(". ")}. Revísalo antes de salir.`, false);
           });
       }
       const id = nid("w");
@@ -307,15 +307,15 @@ Object.assign(ACC, {
         notas:"", notasTec, notasOficina, fotosPrevias:(S.woFotosPreviasDraft||[]).slice(),
         propuestas:[{fecha,medio:"Registro de WO",contacto:S.usuario,respuesta:"Fecha programada",nota:"",motivo:"",quien:S.usuario,hora:hora(),dia:HOY_SUP}],
         hist:[[hora(),"Creada · fecha programada para "+fecha,S.usuario]]};
-      if(dependeDe){ nueva.dependeDe=dependeDe; nueva.hist.push([hora(),`Va después de WO-${dependeDe}`,S.usuario]); }
+      if(dependeDe){ nueva.dependeDe=dependeDe; nueva.hist.push([hora(),`Va después de ${woN(dependeDe)}`,S.usuario]); }
       /* «Crear nueva» desde el aviso de duplicado (modalDupWO): exige motivo y deja rastro en las dos WO.
          El return no pasa por aquí: se hace desde la WO original (ver woDupReturn). */
       const di=S._woDupInfo; S._woDupInfo=null;
       if(di){
         const orig=W(di.orig);
         nueva.motivoDup=di.motivo;
-        nueva.hist.push([hora(),`Creada aunque ya existe WO-${di.orig} · ${di.motivo}`,S.usuario]);
-        if(orig) orig.hist.push([hora(),`Se creó WO-${id} igual (mismo servicio y unidad) · ${di.motivo}`,S.usuario]);
+        nueva.hist.push([hora(),`Creada aunque ya existe ${woN(di.orig)} · ${di.motivo}`,S.usuario]);
+        if(orig) orig.hist.push([hora(),`Se creó ${woN(id)} igual (mismo servicio y unidad) · ${di.motivo}`,S.usuario]);
       }
       const tc=tarifaWO(nueva); if(tc) nueva.tarifaCongelada=tc;
       S.wos.push(nueva);
@@ -335,7 +335,7 @@ Object.assign(ACC, {
       }
       cm();
       const t = tarifa(pid,cat,serv,uNueva.rooms,uNueva.pisos,fecha);
-      toast("✓ Work Order creada", `<b>WO-${id}</b> · ${esc(P(pid).nombre)} ${esc(uNueva.num)}. ${t?"Ingreso "+money(t.precio)+" ya calculado.":"Sin tarifa: quedará como NA."}${esNueva?" Unidad "+esc(uNueva.num)+" agregada al catálogo.":""}`,"v");
+      toast("✓ Work Order creada", `<b>${woN(id)}</b> · ${esc(P(pid).nombre)} ${esc(uNueva.num)}. ${t?"Ingreso "+money(t.precio)+" ya calculado.":"Sin tarifa: quedará como NA."}${esNueva?" Unidad "+esc(uNueva.num)+" agregada al catálogo.":""}`,"v");
       S.mod="wo"; S.sub=id; render();
     };
 
@@ -479,7 +479,7 @@ Object.assign(ACC, {
       flash("wo:"+w.id);
       cm();
       if(motivo){
-        toast("✓ Reagendada",`WO-${w.id} pasó al ${f}. Se liberó el cupo del ${antes}. <b>${esc(contacto)}</b> confirmó por ${esc(medio.toLowerCase())}${w.tec?`, y se le avisó a <b>${esc(tecN(w.tec))}</b>`:". Todavía no tiene técnico asignado"}.`,"v");
+        toast("✓ Reagendada",`${woN(w.id)} pasó al ${f}. Se liberó el cupo del ${antes}. <b>${esc(contacto)}</b> confirmó por ${esc(medio.toLowerCase())}${w.tec?`, y se le avisó a <b>${esc(tecN(w.tec))}</b>`:". Todavía no tiene técnico asignado"}.`,"v");
       } else {
         toast("✓ Fecha confirmada con el cliente",
           `<b>${esc(contacto)}</b> confirmó el <b>${f}</b> por ${esc(medio.toLowerCase())}.`
@@ -495,7 +495,7 @@ Object.assign(ACC, {
             ? `${P(w.prop).nombre} · ${U(w.unidad).num} se movió al ${f} ${w.horaProg}. Motivo: ${motivo.toLowerCase()}.`
             : `${P(w.prop).nombre} ${U(w.unidad)?U(w.unidad).num:""} — ahora es el ${f}, no el ${antes}.`);
         if(!motivo) avisar("Thalia","Se movió una fecha con técnico asignado",
-          `WO-${w.id} pasó del ${antes} al ${f}. Se le avisó a ${esc(tecN(w.tec))}.`,"w");
+          `${woN(w.id)} pasó del ${antes} al ${f}. Se le avisó a ${esc(tecN(w.tec))}.`,"w");
       }
       render(); return;
     }
@@ -540,7 +540,7 @@ Object.assign(ACC, {
   woOficinaLlegada: d => {
     const w = W(d.id);
     const hActual = hora();
-    modal(`<div class="mh"><h3>Marcar llegada por oficina · WO-${w.id}</h3>
+    modal(`<div class="mh"><h3>Marcar llegada por oficina · ${woN(w.id)}</h3>
       <p>Registra la llegada en sitio por el técnico <b>${esc(tecN(w.tec))}</b>.</p></div>
     <div class="mb">
       <div class="fld"><label>Hora de llegada</label><input type="time" id="ofH" value="${hActual}"></div>
@@ -559,9 +559,9 @@ Object.assign(ACC, {
     w.hist.push([hora(), `Llegada a las ${hLlegada} — Registrado por oficina (${S.usuario}) por ${tecN(w.tec)}`, S.usuario]);
     S.bitacora.unshift({ n:++S.audSeq, fecha:HOY_SUP, hora:hora(),
       usuario:S.usuario, rol:ROLES[S.usuario].r,
-      accion:"Registró llegada en campo por el técnico", modulo:"Work Orders", ref:"WO-"+w.id });
+      accion:"Registró llegada en campo por el técnico", modulo:"Work Orders", ref:woN(w.id) });
     cm(); flash("wo:"+w.id);
-    toast("✓ Llegada registrada", `WO-${w.id}: marcada como In progress a las ${hLlegada}.`, "v");
+    toast("✓ Llegada registrada", `${woN(w.id)}: marcada como In progress a las ${hLlegada}.`, "v");
     render();
   },
   woOficinaCorroborar: d => {
@@ -569,7 +569,7 @@ Object.assign(ACC, {
     w.corroborado = true;
     w.hist.push([hora(), `Unidad corroborada — Registrado por oficina (${S.usuario}) por ${tecN(w.tec)}`, S.usuario]);
     flash("wo:"+w.id);
-    toast("✓ Unidad corroborada", `WO-${w.id}: datos de unidad confirmados por oficina.`, "v");
+    toast("✓ Unidad corroborada", `${woN(w.id)}: datos de unidad confirmados por oficina.`, "v");
     render();
   },
   woOficinaTerminar: d => {
@@ -580,14 +580,14 @@ Object.assign(ACC, {
     w.hist.push([hora(), `Terminada — Registrado por oficina (${S.usuario}) por ${tecN(w.tec)}${sinEvid?" (pendiente fotos)":""}`, S.usuario]);
     S.bitacora.unshift({ n:++S.audSeq, fecha:HOY_SUP, hora:hora(),
       usuario:S.usuario, rol:ROLES[S.usuario].r,
-      accion:"Marcó WO terminada por el técnico", modulo:"Work Orders", ref:"WO-"+w.id });
+      accion:"Marcó WO terminada por el técnico", modulo:"Work Orders", ref:woN(w.id) });
     const subsPend = subWOsOperativas().some(a=>a.wo===w.id && a.estadoTrabajo!=="Canceled" && (a.cantPendiente>0 || a.estadoTrabajo!=="Completed" || !(a.fotosEvidArr||[]).length));
     if(!sinEvid && w.evid>0 && ingresoWO(w)!==null && !subsPend){
       w.validada = true;
       w.hist.push([hora(),"Validada automáticamente: evidencia y tarifa completas","Sistema"]);
     }
     flash("wo:"+w.id);
-    toast(sinEvid ? "⚠️ WO terminada (fotos pendientes)" : "✓ Work Order terminada", `WO-${w.id} marcada como Completed por oficina.${sinEvid?" Fotos marcadas como pendientes.":""}`, sinEvid ? "w" : "v");
+    toast(sinEvid ? "⚠️ WO terminada (fotos pendientes)" : "✓ Work Order terminada", `${woN(w.id)} marcada como Completed por oficina.${sinEvid?" Fotos marcadas como pendientes.":""}`, sinEvid ? "w" : "v");
     render();
   },
 
@@ -604,11 +604,11 @@ Object.assign(ACC, {
     const w = W(d.id), p = P(w.prop), u = U(w.unidad);
     const urls = (w.evidFotos||[]).map(f=>f.url).filter(Boolean);
     if(!urls.length){ toast("Sin fotos","Esta orden no tiene fotos de evidencia todavía.","w"); return; }
-    const texto = `Fotos WO-${w.id} · ${p.nombre} ${u.num} (${w.serv}):\n` + urls.map((u,i)=>`Foto ${i+1}: ${u}`).join("\n");
+    const texto = `Fotos ${woN(w.id)} · ${p.nombre} ${u.num} (${w.serv}):\n` + urls.map((u,i)=>`Foto ${i+1}: ${u}`).join("\n");
     if(navigator.clipboard && navigator.clipboard.writeText){
       navigator.clipboard.writeText(texto).then(()=>toast("✓ Enlaces copiados",`${urls.length} enlace(s) copiados al portapapeles listos para pegar.`,"v"));
     } else {
-      modal(`<div class="mh"><h3>Enlaces de fotos · WO-${w.id}</h3></div><div class="mb"><textarea rows="6" readonly style="width:100%">${esc(texto)}</textarea></div><div class="mf"><button class="btn p" data-a="cm">Listo</button></div>`);
+      modal(`<div class="mh"><h3>Enlaces de fotos · ${woN(w.id)}</h3></div><div class="mb"><textarea rows="6" readonly style="width:100%">${esc(texto)}</textarea></div><div class="mf"><button class="btn p" data-a="cm">Listo</button></div>`);
     }
   },
   woDescargarFotos: d => {
@@ -619,7 +619,7 @@ Object.assign(ACC, {
       const a = document.createElement("a");
       a.href = url;
       a.target = "_blank";
-      a.download = `WO-${w.id}-evidencia-${i+1}.jpg`;
+      a.download = `${woN(w.id)}-evidencia-${i+1}.jpg`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -630,10 +630,10 @@ Object.assign(ACC, {
     const w = W(d.id), p = P(w.prop), u = U(w.unidad), para = correosDe(w.prop);
     const urls = (w.evidFotos||[]).map(f=>f.url).filter(Boolean);
     if(!urls.length){ toast("Sin fotos","Esta orden no tiene fotos de evidencia para compartir.","w"); return; }
-    correoModal(para, `Evidencia WO-${w.id} - ${p.nombre} unidad ${u.num}`,
+    correoModal(para, `Evidencia ${woN(w.id)} - ${p.nombre} unidad ${u.num}`,
 `Buenos días,
 
-Te compartimos la evidencia de WO-${w.id} en ${p.nombre}, unidad ${u.num} (${w.serv}):
+Te compartimos la evidencia de ${woN(w.id)} en ${p.nombre}, unidad ${u.num} (${w.serv}):
 
 ${urls.join("\n")}
 
@@ -668,7 +668,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     w.tec=d.tec; w.porEnviar=true;
     w.hist.push([hora(),"Asignada a "+tecN(d.tec)+" (sin enviar)",S.usuario]);
     cm();
-    toast("✓ Asignada, sin enviar",`WO-${w.id} → <b>${esc(tecN(d.tec))}</b>. Sigue en <b>Unassigned</b> para que veas todo el día.<br>${esc(tecN(d.tec))} todavía no la ve: cuando termines de asignar toca <b>«Send schedule»</b>.`,"v");
+    toast("✓ Asignada, sin enviar",`${woN(w.id)} → <b>${esc(tecN(d.tec))}</b>. Sigue en <b>Unassigned</b> para que veas todo el día.<br>${esc(tecN(d.tec))} todavía no la ve: cuando termines de asignar toca <b>«Send schedule»</b>.`,"v");
     flash("wo:"+w.id);
     render();
   },
@@ -679,12 +679,12 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     w.supervisada=true;
     w.revisionCalidad={estado:"Revisada sin observaciones",fecha:HOY_SUP,hora:hora(),quien:S.usuario};
     w.hist.push([hora(),"Revisión de calidad sin observaciones",S.usuario]); flash("wo:"+w.id);
-    toast("✓ Revisión registrada",`WO-${w.id} quedó registrada como revisada. Erika valida el expediente para nómina y facturación.`,"v"); render();
+    toast("✓ Revisión registrada",`${woN(w.id)} quedó registrada como revisada. Erika valida el expediente para nómina y facturación.`,"v"); render();
   },
 
   noSupervisarModal: d => {
     const w=W(d.id);
-    modal(`<div class="mh"><h3>No se pudo supervisar WO-${w.id}</h3><p>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</p></div>
+    modal(`<div class="mh"><h3>No se pudo supervisar ${woN(w.id)}</h3><p>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</p></div>
       <div class="mb"><div class="fld"><label>Motivo <span class="req">*</span></label><select id="nsMotivo"><option>La unidad estaba ocupada</option><option>No hubo acceso a la unidad</option><option>La unidad ya no estaba disponible</option><option>La visita se tuvo que mover</option><option>Otro</option></select></div>
         <div class="fld"><label>Detalle <span style="color:var(--faint);font-weight:500;text-transform:none">— opcional</span></label><input id="nsDetalle" placeholder="Qué pasó o qué falta coordinar"></div>
         <div class="fld"><label>Reagendar para <span style="color:var(--faint);font-weight:500;text-transform:none">— opcional</span></label><input type="date" id="nsFecha"></div>
@@ -696,7 +696,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     w.revisionCalidad={estado:"No se pudo supervisar",fecha:HOY_SUP,hora:hora(),quien:S.usuario,motivo,reagendar:val("nsFecha")||null};
     w.hist.push([hora(),`No se pudo supervisar: ${motivo}${val("nsFecha")?" · reagendar "+val("nsFecha"):""}`,S.usuario]);
     cm(); flash("wo:"+w.id);
-    toast("Visita de calidad registrada",`WO-${w.id}: ${esc(motivo)}. No se modificó su flujo de nómina ni facturación.`,"w"); render();
+    toast("Visita de calidad registrada",`${woN(w.id)}: ${esc(motivo)}. No se modificó su flujo de nómina ni facturación.`,"w"); render();
   },
 
   permisoModal: () => modalPermiso(),
@@ -709,7 +709,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
   apruebaPermiso: d => {
     const p = by(S.disponibilidad,d.id); p.estado="Aprobado"; flash("dis:"+p.id);
     const cf=wosEnConflicto(p.tec,p.desde,p.hasta); avisoConflictos(p.tec,cf);
-    toast("✓ Permiso aprobado",`${esc(tecN(p.tec))} sale de las sugerencias de asignación del ${p.desde} al ${p.hasta}.${cf.length?`<br><br><b>Ojo:</b> tiene ${cf.length} WO en esas fechas (${cf.map(w=>"WO-"+w.id).join(", ")}). Hay que reasignarlas.`:""}`,cf.length?"w":"v");
+    toast("✓ Permiso aprobado",`${esc(tecN(p.tec))} sale de las sugerencias de asignación del ${p.desde} al ${p.hasta}.${cf.length?`<br><br><b>Ojo:</b> tiene ${cf.length} WO en esas fechas (${cf.map(w=>woN(w.id)).join(", ")}). Hay que reasignarlas.`:""}`,cf.length?"w":"v");
     render();
   },
 
@@ -730,7 +730,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
      y crea el mismo return real — un solo resultado, dos puertas. */
   devolverModal: d => {
     const w=W(d.id);
-    modal(`<div class="mh"><h3>Hacer return a WO-${w.id}</h3>
+    modal(`<div class="mh"><h3>Hacer return a ${woN(w.id)}</h3>
       <p>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)} · ${esc(tecN(w.tec))}</p></div>
     <div class="mb">
       <div class="fld"><label>¿Qué no cumple? <span class="req">*</span></label>
@@ -786,7 +786,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
       hist:[[hora(),"Return creado desde revisión de supervisión",S.usuario]]};
     S.devoluciones.push(dv); flash("dv:"+dv.id);
     cm();
-    toast("Return registrado",`WO-${w.id} conserva su cierre original. El return queda abierto en Returns: desde ahí se crea el return fix y se asigna a cualquier técnico.`,"w");
+    toast("Return registrado",`${woN(w.id)} conserva su cierre original. El return queda abierto en Returns: desde ahí se crea el return fix y se asigna a cualquier técnico.`,"w");
     noti("Trabajo con return",`${P(w.prop).nombre} · ${U(w.unidad).num}: ${m}`);
     render();
   },
@@ -870,7 +870,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
      Sin este estado, una unidad trabada tres dias se ve igual que una que
      esta avanzando. */
   woDetener: d => { const w=W(d.id);
-    modal(`<div class="mh"><h3>Detener WO-${w.id}</h3>
+    modal(`<div class="mh"><h3>Detener ${woN(w.id)}</h3>
         <p>${esc(P(w.prop).nombre)} · ${U(w.unidad)?esc(U(w.unidad).num):""} — ${esc(w.serv)}</p></div>
       <div class="mb">
         <div class="fld"><label>¿Por qu\u00e9 se detuvo? <span class="req">*</span></label>
@@ -891,7 +891,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     w.hist.push([hora(), "Detenida: "+w.motivoDet, S.usuario]);
     flash("wo:"+w.id); cm();
     toast("Trabajo detenido",
-      `<b>WO-${w.id}</b> queda detenida: ${esc(w.motivoDet)}.<br><br>No se cancela — sigue viva y visible
+      `<b>${woN(w.id)}</b> queda detenida: ${esc(w.motivoDet)}.<br><br>No se cancela — sigue viva y visible
        hasta que se pueda reanudar.`,"w");
     avisar("Thalia","Un trabajo se detuvo",
       `${esc(P(w.prop).nombre)} ${U(w.unidad)?esc(U(w.unidad).num):""} — ${esc(w.motivoDet)}`,"w");
@@ -901,11 +901,11 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     w.hist.push([hora(), "Reanudada tras: "+(w.motivoDet||"detenci\u00f3n"), S.usuario]);
     w.motivoDet = null; w.desdeDet = null; w.estadoPrevio = null;
     flash("wo:"+w.id);
-    toast("Trabajo reanudado", `<b>WO-${w.id}</b> vuelve a <b>${esc(w.estado)}</b>.`,"v");
+    toast("Trabajo reanudado", `<b>${woN(w.id)}</b> vuelve a <b>${esc(w.estado)}</b>.`,"v");
     render(); },
 
   woAvance: d => { const w=W(d.id);
-    modal(`<div class="mh"><h3>Avance de WO-${w.id}</h3>
+    modal(`<div class="mh"><h3>Avance de ${woN(w.id)}</h3>
         <p>${esc(P(w.prop).nombre)} · ${U(w.unidad)?esc(U(w.unidad).num):""} — ${esc(w.serv)}</p></div>
       <div class="mb">
         <div class="fld"><label>Porcentaje aproximado</label>
@@ -922,7 +922,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     w.avanceFotos = (w.avanceFotos||0) + 1;
     w.hist.push([hora(), "Avance registrado: "+w.avance+"%"+(w.avanceNota?" — "+w.avanceNota:""), S.usuario]);
     flash("wo:"+w.id); cm();
-    toast("Avance registrado", `<b>WO-${w.id}</b> al <b>${w.avance}%</b>.`
+    toast("Avance registrado", `<b>${woN(w.id)}</b> al <b>${w.avance}%</b>.`
       + (w.avanceNota?`<br>${esc(w.avanceNota)}`:""), "v");
     render(); },
 
@@ -952,7 +952,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
         <div class="fld"><label>Fecha límite</label><input type="date" id="rgL" value="${esc(keep("rgL")||HOY_SUP)}"></div>
         <div class="fld"><label>Hora límite</label><input type="time" id="rgLH" value="${esc(keep("rgLH")||"17:00")}"></div></div>
       <label style="display:flex;gap:8px;align-items:center;margin:4px 0 8px;font-weight:650"><input type="checkbox" id="rgUrg" ${(d&&d.keep&&document.getElementById("rgUrg")&&document.getElementById("rgUrg").checked)?"checked":""}> Entra un inquilino pronto (urgente)</label>
-      ${ult?`<div class="hint">Última WO de la unidad: WO-${ult.id} (${esc(ult.serv)}) de ${esc(tecN(ult.tec))}.</div>`:`<div class="hint">Esta unidad no tiene WO con técnico: elige quién hizo el trabajo.</div>`}</div>
+      ${ult?`<div class="hint">Última WO de la unidad: ${woN(ult.id)} (${esc(ult.serv)}) de ${esc(tecN(ult.tec))}.</div>`:`<div class="hint">Esta unidad no tiene WO con técnico: elige quién hizo el trabajo.</div>`}</div>
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="devRegistrarOK">Registrar</button></div>`); },
   devRegCambio: () => { ACC.devRegistrar({keep:true}); },
   /* PRODUCCIÓN: igual que devolverOK, debe pasar la WO original a Returned. */
@@ -1045,7 +1045,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     cm();
     const propio = tec===dv.responsable;
     toast("Return fix creado",
-      `<b>WO-${w.id}</b> · ${esc(P(w.prop).nombre)} ${U(w.unidad)?esc(U(w.unidad).num):""}.<br><br>`
+      `<b>${woN(w.id)}</b> · ${esc(P(w.prop).nombre)} ${U(w.unidad)?esc(U(w.unidad).num):""}.<br><br>`
       + (propio
         ? `Lo corrige <b>${esc(tecN(tec))}</b>, que es el responsable: <b>no se le paga</b> — est\u00e1 rehaciendo su trabajo.`
         : `Lo corrige <b>${esc(tecN(tec))}</b> y <b>s\u00ed se le paga</b>. Ese mismo monto se le <b>descuenta a ${esc(tecN(dv.responsable))}</b>, que fue quien lo hizo mal.`)
@@ -1072,7 +1072,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     const w = W(d.id), antes = w.tec, nuevo = d.tec;
     if(antes===nuevo){ cm(); toast("Sin cambios","Es el mismo técnico.",""); return; }
     /* Se revisa al ejecutar: el modal pudo quedar abierto mientras la WO se pagaba o el técnico pedía permiso. */
-    if(["Canceled","Invoiced","Paid"].includes(w.estado) || w.facturada || w.pagadaTec){ cm(); toast("🚫 No se puede reasignar",`WO-${w.id} ya está en estado <b>${esc(w.estado)}</b>.`,"r"); return; }
+    if(["Canceled","Invoiced","Paid"].includes(w.estado) || w.facturada || w.pagadaTec){ cm(); toast("🚫 No se puede reasignar",`${woN(w.id)} ya está en estado <b>${esc(w.estado)}</b>.`,"r"); return; }
     const bl = bloqueo(nuevo,w.fecha);
     if(bl){ toast("🚫 No se puede reasignar",`<b>${esc(tecN(nuevo))}</b> no está disponible: ${esc(bl.motivo)}.`,"r"); return; }
     if(S.wos.filter(x=>x.tec===nuevo && x.fecha===w.fecha && x.id!==w.id && x.estado!=="Canceled").length >= CAP){
@@ -1093,14 +1093,14 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     flash("wo:"+w.id);
     cm();
     toast("✓ Reasignada",
-      `<b>WO-${w.id}</b> ahora es de <b>${esc(tecN(nuevo))}</b>. `
+      `<b>${woN(w.id)}</b> ahora es de <b>${esc(tecN(nuevo))}</b>. `
       + (w.porEnviar ? `Sigue <b>sin enviar</b>: le llega con «Send schedule».` : `<b>${esc(tecN(antes))}</b> ya no la ve en su celular ni puede tocarla.`)
       + (w.touchup
         ? (nuevo===w.tecOriginal
           ? `<br><br>Como la corrige el propio responsable, <b>se retir\u00f3 el descuento</b> y no se le paga.`
           : `<br><br>Se le paga a ${esc(tecN(nuevo))} y se le descuenta a <b>${esc(tecN(w.tecOriginal))}</b>.`)
         : ""), "v");
-    if(!w.porEnviar) noti("Te reasignaron un trabajo", `${P(w.prop).nombre} ${U(w.unidad)?U(w.unidad).num:""} — WO-${w.id}`);
+    if(!w.porEnviar) noti("Te reasignaron un trabajo", `${P(w.prop).nombre} ${U(w.unidad)?U(w.unidad).num:""} — ${woN(w.id)}`);
     render();
   },
   /* Punto 15: «Send schedule» — manda a cada técnico todo lo que se le asignó y no se le había enviado. */
@@ -1110,7 +1110,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     const porTec = {}; ws.forEach(w => (porTec[w.tec]=porTec[w.tec]||[]).push(w));
     modal(`<div class="mh"><h3>Send schedule</h3><p>Cada técnico recibe sus Work Orders en un solo aviso. Desde ese momento las ve en su celular.</p></div>
       <div class="mb"><table><thead><tr><th>Técnico</th><th>Work Orders que recibe</th></tr></thead><tbody>
-      ${Object.keys(porTec).map(t => `<tr><td><b>${esc(tecN(t))}</b></td><td>${porTec[t].map(w => `WO-${w.id} · ${esc(P(w.prop).nombre)} ${esc(U(w.unidad)?U(w.unidad).num:"")} · ${esc(w.serv)} · ${esc(w.fecha||"sin fecha")}`).join("<br>")}</td></tr>`).join("")}
+      ${Object.keys(porTec).map(t => `<tr><td><b>${esc(tecN(t))}</b></td><td>${porTec[t].map(w => `${woN(w.id)} · ${esc(P(w.prop).nombre)} ${esc(U(w.unidad)?U(w.unidad).num:"")} · ${esc(w.serv)} · ${esc(w.fecha||"sin fecha")}`).join("<br>")}</td></tr>`).join("")}
       </tbody></table></div>
       <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="woEnviarAgenda">Enviar a ${Object.keys(porTec).length} técnico(s)</button></div>`); },
   woEnviarAgenda: () => {
@@ -1127,7 +1127,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     render(); },
   woCancelar: d => {
     const w=W(d.id); if(!w) return;
-    modal(`<div class="mh"><h3>Cancelar WO-${w.id}</h3><p>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)} · ${esc(w.fecha)}</p></div>
+    modal(`<div class="mh"><h3>Cancelar ${woN(w.id)}</h3><p>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)} · ${esc(w.fecha)}</p></div>
       <div class="mb"><div class="fld"><label>¿Por qué se cancela? <span class="req">*</span></label><select id="wcMotivo">
         <option value="">— selecciona —</option><option>Plagas</option><option>No abrieron la unidad</option><option>La unidad no era la correcta</option><option>El cliente canceló</option><option>Ya no se requiere el trabajo</option><option>Otro</option></select></div>
         <div class="fld"><label>Nota interna</label><textarea id="wcNota" placeholder="Detalle para oficina e historial"></textarea></div>
@@ -1138,7 +1138,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     const w=W(d.id), motivo=val("wcMotivo"), nota=val("wcNota");
     if(!motivo){ marcaFalta(["wcMotivo"]); toast("Falta el motivo","Indica por qué se canceló esta Work Order.","r"); return; }
     /* El modal pudo quedar abierto mientras la WO avanzaba: solo se cancela lo que todavía no empieza. */
-    if(!esAgendada(w.estado) || w.facturada || w.pagadaTec){ cm(); toast("Ya no se puede cancelar",`WO-${w.id} está en estado <b>${esc(w.estado)}</b>.`,"r"); return; }
+    if(!esAgendada(w.estado) || w.facturada || w.pagadaTec){ cm(); toast("Ya no se puede cancelar",`${woN(w.id)} está en estado <b>${esc(w.estado)}</b>.`,"r"); return; }
     w.estado="Canceled"; w.motivoCancel=motivo; w.notaCancel=nota;
     w.propuestas=(w.propuestas||[]).concat([{fecha:w.fecha,medio:"Oficina",contacto:S.usuario,respuesta:"Cancelada",nota,motivo,quien:S.usuario,hora:hora(),dia:HOY_SUP}]);
     w.hist.push([hora(),`Cancelada: ${motivo}${nota?" — "+nota:""}`,S.usuario]);
@@ -1161,13 +1161,13 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     /* Un touch-up cancelado deja el return sin corrección y retira el descuento que se había generado. */
     if(w.touchup){
       const dv = DV(w.devOrigen);
-      if(dv){ quitarDescuento(dv); dv.touchup=null; dv.hist.push([hora(), `Return fix WO-${w.id} cancelado: ${motivo}`, S.usuario]); }
+      if(dv){ quitarDescuento(dv); dv.touchup=null; dv.hist.push([hora(), `Return fix ${woN(w.id)} cancelado: ${motivo}`, S.usuario]); }
     }
-    if(w.tec) noti("Cancelaron un trabajo", `${P(w.prop).nombre} ${U(w.unidad)?U(w.unidad).num:""} — WO-${w.id}. Motivo: ${motivo.toLowerCase()}.`);
+    if(w.tec) noti("Cancelaron un trabajo", `${P(w.prop).nombre} ${U(w.unidad)?U(w.unidad).num:""} — ${woN(w.id)}. Motivo: ${motivo.toLowerCase()}.`);
 
     const lim = [rec&&`${rec} recordatorio(s)`, com.length&&`${com.length} aviso(s) de pendiente`, adic.length&&`${adic.length} adicional(es) sin decidir`, exc.length&&`${exc.length} excepción(es)`].filter(Boolean);
     flash("wo:"+w.id); cm();
-    toast("WO cancelada",`WO-${w.id} queda en historial con el motivo: <b>${esc(motivo)}</b>. No se agregará a nómina ni facturación.`
+    toast("WO cancelada",`${woN(w.id)} queda en historial con el motivo: <b>${esc(motivo)}</b>. No se agregará a nómina ni facturación.`
       + (lim.length?`<br><br>También se cerró: ${lim.join(", ")}.`:"")
       + (w.touchup?`<br><br>El return quedó sin return fix: se puede crear otro return fix.`:"")
       + (w.tec?`<br><br>Se le avisó a <b>${esc(tecN(w.tec))}</b>.`:""),"w"); render();
@@ -1218,7 +1218,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
         historial:[{evento:"Created",quien,hora:hora(),fecha:HOY_SUP}], resol:null};
       S.excepciones.push(x);
       avisar("Thalia","Unit data mismatch needs review",
-        `WO-${w.id} · ${esc(P(w.prop).nombre)} ${esc(u.num)} — ${resumen}.`,"w");
+        `${woN(w.id)} · ${esc(P(w.prop).nombre)} ${esc(u.num)} — ${resumen}.`,"w");
     }
     w.corroborado=true; w.corroboradoNota=resumen+(txt?` · ${txt}`:""); S.phSheet=null;
     w.hist.push([hora(),`Reported unit data mismatch: ${w.corroboradoNota}`,T(w.tec).nombre]);
@@ -1312,7 +1312,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
         w.hist.push([hora(),`Cliente aprobó el expediente post-work por ${canal}`,S.usuario]);
         w.validada = aprobPagoOK(w) && aprobFacturaOK(w);
       }
-      else { w.clienteCorreccion={fecha:HOY_SUP,hora:hora(),nota,canal}; desvalidar(w); w.hist.push([hora(),`Cliente solicitó corrección por ${canal}: ${nota}`,S.usuario]); avisar("Erika","Cliente solicitó una corrección",`WO-${w.id}: ${nota}`,"r"); }
+      else { w.clienteCorreccion={fecha:HOY_SUP,hora:hora(),nota,canal}; desvalidar(w); w.hist.push([hora(),`Cliente solicitó corrección por ${canal}: ${nota}`,S.usuario]); avisar("Erika","Cliente solicitó una corrección",`${woN(w.id)}: ${nota}`,"r"); }
     }
     cm(); toast(confirmada?"✓ Aprobación registrada":"Corrección registrada",`Respuesta guardada por canal <b>${esc(canal)}</b>, con fecha y hora.`,confirmada?"v":"w"); render();
   },
@@ -1330,7 +1330,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
   clienteCorreccionGuardar: d => {
     const r=by(S.revisionesCliente,d.id), nota=val("crCorrection"); if(!r||!nota){ toast("Falta el detalle","Describe qué debe corregirse.","r"); return; }
     r.estado="Corrección solicitada"; r.respondido={quien:"Cliente",fecha:HOY_SUP,hora:hora(),nota}; guardarRevisionesCliente();
-    const w=W(r.wo); if(w){ w.clienteCorreccion={fecha:HOY_SUP,hora:hora(),nota}; desvalidar(w); w.hist.push([hora(),`Cliente solicitó corrección: ${nota}`,"Cliente"]); avisar("Erika","Cliente solicitó una corrección",`WO-${w.id}: ${nota}`,"r"); }
+    const w=W(r.wo); if(w){ w.clienteCorreccion={fecha:HOY_SUP,hora:hora(),nota}; desvalidar(w); w.hist.push([hora(),`Cliente solicitó corrección: ${nota}`,"Cliente"]); avisar("Erika","Cliente solicitó una corrección",`${woN(w.id)}: ${nota}`,"r"); }
     toast("Solicitud enviada","Oficina recibió el detalle de la corrección.","w"); cm(); render();
   },
   clienteRevisionExcepcion: d => {
@@ -1359,8 +1359,8 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     a.hist.push([hora(),`Gestión actualizada · ${estado} · ${despues?tecN(despues):"sin técnico"}`,S.usuario]);
     w.hist.push([hora(),`Sub-Work Order ${a.concepto}: ${estado}${despues?" · "+tecN(despues):""}`,S.usuario]);
     if(despues&&despues!==antes){
-      avisar(tecN(despues),"Nueva Sub-Work Order",`WO-${w.id} · ${a.concepto} · ${fechaSubWO(a)||"sin fecha"}`,"a");
-      if(a.estado==="Aprobado") noti("Te asignaron una Sub-Work Order", `${P(w.prop).nombre} ${U(w.unidad)?U(w.unidad).num:""} — WO-${w.id} · ${a.concepto} · ${fechaSubWO(a)||"sin fecha"}`);
+      avisar(tecN(despues),"Nueva Sub-Work Order",`${woN(w.id)} · ${a.concepto} · ${fechaSubWO(a)||"sin fecha"}`,"a");
+      if(a.estado==="Aprobado") noti("Te asignaron una Sub-Work Order", `${P(w.prop).nombre} ${U(w.unidad)?U(w.unidad).num:""} — ${woN(w.id)} · ${a.concepto} · ${fechaSubWO(a)||"sin fecha"}`);
     }
     cm(); flash("wo:"+w.id); toast("✓ Sub-Work Order actualizada","La agenda y la nómina usarán esta asignación.","v"); render();
   },
@@ -1398,13 +1398,13 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     if(na.estado==="Aprobado") desvalidar(w);
     /* Igual que una WO asignada: sin aviso el técnico se entera hasta que abre su agenda. Con costo se avisa al aprobarla (medioOK). */
     const tecAviso = tecOverride||w.tec;
-    if(na.estado==="Aprobado" && tecAviso) noti("Tienes una Sub-Work Order", `${P(w.prop).nombre} ${U(w.unidad)?U(w.unidad).num:""} — WO-${w.id} · ${tipo} · ${fechaOverride||w.fecha}`);
+    if(na.estado==="Aprobado" && tecAviso) noti("Tienes una Sub-Work Order", `${P(w.prop).nombre} ${U(w.unidad)?U(w.unidad).num:""} — ${woN(w.id)} · ${tipo} · ${fechaOverride||w.fecha}`);
     w.hist.push([hora(), `Sub-Work Order planificada: ${tipo}`, S.usuario]);
     cm();
     toast("✓ Sub-Work Order creada",
       monto>0
-        ? `${esc(tipo)} agregada a WO-${w.id}. Como tiene costo (${money(monto)}), queda <b>pendiente de aprobación</b> — la vas a encontrar en Excepciones para confirmar cómo la aprobó el cliente.`
-        : `${esc(tipo)} agregada a WO-${w.id}.`,
+        ? `${esc(tipo)} agregada a ${woN(w.id)}. Como tiene costo (${money(monto)}), queda <b>pendiente de aprobación</b> — la vas a encontrar en Excepciones para confirmar cómo la aprobó el cliente.`
+        : `${esc(tipo)} agregada a ${woN(w.id)}.`,
       "v");
     render();
   },
@@ -1461,7 +1461,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     }
     w.hist.push([hora(), `Material ${cliente?"del cliente":"registrado"}: ${p.nombre} × ${cant}`, S.usuario]);
     cm(); flash("wo:"+w.id);
-    toast("✓ Material agregado", `${esc(p.nombre)} agregado a WO-${w.id}${cliente?" como material del cliente":""}.`, "v");
+    toast("✓ Material agregado", `${esc(p.nombre)} agregado a ${woN(w.id)}${cliente?" como material del cliente":""}.`, "v");
     render();
   },
   materialRecibo: d => {
@@ -1477,10 +1477,10 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     if(alTec&&w&&w.tec) noti("Recordatorio de trabajo",textoRecordatorioTec(r));
     const dest=[alTec?(w&&w.tec?"technician":"team"):"",alCli?"customer":""].filter(Boolean).join(" and ");
     if(w) w.hist.push([hora(),`Reminder sent to ${dest} (${r.tipo})`,S.usuario]);
-    toast("✓ Recordatorio enviado",`WO-${r.wo} · ${esc(r.tipo)} · ${[alTec?(w&&w.tec?"técnico":"equipo"):"",alCli?"cliente":""].filter(Boolean).join(" y ")}. Registrado como enviado (simulado).`,"v"); render(); },
+    toast("✓ Recordatorio enviado",`${woN(r.wo)} · ${esc(r.tipo)} · ${[alTec?(w&&w.tec?"técnico":"equipo"):"",alCli?"cliente":""].filter(Boolean).join(" y ")}. Registrado como enviado (simulado).`,"v"); render(); },
   /* Mover un recordatorio pendiente: los valores por defecto se pueden cambiar a mano. */
   recordatorioMover: d => { const r=(S.recordatoriosWO||[]).find(x=>x.id===d.id); if(!r||r.estado!=="Scheduled"||!puedeAvisarPend()) return;
-    modal(`<div class="mh"><h3>Mover recordatorio · WO-${r.wo}</h3><p>${esc(r.tipo)} · hoy sale ${esc(r.fecha)} ${esc(r.hora)}</p></div><div class="mb">
+    modal(`<div class="mh"><h3>Mover recordatorio · ${woN(r.wo)}</h3><p>${esc(r.tipo)} · hoy sale ${esc(r.fecha)} ${esc(r.hora)}</p></div><div class="mb">
       <div class="fld"><label>Fecha <span class="req">*</span></label><input id="rmF" type="date" value="${esc(r.fecha)}"></div>
       <div class="fld"><label>Hora <span class="req">*</span></label><input id="rmH" type="time" value="${esc(r.hora)}"></div>
       <div class="hint">Si reagendan la WO, este recordatorio se queda donde lo pusiste.</div></div>
@@ -1490,11 +1490,11 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     if(!f||!h){ toast("Falta fecha u hora","Completa los dos campos para mover el recordatorio.","r"); return; }
     const antes=`${r.fecha} ${r.hora}`; r.fecha=f; r.hora=h; r.movido={quien:S.usuario,antes,hora:hora()};
     const w=W(r.wo); if(w) w.hist.push([hora(),`Reminder moved (${r.tipo}): ${antes} → ${f} ${h}`,S.usuario]);
-    cm(); toast("✓ Recordatorio movido",`WO-${r.wo} · ${esc(r.tipo)} · ${esc(f)} ${esc(h)}.`,"v"); render(); },
+    cm(); toast("✓ Recordatorio movido",`${woN(r.wo)} · ${esc(r.tipo)} · ${esc(f)} ${esc(h)}.`,"v"); render(); },
   /* Seguimiento interno: alguien del equipo pregunta al técnico si va en camino y anota qué respondió. */
   recordatorioSeg: d => { const r=(S.recordatoriosWO||[]).find(x=>x.id===d.id); if(!r||!puedeAvisarPend()) return;
     const w=W(r.wo);
-    modal(`<div class="mh"><h3>¿Va en camino? · WO-${r.wo}</h3><p>${w&&w.tec?esc(tecN(w.tec)):"Sin técnico asignado"} · ${esc(r.tipo)} · ${esc(r.fecha)} ${esc(r.hora)}</p></div><div class="mb">
+    modal(`<div class="mh"><h3>¿Va en camino? · ${woN(r.wo)}</h3><p>${w&&w.tec?esc(tecN(w.tec)):"Sin técnico asignado"} · ${esc(r.tipo)} · ${esc(r.fecha)} ${esc(r.hora)}</p></div><div class="mb">
       <div class="fld"><label>Qué respondió</label><select id="rsRes"><option>Va en camino</option><option>Sin respuesta</option><option>Hay que reprogramar</option></select></div>
       <div class="fld"><label>Nota</label><input id="rsNota"></div>
       <div class="hint">Queda en el historial de la WO con quién preguntó y la hora.</div></div>
@@ -1503,7 +1503,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     const resultado=val("rsRes"), nota=val("rsNota"), w=W(r.wo);
     r.seguimiento={resultado,nota,quien:S.usuario,fecha:HOY_SUP,hora:hora()};
     if(w) w.hist.push([hora(),`Seguimiento al técnico (${r.tipo}): ${resultado}${nota?" · "+nota:""}`,S.usuario]);
-    cm(); toast("✓ Seguimiento anotado",`WO-${r.wo} · ${esc(resultado)}.`,resultado==="Va en camino"?"v":"w"); render(); },
+    cm(); toast("✓ Seguimiento anotado",`${woN(r.wo)} · ${esc(resultado)}.`,resultado==="Va en camino"?"v":"w"); render(); },
 
   /* ── WO pendientes: selección en lote, aviso por propiedad y seguimiento de la respuesta ── */
   pendSel: d => { const id=woId(d.id), l=S.pendSel||(S.pendSel=[]);
@@ -1517,21 +1517,21 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
       <div class="fld"><label>Detalle</label><input id="pnDetail"></div>
       <div class="fld"><label>Medio</label><select id="pnMedium"><option>Email</option><option>SMS</option></select></div>
       <div class="fld"><label>Responder antes del <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><input type="date" id="pnLimite"></div>
-      <div class="note">${props.map(pid=>{ const c=(contactosDe(pid)||[])[0]||CLI(P(pid).cliente); return `<b>${esc(P(pid).nombre)}</b> · ${esc(c.nombre||"Property contact")} · ${esc(c.mail||c.tel||"—")} — ${ws.filter(w=>w.prop===pid).map(w=>"WO-"+w.id).join(", ")}`; }).join("<br>")}<br>Envío simulado: queda registrado con su seguimiento.</div></div>
+      <div class="note">${props.map(pid=>{ const c=(contactosDe(pid)||[])[0]||CLI(P(pid).cliente); return `<b>${esc(P(pid).nombre)}</b> · ${esc(c.nombre||"Property contact")} · ${esc(c.mail||c.tel||"—")} — ${ws.filter(w=>w.prop===pid).map(w=>woN(w.id)).join(", ")}`; }).join("<br>")}<br>Envío simulado: queda registrado con su seguimiento.</div></div>
       <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="pendAvisarOK">Enviar</button></div>`); },
   pendAvisarOK: () => { if(!puedeAvisarPend()) return;
     const ws=(S.pendSel||[]).map(W).filter(w=>w&&ESTADOS_PEND.includes(w.estado)); if(!ws.length){ cm(); return; }
     const motivo=val("pnReason"), detalle=val("pnDetail"), medio=val("pnMedium"), limite=val("pnLimite")||null; S.comunicacionesWO=S.comunicacionesWO||[];
     const props=[...new Set(ws.map(w=>w.prop))], nuevas=[];
     props.forEach(pid=>{ const g=ws.filter(w=>w.prop===pid), grupo="M"+nid("gx");
-      const lista=g.map(w=>`WO-${w.id} (unit ${U(w.unidad).num})`).join(", ");
+      const lista=g.map(w=>`${woN(w.id)} (unit ${U(w.unidad).num})`).join(", ");
       const msg=`Hello, the following work order${g.length>1?"s":""} at ${P(pid).nombre} ${g.length>1?"are":"is"} pending because ${motivo.toLowerCase()}: ${lista}${detalle?`. ${detalle}`:""}. Please let us know when the unit${g.length>1?"s are":" is"} ready for service.`;
       g.forEach(w=>{ const c={id:"CW"+(S.comunicacionesWO.length+1+nuevas.length),wo:w.id,prop:pid,medio,fecha:HOY_SUP,hora:hora(),quien:S.usuario,motivo,mensaje:msg,estado:"Sent",grupo,limite};
         nuevas.push(c); w.hist.push([hora(),`Customer notified by ${medio}: ${motivo}`,S.usuario]); }); });
     S.comunicacionesWO.unshift(...nuevas.slice().reverse()); S.pendSel=[]; flash(nuevas.map(c=>"com:"+c.id)); cm();
     toast("✓ Clientes avisados",`${props.length} mensaje(s) por ${medio} · ${nuevas.length} WO con seguimiento abierto.`,"v"); render(); },
   pendRespuesta: d => { const c=(S.comunicacionesWO||[]).find(x=>x.id===d.id); if(!c||!puedeAvisarPend()) return;
-    modal(`<div class="mh"><h3>Respuesta · WO-${c.wo}</h3><p>${esc(c.motivo)} · ${esc(c.medio)} · enviado ${esc(c.fecha)}</p></div><div class="mb">
+    modal(`<div class="mh"><h3>Respuesta · ${woN(c.wo)}</h3><p>${esc(c.motivo)} · ${esc(c.medio)} · enviado ${esc(c.fecha)}</p></div><div class="mb">
       <div class="fld"><label>Respuesta</label><select id="prRes"><option>Ya se puede trabajar</option><option>Sigue pendiente</option></select></div>
       <div class="fld"><label>Nota</label><input id="prNota"></div>
       <div class="fld"><label>Responder antes del <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><input type="date" id="prLimite" value="${esc(c.limite||"")}"></div>
@@ -1543,5 +1543,5 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     c.respuesta={resultado,nota,quien:S.usuario,fecha:HOY_SUP,hora:hora()};
     if(resultado==="Ya se puede trabajar") c.estado="Closed";
     if(w) w.hist.push([hora(),`Cliente respondió: ${resultado}${nota?" · "+nota:""}`,S.usuario]);
-    cm(); toast(c.estado==="Closed"?"✓ Seguimiento cerrado":"Sigue abierto",`WO-${c.wo} · ${esc(resultado)}.`,c.estado==="Closed"?"v":"w"); render(); },
+    cm(); toast(c.estado==="Closed"?"✓ Seguimiento cerrado":"Sigue abierto",`${woN(c.wo)} · ${esc(resultado)}.`,c.estado==="Closed"?"v":"w"); render(); },
 });

@@ -22,12 +22,12 @@ function excAuto(){
   });
   S.asistencias.filter(a=>a.declarada).forEach(a=>{
     out.push(conAsignacion({id:"AUTO-D"+a.wo, tipo:"Llegada declarada", wo:a.wo, auto:true,
-      motivo:`${tecN(a.tec)} cerró WO-${a.wo} sin haber marcado llegada; declaró las ${a.horaReal}. No está verificada.`,
+      motivo:`${tecN(a.tec)} cerró ${woN(a.wo)} sin haber marcado llegada; declaró las ${a.horaReal}. No está verificada.`,
       monto:null, pide:"Sistema", aprueba:"Thalia", estado:"Pendiente", fecha:a.fecha, resol:null}));
   });
   S.wos.filter(w=>w.estado==="Completed" && !w.evid && !w.evidExcusada).forEach(w=>{
     out.push(conAsignacion({id:"AUTO-E"+w.id, tipo:"Cierre sin evidencia", wo:w.id, auto:true,
-      motivo:`WO-${w.id} se cerró sin ninguna foto. No hay con qué sustentar el cobro si el cliente reclama.`,
+      motivo:`${woN(w.id)} se cerró sin ninguna foto. No hay con qué sustentar el cobro si el cliente reclama.`,
       monto:null, pide:"Sistema", aprueba:"Thalia", estado:"Pendiente", fecha:w.fecha, resol:null}));
   });
   // Una excepción por SOLICITUD, no por concepto: el técnico mandó un aviso,
@@ -50,7 +50,7 @@ function excAuto(){
   solTodas().forEach(s=>{
     s.lineas.filter(l=>l.estado==="Aprobado" && l.precioPend).forEach(l=>{
       out.push(conAsignacion({id:"AUTO-P"+l.id, tipo:"Definir precio del adicional", wo:s.wo, auto:true,
-        motivo:`${l.concepto}${(l.cant||1)>1?` ×${l.cant}`:""} · WO-${s.wo} — aprobado ${l.aprob?`por ${l.aprob.medio.toLowerCase()} (${l.aprob.quien})`:"sin registro"} sin precio.`,
+        motivo:`${l.concepto}${(l.cant||1)>1?` ×${l.cant}`:""} · ${woN(s.wo)} — aprobado ${l.aprob?`por ${l.aprob.medio.toLowerCase()} (${l.aprob.quien})`:"sin registro"} sin precio.`,
         monto:null, pide:"Sistema", aprueba:"Erika", estado:"Pendiente", fecha:"", resol:null}));
     });
   });
@@ -58,7 +58,7 @@ function excAuto(){
      No frena pago ni factura: eso ya lo controla el propio return (ver woBloqueada). */
   S.devoluciones.filter(dv=>dv.estado!=="Cerrada").forEach(dv=>{
     out.push(conAsignacion({id:"AUTO-V"+dv.id, tipo:"Return", wo:dv.wo, dev:dv.id, auto:true,
-      motivo:`${devAreasTxt(dv)}: ${dv.desc} — responsable ${tecN(dv.responsable)}${dv.touchup?` · return fix WO-${dv.touchup}`:" · falta crear el return fix"}.`,
+      motivo:`${devAreasTxt(dv)}: ${dv.desc} — responsable ${tecN(dv.responsable)}${dv.touchup?` · return fix ${woN(dv.touchup)}`:" · falta crear el return fix"}.`,
       monto:null, pide:dv.quien||"Gustavo", aprueba:null, estado:"Pendiente", fecha:dv.fechaRep, resol:null}));
   });
   // La primera vez que el sistema detecta cada una queda su hora — así se ve
@@ -142,7 +142,7 @@ VIEWS.excepciones = () => {
     ${visibles.length?`<table><thead><tr><th>Time</th><th>WO</th><th>Assigned to</th><th>Type</th><th>Reason</th><th>Requested by</th><th>Approve / Reject</th></tr></thead><tbody>
     ${visibles.map(x=>{ const sla=slaApprovalRequest(x); return `<tr class="${fl("exc:"+x.id)}">
       <td class="mono" style="color:${sla&&sla.nivel==="r"?"var(--rojo)":"var(--faint)"}">${x.creada?esc(x.creada.hora):"—"}${sla?`<div><span class="pill ${sla.nivel}" style="margin-top:3px">${esc(sla.texto)}</span></div>`:""}</td>
-      <td class="mono">${x.wo?`<b style="cursor:pointer" data-a="woVer" data-id="${x.wo}">WO-${x.wo}</b>`:"—"}</td>
+      <td class="mono">${x.wo?`<b style="cursor:pointer" data-a="woVer" data-id="${x.wo}">${woN(x.wo)}</b>`:"—"}</td>
       <td>${x.assignedTo?`<b>${esc(x.assignedTo)}</b><div style="font-size:9.5px;color:var(--faint)">${x.assignedBy?`assigned by ${esc(x.assignedBy)} · ${esc(x.assignedAt||"")}`:""}</div>`:'<span class="pill w">Unassigned</span>'}${x.aprueba?`<div style="font-size:9.5px;color:var(--faint);margin-top:2px">approver: ${esc(x.aprueba)}</div>`:""}</td>
       <td><span class="pill ${x.tipo==="Tarifa no encontrada"?"w":(x.tipo==="Cierre sin evidencia"||x.tipo==="Ayuda en sitio")?"r":"m"}"><span class="dot"></span>${esc(x.tipo)}</span>
         ${x.auto?'<div style="font-size:9.5px;color:var(--faint);margin-top:2px">detectada por el sistema</div>':""}</td>
@@ -187,7 +187,7 @@ VIEWS.excepciones = () => {
 
   ${res.length?`<div class="card"><div class="chd"><h3>Resueltas</h3></div>
     <table><thead><tr><th>Tipo</th><th>WO</th><th>Quién la pidió</th><th>Creada</th><th>Resultado</th><th>Quién decidió</th><th>Cuándo</th></tr></thead><tbody>
-    ${res.map(x=>`<tr class="${fl("exc:"+x.id)}"><td>${esc(x.tipo)}</td><td class="mono">${x.wo?"WO-"+x.wo:"—"}</td>
+    ${res.map(x=>`<tr class="${fl("exc:"+x.id)}"><td>${esc(x.tipo)}</td><td class="mono">${x.wo?woN(x.wo):"—"}</td>
       <td>${x.creada?esc(x.creada.quien):esc(x.pide)}</td>
       <td class="mono" style="color:var(--faint)">${x.creada?esc(x.creada.hora):"—"}</td>
       <td><span class="pill ${x.estado==="Aprobada"||x.estado==="Resuelta"?"v":"r"}">${x.estado}</span>${x.resol&&x.resol.nota?`<div style="font-size:10.5px;margin-top:3px">${esc(x.resol.nota)}</div>`:""}${x.cambio?`<div style="margin-top:3px"><button class="btn sm" data-a="facCambioVer" data-id="${x.id}">Ver cambio</button></div>`:""}${x.cambioPrecio?`<div style="margin-top:3px"><button class="btn sm" data-a="precioCambioVer" data-id="${x.id}">Ver cambio</button></div>`:""}${x.regreso?`<div style="margin-top:3px"><button class="btn sm" data-a="facRegresoVer" data-id="${x.id}">Ver</button></div>`:""}${historialApproval(x)}</td>
@@ -252,7 +252,7 @@ function modalRegreso(x){
 /* Pedir cambio de un precio que fijó el aprobador: precio nuevo + motivo, los dos obligatorios. */
 function modalCambioPrecio(t){
   const suf=t.escala==="total"?" (cobro de la WO)":" (por unidad)";
-  modal(`<div class="mh"><h3>Pedir cambio de precio</h3><p>WO-${t.wo} · ${esc(t.nombre||"—")}</p></div>
+  modal(`<div class="mh"><h3>Pedir cambio de precio</h3><p>${woN(t.wo)} · ${esc(t.nombre||"—")}</p></div>
   <div class="mb">
     <div class="note" style="margin-bottom:12px"><b>${esc(precioOrigenTxt(t.pf))}.</b> No se cambia directo: el pedido le llega a <b>${esc(APROBADOR_CAMBIO_MONTO)}</b>, que ve cómo estaba y cómo quedaría, y lo aprueba o lo rechaza.</div>
     <div class="fg c2"><div class="fld"><label>Precio actual${suf}</label><div class="mono" style="padding:6px 0">${money(t.antes)}</div></div>
@@ -264,7 +264,7 @@ function modalCambioPrecio(t){
 /* Antes / Después de un cambio de precio pedido (compacto, como el de monto). */
 function modalVerCambioPrecio(x){
   const c=x.cambioPrecio, pend=x.estado==="Pendiente", suf=c.escala==="total"?"cobro de la WO":"por unidad", dif=r2(c.despues-c.antes);
-  modal(`<div class="mh"><h3>Cambio de precio fijado — WO-${c.wo}</h3><p>${esc(c.nombre||"—")} · lo pidió ${esc(x.pide)}${x.creada?" · "+esc(x.creada.fecha||"")+" "+esc(x.creada.hora||""):""}</p></div>
+  modal(`<div class="mh"><h3>Cambio de precio fijado — ${woN(c.wo)}</h3><p>${esc(c.nombre||"—")} · lo pidió ${esc(x.pide)}${x.creada?" · "+esc(x.creada.fecha||"")+" "+esc(x.creada.hora||""):""}</p></div>
   <div class="mb">
     <div class="note" style="margin-bottom:12px"><b>Motivo:</b> ${esc(c.motivo)}</div>
     <table style="font-size:11.5px"><thead><tr><th>Precio (${suf})</th><th class="num">Antes</th><th class="num">Después</th></tr></thead>
@@ -288,7 +288,7 @@ function modalExc(){
     <div class="fld"><label>Tipo <span class="req">*</span></label><select id="xT">
       ${["Pago adicional al técnico","Ajuste de precio al cliente","Descuento especial","Cierre sin evidencia","Trabajo fuera de tarifa","Otro"].map(t=>`<option>${t}</option>`).join("")}</select></div>
     <div class="fld"><label>Work Order <span class="req">*</span></label><select id="xW"><option value="">— selecciona —</option>
-      ${S.wos.map(w=>`<option value="${w.id}">WO-${w.id} · ${esc(P(w.prop).nombre)} ${esc(U(w.unidad).num)}</option>`).join("")}</select></div>
+      ${S.wos.map(w=>`<option value="${w.id}">${woN(w.id)} · ${esc(P(w.prop).nombre)} ${esc(U(w.unidad).num)}</option>`).join("")}</select></div>
     <div class="fld"><label>Quién debe aprobarla <span class="req">*</span></label>
       <select id="xA">${usuariosQueResuelven().map(r=>`<option ${r==="Claudia"?"selected":""}>${r}</option>`).join("")}</select></div>
     <div class="fld"><label>Motivo <span class="req">*</span></label><textarea id="xMo" placeholder="Por qué se sale de lo normal"></textarea></div>
@@ -312,7 +312,7 @@ function modalCorregirUnidad(id){
     return `<div class="fg c2" style="margin-top:8px"><div class="fld"><label>Current ${esc(etq.toLowerCase())}</label><input value="${esc(String(c.anterior))}" disabled></div>
       <div class="fld"><label>Approved ${esc(etq.toLowerCase())} <span class="req">*</span></label>${input}</div></div>`;
   };
-  modal(`<div class="mh"><h3>Review unit data correction</h3><p>WO-${x.wo} · ${esc(P(W(x.wo).prop).nombre)} · ${esc(u.num)}</p></div>
+  modal(`<div class="mh"><h3>Review unit data correction</h3><p>${woN(x.wo)} · ${esc(P(W(x.wo).prop).nombre)} · ${esc(u.num)}</p></div>
     <div class="mb">
       <div class="note w" style="margin-bottom:12px"><b>Reported by ${esc(x.pide)}:</b> ${esc(x.motivo)}<br>Confirm the observed value before changing the master unit data.</div>
       ${d.cambios.map(filaCampo).join("")}
@@ -393,7 +393,7 @@ function modalMedio(sol, lid){
      Sin precio aquí, el que falta lo define Erika o Claudia en la Request «Definir precio del adicional». */
   const ver = false;
   modal(`<div class="mh"><h3>¿Cómo aprobó el cliente?</h3>
-    <p>WO-${w.id} · ${esc(p.nombre)} ${esc(U(w.unidad).num)} · ${esc(s.desc.length>70?s.desc.slice(0,70)+"…":s.desc)}</p></div>
+    <p>${woN(w.id)} · ${esc(p.nombre)} ${esc(U(w.unidad).num)} · ${esc(s.desc.length>70?s.desc.slice(0,70)+"…":s.desc)}</p></div>
   <div class="mb">
     ${p.notas?`<div class="note v" style="margin-bottom:10px"><b>Regla de ${esc(p.nombre)}:</b> ${esc(p.notas)}</div>`:""}
 
@@ -430,7 +430,7 @@ function modalMedio(sol, lid){
       <div style="flex:1;text-align:left"><div style="font-weight:700">${m}</div>
         <div style="font-size:11.5px;color:var(--faint)">Queda quién y cuándo, pero es tu palabra.</div></div></button>`).join("")}
     <div class="tr">Al decidir, el técnico recibe el aviso al instante y la Work Order se destraba para que pueda seguir.
-      <b>Mientras no elijas, WO-${w.id} sigue frenada y ${esc(tecN(w.tec))} no puede avanzar.</b></div>
+      <b>Mientras no elijas, ${woN(w.id)} sigue frenada y ${esc(tecN(w.tec))} no puede avanzar.</b></div>
   </div>
   <div class="mf"><button class="btn" data-a="medioNo" data-wo="${w.id}">Todavía no sé</button></div>`);
 }
@@ -490,7 +490,7 @@ function modalDefinirPrecio(id){
   if(!l||!w||!s) return;
   const p = P(w.prop), u = U(w.unidad);
   modal(`<div class="mh"><h3>Definir precio del adicional</h3>
-    <p>WO-${w.id} · ${esc(p.nombre)} ${esc(u.num)} · ${esc(l.concepto)}${(l.cant||1)>1?` × ${l.cant}`:""}</p></div>
+    <p>${woN(w.id)} · ${esc(p.nombre)} ${esc(u.num)} · ${esc(l.concepto)}${(l.cant||1)>1?` × ${l.cant}`:""}</p></div>
   <div class="mb">
     ${l.ubic?`<div class="note" style="margin-bottom:10px"><b>Ubicación:</b> ${esc(l.ubic)}</div>`:""}
     ${l.aprob?`<div class="note v" style="margin-bottom:10px"><b>Ya aprobado por ${esc((l.aprob.medio||"—").toLowerCase())}:</b> ${esc(l.aprob.quien)} · ${esc(l.aprob.hora)}. Solo falta el precio.</div>`:""}
@@ -535,7 +535,7 @@ VIEWS.nomina = () => {
   prevAll.forEach(w=>{ if(!porTec[w.tec]) porTec[w.tec]=[]; });
   const fN = filtroNom();
   const filaNom = (w,ant) => { const e=egresoWO(w), pg=pagadoTecWO(w), parc=!w.pagadaTec && pg>0;
-    return `<tr><td class="mono" style="font-weight:700">WO-${w.id}${ant?`<div style="font-size:10.5px;color:var(--ambar);font-weight:400">${esc(w.fecha)}</div>`:""}</td>
+    return `<tr><td class="mono" style="font-weight:700">${woN(w.id)}${ant?`<div style="font-size:10.5px;color:var(--ambar);font-weight:400">${esc(w.fecha)}</div>`:""}</td>
       <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td><td>${esc(w.serv)}</td><td>${esc(U(w.unidad).rooms)}</td>
       <td class="num mono">${U(w.unidad).pisos||"—"}</td>
       <td style="white-space:nowrap">${w.pagadaTec?'<span class="pill v">✓ Pagado</span>':woBloqueada(w.id)?'<span class="pill r">Retenida por Request</span>':parc?`<span class="pill a">Pago parcial ${money(pg)}</span>`:'<span class="pill g">Pendiente</span>'}
@@ -561,7 +561,7 @@ VIEWS.nomina = () => {
       if(fN.desde && (n.fecha||"")<fN.desde) return false;
       if(fN.hasta && (n.fecha||"")>fN.hasta) return false;
       if(!q.length) return true;
-      const txt=normBusca([n.cheque,nomTecs(n).map(tecN).join(" "),...(n.wos||[]).flatMap(id=>{ const w=W(id); return ["WO-"+id,id,w?P(w.prop).nombre:"",w&&U(w.unidad)?U(w.unidad).num:""]; })].join(" "));
+      const txt=normBusca([n.cheque,nomTecs(n).map(tecN).join(" "),...(n.wos||[]).flatMap(id=>{ const w=W(id); return [woN(id),id,w?P(w.prop).nombre:"",w&&U(w.unidad)?U(w.unidad).num:""]; })].join(" "));
       return q.every(x=>txt.includes(x)); });
     const totH=hist.reduce((a,n)=>a+(n.total||0),0), abiertos=S.nomAbiertos||[];
     const lbl="font-size:11px;color:var(--faint);font-weight:700;text-transform:uppercase";
@@ -583,7 +583,7 @@ VIEWS.nomina = () => {
         <td>${n.foto?miniRecibo(n.foto):`<button class="btn sm" data-a="nomAdjuntar" data-id="${id}">Adjuntar</button>`}</td>
         <td class="num mono" style="font-weight:700">${money(n.total||0)}</td>
         <td style="text-align:right"><button class="btn sm" data-a="nomVer" data-id="${id}">${ab?"Ocultar":"Ver"}</button></td></tr>
-        ${ab?`<tr><td colspan="9" style="background:var(--surface-2)">${(n.wos||[]).map(wid=>{ const w=W(wid); return w?`<div style="display:flex;gap:10px;padding:3px 0"><span class="mono" style="font-weight:700">WO-${w.id}</span><span>${esc(P(w.prop).nombre)} · ${U(w.unidad)?esc(U(w.unidad).num):""}</span><span style="margin-left:auto" class="mono">${money(nomPagoWO(n,w))}</span></div>`:""; }).join("")||'<span style="color:var(--faint)">Sin WO</span>'}
+        ${ab?`<tr><td colspan="9" style="background:var(--surface-2)">${(n.wos||[]).map(wid=>{ const w=W(wid); return w?`<div style="display:flex;gap:10px;padding:3px 0"><span class="mono" style="font-weight:700">${woN(w.id)}</span><span>${esc(P(w.prop).nombre)} · ${U(w.unidad)?esc(U(w.unidad).num):""}</span><span style="margin-left:auto" class="mono">${money(nomPagoWO(n,w))}</span></div>`:""; }).join("")||'<span style="color:var(--faint)">Sin WO</span>'}
           ${n.desc>0.004?`<div style="display:flex;padding:3px 0;color:var(--rojo)"><span>Descuentos</span><span style="margin-left:auto" class="mono">−${money(n.desc)}</span></div>`:""}
           ${n.nota?`<div style="font-size:11px;color:var(--faint)">${esc(n.nota)}</div>`:""}</td></tr>`:""}`; }).join("")||`<tr><td colspan="9" class="empty">Sin resultados</td></tr>`}
     </tbody></table></div>`;})():""}
@@ -599,7 +599,7 @@ VIEWS.nomina = () => {
         <th>Pedido</th><th class="num">Días</th></tr></thead>
       <tbody>${ped.map(w=>{
         const dias = Math.max(0, Math.round((new Date(HOY_SUP)-new Date(w.infoPedida.fecha))/86400000));
-        return `<tr class="${fl("wo:"+w.id)}"><td class="mono" style="font-weight:700">WO-${w.id}</td>
+        return `<tr class="${fl("wo:"+w.id)}"><td class="mono" style="font-weight:700">${woN(w.id)}</td>
           <td>${esc(P(w.prop).nombre)} · ${U(w.unidad)?esc(U(w.unidad).num):""}</td>
           <td>${esc(tecN(w.tec))}</td>
           <td>${w.infoPedida.falta.map(x=>`<span class="pill r">${esc(x)}</span>`).join(" ")}</td>
@@ -617,7 +617,7 @@ VIEWS.nomina = () => {
       <div class="chd" style="background:var(--ambar-cl)"><h3 style="color:var(--ambar)">Solo estas necesitan tu revisión</h3>
         <span class="s">${porVal.length} de ${S.wos.filter(w=>w.estado==="Completed").length} terminadas · las completas se validaron solas</span></div>
       <table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Técnico</th><th>Evidencia</th><th>Tiempo en sitio</th><th>Aprobaciones</th><th></th></tr></thead>
-      <tbody>${porVal.map(w=>`<tr><td class="mono" style="font-weight:700">WO-${w.id}</td>
+      <tbody>${porVal.map(w=>`<tr><td class="mono" style="font-weight:700">${woN(w.id)}</td>
         <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td><td>${esc(tecN(w.tec))}</td>
         <td>${w.evid?`<span class="pill v">${w.evid}</span>`:'<span class="pill r">falta</span>'}</td>
         <td class="mono" style="color:var(--faint)">${w.horas?w.horas+" h":"—"}</td>
@@ -663,10 +663,10 @@ VIEWS.nomina = () => {
       <table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Servicio</th><th>Rooms</th><th>Floors</th><th>Pago a técnico</th><th>Aprobaciones</th><th class="num">Ingreso</th><th class="num">Egreso</th><th class="num">Material</th>${puedeVerUtilidad()?`<th class="num">Utilidad</th>`:""}</tr></thead>
       <tbody>${arr.map(w=>filaNom(w,false)).join("")}
       ${prev.length?`<tr style="background:var(--ambar-cl)"><td colspan="${puedeVerUtilidad()?11:10}" style="font-weight:700;color:var(--ambar)">Pendientes anteriores · sin pagar de semanas pasadas</td></tr>${prev.map(w=>filaNom(w,true)).join("")}`:""}
-      ${extras.map(x=>`<tr style="background:var(--ambar-cl)"><td colspan="8">Pago adicional aprobado · WO-${x.wo}
+      ${extras.map(x=>`<tr style="background:var(--ambar-cl)"><td colspan="8">Pago adicional aprobado · ${woN(x.wo)}
           <div style="font-size:10.5px;color:var(--ambar)">${esc((x.motivo||"").slice(0,70))}</div></td>
         <td class="num mono">${money(x.monto)}</td><td></td>${puedeVerUtilidad()?`<td></td>`:""}</tr>`).join("")}
-      ${dm.map(x=>`<tr style="background:var(--rojo-cl)"><td colspan="8">Descuento · ${esc(x.concepto)}${x.wo?` · WO-${esc(x.wo)}`:""}
+      ${dm.map(x=>`<tr style="background:var(--rojo-cl)"><td colspan="8">Descuento · ${esc(x.concepto)}${x.wo?` · ${woN(esc(x.wo))}`:""}
           ${x.desc?`<div style="font-size:10.5px;color:var(--rojo)">${esc(x.desc)}</div>`:""}</td>
         <td class="num mono" style="color:var(--rojo)">−${money(x.monto)}</td>
         <td>${x.nomina?"":`<button class="btn sm" data-a="descQuitar" data-id="${x.id}">×</button>`}</td>${puedeVerUtilidad()?`<td></td>`:""}</tr>`).join("")}
@@ -693,7 +693,7 @@ VIEWS.nomina = () => {
           <td>${esc(x.motivo)}</td>
           <td>${dv?`${esc(P(dv.prop).nombre)} ${U(dv.unidad)?esc(U(dv.unidad).num):""}
                 <div style="font-size:10.5px;color:var(--faint)">${esc(dv.desc.slice(0,60))}</div>`:"—"}</td>
-          <td class="mono">WO-${x.wo}</td>
+          <td class="mono">${woN(x.wo)}</td>
           <td>${dv?`<span class="pill m">${(dv.lotesAntes||[]).reduce((t,l)=>t+(l.fotosArr||[]).length,0)} foto(s) del antes</span>`:"—"}</td>
           <td class="num mono" style="color:${x.estado==="Aplicado"?"var(--rojo)":"var(--faint)"}${x.estado==="No aplicado"?";text-decoration:line-through":""}">−${money(x.monto)}
             ${x.tope?`<div style="font-size:10px;color:var(--faint);font-weight:400">
@@ -882,7 +882,7 @@ const tipoLoteLinea = l => l.tipo==="WO" ? `wo:${(W(l.wo)&&W(l.wo).cat)||"—"}`
   : l.tipo==="Manual"&&l.cat&&l.cat!=="Extras" ? `wo:${l.cat}` : "extra";   // una línea manual con tipo entra al lote de ese tipo
 /* Etiqueta de origen de un concepto ya facturado: nunca imprime "WO-undefined" */
 const etiquetaConcepto = x => x.tipo==="Manual"?"Manual":x.tipo==="Credito"?"Credit":x.tipo==="Extra"?"Extra":x.tipo==="AjusteTotal"?"Adjustment":!x.wo?"—"
-  :`WO-${x.wo}${x.tipo==="Sub-WO"?" · Sub-WO":x.tipo==="Ajuste"?" · Adjustment":""}`;
+  :`${woN(x.wo)}${x.tipo==="Sub-WO"?" · Sub-WO":x.tipo==="Ajuste"?" · Adjustment":""}`;
 function opcionesTipoLote(lineas){
   const vistos=new Set(), opciones=[];
   const agregar=(valor,texto)=>{
@@ -1047,7 +1047,7 @@ function facFiltradas(){
     if(f.hasta && (x.emision||"")>f.hasta) return false;
     if(!q.length) return true;
     const cl=CLI(P(x.prop).cliente);
-    const txt=normBusca([x.num,P(x.prop).nombre,cl&&cl.nombre,...(x.conceptos||[]).flatMap(c=>[c.wo?"WO-"+c.wo:"",c.wo,c.nombre,c.descripcion,c.unidad]),...(x.lineas||[]).map(id=>"WO-"+id)].filter(Boolean).join(" "));
+    const txt=normBusca([x.num,P(x.prop).nombre,cl&&cl.nombre,...(x.conceptos||[]).flatMap(c=>[c.wo?woN(c.wo):"",c.wo,c.nombre,c.descripcion,c.unidad]),...(x.lineas||[]).map(id=>woN(id))].filter(Boolean).join(" "));
     return q.every(t=>txt.includes(t)); });
 }
 function barraFiltroFac(n){
@@ -1106,24 +1106,24 @@ VIEWS.facturacion = () => {
     Se mandaron a corregir, así que no se le cobran al cliente hasta que Gustavo verifique que quedaron bien.
     <div style="margin-top:6px;font-size:11.5px">
       ${frenadas.map(w=>{ const d=devAbiertaDeWO(w.id);
-        return `WO-${w.id} · ${esc(P(w.prop).nombre)} ${U(w.unidad)?esc(U(w.unidad).num):""}
+        return `${woN(w.id)} · ${esc(P(w.prop).nombre)} ${U(w.unidad)?esc(U(w.unidad).num):""}
                 — ${esc(devAreasTxt(d))}, ${diasAbierta(d)} día(s) abierta`;}).join("<br>")}</div>
     <button class="btn sm" data-a="ir" data-m="supervision" style="margin-top:7px">Ver returns</button></div>`:""}
   ${frenadasExc.length?`<div class="note r" style="margin-bottom:14px">
     <b>${frenadasExc.length} Work Order(s) no se pueden facturar: tienen una Request pendiente.</b><br>
     Facturar con una tarifa sin definir, o con un adicional todavía sin decidir, es facturar mal. El resto de cada propiedad se puede facturar igual.
     <div style="margin-top:6px;font-size:11.5px">
-      ${frenadasExc.map(w=>`WO-${w.id} · ${esc(P(w.prop).nombre)} ${U(w.unidad)?esc(U(w.unidad).num):""}`).join("<br>")}</div>
+      ${frenadasExc.map(w=>`${woN(w.id)} · ${esc(P(w.prop).nombre)} ${U(w.unidad)?esc(U(w.unidad).num):""}`).join("<br>")}</div>
     <button class="btn sm" data-a="ir" data-m="excepciones" style="margin-top:7px">View Requests</button></div>`:""}
 
   ${pendientes.length?`<div class="card" style="border-color:var(--ambar);margin-bottom:14px"><div class="chd" style="background:var(--ambar-cl)"><h3 style="color:var(--ambar)">Por qué todavía no aparecen algunas WO</h3><span class="s">${pendientes.length} terminada(s) fuera de la lista de facturación</span></div>
     <table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Motivo</th></tr></thead><tbody>
-      ${pendientes.map(x=>`<tr><td class="mono">WO-${x.w.id}</td><td>${esc(P(x.w.prop).nombre)} · ${esc(U(x.w.unidad).num)}</td><td>${x.razones.map(r=>`<span class="pill w" style="margin:0 4px 4px 0">${esc(r)}</span>`).join("")}</td></tr>`).join("")}
+      ${pendientes.map(x=>`<tr><td class="mono">${woN(x.w.id)}</td><td>${esc(P(x.w.prop).nombre)} · ${esc(U(x.w.unidad).num)}</td><td>${x.razones.map(r=>`<span class="pill w" style="margin:0 4px 4px 0">${esc(r)}</span>`).join("")}</td></tr>`).join("")}
     </tbody></table><div class="cp"><div class="tr" style="margin:0">Una WO solo aparece para generar factura cuando está terminada, validada por Erika, sin pendientes que afecten el importe y con tarifa definida. La revisión de calidad se registra aparte.</div></div></div>`:""}
 
   ${retenidas.length?`<div class="card" style="border-color:var(--ambar);margin-bottom:14px"><div class="chd" style="background:var(--ambar-cl)"><h3 style="color:var(--ambar)">Retenidas</h3><span class="s">${retenidas.length} fuera del borrador · la nómina sigue igual</span></div>
     <table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Servicio</th><th>Motivo</th><th></th></tr></thead><tbody>
-      ${retenidas.map(w=>`<tr><td class="mono" style="font-weight:700">WO-${w.id}</td><td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td><td>${esc(w.serv)}</td>
+      ${retenidas.map(w=>`<tr><td class="mono" style="font-weight:700">${woN(w.id)}</td><td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td><td>${esc(w.serv)}</td>
         <td><span class="pill w" title="${esc(w.facRetenida.motivo)}">Retenida</span> ${esc(w.facRetenida.motivo)}<div style="font-size:10.5px;color:var(--faint)">${esc(w.facRetenida.quien)} · ${esc(w.facRetenida.fecha)} ${esc(w.facRetenida.hora)}</div></td>
         <td style="text-align:right"><button class="btn sm" data-a="facLiberar" data-id="${w.id}">Liberar</button></td></tr>`).join("")}
     </tbody></table></div>`:""}
@@ -1134,7 +1134,7 @@ VIEWS.facturacion = () => {
     return `<div class="card"><div class="chd"><h3>${esc(P(pid).nombre)}</h3><span class="s">${esc(CLI(P(pid).cliente).nombre)}</span>
       <span class="r"><span class="mono" style="font-size:16px;font-weight:750">${money(tot)}</span></span></div>
       <table><thead><tr><th>WO</th><th>Unidad</th><th>Servicio</th><th>Técnico</th><th>Evidencia</th><th class="num">Importe</th><th></th></tr></thead>
-      <tbody>${arr.map(w=>`<tr><td class="mono" style="font-weight:700">WO-${w.id}</td><td>${esc(U(w.unidad).num)}</td>
+      <tbody>${arr.map(w=>`<tr><td class="mono" style="font-weight:700">${woN(w.id)}</td><td>${esc(U(w.unidad).num)}</td>
         <td>${esc(w.serv)}</td><td>${w.tec?esc(tecN(w.tec)):"—"}</td>
         <td>${w.evid?`<span class="pill v">${w.evid} foto(s)</span>`:'<span class="pill r"><span class="dot"></span>sin evidencia</span>'}</td>
         <td class="num mono">${ingresoBaseWO(w)!==null?money(ingresoBaseWO(w)):'<span class="pill w">NA</span>'}</td>
@@ -1498,7 +1498,7 @@ function vAuditoriaFinanciera(){
     <span class="s">se aprueban solos al aceptar la Sub-Work Order — aquí quedan a la vista con monto y motivo</span></div>
     ${extras.length?`<table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Técnico</th><th class="num">Monto</th><th>Motivo</th><th>Aprobó</th><th>Fecha</th></tr></thead>
     <tbody>${extras.map(x=>{ const w=W(x.wo); return `<tr>
-      <td class="mono" style="font-weight:700">WO-${esc(x.wo)}</td>
+      <td class="mono" style="font-weight:700">${woN(esc(x.wo))}</td>
       <td>${w?esc(P(w.prop).nombre)+" · "+esc(U(w.unidad).num):"—"}</td>
       <td>${esc(tecN(x.tec))}</td>
       <td class="num mono">${money(x.monto||0)}</td>
@@ -1523,7 +1523,7 @@ function vAuditoriaFinanciera(){
     ${descNom.length?`<table><thead><tr><th>Técnico</th><th>WO</th><th class="num">Monto</th><th>Motivo</th><th>Estado</th><th>Decidió</th><th>Fecha</th></tr></thead>
     <tbody>${descNom.map(x=>`<tr>
       <td style="font-weight:650">${esc(tecN(x.tec))}</td>
-      <td class="mono">${x.wo?"WO-"+esc(x.wo):"—"}</td>
+      <td class="mono">${x.wo?woN(esc)(x.wo):"—"}</td>
       <td class="num mono">${money(x.monto||0)}</td>
       <td>${esc(x.concepto||x.motivo||"—")}</td>
       <td><span class="pill ${x.estado==="Aplicado"?"v":"g"}">${esc(x.estado)}</span></td>
@@ -1536,7 +1536,7 @@ function vAuditoriaFinanciera(){
     ${parciales.length?`<table><thead><tr><th>Técnico</th><th>WO</th><th class="num">Monto</th><th>Nota</th><th>Quién</th><th>Fecha</th></tr></thead>
     <tbody>${parciales.map(n=>`<tr>
       <td style="font-weight:650">${esc(tecN(n.tec))}</td>
-      <td class="mono">WO-${esc((n.wos||[])[0]||"—")}</td>
+      <td class="mono">${woN(esc((n.wos||[])[0]||"—"))}</td>
       <td class="num mono">${money(n.total||0)}</td>
       <td>${esc(n.nota||"—")}</td>
       <td>${esc(n.quien||"—")}</td>
@@ -1586,7 +1586,7 @@ VIEWS.auditoria = vAuditoriaFinanciera;
 const INV_ACTIVOS = ["Herramientas y equipos","Muebles / activos"];
 const INV_ESTADOS = ["Operativa","En reparación","Baja"];
 const reservaTxt = p => { const id=p.reservadoWO||((/WO-(\d+)/.exec(p.reservadoPara||"")||[])[1]), w=id&&W(id);
-  return w ? `WO-${w.id} · ${P(w.prop).nombre} · ${U(w.unidad).num}` : (p.reservadoPara||""); };
+  return w ? `${woN(w.id)} · ${P(w.prop).nombre} · ${U(w.unidad).num}` : (p.reservadoPara||""); };
 const puedeEditarInv = p => !soloLectura() && (INV_ACTIVOS.includes(p.cat) || p.cat==="Material para instalación");
 VIEWS.inventario = () => `
   <div class="ph"><div><h2>Inventario</h2>
@@ -1608,7 +1608,7 @@ VIEWS.inventario = () => `
     <tbody>${S.movs.slice().reverse().map(m=>`<tr class="${fl("mov:"+m.id)}"><td class="mono">${m.fecha.slice(5)}</td>
       <td>${esc(by(S.productos,m.prod).nombre)}</td>
       <td><span class="pill ${m.tipo==="entrada"?"v":"w"}">${m.tipo}</span>${m.costoPend?' <span class="pill w">Falta costo</span>':""}</td>
-      <td class="num mono">${m.cant}</td><td class="mono">${m.wo?`WO-${m.wo}`:m.compraWo?`WO-${m.compraWo} (compra)`:"—"}</td>
+      <td class="num mono">${m.cant}</td><td class="mono">${m.wo?`${woN(m.wo)}`:m.compraWo?`${woN(m.compraWo)} (compra)`:"—"}</td>
       <td>${esc(m.tienda)||"—"}</td><td>${esc(m.quien)}</td>
       <td class="num mono">${m.costoPend?(soloLectura()?'<span class="pill w">Falta costo</span>':`<button type="button" class="btn sm" data-a="movCosto" data-id="${m.id}">Cargar costo del ticket</button>`):money(m.costo)}</td></tr>`).join("")}
     </tbody></table></div>`;

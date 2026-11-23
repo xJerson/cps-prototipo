@@ -37,7 +37,7 @@ function vDevoluciones(){
     const c = causaDe(d.causa), dias = diasAbierta(d), v = devVencida(d);
     return `<tr class="${fl("dv:"+d.id)}">
       <td style="font-weight:650">${esc(P(d.prop).nombre)}
-        <div style="font-size:10.5px;color:var(--faint)">${U(d.unidad)?esc(U(d.unidad).num):"—"}${d.wo?` · WO-${d.wo}`:""}</div></td>
+        <div style="font-size:10.5px;color:var(--faint)">${U(d.unidad)?esc(U(d.unidad).num):"—"}${d.wo?` · ${woN(d.wo)}`:""}</div></td>
       <td>${esc(devAreasTxt(d))}
         <div style="font-size:10.5px;color:var(--soft);max-width:230px">${esc(d.desc)}</div>${d.origen?`<div style="font-size:10px;color:var(--faint)">viene de: ${esc(d.origen)}</div>`:""}</td>
       <td><span class="pill ${c.paga?"g":"b"}">${esc(d.causa)}</span>
@@ -54,7 +54,7 @@ function vDevoluciones(){
       <td><span class="pill ${d.estado==="Cerrada"?"v":d.estado==="Corregida"?"a":"b"}">${esc(d.estado)}</span>
         ${d.verifica?`<div style="font-size:10px;color:var(--verde)">✓ ${esc(tecN(d.verifica))}</div>`:d.cerro?`<div style="font-size:10px;color:var(--verde)">✓ ${esc(d.cerro.quien)}</div>`:""}</td>
       <td style="text-align:right">${(()=>{ const tu=touchupDe(d.id);
-        if(tu) return `<span class="pill m">WO-${tu.id}</span>
+        if(tu) return `<span class="pill m">${woN(tu.id)}</span>
           <div style="font-size:10px;color:var(--faint);margin-top:2px">${esc(tecN(tu.tec))}${
             tu.tec===tu.tecOriginal?" · sin pago":" · se le paga"}</div>${
             d.estado==="Corregida"&&puede("devoluciones")?`<button class="btn sm v" style="margin-top:5px" data-a="devCerrar" data-id="${d.id}">Cerrar</button>`:""}`;
@@ -466,7 +466,7 @@ function vRevisar(rev){
   <div class="card"><div class="chd"><h3>Por supervisar</h3>
     <span class="s">la visita no frena nómina ni facturación; Erika valida el expediente final</span></div>
     ${rev.length?`<table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Servicio</th><th>Técnico</th><th>Evidencia</th><th></th></tr></thead>
-    <tbody>${rev.map(w=>`<tr class="${fl("wo:"+w.id)}"><td class="mono" style="font-weight:700">WO-${w.id}</td>
+    <tbody>${rev.map(w=>`<tr class="${fl("wo:"+w.id)}"><td class="mono" style="font-weight:700">${woN(w.id)}</td>
       <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}<div style="font-size:10.5px;color:var(--faint)">${esc(P(w.prop).zona)}</div></td>
       <td>${esc(w.serv)}</td><td>${esc(tecN(w.tec))}</td>
       <td>${w.evid?`<span class="pill v">${w.evid} foto(s)</span>`:'<span class="pill r"><span class="dot"></span>sin evidencia</span>'}
@@ -562,10 +562,10 @@ function vReporteDia(){
         ${v.acuerdos?`<div class="dd">Acordado: ${esc(v.acuerdos)}</div>`:""}
         <div class="qq">${esc(v.hora)}</div></div></li>`).join("")}
       ${apro.map(w=>`<li class="hecho"><span class="mk">✓</span><div>
-        <div class="tt">Aprobó WO-${w.id} · ${esc(P(w.prop).nombre)} ${esc(U(w.unidad).num)}</div>
+        <div class="tt">Aprobó ${woN(w.id)} · ${esc(P(w.prop).nombre)} ${esc(U(w.unidad).num)}</div>
         <div class="dd">${esc(w.serv)} · ${esc(tecN(w.tec))} · ${w.evid} evidencia(s)</div></div></li>`).join("")}
       ${dev.map(w=>`<li class="pend"><span class="mk">↩</span><div>
-        <div class="tt">Hizo return de WO-${w.id} · ${esc(P(w.prop).nombre)}</div>
+        <div class="tt">Hizo return de ${woN(w.id)} · ${esc(P(w.prop).nombre)}</div>
         <div class="dd">${esc(w.motivoDev||"")}</div><div class="qq">${esc(tecN(w.tec))}</div></div></li>`).join("")}
       ${mats.map(m=>`<li class="hecho"><span class="mk">✓</span><div>
         <div class="tt">Registró material · ${esc(by(S.productos,m.prod).nombre)}</div>

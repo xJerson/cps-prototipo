@@ -81,7 +81,7 @@ function cFotoURL(w, etiqueta){
   const c = cPick(["#8fa8b8","#b8a98f","#9bb89f","#b89fa8","#a8a8b8","#c4b48a"]);
   const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='320' height='240'><rect width='320' height='240' fill='${c}'/>`
     + `<rect x='20' y='20' width='280' height='200' fill='none' stroke='#fff' stroke-width='3' stroke-dasharray='10 6'/>`
-    + `<text x='160' y='110' font-family='sans-serif' font-size='24' font-weight='700' text-anchor='middle' fill='#fff'>${w.id != null ? "WO-"+w.id : (w.rotulo || "Campo")}</text>`
+    + `<text x='160' y='110' font-family='sans-serif' font-size='24' font-weight='700' text-anchor='middle' fill='#fff'>${w.id != null ? woN(w.id) : (w.rotulo || "Campo")}</text>`
     + `<text x='160' y='146' font-family='sans-serif' font-size='16' text-anchor='middle' fill='#fff'>${etiqueta} · simulada</text></svg>`;
   return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
 }
@@ -258,10 +258,10 @@ CAMPO_MANEJADORES.push({ id:"info",
     if((w.infoPedida.falta||[]).includes("evidencia") && !w.evid){
       S.reloj += cRnd(3,8);
       const n = cSubirFotos(w.tec, w, "evidencia pedida", Math.max(1, Math.round(d.fotos)||1), ()=>ACC.fFoto({id}), ()=>W(w.id).evid||0);
-      return n > 0 ? {texto:`${cNombre(w.tec)} subió la foto que pidió oficina en WO-${w.id}`, paso:"info pedida", oblig:true} : null;
+      return n > 0 ? {texto:`${cNombre(w.tec)} subió la foto que pidió oficina en ${woN(w.id)}`, paso:"info pedida", oblig:true} : null;
     }
     cConTecnico(w.tec, ()=>ACC.fCompletaInfo({id}));
-    return !W(w.id).infoPedida ? {texto:`${cNombre(w.tec)} completó lo que faltaba en WO-${w.id}`, paso:"info pedida", oblig:true} : null;
+    return !W(w.id).infoPedida ? {texto:`${cNombre(w.tec)} completó lo que faltaba en ${woN(w.id)}`, paso:"info pedida", oblig:true} : null;
   }});
 
 /* Llegada */
@@ -281,7 +281,7 @@ CAMPO_MANEJADORES.push({ id:"llegar",
     if(S.reloj + 23 < llega) S.reloj = llega - 23;
     S.reloj = Math.min(S.reloj, 20*60);
     cConTecnico(w.tec, ()=>ACC.fLlegue({id:String(w.id)}));
-    return asisDe(w.id) ? {texto:`${cNombre(w.tec)} llegó a WO-${w.id}`, paso:"llegada", oblig:true} : null;
+    return asisDe(w.id) ? {texto:`${cNombre(w.tec)} llegó a ${woN(w.id)}`, paso:"llegada", oblig:true} : null;
   }});
 
 /* Corroborar la unidad antes de empezar (coincide o no coincide) */
@@ -322,10 +322,10 @@ CAMPO_MANEJADORES.push({ id:"corroborar",
       if(d.cnBed!=null) campos.cnBed = {value:String(d.cnBed)};
       if(d.cnBath!=null) campos.cnBath = {value:String(d.cnBath)};
       cConTecnico(w.tec, ()=>cConCampos(campos, ()=>ACC.woCorroboraNoOK({id})));
-      return W(w.id).corroborado ? {texto:`${cNombre(w.tec)} reportó que la unidad de WO-${w.id} no coincide (problema)`, paso:"corroborar unidad", estado:"problema", oblig:true} : null;
+      return W(w.id).corroborado ? {texto:`${cNombre(w.tec)} reportó que la unidad de ${woN(w.id)} no coincide (problema)`, paso:"corroborar unidad", estado:"problema", oblig:true} : null;
     }
     cConTecnico(w.tec, ()=>ACC.woCorrobora({id}));
-    return W(w.id).corroborado ? {texto:`${cNombre(w.tec)} corroboró la unidad de WO-${w.id}`, paso:"corroborar unidad", oblig:true} : null;
+    return W(w.id).corroborado ? {texto:`${cNombre(w.tec)} corroboró la unidad de ${woN(w.id)}`, paso:"corroborar unidad", oblig:true} : null;
   }});
 
 /* Trabajo en sitio: foto del antes, evidencia, nota y cierre (también return fix y WO encadenadas).
@@ -358,16 +358,16 @@ CAMPO_MANEJADORES.push({ id:"trabajo",
       pl.dec.antes = 1;
       if(!cSi(d.hacer)) return cOmitido(n, "la foto del antes", "foto del antes");
       const k = cSubirFotos(w.tec, w, "antes", 1, ()=>ACC.fFotoAntes({id}), ()=>(W(w.id).antesFotos||[]).length);
-      return k > 0 ? {texto:`${n} subió la foto del antes en WO-${w.id}`, paso:"foto del antes", oblig:false} : null;
+      return k > 0 ? {texto:`${n} subió la foto del antes en ${woN(w.id)}`, paso:"foto del antes", oblig:false} : null;
     }
     if(step==="evid"){
       const meta = Math.max(1, Math.min(6, Math.round(d.fotos)||1)), n0 = w.evid||0;
       pl.dec.evid = 1;
-      if(meta <= n0) return {texto:`${n} ya había subido evidencia en WO-${w.id}`, paso:"foto de evidencia", oblig:true};
+      if(meta <= n0) return {texto:`${n} ya había subido evidencia en ${woN(w.id)}`, paso:"foto de evidencia", oblig:true};
       const k = cSubirFotos(w.tec, w, "después", meta - n0, ()=>ACC.fFoto({id}), ()=>W(w.id).evid||0);
       if(k > 0 && meta === 1 && pl.p.fotos[1] > 1)
         cLog(w.id, w.tec, "fotos extra", "omitido", false, `${n} subió solo la foto de evidencia necesaria y omitió las extras (opcional)`);
-      return k > 0 ? {texto:`${n} subió evidencia ${W(w.id).evid}/${meta} de WO-${w.id}`, paso:n0 ? "foto extra de evidencia" : "foto de evidencia", oblig:true} : null;
+      return k > 0 ? {texto:`${n} subió evidencia ${W(w.id).evid}/${meta} de ${woN(w.id)}`, paso:n0 ? "foto extra de evidencia" : "foto de evidencia", oblig:true} : null;
     }
     if(step==="nota"){
       pl.dec.nota = 1;
@@ -377,7 +377,7 @@ CAMPO_MANEJADORES.push({ id:"trabajo",
       if(!ta){ ta = document.createElement("textarea"); ta.dataset.a = "fNotaTrabajo"; ta.dataset.id = id; ta.style.display = "none"; document.body.appendChild(ta); tmp = true; }
       ta.value = txt;
       try{ cConTecnico(w.tec, ()=>ACC.fNotaTrabajo({id})); } finally { if(tmp) ta.remove(); }
-      if(W(w.id).notas === txt){ cHist(W(w.id), "Nota de trabajo registrada"); return {texto:`${n} anotó qué hizo en WO-${w.id}`, paso:"nota de trabajo", oblig:false}; }
+      if(W(w.id).notas === txt){ cHist(W(w.id), "Nota de trabajo registrada"); return {texto:`${n} anotó qué hizo en ${woN(w.id)}`, paso:"nota de trabajo", oblig:false}; }
       return null;
     }
     /* Terminar: el reloj avanza hasta que el tiempo en sitio coincida con la duración indicada */
@@ -391,7 +391,7 @@ CAMPO_MANEJADORES.push({ id:"trabajo",
       if(!asisDe(w.id) && S.phSheet && S.phSheet.t==="llegada")
         cConCampos({plH:{value: w.horaProg||"9:00"}}, ()=>ACC.fLlegadaDecl({id}));
     });
-    return W(w.id).estado==="Completed" ? {texto:`${n} terminó WO-${w.id}${W(w.id).horas?` (${W(w.id).horas} h en sitio)`:""}`, paso:"terminar", oblig:true} : null;
+    return W(w.id).estado==="Completed" ? {texto:`${n} terminó ${woN(w.id)}${W(w.id).horas?` (${W(w.id).horas} h en sitio)`:""}`, paso:"terminar", oblig:true} : null;
   }});
 
 /* ══════════ EVENTOS QUE INICIA EL TÉCNICO (solo perfil «Mixto») ══════════
@@ -534,9 +534,9 @@ function cEvRevisar(){
       ev.estado = "cerrado";
       const n = cNombre(w.tec), E = CAMPO_EV_INFO[ev.tipo], no = r.res === "rechazado";
       const sigue = CAMPO_EV_RETIENE.includes(ev.tipo) ? `; ${n} continúa con la WO` : "";
-      const txt = ev.tipo==="adic" ? `Oficina ${r.res==="aprobado" ? "aprobó" : no ? "rechazó" : "resolvió"} el change order «${ev.datos.c}» de WO-${w.id}${r.res==="parcial" ? " (aprobó solo una parte)" : ""}${no ? `; ${n} sigue con lo original` : sigue}`
-        : ev.tipo==="ayuda" ? `Oficina ${no ? "no atendió" : "atendió"} la ayuda en sitio de WO-${w.id}${sigue}`
-        : ev.tipo==="compra" ? `Oficina cargó el costo del ticket de la compra de materiales de WO-${w.id}`
+      const txt = ev.tipo==="adic" ? `Oficina ${r.res==="aprobado" ? "aprobó" : no ? "rechazó" : "resolvió"} el change order «${ev.datos.c}» de ${woN(w.id)}${r.res==="parcial" ? " (aprobó solo una parte)" : ""}${no ? `; ${n} sigue con lo original` : sigue}`
+        : ev.tipo==="ayuda" ? `Oficina ${no ? "no atendió" : "atendió"} la ayuda en sitio de ${woN(w.id)}${sigue}`
+        : ev.tipo==="compra" ? `Oficina cargó el costo del ticket de la compra de materiales de ${woN(w.id)}`
         : `Oficina ${no ? "rechazó" : "aprobó"} el permiso que pidió ${n}`;
       cLog(w.id, w.tec, E.paso, no ? "problema" : "hecho", false, txt, "auto");
     });
@@ -592,7 +592,7 @@ const CAMPO_EV_ENVIAR = {
     if(!nuevos.length) return null;
     ev.estado = "enviado"; ev.ids = nuevos.map(a=>a.id); ev.datos.c = c;
     const pr = nuevos[0].precio != null ? `tarifa ${money(nuevos[0].precio)}` : "precio en oficina";
-    return {texto:`${n} pidió a oficina un change order en WO-${w.id}: ${c} ×${q} (${t}) en ${ubic}, ${pr} — sin responder, esperando a oficina`, paso:CAMPO_EV_INFO.adic.paso, estado:"sin responder", oblig:false};
+    return {texto:`${n} pidió a oficina un change order en ${woN(w.id)}: ${c} ×${q} (${t}) en ${ubic}, ${pr} — sin responder, esperando a oficina`, paso:CAMPO_EV_INFO.adic.paso, estado:"sin responder", oblig:false};
   },
   ayuda:(w, ev, d, n) => {
     const id = String(w.id), opc = AYUDA_OPC.includes(d.opc) ? d.opc : ev.datos.opc;
@@ -608,7 +608,7 @@ const CAMPO_EV_ENVIAR = {
     const x = S.excepciones.find(y=>!antes.has(y.id) && y.tipo==="Ayuda en sitio" && y.wo===w.id);
     if(!x) return null;
     ev.estado = "enviado"; ev.xid = x.id;
-    return {texto:`${n} pidió ayuda en sitio en WO-${w.id}: ${opc}${txt ? " — "+txt : ""} — sin responder, esperando a oficina`, paso:CAMPO_EV_INFO.ayuda.paso, estado:"sin responder", oblig:false};
+    return {texto:`${n} pidió ayuda en sitio en ${woN(w.id)}: ${opc}${txt ? " — "+txt : ""} — sin responder, esperando a oficina`, paso:CAMPO_EV_INFO.ayuda.paso, estado:"sin responder", oblig:false};
   },
   compra:(w, ev, d, n) => {
     const id = String(w.id);
@@ -626,7 +626,7 @@ const CAMPO_EV_ENVIAR = {
     const nuevas = S.movs.filter(m=>!antes.has(m.id) && m.tipo==="entrada" && m.compraWo===w.id);
     if(!nuevas.length) return null;
     ev.estado = "enviado"; ev.movs = nuevas.map(m=>m.id);
-    return {texto:`${n} registró una compra de materiales en WO-${w.id} (${tienda}): ${lineas.map(l=>`${l.n} ×${l.c}`).join(", ")} — sin responder, falta que oficina cargue el costo del ticket`, paso:CAMPO_EV_INFO.compra.paso, estado:"sin responder", oblig:false};
+    return {texto:`${n} registró una compra de materiales en ${woN(w.id)} (${tienda}): ${lineas.map(l=>`${l.n} ×${l.c}`).join(", ")} — sin responder, falta que oficina cargue el costo del ticket`, paso:CAMPO_EV_INFO.compra.paso, estado:"sin responder", oblig:false};
   },
   permiso:(w, ev, d, n) => {
     const motivo = String(d.motivo||"").trim(), re = /^\d{4}-\d{2}-\d{2}$/;
@@ -699,7 +699,7 @@ CAMPO_MANEJADORES.push({ id:"subwo",
     const tec = tecSubWO(a), w = W(a.wo), id = String(a.id), n = cNombre(tec), pl = cPlanSub(a, w, tec), step = prop && prop.step;
     if(step==="iniciar"){
       cConTecnico(tec, ()=>ACC.fSubIniciar({id}));
-      return a.estadoTrabajo==="In progress" ? {texto:`${n} inició la Sub-WO "${a.concepto}" de WO-${a.wo}`, paso:"iniciar Sub-WO", oblig:true} : null;
+      return a.estadoTrabajo==="In progress" ? {texto:`${n} inició la Sub-WO "${a.concepto}" de ${woN(a.wo)}`, paso:"iniciar Sub-WO", oblig:true} : null;
     }
     if(step==="hallazgo"){
       pl.dec.hallazgo = 1;
@@ -717,7 +717,7 @@ CAMPO_MANEJADORES.push({ id:"subwo",
     const total = Math.max(1, parseFloat(a.cant)||1), hechas = Math.max(1, Math.min(total, Number(d.hechas)||total));
     S.reloj = Math.min(S.reloj + cRnd(10,40), 21*60);
     cConTecnico(tec, ()=>cConCampos({subHechas:{value:String(hechas)}}, ()=>ACC.fSubTerminarGuardar({id})));
-    return a.estadoTrabajo==="Completed" ? {texto:`${n} terminó la Sub-WO "${a.concepto}" de WO-${a.wo} (${hechas}/${total})`, paso:"terminar Sub-WO", estado:hechas<total ? "problema" : "hecho", oblig:true} : null;
+    return a.estadoTrabajo==="Completed" ? {texto:`${n} terminó la Sub-WO "${a.concepto}" de ${woN(a.wo)} (${hechas}/${total})`, paso:"terminar Sub-WO", estado:hechas<total ? "problema" : "hecho", oblig:true} : null;
   }});
 
 /* Conformidad de la nómina semanal (opcional) */
@@ -1273,7 +1273,7 @@ function cDecision(it, forzar){
   if(!CAMPO_DECIDE.includes(it.h)) return false;
   const s = cDecEstado(it);
   const n = cNombre(it.tec);
-  const que = it.que || (it.h==="nomina" ? `la conformidad de nómina de la semana ${it.sem}` : it.h==="disp" ? "su disponibilidad de la semana" : `lo que pidió oficina en WO-${it.wo}`);
+  const que = it.que || (it.h==="nomina" ? `la conformidad de nómina de la semana ${it.sem}` : it.h==="disp" ? "su disponibilidad de la semana" : `lo que pidió oficina en ${woN(it.wo)}`);
   const paso = it.pasoLog || (it.h==="nomina" ? "nómina semana "+it.sem : it.h==="disp" ? "disponibilidad" : "info pedida");
   if(s.omite){
     if(cUna(s.l, "omite")) cLog(it.wo, it.tec, paso, "omitido", false, `${n} omitió ${que} (opcional)`, "auto");
@@ -1296,7 +1296,7 @@ const cHayOmitidos = () => Array.from(_campoOmitidos.keys()).some(cOmitidoAhora)
 function cQuien(it){
   const t = T(it.tec) || {}, w = it.wo ? W(it.wo) : null, a = it.sub ? S.adicionales.find(x=>x.id===it.sub) : null;
   const oficio = it.tec===GUSTAVO ? "supervisor de campo" : ((t.esp||[]).filter(e=>e!=="Supervisor").join(" / ") || "sin oficio");
-  const donde = it.donde ? it.donde : w ?` en WO-${w.id}${w.serv ? " · "+w.serv : ""}${a ? " · Sub-WO «"+a.concepto+"»" : ""}`
+  const donde = it.donde ? it.donde : w ?` en ${woN(w.id)}${w.serv ? " · "+w.serv : ""}${a ? " · Sub-WO «"+a.concepto+"»" : ""}`
     : it.h==="nomina" ? ` · pago de la semana ${it.sem}` : it.h==="disp" ? " · disponibilidad de la semana siguiente" : "";
   return `${cNombre(it.tec)} (${oficio}) responde${donde}`;
 }
@@ -1483,7 +1483,7 @@ function campoLogModal(){
       <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${btn("todo","Todo")}${btn("omitidos","Omitidos")}${btn("sin","Sin responder")}${btn("problemas","Problemas")}</div>
       ${R.length
         ? `<table><thead><tr><th>Hora</th><th>WO</th><th>Técnico</th><th>Qué pasó</th><th>Quién</th><th>Estado</th></tr></thead><tbody>${R.map(e=>`<tr>
-            <td>${esc(e.t)}</td><td>${e.wo?"WO-"+e.wo:"—"}</td><td>${esc(e.tec||"—")}</td><td>${esc(e.texto)}</td><td>${e.por==="oficina"?"Oficina":"Automático"}</td><td>${cPillLog(e)}</td></tr>`).join("")}</tbody></table>`
+            <td>${esc(e.t)}</td><td>${e.wo?woN(e.wo):"—"}</td><td>${esc(e.tec||"—")}</td><td>${esc(e.texto)}</td><td>${e.por==="oficina"?"Oficina":"Automático"}</td><td>${cPillLog(e)}</td></tr>`).join("")}</tbody></table>`
         : `<div class="empty"><div class="b">…</div>${L.length ? "No hay entradas con este filtro." : "Aquí se irá llenando lo que el campo automático haga: pasos hechos, omitidos, sin responder y problemas."}</div>`}
     </div>
     <div class="mf"><button class="btn" data-a="campoLogLimpiar">Limpiar</button><button class="btn" data-a="cm">Cerrar</button></div>`, true);

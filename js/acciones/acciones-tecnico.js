@@ -58,7 +58,7 @@ Object.assign(ACC, {
     const a=S.adicionales.find(x=>x.id===+d.id); if(!a) return;
     if(!(a.fotosEvidArr||[]).length){ toast("🚫 Falta la evidencia","Agrega al menos una foto antes de terminar la Sub-WO.","r"); return; }
     const total=Math.max(1,parseFloat(a.cant)||1), hechas=Math.min(total,parseFloat(a.cantRealizada)||0);
-    modal(`<div class="mh"><h3>Registrar avance de Sub-WO</h3><p>${esc(a.concepto)} · WO-${a.wo}</p></div>
+    modal(`<div class="mh"><h3>Registrar avance de Sub-WO</h3><p>${esc(a.concepto)} · ${woN(a.wo)}</p></div>
       <div class="mb"><div class="note v">Marca cuántas unidades/reparaciones terminó este técnico. Las restantes se separarán para reasignarlas.</div>
       <div class="fld"><label>Terminadas por este técnico <span class="req">*</span></label><input id="subHechas" type="number" min="1" max="${total}" step="1" value="${hechas||total}"></div>
       <div class="hint">Total de la Sub-WO: ${total}. La evidencia cargada queda asociada al técnico actual.</div></div>
@@ -82,12 +82,12 @@ Object.assign(ACC, {
       const pendientes=subWOsOperativas().some(x=>x.wo===w.id && x.estadoTrabajo!=="Canceled" && (x.cantPendiente>0 || x.estadoTrabajo!=="Completed" || !(x.fotosEvidArr||[]).length));
       if(w.estado==="Completed" && w.evid>0 && ingresoWO(w)!==null && !pendientes){ w.validada=true; w.hist.push([hora(),"Validada automáticamente: WO y Sub-WO completas","Sistema"]); }
     }
-    cm(); avisar("Erika",resto?"Sub-WO parcialmente terminada":"Sub-WO terminada",`WO-${a.wo} · ${a.concepto}: ${hechas}/${total} realizado(s) por ${tecnico}${resto?`, ${resto} reasignable(s)`:""}.`,"v");
+    cm(); avisar("Erika",resto?"Sub-WO parcialmente terminada":"Sub-WO terminada",`${woN(a.wo)} · ${a.concepto}: ${hechas}/${total} realizado(s) por ${tecnico}${resto?`, ${resto} reasignable(s)`:""}.`,"v");
     toast(resto?"✓ Avance guardado":"✓ Sub-WO terminada",resto?`${resto} pendiente(s) quedaron disponibles para reasignar a otro técnico.`:"Oficina ya recibió el cierre y la evidencia.","v"); render();
   },
   fLlegue: d => {
     const w=W(d.id), p=P(w.prop);
-    if(woEspera(w)){ toast("En espera",`Falta terminar WO-${woEspera(w).id} para poder empezar.`,"w"); return; }
+    if(woEspera(w)){ toast("En espera",`Falta terminar ${woN(woEspera(w).id)} para poder empezar.`,"w"); return; }
     S.reloj += 23;
     const prog = w.horaProg || null;
     let tarde = false;
@@ -121,7 +121,7 @@ Object.assign(ACC, {
         }
       }
       w.hist.push([hora(),"Cargó evidencia",T(w.tec).nombre]);
-      toast("📷 Evidencia recibida",`WO-${w.id} ya tiene ${w.evid} foto(s).`,"v"); render();
+      toast("📷 Evidencia recibida",`${woN(w.id)} ya tiene ${w.evid} foto(s).`,"v"); render();
     });
   },
   // "Antes" es como se encontró la unidad — separado de evidFotos/evid, no cuenta para cerrar el trabajo.
@@ -170,7 +170,7 @@ Object.assign(ACC, {
       historial:[{evento:"Created",quien:tecN(w.tec),hora:hora(),fecha:HOY_SUP}]};
     S.excepciones.push(nx);
     w.hist.push([hora(),`Pidió ayuda en sitio · ${sh.opc}`,tecN(w.tec)]);
-    const cuerpo=`${tecN(w.tec)} · WO-${w.id} ${P(w.prop).nombre} ${U(w.unidad).num} — ${sh.opc}`;
+    const cuerpo=`${tecN(w.tec)} · ${woN(w.id)} ${P(w.prop).nombre} ${U(w.unidad).num} — ${sh.opc}`;
     avisar("Thalia","Un técnico necesita ayuda",cuerpo,"r");
     avisar("Gustavo","Un técnico necesita ayuda",cuerpo,"r");
     S.phSheet=null;
@@ -210,7 +210,7 @@ Object.assign(ACC, {
     else if(w.obsTec) w.hist.push([hora(), "Agregó observaciones al cierre", tec?tec.nombre:S.usuario]);
     S.phSheet=null; flash("wo:"+w.id);
     toast(n?"✓ Materiales registrados":"✓ Guardado",
-      n?`${n} línea(s) — quedaron en el costo de WO-${w.id}.`:"Se guardaron las observaciones.","v");
+      n?`${n} línea(s) — quedaron en el costo de ${woN(w.id)}.`:"Se guardaron las observaciones.","v");
     render();
   },
   /* ── Gasolina / vehículo de Gustavo (su celular) ── */
@@ -410,11 +410,11 @@ Object.assign(ACC, {
     S.phSheet=null;
     toast("⚠ Adicional enviado a oficina",
       `${sh.filas.length} concepto(s): ${esc(lista)}. Entró como <b>Request</b>: Thalia recibe primero la decisión; si está fuera de su alcance puede reasignarla a Gustavo u otra persona. La WO no se paga ni factura hasta resolverla — pero puedes seguir con lo programado.`,"w");
-    avisar("Thalia","Adicional esperando aprobación",`WO-${w.id} · ${lista}. Revisa el alcance y aprueba o reasigna la solicitud.`,"r");
+    avisar("Thalia","Adicional esperando aprobación",`${woN(w.id)} · ${lista}. Revisa el alcance y aprueba o reasigna la solicitud.`,"r");
     render(); },
   fTermine: d => {
     const w=W(d.id);
-    if(woEspera(w)){ toast("En espera",`Falta terminar WO-${woEspera(w).id} para poder empezar.`,"w"); return; }
+    if(woEspera(w)){ toast("En espera",`Falta terminar ${woN(woEspera(w).id)} para poder empezar.`,"w"); return; }
     /* Un adicional pendiente ya NO frena que el técnico cierre lo que tenía
        programado — el pago/factura de esta WO igual queda frenado por la
        excepción en vivo que arma excAuto() (ver woBloqueada), así que no
@@ -437,13 +437,13 @@ Object.assign(ACC, {
     const dvC=w.touchup&&w.devOrigen?DV(w.devOrigen):null;
     if(dvC && dvC.estado!=="Cerrada"){
       dvC.estado="Corregida"; dvC.lotesDespues=[{amb:devAreasTxt(dvC), fotosArr:(w.evidFotos||[]).slice()}];
-      dvC.hist.push([hora(),`Return fix terminado en WO-${w.id} · ${w.evid} evidencia(s)`,T(w.tec).nombre]);
-      avisar("Thalia","Un return fix está listo para cerrar",`${P(dvC.prop).nombre} ${U(dvC.unidad)?U(dvC.unidad).num:""} · ${devAreasTxt(dvC)} — WO-${w.id} terminada por ${tecN(w.tec)}.`,"v");
+      dvC.hist.push([hora(),`Return fix terminado en ${woN(w.id)} · ${w.evid} evidencia(s)`,T(w.tec).nombre]);
+      avisar("Thalia","Un return fix está listo para cerrar",`${P(dvC.prop).nombre} ${U(dvC.unidad)?U(dvC.unidad).num:""} · ${devAreasTxt(dvC)} — ${woN(w.id)} terminada por ${tecN(w.tec)}.`,"v");
     }
     // WO enlazadas: al terminar esta, la que iba después queda libre y su técnico se entera
     S.wos.filter(x=>x.dependeDe===w.id && x.estado!=="Canceled").forEach(x=>{
-      x.hist.push([hora(),`Ya puede empezar: terminó WO-${w.id}`,"Sistema"]);
-      if(x.tec) noti(`Ya puedes empezar WO-${x.id}`,`${P(x.prop).nombre} ${U(x.unidad).num} · ${x.serv} — terminó WO-${w.id}.`);
+      x.hist.push([hora(),`Ya puede empezar: terminó ${woN(w.id)}`,"Sistema"]);
+      if(x.tec) noti(`Ya puedes empezar ${woN(x.id)}`,`${P(x.prop).nombre} ${U(x.unidad).num} · ${x.serv} — terminó ${woN(w.id)}.`);
     });
     // Hoy Erika revisa a mano porque los reportes le llegan en papel.
     // Aquí el dato ya está: si está completo, se valida solo. A ella solo le llega lo que falla.
@@ -457,7 +457,7 @@ Object.assign(ACC, {
       w.hist.push([hora(),"Validación pendiente: hay Sub-WO sin terminar o sin evidencia","Sistema"]);
     }
     toast(sinEvidencia ? "⚠️ Work Order terminada (fotos pendientes)" : "✓ Work Order terminada",
-      sinEvidencia ? `WO-${w.id} quedó terminada en campo. Recuerda subir las fotos antes del cierre de nómina.` : `WO-${w.id} quedó lista. Pasa a supervisión de Gustavo.`, sinEvidencia ? "w" : "v"); render(); },
+      sinEvidencia ? `${woN(w.id)} quedó terminada en campo. Recuerda subir las fotos antes del cierre de nómina.` : `${woN(w.id)} quedó lista. Pasa a supervisión de Gustavo.`, sinEvidencia ? "w" : "v"); render(); },
   fLlegadaDecl: d => {
     const w=W(d.id), p=P(w.prop);
     const hDecl = val("plH") || w.horaProg || hora();
@@ -466,11 +466,11 @@ Object.assign(ACC, {
       puntualidad:"Declarada", declarada:true, ubicacion:p.dir+" · "+p.zona});
     w.estado="In progress"; w.asistencia=true; w.nueva=false; S.phSheet=null;
     w.hist.push([hora(),`Llegada declarada a las ${hDecl} (no verificada)`,T(w.tec).nombre]);
-    toast("Llegada declarada",`<b>${esc(tecN(w.tec))}</b> dice que llegó ${esc(hDecl)} a WO-${w.id}. Queda marcada como <b>no verificada</b> y levanta una excepción para Gustavo.`,"w");
+    toast("Llegada declarada",`<b>${esc(tecN(w.tec))}</b> dice que llegó ${esc(hDecl)} a ${woN(w.id)}. Queda marcada como <b>no verificada</b> y levanta una excepción para Gustavo.`,"w");
     // El botón dice «Registrar y cerrar»: hay que cerrar. Si no, el técnico
     // toca cerrar, le piden la hora, la da… y sigue sin cerrar.
     S.bitacora.unshift({ n:++S.audSeq, fecha:HOY_SUP, hora:hora(),
       usuario:S.usuario, rol:ROLES[S.usuario].r,
-      accion:"Declaró llegada sin verificar", modulo:"Campo", ref:"WO-"+w.id });
+      accion:"Declaró llegada sin verificar", modulo:"Campo", ref:woN(w.id) });
     ACC.fTermine({id:String(w.id)});
   },});

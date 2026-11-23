@@ -137,10 +137,10 @@ Object.assign(ACC, {
           <td>${esc(w.serv)}<div style="font-size:10.5px;color:var(--ambar)">Pendiente de una semana anterior</div></td>
           <td class="num mono">${egresoWO(w)!==null?money(montoNomWO(w)):'<span class="pill w">NA</span>'}</td></tr>`).join("")}
         ${extra.map(x=>`<tr style="background:var(--ambar-cl)"><td class="mono">—</td>
-          <td colspan="2">Pago adicional aprobado · WO-${x.wo}<div style="font-size:10.5px;color:var(--ambar)">${esc(x.motivo.slice(0,70))}</div></td>
+          <td colspan="2">Pago adicional aprobado · ${woN(x.wo)}<div style="font-size:10.5px;color:var(--ambar)">${esc(x.motivo.slice(0,70))}</div></td>
           <td class="num mono">${money(x.monto)}</td></tr>`).join("")}
         ${descs.map(x=>`<tr style="background:var(--rojo-cl)"><td class="mono">—</td>
-          <td colspan="2">${x.tipo==="Manual"?`Descuento · ${esc(x.concepto)}${x.wo?` · WO-${esc(x.wo)}`:""}`:`Descuento por return · WO-${x.wo}`}<div style="font-size:10.5px;color:var(--rojo)">${esc((x.tipo==="Manual"?x.desc:x.motivo||"").slice(0,90))}</div></td>
+          <td colspan="2">${x.tipo==="Manual"?`Descuento · ${esc(x.concepto)}${x.wo?` · ${woN(esc(x.wo))}`:""}`:`Descuento por return · ${woN(x.wo)}`}<div style="font-size:10.5px;color:var(--rojo)">${esc((x.tipo==="Manual"?x.desc:x.motivo||"").slice(0,90))}</div></td>
           <td class="num mono">−${money(x.monto)}</td></tr>`).join("")}
         <tr style="background:var(--surface-2);font-weight:750"><td colspan="3">Total ${esc(perTxt)}</td>
           <td class="num mono" style="font-size:15px">${money(neto)}</td></tr></tbody></table>

@@ -80,13 +80,13 @@ function comunicacionProp(pid){
   });
   (S.confirmacionesAgendamiento||[]).filter(x=>x.prop===pid).forEach(x=>
     out.push({fecha:d10(x.fechaCierre), origen:"Scheduling", medio:canalEN(x.medio), contacto:(x.contactos||[]).map(c=>c.nombre||c.mail).join(", "), quien:x.quien,
-      nota:`Agenda ${x.fechaAgenda}: `+(x.wos||[]).map(id=>{ const w=W(id); return w?"Unit "+U(w.unidad).num:"WO-"+id; }).join(", ")}));
+      nota:`Agenda ${x.fechaAgenda}: `+(x.wos||[]).map(id=>{ const w=W(id); return w?"Unit "+U(w.unidad).num:woN(id); }).join(", ")}));
   (S.comunicacionesWO||[]).filter(c=>(c.prop||(W(c.wo)||{}).prop)===pid).forEach(c=>
-    out.push({fecha:d10(c.fecha), origen:"WO notice", medio:canalEN(c.medio), contacto:"", quien:c.quien, nota:`WO-${c.wo} pending: ${c.motivo||""}`}));
+    out.push({fecha:d10(c.fecha), origen:"WO notice", medio:canalEN(c.medio), contacto:"", quien:c.quien, nota:`${woN(c.wo)} pending: ${c.motivo||""}`}));
   (S.revisionesCliente||[]).filter(r=>r.prop===pid).forEach(r=>{
-    out.push({fecha:d10(r.enviado||r.creado), origen:"Client review", medio:"Email", contacto:r.correo, quien:r.quien||"", nota:`WO-${r.wo} · Unit ${r.unidad}: fotos enviadas para revisión`});
+    out.push({fecha:d10(r.enviado||r.creado), origen:"Client review", medio:"Email", contacto:r.correo, quien:r.quien||"", nota:`${woN(r.wo)} · Unit ${r.unidad}: fotos enviadas para revisión`});
     if(r.respondido) out.push({fecha:d10(r.respondido.fecha), origen:"Client review", medio:canalEN(r.respondido.canal||"Email"), contacto:r.correo, quien:r.respondido.quien,
-      nota:`WO-${r.wo} · respuesta: ${r.estado}${r.respondido.nota?" — "+r.respondido.nota:""}`});
+      nota:`${woN(r.wo)} · respuesta: ${r.estado}${r.respondido.nota?" — "+r.respondido.nota:""}`});
   });
   (S.listasPrecio||[]).filter(x=>x.prop===pid).forEach(x=>
     out.push({fecha:d10(x.fecha), origen:"Price List", medio:"Email", contacto:(x.para||[]).join(", "), quien:x.quien, nota:`Price List enviada (${x.tipo}, ${x.filas} precios)`}));
@@ -109,6 +109,8 @@ const porEnviarWO = () => S.wos.filter(w => w.porEnviar && w.tec && w.estado!=="
 const pillNoEnviada = w => w && w.porEnviar && w.tec ? ` <span class="pill w" title="El técnico todavía no la ve. Se le envía con «Send schedule».">Not sent</span>` : "";
 const woSanas = () => (S.wos||[]).forEach(w => { if(w && !Array.isArray(w.hist)) w.hist = []; });
 woSanas();
+/* Número de WO para mostrar: no repite «WO-» si el ID ya lo trae (WO-P14-1). */
+const woN = v => { const s=String(v==null?"":v); return /^WO-/i.test(s)?s:"WO-"+s; };
 const W = id => by(S.wos,id) || (id==null || id==="" ? undefined : S.wos.find(w=>w.id!=null && String(w.id)===String(id)));
 /* Plazo de cobranza: días de crédito de la propiedad (30 si no tiene) y suma de días en UTC para que la zona horaria no mueva la fecha. */
 const diasCreditoProp = prop => { const p=P(prop); const n=p&&parseInt(p.diasCredito,10); return Number.isFinite(n)&&n>=0 ? n : 30; };
@@ -265,7 +267,7 @@ function textoRecordatorioTec(r){
   const horaTxt = (w.horaProg && w.horaFin)
     ? ` ${w.horaProg}–${w.horaFin}`
     : (w.horaProg ? ` ${w.horaProg}` : (w.horaFin ? ` hasta ${w.horaFin}` : ""));
-  return `WO-${w.id} · ${w.serv} · ${P(w.prop).nombre} ${U(w.unidad).num} — ${w.fecha}${horaTxt}`;
+  return `${woN(w.id)} · ${w.serv} · ${P(w.prop).nombre} ${U(w.unidad).num} — ${w.fecha}${horaTxt}`;
 }
 /* Texto al cliente (en inglés) del recordatorio de una WO en unidad ocupada. */
 function textoRecordatorio(r){
@@ -273,7 +275,7 @@ function textoRecordatorio(r){
   const horaTxt = (w.horaProg && w.horaFin)
     ? ` between ${w.horaProg} and ${w.horaFin}`
     : (w.horaProg ? ` at ${w.horaProg}` : (w.horaFin ? ` before ${w.horaFin}` : ""));
-  return `Hello, this is a reminder that work order WO-${w.id} (${w.serv}) at ${P(w.prop).nombre}, unit ${U(w.unidad).num}, is scheduled for ${w.fecha}${horaTxt}. Please make sure our team can access the unit.`;
+  return `Hello, this is a reminder that work order ${woN(w.id)} (${w.serv}) at ${P(w.prop).nombre}, unit ${U(w.unidad).num}, is scheduled for ${w.fecha}${horaTxt}. Please make sure our team can access the unit.`;
 }
 /* Miniatura de un comprobante (foto real). */
 const miniRecibo = url => url ? `<a href="${url}" target="_blank"><img src="${url}" style="width:44px;height:44px;object-fit:cover;border-radius:6px;border:1px solid var(--line);vertical-align:middle"></a>` : "";
@@ -676,7 +678,7 @@ function conflictoHorario(tec,w){
 const wosEnConflicto = (tec,desde,hasta) => S.wos.filter(w=>w.tec===tec && w.fecha>=desde && w.fecha<=hasta
   && !["Canceled","Completed"].includes(w.estado) && !w.cobrada && (bloqueo(tec,w.fecha) || conflictoHorario(tec,w)));
 const avisoConflictos = (tec,cf) => cf.length
-  ? avisar("Thalia","Técnico con trabajos en días no disponibles",`${tecN(tec)} tiene ${cf.map(w=>"WO-"+w.id+" ("+w.fecha.slice(5)+")").join(", ")} en días u horarios que no puede. Hay que reasignarlas.`,"w") : null;
+  ? avisar("Thalia","Técnico con trabajos en días no disponibles",`${tecN(tec)} tiene ${cf.map(w=>woN(w.id)+" ("+w.fecha.slice(5)+")").join(", ")} en días u horarios que no puede. Hay que reasignarlas.`,"w") : null;
 
 /* Candidatos técnico para una WO — cruza disponibilidad, carga del día, zona,
    especialidad y última ubicación conocida (la misma que UC-09 usa para
@@ -777,8 +779,8 @@ function tarAvisos(){
 /* Alertas — solo reglas que salen del propio Excel o del análisis */
 function alertas(){
   const A=[];
-  S.wos.filter(w=>!w.tec && esAgendada(w.estado)).forEach(w=>A.push({t:"Work Order sin técnico",d:`WO-${w.id} · ${P(w.prop).nombre} ${U(w.unidad).num}`,q:"Thalia",n:"w"}));
-  S.asistencias.filter(a=>a.puntualidad==="Tarde").forEach(a=>A.push({t:"Llegada tarde",d:`${tecN(a.tec)} llegó ${a.horaReal} a WO-${a.wo} (programada ${a.horaProg})`,q:"Gustavo",n:"w"}));
+  S.wos.filter(w=>!w.tec && esAgendada(w.estado)).forEach(w=>A.push({t:"Work Order sin técnico",d:`${woN(w.id)} · ${P(w.prop).nombre} ${U(w.unidad).num}`,q:"Thalia",n:"w"}));
+  S.asistencias.filter(a=>a.puntualidad==="Tarde").forEach(a=>A.push({t:"Llegada tarde",d:`${tecN(a.tec)} llegó ${a.horaReal} a ${woN(a.wo)} (programada ${a.horaProg})`,q:"Gustavo",n:"w"}));
   /* Técnico que no responde. Estas alertas miran la FECHA: antes "Sin marcar llegada" salía en gris incluso por una WO de mañana,
      y un trabajo empezado que nunca se cerró no avisaba nada. No frenan a las demás WO: la pendiente solo no entra a nómina ni a
      factura hasta que se cierre o se reasigne. */
@@ -786,23 +788,23 @@ function alertas(){
   S.wos.filter(w=>w.tec && esAgendada(w.estado) && !asisDe(w.id) && w.fecha).forEach(w=>{
     const donde=`${P(w.prop).nombre} ${U(w.unidad).num}`;
     const horaTxt = w.horaProg ? `programada ${w.horaProg}` : (w.horaFin ? `ventana hasta ${w.horaFin}` : "sin hora fija");
-    if(w.fecha<HOY_SUP) A.push({t:"Técnico no se presentó",d:`WO-${w.id} · ${tecN(w.tec)} no marcó llegada el ${w.fecha} (${donde}). Confirma con el técnico o reasigna la WO.`,q:"Thalia · Gustavo",n:"r"});
-    else if(w.fecha===HOY_SUP && w.horaProg && S.reloj>minProg(w)+10) A.push({t:"Sin marcar llegada",d:`WO-${w.id} · ${tecN(w.tec)} no ha marcado llegada (${horaTxt})`,q:"Thalia",n:"a"});
+    if(w.fecha<HOY_SUP) A.push({t:"Técnico no se presentó",d:`${woN(w.id)} · ${tecN(w.tec)} no marcó llegada el ${w.fecha} (${donde}). Confirma con el técnico o reasigna la WO.`,q:"Thalia · Gustavo",n:"r"});
+    else if(w.fecha===HOY_SUP && w.horaProg && S.reloj>minProg(w)+10) A.push({t:"Sin marcar llegada",d:`${woN(w.id)} · ${tecN(w.tec)} no ha marcado llegada (${horaTxt})`,q:"Thalia",n:"a"});
   });
   S.wos.filter(w=>w.tec && w.estado==="In progress" && w.fecha && w.fecha<HOY_SUP && asisDe(w.id)).forEach(w=>A.push({t:"Trabajo sin cerrar",
-    d:`WO-${w.id} · ${tecN(w.tec)} llegó a las ${asisDe(w.id).horaReal} del ${w.fecha} y la WO sigue en curso sin cerrarse (${P(w.prop).nombre} ${U(w.unidad).num})`,q:"Gustavo · Thalia",n:"r"}));
+    d:`${woN(w.id)} · ${tecN(w.tec)} llegó a las ${asisDe(w.id).horaReal} del ${w.fecha} y la WO sigue en curso sin cerrarse (${P(w.prop).nombre} ${U(w.unidad).num})`,q:"Gustavo · Thalia",n:"r"}));
   S.wos.filter(w=>w.tec && w.infoPedida && (w.infoPedida.falta||[]).includes("evidencia")).forEach(w=>{
     const dias=Math.round((new Date(HOY_SUP)-new Date(w.infoPedida.fecha))/86400000);
-    if(dias>=1) A.push({t:"Información sin responder",d:`WO-${w.id} · ${tecN(w.tec)} no ha completado la evidencia que se le pidió el ${w.infoPedida.fecha} (${dias} día${dias===1?"":"s"})`,q:"Erika",n:"a"});
+    if(dias>=1) A.push({t:"Información sin responder",d:`${woN(w.id)} · ${tecN(w.tec)} no ha completado la evidencia que se le pidió el ${w.infoPedida.fecha} (${dias} día${dias===1?"":"s"})`,q:"Erika",n:"a"});
   });
   respuestasVencidas().forEach(c=>{ const w=W(c.wo), vencida=c.limite<HOY_SUP; A.push({t:vencida?"Respuesta del cliente vencida":"Respuesta del cliente para hoy",
-    d:`WO-${c.wo}${w?` · ${P(w.prop).nombre} ${U(w.unidad).num}`:""} · ${c.motivo} — responder antes del ${c.limite}`,q:"Thalia",n:vencida?"r":"w"}); });
+    d:`${woN(c.wo)}${w?` · ${P(w.prop).nombre} ${U(w.unidad).num}`:""} · ${c.motivo} — responder antes del ${c.limite}`,q:"Thalia",n:vencida?"r":"w"}); });
   solTodas().filter(solPend).forEach(s=>A.push({t:"Adicional esperando aprobación",
-    d:`WO-${s.wo} · ${s.lineas.filter(l=>l.estado==="Pendiente").length} concepto(s): ${solTxt(s)}`,q:s.aprobador||"Thalia",n:"r"}));
+    d:`${woN(s.wo)} · ${s.lineas.filter(l=>l.estado==="Pendiente").length} concepto(s): ${solTxt(s)}`,q:s.aprobador||"Thalia",n:"r"}));
   /* Los SLA de Requests se ven también fuera de la bandeja, para que
      una persona no tenga que acordarse de abrirla para enterarse del vencimiento. */
   excPend().forEach(x=>{ const sla=slaApprovalRequest(x); if(sla&&sla.alerta) A.push({
-    t:sla.texto, d:`${x.wo?`WO-${x.wo} · `:""}${x.tipo}: ${x.motivo}`,
+    t:sla.texto, d:`${x.wo?`${woN(x.wo)} · `:""}${x.tipo}: ${x.motivo}`,
     q:x.assignedTo||x.aprueba, n:sla.nivel
   }); });
   S.wos.filter(w=>w.precio==null && !tarifaWO(w)).forEach(w=>A.push({t:"Tarifa faltante",d:`${w.serv} · ${U(w.unidad).rooms} en ${P(w.prop).nombre} — hoy saldría "NA"`,q:"Erika",n:"w"}));
