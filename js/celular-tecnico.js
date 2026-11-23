@@ -167,7 +167,6 @@ function renderFon(){
       ${dato("Final Expectations", p.finalExp)}
       ${dato("Final Expectations ("+(w.cat||"")+")", feDeWO(p, w))}
       ${dato("Ojo", p.notasTec)}
-      ${dato("Regla de la propiedad", p.notas)}
       ${w.notasTec?dato("Nota de esta orden", w.notasTec):""}
     </div>
 

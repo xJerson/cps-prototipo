@@ -107,7 +107,8 @@ Object.assign(ACC, {
         <div class="fld"><label>Accounts Payable Email 1 <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><input id="nAP1" value="${p?esc(p.mailAP1):""}"></div>
         <div class="fld"><label>Accounts Payable Email 2 <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label><input id="nAP2" value="${p?esc(p.mailAP2):""}"></div></div>
       <div class="hint" style="margin:-6px 0 10px">A dónde se manda la factura de esta propiedad, si es distinto del contacto que coordina el trabajo.</div>
-      <div class="fld"><label>Special Property Requirements</label><input id="nNT" value="${p?esc(p.notas):""}" placeholder="lo que siempre se olvida y genera reclamos"></div>
+      <div class="fld"><label>Special Property Requirements <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— Internal · not shown to technician</span></label><input id="nNT" value="${p?esc(p.notas):""}" placeholder="e.g., No extra cleaning charge for balconies"></div>
+      ${notaProto("cómo se hace",["Special Property Requirements es interno: lo ve oficina (ficha, Notas internas al asignar, aprobación de adicionales). No sale en el celular.","Lo que el técnico debe saber va en «Ojo», dentro de Información para el técnico."])}
       <div class="fg c3">
         <div class="fld"><label>Gate code</label><input id="nDC" class="mono" value="${p?esc(p.door):""}"></div>
         <div class="fld"><label>Default Contact Method</label><input id="nPR" placeholder="Email, Text…" value="${p?esc(p.pref):""}"></div></div>
@@ -127,7 +128,7 @@ Object.assign(ACC, {
         <div class="fld"><label>Final Expectations — por tipo de trabajo <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— el técnico ve solo la del tipo de su WO</span></label>
           <div id="feRows">${(p&&p.finalExpTipo||[]).map(f=>feFila(f.tipo,f.nota)).join("")}</div>
           <button class="btn sm" type="button" data-a="propFEAdd">+ Agregar por tipo de trabajo</button></div>
-        <div class="fld" style="margin-bottom:0"><label>Ojo <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional, advertencias</span></label><input id="nOjo" value="${p?esc(p.notasTec):""}" placeholder="Estacionarse en visitas, no en la entrada principal"></div>
+        <div class="fld" style="margin-bottom:0"><label>Ojo <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— Shown to technician</span></label><input id="nOjo" value="${p?esc(p.notasTec):""}" placeholder="Estacionarse en visitas, no en la entrada principal"></div>
       </div>
       ${p?"":`<div class="note">Las unidades no hace falta cargarlas aquí: se van registrando solas cuando crees Work Orders o Estimados de esta propiedad.</div>`}
     </div>

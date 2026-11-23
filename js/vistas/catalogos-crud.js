@@ -145,7 +145,7 @@ function fichaProp(id){
     <tr><td style="color:var(--faint)">Approval Method</td><td>${esc(p.aprob)}</td></tr>
     <tr><td style="color:var(--faint)">Accounts Payable Email 1</td><td>${esc(p.mailAP1)||"—"}</td></tr>
     <tr><td style="color:var(--faint)">Accounts Payable Email 2</td><td>${esc(p.mailAP2)||"—"}</td></tr>
-    <tr><td style="color:var(--faint)">Special Property Requirements</td><td>${p.notas?`<b>${esc(p.notas)}</b>`:"—"}</td></tr>
+    <tr><td style="color:var(--faint)">Special Property Requirements <span style="font-size:10.5px">· Internal</span></td><td>${p.notas?`<b>${esc(p.notas)}</b>`:"—"}</td></tr>
     <tr><td colspan="2" style="padding-top:14px"><b style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint)">Información para el técnico</b></td></tr>
     <tr><td style="color:var(--faint)">Dónde está el shop</td><td>${esc(p.shop)||"—"}</td></tr>
     <tr><td style="color:var(--faint)">Código del shop</td><td class="mono">${esc(p.shopCode)||"—"}</td></tr>
