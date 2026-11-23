@@ -27,7 +27,7 @@ function excAuto(){
   });
   S.wos.filter(w=>w.estado==="Completed" && !w.evid && !w.evidExcusada).forEach(w=>{
     out.push(conAsignacion({id:"AUTO-E"+w.id, tipo:"Cierre sin evidencia", wo:w.id, auto:true,
-      motivo:`${woN(w.id)} se cerró sin ninguna foto. No hay con qué sustentar el cobro si el cliente reclama.`,
+      motivo:`${woN(w.id)} se cerró sin ninguna foto. Evidencia: Optional · no frena pago ni factura.`,
       monto:null, pide:"Sistema", aprueba:"Thalia", estado:"Pendiente", fecha:w.fecha, resol:null}));
   });
   // Una excepción por SOLICITUD, no por concepto: el técnico mandó un aviso,
@@ -110,7 +110,7 @@ function slaApprovalRequest(x){
    orden: las demás nóminas y facturas pueden continuar. */
 const excBloqueaTodo = () => false;
 // «Ayuda en sitio» (el técnico pide una mano) y «Return» (ya lo controla el propio return) no frenan pago ni factura de la WO.
-const woBloqueada = wid => excPend().some(x=>x.wo===wid && x.tipo!=="Ayuda en sitio" && x.tipo!=="Return" && x.tipo!=="Cambio de precio fijado");
+const woBloqueada = wid => excPend().some(x=>x.wo===wid && !["Ayuda en sitio","Return","Cambio de precio fijado","Cierre sin evidencia"].includes(x.tipo));   // evidencia: opcional (REQ 19/11)
 function historialApproval(x){
   const hs=x.historial||[];
   return hs.length?`<div style="font-size:9.5px;color:var(--faint);margin-top:5px">${hs.map(h=>
@@ -127,7 +127,7 @@ VIEWS.excepciones = () => {
   pend.forEach(x=>porTipo[x.tipo]=(porTipo[x.tipo]||0)+1);
   return `
   <div class="ph"><div><h2>Requests</h2>
-    <p>Solicitudes que necesitan que <b>alguien de oficina</b> decida. Cada una frena el pago y la factura de su propia WO — no de las demás. Las de «Ayuda en sitio» (técnico pidiendo una mano) y las de «Return» no frenan el pago ni la factura.</p></div>
+    <p>Solicitudes que necesitan que <b>alguien de oficina</b> decida. Cada una frena el pago y la factura de su propia WO — no de las demás. Las de «Ayuda en sitio» (técnico pidiendo una mano), «Return» y «Cierre sin evidencia» no frenan el pago ni la factura.</p></div>
     <div class="act"><button class="btn p" data-a="excNueva">+ New Request</button></div></div>
 
   ${pend.length
@@ -144,7 +144,7 @@ VIEWS.excepciones = () => {
       <td class="mono" style="color:${sla&&sla.nivel==="r"?"var(--rojo)":"var(--faint)"}">${x.creada?esc(x.creada.hora):"—"}${sla?`<div><span class="pill ${sla.nivel}" style="margin-top:3px">${esc(sla.texto)}</span></div>`:""}</td>
       <td class="mono">${x.wo?`<b style="cursor:pointer" data-a="woVer" data-id="${x.wo}">${woN(x.wo)}</b>`:"—"}</td>
       <td>${x.assignedTo?`<b>${esc(x.assignedTo)}</b><div style="font-size:9.5px;color:var(--faint)">${x.assignedBy?`assigned by ${esc(x.assignedBy)} · ${esc(x.assignedAt||"")}`:""}</div>`:'<span class="pill w">Unassigned</span>'}${x.aprueba?`<div style="font-size:9.5px;color:var(--faint);margin-top:2px">approver: ${esc(x.aprueba)}</div>`:""}</td>
-      <td><span class="pill ${x.tipo==="Tarifa no encontrada"?"w":(x.tipo==="Cierre sin evidencia"||x.tipo==="Ayuda en sitio")?"r":"m"}"><span class="dot"></span>${esc(x.tipo)}</span>
+      <td><span class="pill ${x.tipo==="Tarifa no encontrada"?"w":x.tipo==="Ayuda en sitio"?"r":x.tipo==="Cierre sin evidencia"?"w":"m"}"><span class="dot"></span>${esc(x.tipo)}</span>
         ${x.auto?'<div style="font-size:9.5px;color:var(--faint);margin-top:2px">detectada por el sistema</div>':""}</td>
       <td style="max-width:340px">${esc(x.motivo)}${x.foto?` ${miniRecibo(x.foto)}`:""}${historialApproval(x)}</td>
       <td>${esc(x.pide)}</td>
@@ -619,7 +619,7 @@ VIEWS.nomina = () => {
       <table><thead><tr><th>WO</th><th>Propiedad · Unidad</th><th>Técnico</th><th>Evidencia</th><th>Tiempo en sitio</th><th>Aprobaciones</th><th></th></tr></thead>
       <tbody>${porVal.map(w=>`<tr><td class="mono" style="font-weight:700">${woN(w.id)}</td>
         <td>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)}</td><td>${esc(tecN(w.tec))}</td>
-        <td>${w.evid?`<span class="pill v">${w.evid}</span>`:'<span class="pill r">falta</span>'}</td>
+        <td>${w.evid?`<span class="pill v">${w.evid}</span>`:'<span class="pill w" title="Optional">sin fotos</span>'}</td>
         <td class="mono" style="color:var(--faint)">${w.horas?w.horas+" h":"—"}</td>
         <td>${pillsAprob(w)}</td>
         <td style="text-align:right"><button class="btn sm p" data-a="validarModal" data-id="${w.id}">Revisar y validar</button></td></tr>`).join("")}
@@ -1136,7 +1136,7 @@ VIEWS.facturacion = () => {
       <table><thead><tr><th>WO</th><th>Unidad</th><th>Servicio</th><th>Técnico</th><th>Evidencia</th><th class="num">Importe</th><th></th></tr></thead>
       <tbody>${arr.map(w=>`<tr><td class="mono" style="font-weight:700">${woN(w.id)}</td><td>${esc(U(w.unidad).num)}</td>
         <td>${esc(w.serv)}</td><td>${w.tec?esc(tecN(w.tec)):"—"}</td>
-        <td>${w.evid?`<span class="pill v">${w.evid} foto(s)</span>`:'<span class="pill r"><span class="dot"></span>sin evidencia</span>'}</td>
+        <td>${w.evid?`<span class="pill v">${w.evid} foto(s)</span>`:'<span class="pill w" title="Optional · no frena la factura">sin evidencia</span>'}</td>
         <td class="num mono">${ingresoBaseWO(w)!==null?money(ingresoBaseWO(w)):'<span class="pill w">NA</span>'}</td>
         <td style="text-align:right"><button class="btn sm" data-a="facRetener" data-id="${w.id}">Retener</button></td></tr>
         ${ajustesValDe(w,"cobro").map(a=>`<tr style="background:var(--azul-cl)"><td class="mono">↳ Adjustment</td><td>${esc(U(w.unidad).num)}</td><td>${esc(a.concepto)}</td><td>—</td><td>—</td>

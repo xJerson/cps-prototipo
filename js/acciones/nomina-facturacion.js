@@ -563,8 +563,7 @@ function aprobarWO(w, que){
   if(!puedeValidar()){ S.audOmitir=true; toast("Sin permiso","Solo Claudia o Erika pueden validar Work Orders.","r"); return; }
   if(w.estado!=="Completed"){ S.audOmitir=true; toast("No está terminada",`${woN(w.id)} está en «${esc(w.estado)}». Solo se validan Work Orders terminadas.`,"r"); return; }
   leerValDraft(w); if(!aplicarEdicionVal(w)) return;
-  const falta = [];
-  if(!w.evid && !w.evidExcusada) falta.push("evidencia del trabajo");
+  const falta = [];   // REQ 19/11: la evidencia es opcional para oficina (no bloquea pago ni factura)
   if(ingresoWO(w)===null) falta.push("tarifa");
   if(subWOsPendientesDeWO(w.id).length) falta.push(`${subWOsPendientesDeWO(w.id).length} Sub-WO sin terminar o sin evidencia`);
   if(clienteRevisionPendienteDeWO(w.id)) falta.push("confirmación del cliente");
@@ -593,8 +592,7 @@ function modalValidar(w){
        "horas trabajadas" para validar no correspondía. Solo evidencia y
        tarifa son requisito real. El tiempo en sitio se sigue guardando solo
        (llegada → término), pero como dato de operación, no de nómina. */
-    const falta = [];
-    if(!w.evid && !w.evidExcusada) falta.push("evidencia del trabajo");
+    const falta = [];   // REQ 19/11: la evidencia es opcional (no bloquea); se sigue mostrando
     if(ingresoWO(w)===null) falta.push("tarifa");
     if(subsPend.length) falta.push(`${subsPend.length} Sub-WO sin terminar o sin evidencia`);
     if(clienteRevisionPendienteDeWO(w.id)) falta.push("confirmación del cliente");
@@ -602,6 +600,7 @@ function modalValidar(w){
     modal(`<div class="mh"><h3>Validar ${woN(w.id)}</h3>
       <p>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)} · ${esc(tecN(w.tec))}</p></div>
     <div class="mb">
+      ${faltaBase?notaProto("evidencia opcional",["La WO no tiene fotos: igual se puede «Aprobar pago», «Aprobar factura» o «Validar».","«Solicitar info al técnico» le pide las fotos; no frena nada.","El celular del técnico no dice que sea opcional: sigue viendo «Faltan fotos»."]):""}
       <table><tbody>
         <tr><td style="width:40px">${w.serv?'<span class="pill v">✓</span>':'<span class="pill r">—</span>'}</td>
           <td><b>Servicios realizados</b><div style="font-size:11.5px;color:var(--soft)">${esc(w.serv)} × ${w.cant||1}</div></td></tr>
@@ -613,8 +612,8 @@ function modalValidar(w){
           <td><b>Materiales</b><div style="font-size:11.5px;color:var(--soft)">${mv.length?mv.map(m=>esc(by(S.productos,m.prod).nombre)+" ×"+m.cant).join(", ")+" · "+money(materialWO(w)):"ninguno"}</div></td></tr>
         <tr><td><span class="pill g">·</span></td>
           <td><b>Tiempo en sitio</b><div style="font-size:11.5px;color:var(--soft)">${w.horas?w.horas+" h (de la llegada al término)":"—"} · informativo, no cambia el pago (es por trabajo)</div></td></tr>
-        <tr><td>${w.evid?'<span class="pill v">✓</span>':'<span class="pill r">—</span>'}</td>
-          <td><b>Evidencia y observaciones</b><div style="font-size:11.5px;color:var(--soft)">${w.evid} foto(s)${w.notas?" · "+esc(w.notas):""}</div></td></tr>
+        <tr><td>${w.evid?'<span class="pill v">✓</span>':'<span class="pill w">·</span>'}</td>
+          <td><b>Evidencia y observaciones</b> <span class="pill g">Optional</span><div style="font-size:11.5px;color:var(--soft)">${w.evid?w.evid+" foto(s)":"Sin fotos · no bloquea pago ni factura"}${w.notas?" · "+esc(w.notas):""}</div></td></tr>
       </tbody></table>
       ${falta.length?`<div class="note r" style="margin-top:12px"><b>Falta: ${esc(falta.join(", "))}.</b>
         Su flujograma dice «solicitar información al técnico» antes de validar.</div>`

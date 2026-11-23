@@ -192,8 +192,10 @@ const respuestasVencidas = () => (S.comunicacionesWO||[]).filter(c=>c.estado!=="
    w.validada queda como "las dos" y como marca de las WO anteriores a este cambio: por eso los
    helpers la aceptan — nómina y facturación leen siempre estos dos, nunca w.validada directo. */
 const puedeValidar = () => esAdmin() || S.usuario==="Erika";
-const aprobPagoOK = w => !w.fotosPend && !!(w.aprobPago || w.validada);
-const aprobFacturaOK = w => !w.fotosPend && !!(w.aprobFactura || w.validada);
+/* REQ 19/11: la evidencia es opcional para oficina — «fotos pendientes» ya no anula las aprobaciones.
+   El celular del técnico sigue pidiendo las fotos (w.fotosPend) sin decir que son opcionales. */
+const aprobPagoOK = w => !!(w.aprobPago || w.validada);
+const aprobFacturaOK = w => !!(w.aprobFactura || w.validada);
 /* Una corrección o un cambio en la WO invalida las dos aprobaciones, no solo la marca general. */
 function desvalidar(w){ w.validada=false; w.aprobPago=null; w.aprobFactura=null; }
 /* Estado derivado de un estimado en función del ciclo de vida de las Work Orders que nacieron de él */
