@@ -326,7 +326,7 @@ const notaProto = (titulo, pasos) => NOTAS_PROTO && !soloVerMod() ? `<div class=
   <ol style="margin:6px 0 0 18px;padding:0">${pasos.map(p=>`<li style="margin:2px 0">${p}</li>`).join("")}</ol></div>` : "";
 const NOTA_VISTA = {
   tablero:"Revisa «Lo que necesita tu atención» y resuelve primero lo más urgente.",
-  wo:"Crea la Work Order con «+ Nueva Work Order», asígnale técnico y seguila hasta Completed.",
+  wo:"Crea la Work Order con «+ Nueva Work Order» y asígnale técnico. Lo asignado no le llega al técnico hasta que tocas «Send schedule». Síguela hasta Completed.",
   calendario:"Elige Día/Semana/Rango/Mes arriba y asigna técnico a lo que sale en «Sin asignar».",
   despacho:"Antes de prometerle una fecha a un cliente, mira aquí si el equipo tiene cupo ese día.",
   propiedades:"Crea la propiedad con «+ Nueva propiedad» y completa su «Expediente» antes de poder agendarla.",

@@ -103,6 +103,10 @@ const tecN = id => { const t=T(id); return t? t.nombre+" "+t.apellido : "sin asi
 /* Toda WO debe tener historial: hay WOs cargadas sin «hist» y el sistema le agrega renglones en muchos lados. */
 /* ID real de una WO a partir de lo que llega de data-id (siempre texto): número si la WO es numérica, texto si es de texto. */
 const woId = v => { const w = W(v); return w ? w.id : (v!=="" && !isNaN(+v) ? +v : v); };
+/* REQ 19/11 punto 15: Lydia asigna todo el día y recién al tocar «Send schedule» le llega al técnico.
+   Mientras tanto la WO queda con porEnviar:true — el técnico no la ve ni recibe aviso. */
+const porEnviarWO = () => S.wos.filter(w => w.porEnviar && w.tec && w.estado!=="Canceled");
+const pillNoEnviada = w => w && w.porEnviar && w.tec ? ` <span class="pill w" title="El técnico todavía no la ve. Se le envía con «Send schedule».">Not sent</span>` : "";
 const woSanas = () => (S.wos||[]).forEach(w => { if(w && !Array.isArray(w.hist)) w.hist = []; });
 woSanas();
 const W = id => by(S.wos,id) || (id==null || id==="" ? undefined : S.wos.find(w=>w.id!=null && String(w.id)===String(id)));

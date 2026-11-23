@@ -266,7 +266,7 @@ CAMPO_MANEJADORES.push({ id:"info",
 
 /* Llegada */
 CAMPO_MANEJADORES.push({ id:"llegar",
-  detect:() => S.wos.filter(w=>w.tec && cTecOk(w.tec) && esAgendada(w.estado) && !asisDe(w.id) && !woEspera(w)).map(w=>({k:"llegar:"+w.id, h:"llegar", wo:w.id, tec:w.tec})),
+  detect:() => S.wos.filter(w=>w.tec && !w.porEnviar && cTecOk(w.tec) && esAgendada(w.estado) && !asisDe(w.id) && !woEspera(w)).map(w=>({k:"llegar:"+w.id, h:"llegar", wo:w.id, tec:w.tec})),
   proponer:it => {
     const w = W(it.wo); if(!w || asisDe(w.id) || woEspera(w)) return null;
     const pl = cPlan(w), prog = cMinHora(w.horaProg||"9:00");

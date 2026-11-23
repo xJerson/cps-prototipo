@@ -25,7 +25,7 @@ function renderFon(){
   $("#fasu").textContent = t.zona;
   /* La confirmación del cliente es solo para la oficina: el técnico va igual
      y no debe saber si el cliente confirmó o no, para que no deje de ir. */
-  const mias = S.wos.filter(w=>w.tec===t.id && !w.cobrada && w.estado!=="Canceled");
+  const mias = S.wos.filter(w=>w.tec===t.id && !w.porEnviar && !w.cobrada && w.estado!=="Canceled");   // punto 15: sin enviar no la ve
   const subMias = subWOsDeTec(t.id).filter(a=>{
     const w=W(a.wo); return w && !w.cobrada;
   });
@@ -1190,7 +1190,7 @@ function gustavoScreenHTML(view){
       /* Una tarjeta por técnico: en qué está hoy y en qué WO */
       const tecs = S.tecnicos.filter(t=>t.activo && t.id!==GUSTAVO);
       const filas = tecs.map(t=>{
-        const hoy = S.wos.filter(w=>w.tec===t.id && w.fecha===HOY_SUP);
+        const hoy = S.wos.filter(w=>w.tec===t.id && !w.porEnviar && w.fecha===HOY_SUP);
         const act = hoy.find(w=>w.estado==="In progress") || hoy.find(w=>["Detenido","Esperando aprobación"].includes(w.estado));
         const hechas = hoy.filter(w=>w.estado==="Completed");
         const sig = hoy.find(w=>["Scheduled","Confirmed","Pending"].includes(w.estado));

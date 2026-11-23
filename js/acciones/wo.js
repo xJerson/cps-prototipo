@@ -296,7 +296,7 @@ Object.assign(ACC, {
             else if(fechaAntes!==o.fecha) tarRefijarPorFecha(o);   // solo cambió la fecha: puede cambiar la versión de la tarifa
             o.hist.push([hora(), "Datos corregidos: "+cambios.map(c=>c.campo).join(", "), S.usuario]);
             // Si ya hay técnico, el cambio le llega: si no, se entera al llegar
-            if(o.tec) noti("Tu trabajo cambió",
+            if(o.tec && !o.porEnviar) noti("Tu trabajo cambió",
               `WO-${o.id}: ${cambios.map(c=>`${c.campo} ahora es ${c.a}`).join(". ")}. Revísalo antes de salir.`, false);
           });
       }
@@ -649,13 +649,13 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     const w=W(d.id);
     // En su Excel, Assigned y Completion Status son columnas distintas:
     // asignar NO cambia el estado, solo llena el técnico.
-    w.tec=d.tec; w.nueva=true;
-    w.hist.push([hora(),"Asignada a "+tecN(d.tec),S.usuario]);
+    /* Punto 15: la asignación queda sin enviar. El técnico la recibe cuando se toca «Send schedule». */
+    w.tec=d.tec; w.porEnviar=true;
+    w.hist.push([hora(),"Asignada a "+tecN(d.tec)+" (sin enviar)",S.usuario]);
     cm();
-    toast("✓ Asignada",`WO-${w.id} → <b>${esc(tecN(d.tec))}</b>. Le salió el aviso a su app. La orden sigue en <b>${w.estado}</b>: asignar no cambia el estado.`,"v");
-    noti("Nueva Work Order",`${P(w.prop).nombre} · ${U(w.unidad).num} — ${w.serv} · ${w.fecha}${w.horaProg ? " " + horaVentanaWO(w) : ""}`);
+    toast("✓ Asignada, sin enviar",`WO-${w.id} → <b>${esc(tecN(d.tec))}</b>. Sigue en <b>Unassigned</b> para que veas todo el día.<br>${esc(tecN(d.tec))} todavía no la ve: cuando termines de asignar toca <b>«Send schedule»</b>.`,"v");
     flash("wo:"+w.id);
-    S.phTec=d.tec; S.phView="agenda"; render();
+    render();
   },
 
   supervisar: d => {
@@ -1079,15 +1079,37 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     cm();
     toast("✓ Reasignada",
       `<b>WO-${w.id}</b> ahora es de <b>${esc(tecN(nuevo))}</b>. `
-      + `<b>${esc(tecN(antes))}</b> ya no la ve en su celular ni puede tocarla.`
+      + (w.porEnviar ? `Sigue <b>sin enviar</b>: le llega con «Send schedule».` : `<b>${esc(tecN(antes))}</b> ya no la ve en su celular ni puede tocarla.`)
       + (w.touchup
         ? (nuevo===w.tecOriginal
           ? `<br><br>Como la corrige el propio responsable, <b>se retir\u00f3 el descuento</b> y no se le paga.`
           : `<br><br>Se le paga a ${esc(tecN(nuevo))} y se le descuenta a <b>${esc(tecN(w.tecOriginal))}</b>.`)
         : ""), "v");
-    noti("Te reasignaron un trabajo", `${P(w.prop).nombre} ${U(w.unidad)?U(w.unidad).num:""} — WO-${w.id}`);
+    if(!w.porEnviar) noti("Te reasignaron un trabajo", `${P(w.prop).nombre} ${U(w.unidad)?U(w.unidad).num:""} — WO-${w.id}`);
     render();
   },
+  /* Punto 15: «Send schedule» — manda a cada técnico todo lo que se le asignó y no se le había enviado. */
+  woEnviarAgendaModal: () => {
+    const ws = porEnviarWO();
+    if(!ws.length){ toast("Nada por enviar","Todas las Work Orders asignadas ya se enviaron.",""); return; }
+    const porTec = {}; ws.forEach(w => (porTec[w.tec]=porTec[w.tec]||[]).push(w));
+    modal(`<div class="mh"><h3>Send schedule</h3><p>Cada técnico recibe sus Work Orders en un solo aviso. Desde ese momento las ve en su celular.</p></div>
+      <div class="mb"><table><thead><tr><th>Técnico</th><th>Work Orders que recibe</th></tr></thead><tbody>
+      ${Object.keys(porTec).map(t => `<tr><td><b>${esc(tecN(t))}</b></td><td>${porTec[t].map(w => `WO-${w.id} · ${esc(P(w.prop).nombre)} ${esc(U(w.unidad)?U(w.unidad).num:"")} · ${esc(w.serv)} · ${esc(w.fecha||"sin fecha")}`).join("<br>")}</td></tr>`).join("")}
+      </tbody></table></div>
+      <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="woEnviarAgenda">Enviar a ${Object.keys(porTec).length} técnico(s)</button></div>`); },
+  woEnviarAgenda: () => {
+    const ws = porEnviarWO();
+    if(!ws.length){ cm(); toast("Nada por enviar","Todas las Work Orders asignadas ya se enviaron.",""); render(); return; }
+    const porTec = {};
+    ws.forEach(w => { (porTec[w.tec]=porTec[w.tec]||[]).push(w);
+      delete w.porEnviar; w.nueva = true; w.enviada = {quien:S.usuario, fecha:hoyReal(), hora:hora()};
+      w.hist.push([hora(), "Enviada a "+tecN(w.tec)+" (Send schedule)", S.usuario]); });
+    Object.keys(porTec).forEach(t => noti("Tu agenda — "+tecN(t),
+      porTec[t].map(w => `${P(w.prop).nombre} ${U(w.unidad)?U(w.unidad).num:""} · ${w.serv} · ${w.fecha||""}${w.horaProg?" "+horaVentanaWO(w):""}`).join(" | ")));
+    cm(); flash(ws.map(w => "wo:"+w.id));
+    toast("✓ Agenda enviada",`${ws.length} Work Order(s) a ${Object.keys(porTec).length} técnico(s). Ya las ven en su celular.`,"v");
+    render(); },
   woCancelar: d => {
     const w=W(d.id); if(!w) return;
     modal(`<div class="mh"><h3>Cancelar WO-${w.id}</h3><p>${esc(P(w.prop).nombre)} · ${esc(U(w.unidad).num)} · ${esc(w.fecha)}</p></div>

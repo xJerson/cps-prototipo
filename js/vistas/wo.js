@@ -10,9 +10,9 @@ VIEWS.wo = () => {
   let ws = S.wos.slice().sort((a,b)=>b.id-a.id);
   if(f==="semana") ws = ws.filter(w=>w.semana===S.semana);
   if(ETAPAS_WO.includes(f)) ws = ws.filter(w=>etapaWO(w)===f);
-  if(f==="sin") ws = ws.filter(w=>!w.tec && w.estado!=="Canceled");
+  if(f==="sin") ws = ws.filter(w=>(!w.tec || w.porEnviar) && w.estado!=="Canceled");   // las asignadas sin enviar siguen aquí (punto 15)
   if(f==="curso") ws = ws.filter(w=>["In progress","Esperando aprobación"].includes(w.estado));
-  if(f==="camino") ws = ws.filter(w=>w.tec && esAgendada(w.estado) && !asisDe(w.id));
+  if(f==="camino") ws = ws.filter(w=>w.tec && !w.porEnviar && esAgendada(w.estado) && !asisDe(w.id));
   if(f==="pend") ws = ws.filter(w=>ESTADOS_PEND.includes(w.estado));
   const selMode = f==="pend" && puedeAvisarPend(), sel = (S.pendSel||[]).filter(id=>{ const w=W(id); return w && ESTADOS_PEND.includes(w.estado); });
   /* Fecha: «todos» no filtra; «fecha» un día; «rango» de una fecha a otra; «mes» un mes del año actual;
@@ -95,6 +95,16 @@ VIEWS.wo = () => {
   ${vistaCierreAgendamiento()}
   ${cardRecordatorios()}
   ${puedeAvisarPend()?cardSeguimientoPend():""}
+  ${f==="sin"?notaProto("cómo se arma y se envía la agenda",[
+    "Filtra por <b>Fecha</b>, <b>City</b> o <b>Service</b> para ver todo el día siguiente junto.",
+    "Asigna técnico a cada Work Order. Se queda aquí con la marca <b>«Not sent»</b>: así sigues viendo el panorama completo.",
+    "Mientras diga «Not sent» puedes cambiar de técnico las veces que quieras. El técnico no ve nada ni le llega aviso.",
+    "Cuando termines, toca <b>«Send schedule»</b>. Cada técnico recibe sus Work Orders en un solo aviso y pasan a <b>Assigned</b>.",
+    "Si después cambias algo de una ya enviada, solo le avisa al técnico afectado."]):""}
+  ${(()=>{ const pe=porEnviarWO(); if(!pe.length || soloLectura()) return "";
+    const nt=new Set(pe.map(w=>w.tec)).size;
+    return `<div class="note w" style="margin-bottom:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span><b>${pe.length} Work Order(s) asignada(s) sin enviar</b> a ${nt} técnico(s). Todavía no las ven en su celular. Termina de asignar y envía todo junto.</span>
+      <button class="btn p" style="margin-left:auto" data-a="woEnviarAgendaModal">Send schedule (${pe.length})</button></div>`; })()}
   <div class="tabs">
     ${[["abiertas","Open"],["sin","Unassigned"],["camino","Assigned"],["curso","In progress"],["pend","Pending"],["porcerrar","To close"],["cerradas","Closed"],["cancel","Canceled"],["semana","Week "+S.semana]].map(([k,n])=>
       `<button class="tab ${f===k?"on":""}" data-a="tab" data-t="${k}">${n}</button>`).join("")}
@@ -150,7 +160,7 @@ VIEWS.wo = () => {
         <td>${esc(U(w.unidad).rooms)}</td>
         <td><span class="pill g">${esc(w.cat)}</span></td>
         <td>${esc(w.serv)}</td>
-        <td>${w.tec?esc(tecN(w.tec)):`<span class="pill w">sin asignar</span>${!["Canceled","Completed","Invoiced","Paid"].includes(w.estado)?` <button class="btn sm p" data-a="asigModal" data-id="${w.id}">Asignar</button>`:""}`}</td>
+        <td>${w.tec?esc(tecN(w.tec))+pillNoEnviada(w):`<span class="pill w">sin asignar</span>${!["Canceled","Completed","Invoiced","Paid"].includes(w.estado)?` <button class="btn sm p" data-a="asigModal" data-id="${w.id}">Asignar</button>`:""}`}</td>
         <td>${asisDe(w.id)?`<span class="pill ${asisDe(w.id).puntualidad==="Tarde"?"w":"v"}"><span class="dot"></span>${esc(asisDe(w.id).horaReal)}</span>`:'<span style="color:var(--faint)">—</span>'}</td>
         <td><div style="display:flex;flex-direction:column;align-items:flex-start;gap:3px">
           <span class="pill ${estP(w.estado)}"><span class="dot"></span>${w.estado}</span>
@@ -361,7 +371,7 @@ function fichaWO(id){
           <tr><td style="color:var(--faint)">Ubicación del trabajo</td><td>${w.ubic?esc(w.ubic)+(w.ubicDetalle?" · "+esc(w.ubicDetalle):""):'<span class="pill w">sin especificar</span>'}</td></tr>
           <tr><td style="color:var(--faint)">Gate code</td><td class="mono">${esc(p.door)}</td></tr>
           ${u.doorCode?`<tr><td style="color:var(--faint)">Door code</td><td class="mono">${esc(u.doorCode)}</td></tr>`:""}
-          <tr><td style="color:var(--faint)">Técnico</td><td>${w.tec?esc(tecN(w.tec)):'<span class="pill w">sin asignar</span>'}</td></tr>
+          <tr><td style="color:var(--faint)">Técnico</td><td>${w.tec?esc(tecN(w.tec))+pillNoEnviada(w):'<span class="pill w">sin asignar</span>'}</td></tr>
           <tr><td style="color:var(--faint)">Cantidad</td><td class="mono">${w.cant||1}${puedeVerDinero&&(w.cant||1)>1&&t?` × ${money(t.precio)} = ${money(ingresoWO(w))}`:""}</td></tr>
           ${w.desdeEstimado?`<tr><td style="color:var(--faint)">Viene del estimado</td><td><b>${esc(w.desdeEstimado)}</b>${w.autorizado?` · ${esc(w.autorizado)}`:""}</td></tr>`:""}
           <tr><td style="color:var(--faint)">PO</td><td class="mono">${esc(w.po)||"—"}</td></tr>
