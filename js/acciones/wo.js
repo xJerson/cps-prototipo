@@ -674,6 +674,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
   },
 
   supervisar: d => {
+    if(!esGustavo()){ toast("Solo Gustavo","La supervisión la aprueba Gustavo.","w"); return; }
     const w=W(d.id);
     if(!w.evid){ toast("🚫 No se puede aprobar","Esta Work Order no tiene ninguna evidencia cargada. Claudia: «no me consta lo que me estás diciendo».","r"); return; }
     w.supervisada=true;

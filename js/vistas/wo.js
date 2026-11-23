@@ -325,7 +325,7 @@ function fichaWO(id){
         ?`<button class="btn p" data-a="progCliente" data-id="${w.id}">
             ${w.fecha?"Reagendar":"Definir fecha con cliente"}</button>`:""}
       ${!w.tec?`<button class="btn ${w.confirmCliente?"p":""}" data-a="asigModal" data-id="${w.id}">Asignar técnico</button>`:""}
-      ${w.estado==="Completed"&&!w.supervisada?`<button class="btn v" data-a="supervisar" data-id="${w.id}">Aprobar supervisión</button>`:""}
+      ${w.estado==="Completed"&&!w.supervisada?(esGustavo()?`<button class="btn v" data-a="supervisar" data-id="${w.id}">Aprobar supervisión</button>`:`<span class="pill g" title="Solo Gustavo aprueba la supervisión.">Supervisión · Optional · Pending (Gustavo)</span>`):""}
       ${puedeValidar()&&w.estado==="Completed"&&!(aprobPagoOK(w)&&aprobFacturaOK(w))?`<button class="btn p" data-a="validarModal" data-id="${w.id}">Revisar</button>`:""}
       ${w.tec && !["Canceled","Invoiced","Paid"].includes(w.estado)
         ?`<button class="btn" data-a="woReasignar" data-id="${w.id}">Reasignar técnico</button>`:""}

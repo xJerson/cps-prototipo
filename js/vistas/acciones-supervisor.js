@@ -475,7 +475,7 @@ function vRevisar(rev){
       <td style="text-align:right;white-space:nowrap">
         <button class="btn sm" data-a="devolverModal" data-id="${w.id}">Hacer return</button>
         <button class="btn sm" data-a="noSupervisarModal" data-id="${w.id}">No se pudo supervisar</button>
-        <button class="btn sm ${w.evid?"v":""}" data-a="supervisar" data-id="${w.id}">Aprobar supervisión</button></td></tr>`).join("")}
+        ${esGustavo()?`<button class="btn sm ${w.evid?"v":""}" data-a="supervisar" data-id="${w.id}">Aprobar supervisión</button>`:`<span class="pill g" title="Solo Gustavo aprueba la supervisión.">Supervisión · Optional · Pending (Gustavo)</span>`}</td></tr>`).join("")}
     </tbody></table>`:`<div class="empty"><div class="b">✓</div>Nada pendiente de revisar</div>`}
   </div>
   <div class="tr">Si no hubo acceso, registra el motivo y reagenda cuando corresponda. Un return crea un return fix asignable sin reabrir la WO original.</div>`;
