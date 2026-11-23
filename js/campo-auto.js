@@ -885,6 +885,23 @@ CAMPO_MANEJADORES.push({ id:"gparada",
     return a.estado==="Visitada" ? {texto:`${n} llegó a ${pn} (${a.motivo}) a las ${a.hora}`, paso:"llegada a la parada", oblig:true} : null;
   }});
 
+/* ── REQ 19/11 punto 28: unidades que Claudia agendó en la parada ──
+   Ya en la propiedad, Gustavo marca cada unidad que revisó (una por paso). */
+CAMPO_MANEJADORES.push({ id:"guni",
+  detect:() => !cGusOk() ? [] : agendaHoy().filter(a=>a.estado==="Visitada")
+    .flatMap(a=>(a.unidades||[]).filter(x=>!x.visto).map(x=>({k:"guni:"+a.id+":"+x.unidad, h:"guni", tec:GUSTAVO, stop:a.id, uni:x.unidad,
+      que:`revisar la unidad ${U(x.unidad).num}`, pasoLog:"unidad revisada", donde:` · ${P(a.prop).nombre} · ${U(x.unidad).num}`}))),
+  proponer:it => ({paso:"unidad revisada", oblig:false, titulo:"Revisar una unidad de la parada",
+    desc:`${P((by(S.agendaSup,it.stop)||{}).prop).nombre} · unidad ${U(it.uni).num}.`, campos:[cHacer("¿La marca como revisada?", true)]}),
+  responder:(it, d) => {
+    const a = by(S.agendaSup, it.stop), x = a && (a.unidades||[]).find(y=>y.unidad===it.uni);
+    if(!x || x.visto || a.estado!=="Visitada") return null;
+    const n = cNombre(GUSTAVO);
+    if(!cSi(d.hacer)) return cOmitido(n, `revisar la unidad ${U(it.uni).num}`, "unidad revisada");
+    cConGustavo(()=>ACC.gUniVista({id:String(a.id), uni:it.uni}));
+    return x.visto ? {texto:`${n} revisó la unidad ${U(it.uni).num} en ${P(a.prop).nombre}`, paso:"unidad revisada", oblig:false} : null;
+  }});
+
 /* ── Relevamiento (inspección para estimado) ──
    Servicios del catálogo por categoría, con hallazgos por área y cantidades según el tamaño de la unidad. */
 const CAMPO_SURVEY = {
@@ -1435,7 +1452,7 @@ function campoProgramar(seg){
 }
 /* Lo llama bootstrap.js al terminar cada acción (ya con guardado) */
 const CAMPO_NO_DISPARAN = new Set(["campoAutoModo","campoAutoPerfil","campoResponderWO","campoPregRegistrar","campoPregOmitir","campoPregModo","ir","tab","cm","pop","pcl","campana",
-  "campoLogVer","campoLogFiltro","campoLogLimpiar","avLeidos","temaToggle","fView","fAbrir","fSubAbrir","fSheetNo","coachOff","coachOn","ayudaVistaToggle","gvTab","phTecPick","verTecnicoCel","gTecWO","gTecWOCerrar","fDispDia","fDispHoras","fDispSinHoras","ingresoVer"]);
+  "campoLogVer","campoLogFiltro","campoLogLimpiar","avLeidos","temaToggle","fView","fAbrir","fSubAbrir","fSheetNo","coachOff","coachOn","ayudaVistaToggle","gvTab","phTecPick","verTecnicoCel","gTecWO","gTecWOCerrar","fDispDia","fDispHoras","fDispSinHoras","rsProp","rsUni","ingresoVer"]);
 function campoAutoTrasAccion(k){
   try{
     if(CAMPO_NO_DISPARAN.has(k)) return;

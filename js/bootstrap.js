@@ -88,6 +88,8 @@ const AUD = {
   asigFecha:{a:"Movió la fecha de una Work Order", m:"Work Orders"},
   devolverOK:{a:"Hizo un return a un trabajo", m:"Work Orders"},
   agSupOK:{a:"Armó la ruta del supervisor", m:"Supervisión"},
+  rsAgregar:{a:"Armó la ruta del supervisor (propiedades y unidades)", m:"Supervisión"},
+  gUniVista:{a:"Marcó una unidad revisada (supervisor)", m:"Supervisión"},
   agSupQuita:{a:"Quitó una parada de la ruta del supervisor", m:"Supervisión"},
   supSolOK:{a:"Solicitó una visita de Gustavo", m:"Supervisión"},
   supAgendar:{a:"Agendó una visita en la ruta de Gustavo", m:"Supervisión"},

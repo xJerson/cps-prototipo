@@ -1,6 +1,10 @@
 "use strict";
 /* Crea la parada en la ruta de Gustavo. Devuelve null (sin crear nada) si esa propiedad ya tiene otra parada ese día.
    Es función suelta (no ACC.*) porque las acciones de ACC solo reciben un argumento. */
+/* Contador del botón «Agregar a la ruta de Gustavo» */
+function rsContar(){ const b=document.getElementById("rsBtn"); if(!b) return;
+  const p=document.querySelectorAll(".rsP:checked").length, u=document.querySelectorAll(".rsU:checked").length;
+  b.disabled=!p; b.textContent = p ? `Agregar a la ruta de Gustavo (${p} propiedad(es) · ${u} unidad(es))` : "Agregar a la ruta de Gustavo"; }
 function agSupCrear(pid, f, motivo, nota, extra){
   if(S.agendaSup.some(a=>a.prop===pid && a.fecha===f)) return null;
   const a=Object.assign({id:"AS"+Date.now(), fecha:f, prop:pid, motivo, nota,
@@ -48,6 +52,37 @@ Object.assign(ACC, {
   agSupQuita: d => { const a=by(S.agendaSup,d.id);
     S.agendaSup.splice(S.agendaSup.indexOf(a),1);
     toast("Parada quitada",`<b>${esc(P(a.prop).nombre)}</b> ya no está en su ruta ${a.fecha===HOY_SUP?"de hoy":"del "+esc(a.fecha)}.`,"w"); render(); },
+
+  /* ── REQ 19/11 punto 28: Claudia arma la ruta desde «Dónde hay trabajo» ──
+     Los checkbox solo cambian el DOM (sin render) para no perder lo marcado. */
+  rsProp: d => { const on=!!(document.getElementById("rsP-"+d.pid)||{}).checked;
+    document.querySelectorAll(`.rsU[data-pid="${d.pid}"]`).forEach(c=>c.checked=on); rsContar(); },
+  rsUni: d => { const us=[...document.querySelectorAll(`.rsU[data-pid="${d.pid}"]`)], p=document.getElementById("rsP-"+d.pid);
+    if(p) p.checked = us.some(c=>c.checked); rsContar(); },
+  rsAgregar: () => {
+    if(!esAdmin()){ S.audOmitir=true; toast("Solo Claudia","La ruta de Gustavo la arma administración.","r"); return; }
+    const f=val("rsDia"), mot=val("rsMot")||MOTIVOS_SUP[0], nota=val("rsNota");
+    const props=[...document.querySelectorAll(".rsP:checked")].map(c=>c.dataset.pid);
+    if(!props.length){ S.audOmitir=true; toast("Nada marcado","Marca al menos una propiedad.","w"); return; }
+    if(!f){ S.audOmitir=true; toast("Falta el día","Elige el día de la visita.","r"); return; }
+    let sumadas=0, nU=0;
+    props.forEach(pid=>{
+      const unidades=[];
+      [...document.querySelectorAll(`.rsU[data-pid="${pid}"]:checked`)].forEach(c=>{
+        if(!unidades.some(x=>x.unidad===c.dataset.uni)) unidades.push({unidad:c.dataset.uni, wo:woId(c.dataset.wo), visto:false}); });
+      nU+=unidades.length;
+      const ya=S.agendaSup.find(a=>a.prop===pid && a.fecha===f);
+      if(ya){ ya.unidades=ya.unidades||[]; unidades.forEach(x=>{ if(!ya.unidades.some(y=>y.unidad===x.unidad)) ya.unidades.push(x); }); flash("ags:"+ya.id); sumadas++; }
+      else agSupCrear(pid, f, mot, nota, {unidades});
+    });
+    const hoy=f===HOY_SUP, nom=props.map(p=>P(p).nombre).join(", ");
+    if(hoy) noti("Nueva parada en tu ruta", `${nom} — ${mot}${nU?` · ${nU} unidad(es)`:""}`);
+    toast("✓ Ruta de Gustavo",`${props.length} propiedad(es) · ${nU} unidad(es) para el <b>${esc(f)}</b>${sumadas?` (${sumadas} ya estaba(n) ese día: se sumaron las unidades)`:""}. ${hoy?"Le aparece en el celular al instante.":"Le aparece en «Mi ruta» ese día."}`,"v");
+    render();
+  },
+  /* Gustavo marca en el celular cada unidad que revisó */
+  gUniVista: d => { const a=by(S.agendaSup,d.id); if(!a) return; const x=(a.unidades||[]).find(y=>y.unidad===d.uni); if(!x) return;
+    x.visto=!x.visto; x.hora=x.visto?hora():null; render(); },
 
   /* ── CALENDARIO DE GUSTAVO: Thalia pide, Claudia agenda y acomoda ── */
   supCalNav: d => { S.supSem = +d.s; render(); },

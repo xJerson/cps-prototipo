@@ -306,8 +306,14 @@ function vPrevio(pid){
 }
 
 /* Calendario semanal de Gustavo: Thalia pide visitas, Claudia las agenda y las acomoda por día. */
+/* Semana del calendario y de «Dónde hay trabajo»: la misma para las dos.
+   Por defecto, la semana de trabajo elegida arriba (S.periodo); si no hay, la de hoy. */
+const supSemana = () => S.supSem || (S.periodo && S.periodo.tipo==="semana" && S.periodo.sem)
+  || (33 + Math.floor((new Date(HOY_SUP+"T12:00:00") - new Date(LUN_S33+"T12:00:00")) / (7*86400000)));
+/* Unidades agendadas en una parada (REQ 19/11 punto 28): Claudia las elige, Gustavo las va marcando. */
+const uniTxt = a => { const us=a.unidades||[]; return us.length ? `${us.filter(x=>x.visto).length} de ${us.length} unidad(es) revisada(s)` : ""; };
 function vCalGustavo(){
-  const sem = S.supSem || 33, dias = diasDeSemana(sem);
+  const sem = supSemana(), dias = diasDeSemana(sem);
   const esClaudia = esAdmin();
   const pend = (S.solicitudesSup||[]).filter(s=>s.estado==="Por agendar");
   const hechas = (S.solicitudesSup||[]).filter(s=>s.estado!=="Por agendar");
@@ -320,6 +326,7 @@ function vCalGustavo(){
       ${paradas.map(a=>`<div class="${fl("ags:"+a.id)}" style="border:1px solid var(--line);border-radius:7px;padding:7px;margin-bottom:6px">
         <div style="font-weight:650;font-size:12px">${esc(P(a.prop).nombre)}</div>
         <div style="font-size:11px;color:var(--soft);margin:2px 0">${esc(a.motivo)}</div>
+        ${(a.unidades||[]).length?`<div style="font-size:10.5px;color:var(--faint);margin-bottom:3px">${esc(a.unidades.map(x=>U(x.unidad).num).join(", "))}</div>`:""}
         <span class="pill ${pilE[a.estado]||"g"}">${esc(a.estado==="Pendiente"?"pendiente":a.estado.toLowerCase())}</span>
         ${esClaudia && a.estado==="Pendiente"?`<div style="display:flex;gap:4px;margin-top:6px">
           <input type="date" id="smv-${a.id}" value="${a.fecha}" style="min-width:0;flex:1">
@@ -378,7 +385,9 @@ function vRuta(){
           <div style="font-size:10.5px;color:var(--faint)">${esc(P(pa.prop).dir)}</div></td>
         <td>${esc(z.zona)}</td>
         <td><span class="pill a">${esc(pa.motivo)}</span></td>
-        <td style="max-width:250px;font-size:11.5px;color:var(--soft)">${esc(pa.nota)||"—"}</td>
+        <td style="max-width:250px;font-size:11.5px;color:var(--soft)">${esc(pa.nota)||"—"}
+          ${(pa.unidades||[]).length?`<div style="margin-top:4px">${pa.unidades.map(x=>`<span class="pill ${x.visto?"v":"g"}" style="margin:0 3px 3px 0">${x.visto?"✓ ":""}${esc(U(x.unidad).num)}</span>`).join("")}</div>
+            <div style="font-size:10.5px;color:var(--faint)">${uniTxt(pa)}</div>`:""}</td>
         <td><span class="pill ${pil}">${pa.estado==="Visitada"?`<span class="dot"></span>llegó ${esc(pa.hora)}`
               :pa.estado==="En camino"?`en camino desde ${esc(pa.horaCamino||"")}`
               :pa.estado==="No completada"?`no se pudo`:`pendiente`}</span>
@@ -426,13 +435,23 @@ function vRuta(){
    sugerencia de a dónde convendría mandarlo, pero ya no ES su agenda. */
 function vRutaCalc(){
   const hoy = HOY_SUP;
-  const enCurso = S.wos.filter(w=>["In progress","Esperando aprobación","Completed"].includes(w.estado) && !w.supervisada);
+  /* REQ 19/11 punto 28: se elige la semana (la misma del calendario) y Claudia marca a qué propiedades y unidades va Gustavo. */
+  const sem = supSemana(), dias = diasDeSemana(sem), arma = esAdmin();
+  const enCurso = S.wos.filter(w=>dias.includes(w.fecha) && w.estado!=="Canceled" && !w.supervisada && w.prop && w.unidad);
+  const enRuta = pid => S.agendaSup.filter(a=>a.prop===pid && dias.includes(a.fecha));
+  const uniEnRuta = (pid,uid) => enRuta(pid).some(a=>(a.unidades||[]).some(x=>x.unidad===uid));
+  const diaTxt = f => DIAS_SEM[dias.indexOf(f)].slice(0,3)+" "+f.slice(5).split("-").reverse().join("/");
+  const diaDef = dias.includes(hoy) ? hoy : dias[0];
   const porZona = {};
   enCurso.forEach(w=>{ const z=P(w.prop).zona; (porZona[z]=porZona[z]||[]).push(w); });
   const zonas = Object.keys(porZona).sort((a,b)=>porZona[b].length-porZona[a].length);
   return `
-  ${zonas.length?`<div class="card" style="margin-top:14px"><div class="chd"><h3>Dónde hay trabajo esta semana</h3>
-    <span class="s">${enCurso.length} trabajo(s) en ${zonas.length} zona(s) — sugerencia de a dónde conviene mandarlo</span></div>
+  <div class="card" style="margin-top:14px"><div class="chd"><h3>Dónde hay trabajo — semana ${sem}</h3>
+    <span class="s">${enCurso.length} trabajo(s) en ${zonas.length} zona(s)${arma?" — marca a qué propiedades y unidades va Gustavo":""}</span>
+    <span class="r"><button class="btn sm" data-a="supCalNav" data-s="${sem-1}">← Anterior</button>
+      <button class="btn sm" data-a="supCalNav" data-s="${sem+1}">Siguiente →</button></span></div>
+  ${arma?`<div class="cp" style="padding-bottom:0">${notaProto("armar la ruta de Gustavo",["Elige la semana con ← / →.","Marca las propiedades y, dentro de cada una, las unidades a revisar.","Elige el día y toca «Agregar a la ruta de Gustavo»: le llega en «Mi ruta» ese día.","En el celular Gustavo marca cada unidad que revisó; aquí se ve «N de M unidad(es) revisada(s)»."])}</div>`:""}
+  ${zonas.length?`
     <div class="cp" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:12px">
     ${zonas.map((z,i)=>{
       const arr=porZona[z], props=[...new Set(arr.map(w=>w.prop))];
@@ -444,19 +463,30 @@ function vRutaCalc(){
         ${props.map(pid=>{
           const suyas=arr.filter(w=>w.prop===pid);
           const vis=S.visitas.find(v=>v.prop===pid && v.fecha===hoy && v.tipo==="Supervisión");
+          const ya=enRuta(pid);
           return `<div style="padding:10px 12px;border-bottom:1px solid var(--line)">
             <div style="display:flex;align-items:center;gap:8px">
+              ${arma?`<input type="checkbox" class="rsP" id="rsP-${pid}" data-a="rsProp" data-pid="${pid}" style="width:16px;height:16px;flex:none">`:""}
               <div style="min-width:0"><div style="font-weight:650;font-size:12.5px">${esc(P(pid).nombre)}</div>
-                <div style="font-size:10.5px;color:var(--faint)">${esc(P(pid).dir)}</div></div>
+                <div style="font-size:10.5px;color:var(--faint)">${esc(P(pid).dir)}</div>
+                ${ya.length?`<div style="margin-top:3px">${ya.map(a=>`<span class="pill a" style="margin-right:3px">En ruta · ${esc(diaTxt(a.fecha))}</span>`).join("")}</div>`:""}</div>
               ${vis?`<span class="pill v" style="margin-left:auto">visitada ${esc(vis.hora)}</span>`
                    :`<button class="btn sm p" style="margin-left:auto" data-a="visitaModal" data-prop="${pid}">Registrar visita</button>`}</div>
-            <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">
+            ${arma?`<div style="margin:6px 0 0 24px">${suyas.map(w=>`<label style="display:flex;align-items:center;gap:7px;font-size:12px;padding:2px 0;cursor:pointer">
+                <input type="checkbox" class="rsU" data-a="rsUni" data-pid="${pid}" data-wo="${w.id}" data-uni="${esc(w.unidad)}" style="width:15px;height:15px;flex:none">
+                <span><b>${esc(U(w.unidad).num)}</b> · ${esc(w.serv)} · ${esc(w.tec?tecN(w.tec):"sin técnico")} · <span style="color:var(--faint)">${esc(w.fecha.slice(5).split("-").reverse().join("/"))} · ${esc(w.estado)}</span>${uniEnRuta(pid,w.unidad)?` <span class="pill a">en ruta</span>`:""}</span></label>`).join("")}</div>`
+            :`<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:4px">
               ${suyas.map(w=>`<span class="pill ${w.estado==="Completed"?"v":"m"}" style="cursor:pointer" data-a="woVer" data-id="${w.id}">
-                ${esc(U(w.unidad).num)} · ${esc(w.serv)} · ${esc(tecN(w.tec))}</span>`).join("")}</div>
+                ${esc(U(w.unidad).num)} · ${esc(w.serv)} · ${esc(tecN(w.tec))}</span>`).join("")}</div>`}
             ${vis&&vis.acuerdos?`<div class="note v" style="margin-top:7px;font-size:11.5px"><b>Acordado:</b> ${esc(vis.acuerdos)}</div>`:""}
           </div>`;}).join("")}
-      </div>`;}).join("")}</div></div>`
-  :`<div class="card"><div class="empty"><div class="b">✓</div>Sin trabajo en curso — no hay ruta que armar hoy</div></div>`}
+      </div>`;}).join("")}</div>
+    ${arma?`<div class="cp" style="border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
+      <div class="fld" style="margin:0;min-width:150px"><label>Día</label><select id="rsDia">${dias.map(f=>`<option value="${f}" ${f===diaDef?"selected":""}>${esc(diaTxt(f))}${f===hoy?" (hoy)":""}</option>`).join("")}</select></div>
+      <div class="fld" style="margin:0;min-width:170px"><label>Motivo</label><select id="rsMot">${MOTIVOS_SUP.map(m=>`<option>${esc(m)}</option>`).join("")}</select></div>
+      <div class="fld" style="margin:0;flex:1;min-width:180px"><label>Nota para Gustavo</label><input id="rsNota" placeholder="Opcional"></div>
+      <button class="btn p" id="rsBtn" data-a="rsAgregar" disabled>Agregar a la ruta de Gustavo</button></div>`:""}`
+  :`<div class="empty"><div class="b">✓</div>Sin trabajo en la semana ${sem}</div>`}</div>
   <div class="tr">Ordenada por zona porque el traslado quita tiempo. Es la misma razón por la que se asigna por cercanía.</div>`;
 }
 

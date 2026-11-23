@@ -945,6 +945,11 @@ function gustavoScreenHTML(view){
                  :no?`<span class="dtag" style="background:#8a5a0022;color:#8a5a00;flex:none">no se pudo</span>`:""}</div>
               <div class="ds" style="margin-top:5px"><b style="color:var(--azul)">${esc(pa.motivo)}</b></div>
               ${pa.nota?`<div class="ds" style="margin-top:3px">«${esc(pa.nota)}»</div>`:""}
+              ${(pa.unidades||[]).length?`<div class="ds" style="margin-top:6px;font-weight:700">Unidades a revisar · ${pa.unidades.filter(x=>x.visto).length}/${pa.unidades.length}</div>
+                ${pa.unidades.map(x=>{ const w=W(x.wo); return `<label style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px;${ok?"cursor:pointer":"opacity:.75"}">
+                  <input type="checkbox" data-a="gUniVista" data-id="${pa.id}" data-uni="${esc(x.unidad)}" ${x.visto?"checked":""} ${ok?"":"disabled"} style="width:17px;height:17px;flex:none">
+                  <span><b>${esc(U(x.unidad).num)}</b>${w?` · ${esc(w.serv)}`:""}${x.visto&&x.hora?` <span style="color:var(--verde)">✓ ${esc(x.hora)}</span>`:""}</span></label>`; }).join("")}
+                ${ok?"":`<div class="ds" style="color:var(--faint)">Las marcas al llegar.</div>`}`:""}
               ${presentes.length?`<div class="ds" style="margin-top:4px;color:var(--verde);font-weight:650">En la propiedad ahora: ${presentes.map(t=>esc(tecN(t))).join(", ")}</div>`:""}
               ${no
                 ? `<div class="ds" style="margin-top:6px;color:var(--ambar)">${esc(pa.motivoNo||"")}</div>`
