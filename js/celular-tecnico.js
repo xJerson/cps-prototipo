@@ -131,6 +131,7 @@ function renderFon(){
        momento de programarle al técnico un recordatorio/notificación para
        ese día a esa hora, con las notas de la WO (w.notasTec). */
     h=`<button class="db g" style="margin:5px 0 9px;padding:7px;font-size:11.5px" data-a="fView" data-v="agenda">‹ Mi agenda</button>
+    ${w.touchup?`<div class="dc" style="background:var(--rojo-cl,#fde8e8);border-color:var(--rojo)"><div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--rojo)">RETURN FIX${w.woOrigen!=null?` DE ${esc(woN(w.woOrigen))}`:""}</div><div class="ds" style="margin-top:3px">${fixTxt(w)}</div></div>`:""}
     <div class="dc"><div style="display:flex;justify-content:space-between;gap:7px">
       <div style="min-width:0"><div class="dh">${esc(p.nombre)}</div><div class="ds">Unidad ${esc(u.num)} · ${esc(u.rooms)}${u.pisos?` · ${u.pisos} piso(s)`:""}</div></div>
       <span class="dtag" style="background:${col}22;color:${col};flex:none">${esc(estadoTec(w))}</span></div>
@@ -349,11 +350,13 @@ function renderFon(){
           <div style="min-width:0">
             ${w.fotosPend?`<div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--ambar);margin-bottom:2px">⚠️ FALTAN FOTOS</div>`
              :w.infoPedida?`<div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--ambar);margin-bottom:2px">TE FALTA ${esc(w.infoPedida.falta.join(" Y ").toUpperCase())}</div>`
+             :w.touchup?`<div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--rojo);margin-bottom:2px">RETURN FIX</div>`
              :w.nueva?`<div style="font-size:9px;font-weight:800;letter-spacing:.06em;color:var(--azul);margin-bottom:2px">NUEVO</div>`:""}
             <div class="dh">${esc(P(w.prop).nombre)}</div>
             <div class="ds">${esc(U(w.unidad).num)} · ${esc(w.serv)}</div>
             <div class="ds" style="font-size:10px">${w.fecha}${w.horaProg?` · ${esc(w.horaFin?`${w.horaProg}–${w.horaFin}`:w.horaProg)}`:""}</div></div>
           <span class="dtag" style="background:${col}22;color:${col};flex:none;height:fit-content">${esc(estadoTec(w))}</span></div>
+        ${w.touchup&&fixTxt(w)?`<div class="ds" style="margin-top:5px;color:var(--rojo)">${fixTxt(w)}</div>`:""}
         ${woEspera(w)?`<div class="ds" style="margin-top:5px;color:var(--ambar);font-weight:700">En espera — falta terminar ${woN(woEspera(w).id)} (${esc(woEspera(w).serv)})</div>`:""}
         ${a?`<div class="ds" style="margin-top:5px;color:var(--verde)">Llegada: ${esc(a.horaReal)}</div>`:""}
         ${(w.fotosPrevias||[]).length?`<div class="ds" style="margin-top:5px;color:var(--azul);font-weight:700">📷 ${(w.fotosPrevias||[]).length} foto(s) para prepararte antes de ir</div>`:""}
@@ -642,6 +645,8 @@ const ENTRADAS_DIA = {
 const devAbiertas  = () => S.devoluciones.filter(d=>d.estado!=="Cerrada");
 const devDe        = uid => S.devoluciones.filter(d=>d.unidad===uid);
 const DV           = id => S.devoluciones.find(d=>d.id===id);
+/* REQ 19/11 punto 24: el return fix se distingue en el celular y dice qué corregir. */
+const fixTxt = w => { const d=w&&w.touchup&&w.devOrigen?DV(w.devOrigen):null; if(!d) return ""; const a=devAreasTxt(d); return `Corregir: ${esc(d.desc||"")}${a?` (${esc(a)})`:""}`; };
 /* Texto de las areas de un return: soporta el array nuevo (areas) y, por si quedo algo viejo sin migrar, el campo singular (area). */
 const devAreasTxt = d => (d.areas&&d.areas.length?d.areas:(d.area?[d.area]:[])).join(", ");
 /* Checkboxes reutilizables para elegir varias ubicaciones a la vez (un return puede tener mas de un area a corregir). */
