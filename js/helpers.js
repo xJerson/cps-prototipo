@@ -131,7 +131,7 @@ const soloLectura = () => S.usuario==="Contador";
 /* Módulos que un usuario puede consultar pero no modificar (REQ 19/11: Erika ve Propiedades y Catálogos).
    Ahí solo funcionan las acciones de navegación; el resto se oculta y se bloquea. */
 const SOLO_VER = {Erika:["propiedades","catalogos"]};
-const NAV_RO = ["propVer","tab","catTipo","catVerSel","comFiltro","tarVerServ","woVer","ir","irEstimados"];
+const NAV_RO = ["propVer","tab","ingresoVer","catTipo","catVerSel","comFiltro","tarVerServ","woVer","ir","irEstimados"];
 const soloVerMod = () => (SOLO_VER[S.usuario]||[]).includes(S.mod);
 /* Quién puede tener o aprobar un Request: el Contador solo consulta, no resuelve nada. */
 const usuariosQueResuelven = () => Object.keys(ROLES).filter(u=>u!=="Contador");

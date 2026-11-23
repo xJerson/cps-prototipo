@@ -1,4 +1,7 @@
 "use strict";
+/* Ingreso semana del Tablero: oculto por defecto, como un saldo de banco. No se guarda: al recargar vuelve a ocultarse. */
+let _verIngreso = false;
+ACC.ingresoVer = () => { _verIngreso = !_verIngreso; render(); };
 VIEWS.tablero = () => {
   const sem = S.wos.filter(w=>w.semana===S.semana && w.estado!=="Canceled");
   const cnt = e => sem.filter(w=>w.estado===e).length;
@@ -15,7 +18,9 @@ VIEWS.tablero = () => {
     <div class="kpi"><div class="l">Esperando aprobación</div><div class="v ${cnt("Esperando aprobación")?"w":""}">${cnt("Esperando aprobación")}</div></div>
     <div class="kpi"><div class="l">En progreso</div><div class="v">${cnt("In progress")}</div></div>
     <div class="kpi"><div class="l">Terminadas</div><div class="v g">${cnt("Completed")}</div></div>
-    ${puedeVerIngreso()?`<div class="kpi"><div class="l">Ingreso semana</div><div class="v mono">${money(ing)}</div></div>`:""}
+    ${puedeVerIngreso()?`<div class="kpi"><div class="l" style="display:flex;justify-content:space-between;align-items:center;gap:6px">Ingreso semana
+      <button type="button" class="btn sm" data-a="ingresoVer" style="padding:1px 7px;font-size:10.5px;text-transform:none;letter-spacing:0">${_verIngreso?"Ocultar":"Mostrar"}</button></div>
+      <div class="v mono">${_verIngreso?money(ing):"$ •••••"}</div></div>`:""}
   </div>
 
   ${vPendientes()}
