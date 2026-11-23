@@ -332,6 +332,11 @@ Object.assign(ACC, {
   },
   fPermiso: () => { S.phSheet={t:"permiso"}; render(); },
   fDisp: () => { S.phSheet={t:"disp"}; render(); },
+  /* Disponibilidad: solo muestra/oculta en pantalla, sin redibujar (así no se pierde lo marcado). */
+  fDispDia: d => dispPintarDia(d.i),
+  fDispHoras: d => { const r=document.getElementById("dpRow"+d.i); if(!r) return; r.dataset.h="1"; dispPintarDia(d.i); const a=document.getElementById("dpA"+d.i); if(a) a.focus(); },
+  fDispSinHoras: d => { const r=document.getElementById("dpRow"+d.i); if(!r) return; r.dataset.h="0";
+    ["dpA","dpB"].forEach(k=>{ const e=document.getElementById(k+d.i); if(e) e.value=""; }); dispPintarDia(d.i); },
   fDispOK: () => {
     const sd=semSigDias(), dias={}; let mal="";
     sd.forEach((f,i)=>{ const disp=document.getElementById("dpD"+i).checked, desde=val("dpA"+i), hasta=val("dpB"+i);

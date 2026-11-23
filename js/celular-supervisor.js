@@ -568,12 +568,18 @@ function hojaCel(sh){
     return `<div class="fscrim" data-a="fSheetNo"><div class="fsheet" data-stop>
     <div class="grab"></div>
     <h4>Mi disponibilidad de la semana</h4>
-    <div class="sub">Semana del ${sd[0].slice(8)}/${sd[0].slice(5,7)} al ${sd[5].slice(8)}/${sd[5].slice(5,7)}. Marca los días que puedes y, si quieres, un horario. Oficina arma el calendario con esto.</div>
-    ${sd.map((f,i)=>{ const x=dd(f); return `<div class="dc" style="margin:6px 0">
-      <label style="display:flex;gap:8px;align-items:center;font-weight:700;margin:0"><input type="checkbox" id="dpD${i}" ${x.disp?"checked":""}> ${DIAS_SEM[i]} ${f.slice(8)}/${f.slice(5,7)}</label>
-      <div style="display:flex;gap:8px;margin-top:5px"><div style="flex:1"><label>A partir de</label><input type="time" id="dpA${i}" value="${esc(x.desde||"")}"></div>
-        <div style="flex:1"><label>Hasta</label><input type="time" id="dpB${i}" value="${esc(x.hasta||"")}"></div></div></div>`; }).join("")}
-    <div class="sub">Los horarios son opcionales: si los dejas vacíos, estás disponible todo el día.</div>
+    <div class="sub">Semana del ${sd[0].slice(8)}/${sd[0].slice(5,7)} al ${sd[5].slice(8)}/${sd[5].slice(5,7)} · marca los días que puedes. Oficina arma el calendario con esto.</div>
+    ${sd.map((f,i)=>{ const x=dd(f), h=!!(x.disp&&(x.desde||x.hasta)), lk="background:none;border:0;padding:0;color:var(--acc,#2563eb);font-size:12px;font-weight:700;cursor:pointer"; return `<div class="dc" id="dpRow${i}" data-h="${h?1:0}" style="margin:6px 0">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <label style="display:flex;gap:8px;align-items:center;font-weight:700;margin:0"><input type="checkbox" id="dpD${i}" data-a="fDispDia" data-i="${i}" ${x.disp?"checked":""}> ${DIAS_SEM[i]} ${f.slice(8)}/${f.slice(5,7)}</label>
+        <span id="dpNo${i}" class="sub" style="margin:0;${x.disp?"display:none":""}">(no disponible)</span>
+        <button type="button" id="dpMas${i}" data-a="fDispHoras" data-i="${i}" style="${lk};${x.disp&&!h?"":"display:none"}">+ Set hours</button>
+      </div>
+      <div id="dpH${i}" style="flex-wrap:wrap;gap:4px 8px;margin-top:5px;display:${h?"flex":"none"}"><div style="flex:1 1 0;min-width:0"><label>A partir de</label><input type="time" id="dpA${i}" value="${esc(x.desde||"")}" style="width:100%;min-width:0;box-sizing:border-box"></div>
+        <div style="flex:1 1 0;min-width:0"><label>Hasta</label><input type="time" id="dpB${i}" value="${esc(x.hasta||"")}" style="width:100%;min-width:0;box-sizing:border-box"></div>
+        <div style="flex-basis:100%;text-align:right"><button type="button" data-a="fDispSinHoras" data-i="${i}" style="${lk}">Remove hours</button></div></div></div>`; }).join("")}
+    <div class="sub">Sin horario = disponible todo el día. Usa «+ Set hours» solo si ese día tienes un límite.</div>
+    ${notaProto("cómo se hace",["Cada día es solo un check: marcado = puede, sin marcar = no puede.","El horario aparece solo si toca «+ Set hours». Si ya lo había puesto, el día se abre con sus horas. «Remove hours» lo quita.","Se guarda igual que antes: Disponibilidad y los avisos de conflicto no cambian."])}
     <button class="db p" style="margin-top:11px" data-a="fDispOK">Enviar</button>
     <button class="db g" data-a="fSheetNo">Cancelar</button>
   </div></div>`; }

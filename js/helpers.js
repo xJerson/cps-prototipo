@@ -653,6 +653,12 @@ const ausente = (tecId,fecha) => bloqueo(tecId,fecha) || noDisp(tecId,fecha);
 /* Disponibilidad de la semana siguiente: la arma el técnico desde su app (sin aprobación) y la oficina arma el calendario con eso.
    S.dispSemana: [{tec, lunes, dias:{"AAAA-MM-DD":{disp, desde, hasta}}, enviado:{fecha,hora}}]. Los permisos siguen en S.disponibilidad. */
 const semSigDias = () => diasDeSemana(S.semana+1);
+/* Hoja «Mi disponibilidad»: muestra «+ Set hours», las horas o «(no disponible)» según el check del día. */
+function dispPintarDia(i){
+  const r=document.getElementById("dpRow"+i), c=document.getElementById("dpD"+i); if(!r||!c) return;
+  const d=c.checked, h=r.dataset.h==="1", vis=(id,on,disp)=>{ const e=document.getElementById(id); if(e) e.style.display=on?(disp||""):"none"; };
+  vis("dpH"+i, d&&h, "flex"); vis("dpMas"+i, d&&!h); vis("dpNo"+i, !d);
+}
 const dispSemDe = tec => (S.dispSemana||[]).find(x=>x.tec===tec && x.lunes===semSigDias()[0]) || null;
 const horaAMin = s => { const [h,m]=String(s||"").split(":"); return (+h)*60+(+m||0); };
 const dispDiaDe = (tec,fecha) => { const e=(S.dispSemana||[]).find(x=>x.tec===tec && x.dias && x.dias[fecha]); return e?e.dias[fecha]:null; };
