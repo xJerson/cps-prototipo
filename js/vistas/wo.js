@@ -95,6 +95,9 @@ VIEWS.wo = () => {
   ${vistaCierreAgendamiento()}
   ${cardRecordatorios()}
   ${puedeAvisarPend()?cardSeguimientoPend():""}
+  ${f==="porcerrar"?notaProto("cómo se hace",[
+    "<b>Completed</b> = el técnico terminó. Pasa a <b>Closed</b> cuando tiene nómina pagada y factura.",
+    "Cada fila dice qué le falta: <b>Nómina</b>, <b>Factura</b> o las dos. Se resuelve en Nómina y Facturación."]):""}
   ${f==="sin"?notaProto("cómo se arma y se envía la agenda",[
     "Filtra por <b>Fecha</b>, <b>City</b> o <b>Service</b> para ver todo el día siguiente junto.",
     "Asigna técnico a cada Work Order. Se queda aquí con la marca <b>«Not sent»</b>: así sigues viendo el panorama completo.",
@@ -107,7 +110,7 @@ VIEWS.wo = () => {
       <button class="btn p" style="margin-left:auto" data-a="woEnviarAgendaModal">Send schedule (${pe.length})</button></div>`; })()}
   <div class="tabs">
     ${[["abiertas","Open"],["sin","Unassigned"],["camino","Assigned"],["curso","In progress"],["pend","Pending"],["porcerrar","To close"],["cerradas","Closed"],["cancel","Canceled"],["semana","Week "+S.semana]].map(([k,n])=>
-      `<button class="tab ${f===k?"on":""}" data-a="tab" data-t="${k}">${n}</button>`).join("")}
+      `<button class="tab ${f===k?"on":""}" data-a="tab" data-t="${k}"${k==="porcerrar"?` title="Completed · falta nómina o factura"`:""}>${n}</button>`).join("")}
   </div>
   <div class="note" style="margin-bottom:12px;display:flex;align-items:center;gap:10px"><span><b>${ws.length} resultado(s)${nSubVistas?` · ${nSubVistas} Sub-WO`:""}.</b> Los filtros de texto y fecha se mantienen juntos hasta que los cambies.</span>
     ${selMode?`<button class="btn p" style="margin-left:auto" data-a="pendAvisar" ${sel.length?"":"disabled"}>Avisar (${sel.length})</button>`:""}</div>
@@ -165,6 +168,7 @@ VIEWS.wo = () => {
         <td><div style="display:flex;flex-direction:column;align-items:flex-start;gap:3px">
           <span class="pill ${estP(w.estado)}"${w.motivoCancel?` title="${esc(w.motivoCancel)}"`:""}><span class="dot"></span>${w.estado}</span>
           ${w.estado==="Canceled"&&w.motivoCancel?`<span style="font-size:11px;color:var(--faint)">${esc(w.motivoCancel)}</span>`:""}
+          ${etapaWO(w)==="porcerrar"?`<span style="font-size:11px;color:var(--faint)">Falta: ${[w.pagadaTec?"":"Nómina",w.facturada?"":"Factura"].filter(Boolean).join(" · ")}</span>`:""}
           ${w.reagendada?`<span class="pill w" title="${esc(w.motivoReag||"Se movió de fecha")}"><span class="dot"></span>Reagendada${w.reagendada>1?" · "+w.reagendada+"x":""}</span>`:""}
           ${fechaSinConfirmar(w)?`<span class="pill w" title="El cliente todavía no confirma esta fecha. Enviar la agenda no la confirma: usa «Confirm date»."><span class="dot"></span>Sin confirmar</span>${soloLectura()?"":`<button class="btn sm" data-a="woConfirmarFecha" data-id="${w.id}">Confirm date</button>`}`:""}
           ${bloqueadaPorDev(w)?`<span class="pill r" title="${esc(devAreasTxt(devAbiertaDeWO(w.id)))}: ${esc(devAbiertaDeWO(w.id).desc)}"><span class="dot"></span>Return abierto</span>`:""}
