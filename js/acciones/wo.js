@@ -436,11 +436,12 @@ Object.assign(ACC, {
   progOK: d => {
     const w = W(d.id);
     const f = val("pgF"), medio = val("pgM"), contacto = val("pgC"), nota = val("pgN");
-    const motivo = document.getElementById("pgMotivo") ? val("pgMotivo") : "";
+    /* Punto 16: «¿Qué pasó con la fecha anterior?» solo aplica si la fecha cambia; con la misma fecha se ignora. */
+    const motivo = document.getElementById("pgMotivo") && w.fecha && f && f!==w.fecha ? val("pgMotivo") : "";
     const pendiente = chk("pgP"), inicio=val("pgInicio"), fin=val("pgFin");
     const resp = pendiente ? "Quedó en confirmar después" : "Fecha acordada";
     if(!f){ marcaFalta(["pgF"]); toast("Falta la fecha","Pon la fecha que quedaron.","r"); return; }
-    if(w.fecha && !motivo){ marcaFalta(["pgMotivo"]); toast("Falta el resultado","Registra qué pasó con la fecha anterior antes de reagendar.","r"); return; }
+    if(w.fecha && f!==w.fecha && !motivo){ marcaFalta(["pgMotivo"]); toast("Falta el resultado","Cambiaste la fecha: registra qué pasó con la anterior.","r"); return; }
 
     /* Si ya hay técnico asignado, mover la fecha le puede quitar el cupo a
        otro día lleno — antes esto solo se revisaba en "Reagendar". */
@@ -511,6 +512,20 @@ Object.assign(ACC, {
     render();
   },
 
+  woConfirmarFecha: d => { const w=W(d.id); if(!w || !fechaSinConfirmar(w)) return; modalConfirmarFecha(w.id); },
+  woConfirmarFechaOK: d => {
+    const w=W(d.id); if(!w) return;
+    if(!fechaSinConfirmar(w)){ cm(); toast("Ya estaba confirmada","Esta fecha ya no está pendiente de confirmar.",""); render(); return; }
+    const medio=val("cfM"), contacto=val("cfC"), nota=val("cfN");
+    if(!medio || !contacto){ marcaFalta(["cfM","cfC"]); toast("Faltan datos","Indica cómo y con quién confirmaste.","r"); return; }
+    w.propuestas=(w.propuestas||[]).concat([{fecha:w.fecha, medio, contacto, respuesta:"Fecha acordada", nota:nota||"", motivo:"", quien:S.usuario, hora:hora(), dia:HOY_SUP}]);
+    w.confirmCliente={fecha:w.fecha, medio, contacto, quien:S.usuario, hora:hora(), dia:HOY_SUP};
+    if(w.estado==="Scheduled") w.estado="Confirmed";
+    w.hist.push([hora(), `Fecha confirmada con el cliente — ${w.fecha} (${medio}, ${contacto})${nota?" · "+nota:""}`, S.usuario]);
+    cm(); flash("wo:"+w.id);
+    toast("✓ Fecha confirmada",`<b>${esc(contacto)}</b> confirmó el <b>${esc(w.fecha)}</b> por ${esc(medio.toLowerCase())}. Ya no dice «sin confirmar».`,"v");
+    render();
+  },
   progVentanaCambio: () => {
     const v = val("pgVentana");
     const ini = document.getElementById("pgInicio");

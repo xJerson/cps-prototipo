@@ -163,9 +163,10 @@ VIEWS.wo = () => {
         <td>${w.tec?esc(tecN(w.tec))+pillNoEnviada(w):`<span class="pill w">sin asignar</span>${!["Canceled","Completed","Invoiced","Paid"].includes(w.estado)?` <button class="btn sm p" data-a="asigModal" data-id="${w.id}">Asignar</button>`:""}`}</td>
         <td>${asisDe(w.id)?`<span class="pill ${asisDe(w.id).puntualidad==="Tarde"?"w":"v"}"><span class="dot"></span>${esc(asisDe(w.id).horaReal)}</span>`:'<span style="color:var(--faint)">—</span>'}</td>
         <td><div style="display:flex;flex-direction:column;align-items:flex-start;gap:3px">
-          <span class="pill ${estP(w.estado)}"><span class="dot"></span>${w.estado}</span>
+          <span class="pill ${estP(w.estado)}"${w.motivoCancel?` title="${esc(w.motivoCancel)}"`:""}><span class="dot"></span>${w.estado}</span>
+          ${w.estado==="Canceled"&&w.motivoCancel?`<span style="font-size:11px;color:var(--faint)">${esc(w.motivoCancel)}</span>`:""}
           ${w.reagendada?`<span class="pill w" title="${esc(w.motivoReag||"Se movió de fecha")}"><span class="dot"></span>Reagendada${w.reagendada>1?" · "+w.reagendada+"x":""}</span>`:""}
-          ${fechaSinConfirmar(w)?`<span class="pill w" title="Se le propuso una fecha al cliente y todavía no la confirmó"><span class="dot"></span>Sin confirmar</span>`:""}
+          ${fechaSinConfirmar(w)?`<span class="pill w" title="El cliente todavía no confirma esta fecha. Enviar la agenda no la confirma: usa «Confirm date»."><span class="dot"></span>Sin confirmar</span>${soloLectura()?"":`<button class="btn sm" data-a="woConfirmarFecha" data-id="${w.id}">Confirm date</button>`}`:""}
           ${bloqueadaPorDev(w)?`<span class="pill r" title="${esc(devAreasTxt(devAbiertaDeWO(w.id)))}: ${esc(devAbiertaDeWO(w.id).desc)}"><span class="dot"></span>Return abierto</span>`:""}
           ${woEspera(w)?`<span class="pill w" title="Empieza cuando termine WO-${woEspera(w).id}"><span class="dot"></span>Espera WO-${woEspera(w).id}</span>`:""}
           ${w.facRetenida&&!w.facturada?`<span class="pill w" title="${esc(w.facRetenida.motivo)}"><span class="dot"></span>Retenida</span>`:""}
@@ -350,7 +351,8 @@ function fichaWO(id){
           ${w.fotosPend?`<span class="pill w" style="margin-left:5px">⚠️ fotos pendientes</span>`:""}
           ${puedeValidar()&&w.estado==="Completed"?`<span style="margin-left:5px">${pillsAprob(w)}</span>`:""}
           ${w.reagendada?`<span class="pill w" style="margin-left:5px" title="${esc(w.motivoReag||"")}">↻ reagendada${w.reagendada>1?" "+w.reagendada+"x":""}</span>`:""}
-          ${fechaSinConfirmar(w)?`<span class="pill w" style="margin-left:5px" title="Se le propuso una fecha al cliente y todavía no la confirmó">⏳ fecha sin confirmar</span>`:""}
+          ${fechaSinConfirmar(w)?`<span class="pill w" style="margin-left:5px" title="El cliente todavía no confirma esta fecha. Enviar la agenda no la confirma: usa «Confirm date».">⏳ fecha sin confirmar</span>${soloLectura()?"":` <button class="btn sm p" data-a="woConfirmarFecha" data-id="${w.id}">Confirm date</button>`}`:""}
+          ${w.estado==="Canceled"&&w.motivoCancel?`<span class="pill r" style="margin-left:5px">Motivo: ${esc(w.motivoCancel)}</span>`:""}
           ${bloqueadaPorDev(w)?`<span class="pill r" style="margin-left:5px">⚠ return abierto</span>`:""}
           ${woEspera(w)?`<span class="pill w" style="margin-left:5px">Espera WO-${woEspera(w).id}</span>`:""}
           ${w.facRetenida&&!w.facturada?`<span class="pill w" style="margin-left:5px" title="${esc(w.facRetenida.motivo)}">Retenida · ${esc(w.facRetenida.motivo)}</span>`:""}</span></div>
@@ -471,6 +473,9 @@ function fichaWO(id){
           <table><thead><tr><th>Tipo</th><th>Para</th><th>Se envía</th><th>Estado</th><th></th></tr></thead><tbody>${rs.map(r=>filaRecordatorio(r,false)).join("")}</tbody></table></div>`; })()}
 
       ${trazaWO(w)}
+
+      ${(w.propuestas||[]).length?`<div class="card"><div class="chd"><h3>Fechas con el cliente</h3><span class="s">cada fecha propuesta, confirmada, movida o cancelada · con quién y por qué</span></div>
+        <div class="cp">${tablaFechasCliente(w, w.propuestas)}</div></div>`:""}
 
       <div class="card"><div class="chd"><h3>Historial</h3><span class="s">quién hizo qué y cuándo</span></div>
         <table><tbody>${w.hist.map(h=>`<tr><td class="mono" style="width:60px;color:var(--faint)">${h[0]}</td><td>${esc(h[1])}</td><td style="color:var(--faint);width:110px">${esc(h[2])}</td></tr>`).join("")}</tbody></table></div>
@@ -1267,6 +1272,45 @@ function refTarifa(){
 /* ── PROGRAMAR CON EL CLIENTE ────────────────────────────────
    El sistema no llama por Thalia — eso lo sigue haciendo ella. Lo que hace es
    mostrarle quien esta libre mientras habla, y guardar la fecha que quedaron. */
+/* Historial de fechas con el cliente (w.propuestas): se ve en la ficha de la WO y dentro de Reagendar.
+   La última fila es la vigente; una fecha que quedó «por confirmar» y luego se confirmó dice «Se confirmó después». */
+function tablaFechasCliente(w, prev){
+  return `<table style="margin:5px 0 0"><thead><tr><th>Fecha</th><th>Medio</th><th>Con quién</th><th>Cómo quedó</th></tr></thead>
+    <tbody>${prev.map((x,i)=>{
+      const sig = prev[i+1];
+      const cumplida = x.fecha===w.fecha && w.asistencia && x.respuesta!=="Cancelada";
+      const esUltima = i===prev.length-1;
+      const confirmadaLuego = !esUltima && x.respuesta==="Quedó en confirmar después" && sig && sig.fecha===x.fecha && sig.respuesta==="Fecha acordada";
+      const texto = x.respuesta==="Cancelada"?"Cancelada":cumplida&&esUltima?"Fecha cumplida":esUltima?x.respuesta:confirmadaLuego?"Se confirmó después":"Reemplazada";
+      const col = texto==="Cancelada"?"r":texto==="Fecha cumplida"?"v":!esUltima?"g":String(x.respuesta).startsWith("Fecha")?"v":"a";
+      return `<tr${esUltima?"":' style="opacity:.65"'}><td>${esc(x.fecha)}</td><td>${esc(x.medio)}</td>
+      <td>${esc(x.contacto)}</td>
+      <td><span class="pill ${col}">${esc(texto)}</span>
+        ${x.motivo?`<div style="font-size:10px;color:var(--faint)">${esc(x.motivo)}</div>`:""}
+        ${x.nota?`<div style="font-size:10px;color:var(--faint)">${esc(x.nota)}</div>`:""}
+        <div style="font-size:10px;color:var(--faint)">${esc(x.quien)} · ${esc(x.dia?x.dia+" ":"")}${esc(x.hora)}</div></td></tr>`;}).join("")}
+    </tbody></table>`;
+}
+/* Punto 16: confirmar la fecha que quedó «por confirmar», sin pasar por Reagendar. */
+function modalConfirmarFecha(id){
+  const w = W(id), p = P(w.prop), cs = contactosDe(w.prop);
+  const ult = (w.propuestas||[]).slice(-1)[0] || {};
+  modal(`<div class="mh"><h3>Confirm date · WO-${w.id}</h3><p>${esc(p.nombre)} · ${esc(U(w.unidad)?U(w.unidad).num:"")} · ${esc(w.serv)}</p></div>
+  <div class="mb">
+    <div class="note" style="margin-bottom:12px">¿El cliente confirmó el <b>${esc(w.fecha)}</b>${w.horaProg?` · ${esc(horaVentanaWO(w))}`:""}?
+      Si quiere <b>otra fecha</b>, cancela aquí y usa <b>«Reagendar»</b>.</div>
+    <div class="fg c2">
+      <div class="fld"><label>Channel <span class="req">*</span></label>
+        <select id="cfM">${activos("medios").map(m=>`<option ${m===ult.medio?"selected":""}>${esc(m)}</option>`).join("")}</select></div>
+      <div class="fld"><label>Contact <span class="req">*</span></label>
+        <select id="cfC">${cs.length?cs.map(c=>`<option value="${esc(c.nombre)}" ${c.nombre===ult.contacto?"selected":""}>${esc(c.nombre)} — ${esc(c.tipo)}</option>`).join("")
+          :`<option>${esc(CLI(p.cliente).contacto||CLI(p.cliente).nombre)}</option>`}</select></div></div>
+    <div class="fld"><label>Notes <span style="text-transform:none;font-weight:500;color:var(--faint)">— opcional</span></label>
+      <input id="cfN" placeholder="Ej. Confirmó por WhatsApp"></div>
+  </div>
+  <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
+    <button class="btn p" data-a="woConfirmarFechaOK" data-id="${w.id}">Confirmar fecha</button></div>`);
+}
 function modalProg(id){
   const w = W(id), p = P(w.prop);
   const reagendando=!!w.fecha;
@@ -1323,23 +1367,9 @@ function modalProg(id){
 
     ${prev.length?`<div style="margin:0 0 12px">
       <b style="font-size:11px;color:var(--faint);text-transform:uppercase">Fechas anteriores</b>
-      <table style="margin:5px 0 0"><thead><tr><th>Fecha</th><th>Medio</th><th>Con quién</th><th>Cómo quedó</th></tr></thead>
-      <tbody>${prev.map((x,i)=>{
-        /* La última propuesta es la vigente; cualquier otra fue pisada por una
-           más nueva — antes las dos se veían igual ("Fecha acordada" en verde),
-           sin forma de saber cuál seguía valiendo. */
-        const cumplida = x.fecha===w.fecha && w.asistencia;
-        const esUltima = i===prev.length-1;
-        const texto = cumplida?"Fecha cumplida":esUltima?x.respuesta:"Reemplazada";
-        const col = cumplida?"v":!esUltima?"g":x.respuesta.startsWith("Fecha")?"v":"a";
-        return `<tr${esUltima?"":' style="opacity:.65"'}><td>${esc(x.fecha)}</td><td>${esc(x.medio)}</td>
-        <td>${esc(x.contacto)}</td>
-        <td><span class="pill ${col}">${esc(texto)}</span>
-          ${x.motivo?`<div style="font-size:10px;color:var(--faint)">${esc(x.motivo)}</div>`:""}
-          <div style="font-size:10px;color:var(--faint)">${esc(x.quien)} · ${esc(x.hora)}</div></td></tr>`;}).join("")}
-      </tbody></table></div>`:""}
+      ${tablaFechasCliente(w, prev)}</div>`:""}
 
-    ${reagendando?`<div class="fld"><label>¿Qué pasó con la fecha anterior? <span class="req">*</span></label>
+    ${reagendando?`<div class="fld"><label>¿Qué pasó con la fecha anterior? <span class="req">*</span> <span style="text-transform:none;font-weight:500;color:var(--faint)">— solo si cambias la fecha</span></label>
       <select id="pgMotivo"><option value="">— selecciona —</option>
         <option>El cliente pidió moverla</option>
         <option>No asistió el técnico</option><option>Trabajo incompleto</option>
