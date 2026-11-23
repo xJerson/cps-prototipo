@@ -564,8 +564,11 @@ function trazaWO(w){
       ${det?`<div class="dd">${det}</div>`:""}
       ${quien?`<div class="qq">${esc(quien)}</div>`:""}</div></li>`;
 
+  const etq={abiertas:"Open",porcerrar:"To close",cerradas:"Closed",cancel:"Canceled"}[etapaWO(w)];
+  const det=etapaWO(w)==="cerradas"?" (nómina pagada · facturada)":etapaWO(w)==="porcerrar"?` (falta: ${[w.pagadaTec?"":"Nómina",w.facturada?"":"Factura"].filter(Boolean).join(" · ")})`:"";
   return `<div class="card"><div class="chd"><h3>Trazabilidad</h3>
-    <span class="s">${puedeVerDinero?"de dónde vino este trabajo y a dónde fue a parar el dinero":"historial operativo del trabajo"}</span></div>
+    <span class="s">${puedeVerDinero?"de dónde vino este trabajo y a dónde fue a parar el dinero":"historial operativo del trabajo"}</span>
+    <span class="pill ${etapaWO(w)==="cerradas"?"v":etapaWO(w)==="cancel"?"r":"g"}" style="margin-left:auto">Estado: ${etq}${det}</span></div>
     <div class="cp"><ul class="traza">
     ${paso(true,"Propiedad",
       `<b>${esc(p.nombre)}</b> · ${esc(p.estado||"—")} · entró por ${esc(p.origen||"—")}${p.cliente?` · management: ${esc(c.nombre)}`:""}`, null)}
@@ -591,9 +594,9 @@ function trazaWO(w){
           `${l.estado==="Aprobado"?"✓":l.estado==="Rechazado"?"✗":"○"} ${esc(l.concepto)}${(l.cant||1)>1?` ×${l.cant}`:""}`).join(" · ")}</div>`,
         a?`${e==="Parcial"?"Aprobado en parte":esc(e)} por ${esc(a.aprob.quien)} vía ${esc(a.aprob.medio)}${a.aprob.ip?" · IP "+a.aprob.ip:""}`:"esperando decisión");
     }).join("")}
-    ${paso(!!w.supervisada,"Supervisión",
-      w.supervisada?"Supervisión aprobada":"Supervisión pendiente (a cargo de Gustavo)",
-      w.supervisada?esc((w.hist.find(h=>h[1].includes("Supervisión"))||[])[2]||""):null)}
+    ${w.supervisada ? paso(true,"Supervisión","Approved · "+esc((w.hist.find(h=>h[1].includes("Supervisión"))||[])[2]||"Gustavo"),null)
+      : etapaWO(w)==="cerradas" ? `<li class="pend"><span class="mk">–</span><div style="min-width:0"><div class="tt">Supervisión</div><div class="dd">Optional · Not done</div></div></li>`
+      : paso(false,"Supervisión","Optional · Pending (Gustavo)",null)}
     ${paso(!!fac, fac?`Facturada en ${esc(fac.num)}`:"Sin facturar",
       fac?`${puedeVerDinero?money(ingresoWO(w)||0)+" de "+money(fac.total)+" · ":""}vence ${esc(fac.vence||"al enviar")}`:"Todavía no entra a ninguna factura",null)}
     ${paso(!!w.cobrada,"Cobrada", w.cobrada?`Pago registrado`:"Pendiente de cobro",null)}
