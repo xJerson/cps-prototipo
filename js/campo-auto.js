@@ -41,6 +41,8 @@ function CA(){
 const cRnd = (a,b) => a + Math.floor(Math.random()*(b-a+1));
 const cPick = arr => arr[Math.floor(Math.random()*arr.length)];
 const cChance = p => Math.random() < p;
+/* REQ 19/11 punto 25: en Automático el técnico avanza UNA fase por vuelta; la siguiente sale sola a los CAMPO_PASO_SEG segundos. */
+const CAMPO_PASO_SEG = 4;
 const cSleep = ms => new Promise(r => setTimeout(r, ms));
 const cMuestra = (arr,n) => { const c=arr.slice(), o=[]; while(c.length && o.length<n) o.push(c.splice(Math.floor(Math.random()*c.length),1)[0]); return o; };
 const cModalAbierto = () => { const m=document.getElementById("mroot"); return !!(m && m.innerHTML.trim()); };
@@ -1388,7 +1390,7 @@ async function campoCorrer(op){
   if(_campoCorriendo) return {pasos:0, ocupado:true};
   _campoCorriendo = true; _campoEnMotor = true;
   const fallidas = new Set(), log = [];
-  let pasos = 0, modal = false, pregunto = false;
+  let pasos = 0, modal = false, pregunto = false, unPaso = false;
   _campoSilencios = 0;
   if(op.forzar) _campoOmitidos.clear();
   try{ cEvRevisar(); } catch(e){ console.warn("Campo automático: revisar pedidos", e); }
@@ -1413,13 +1415,15 @@ async function campoCorrer(op){
       pasos++; log.push(txt.texto);
       if(txt.estado === "omitido"){ render(); continue; }
       toast("Técnico (auto)", esc(txt.texto), "v"); render();
+      if(!op.forzar){ unPaso = true; break; }          // una fase a la vez: la siguiente en CAMPO_PASO_SEG
       if(!op.sinPausa && CA().pausa>0) await cSleep(CA().pausa*1000);
     }
   } finally { _campoCorriendo = false; _campoEnMotor = false; }
   /* un traspaso en silencio se reintenta solo en unos segundos, para que no dependa de otra acción de oficina */
-  if(!op.forzar && (modal || _campoRepetir || _campoSilencios)){ const rep = _campoRepetir; _campoRepetir = false; campoProgramar(modal ? 4 : rep ? null : 12); }
+  if(unPaso && CA().on){ _campoRepetir = false; campoProgramar(CAMPO_PASO_SEG); }
+  else if(!op.forzar && (modal || _campoRepetir || _campoSilencios)){ const rep = _campoRepetir; _campoRepetir = false; campoProgramar(modal ? 4 : rep ? null : 12); }
   else if(!pregunto && CA().on && cPreg() && cHayOmitidos()) campoProgramar(CAMPO_REINTENTO);   // lo que oficina dejó para después
-  return {pasos, log, pregunto};
+  return {pasos, log, pregunto, unPaso};
 }
 function campoProgramar(seg){
   if(window.__R) return;                                  // no durante las pruebas automáticas
@@ -1441,7 +1445,7 @@ function campoAutoTrasAccion(k){
 
 /* ══════════ INTERFAZ ══════════ */
 const CAMPO_MODO_TXT = {
-  "auto":"Automático: el técnico responde solo después de cada acción de oficina.",
+  "auto":"Automático: el técnico responde solo, una fase a la vez (cada "+CAMPO_PASO_SEG+" s).",
   "preguntar":"Preguntar: antes de cada respuesta se abre una ventana con lo que haría el técnico, para que la revises y la registres.",
   "apagado":"Apagado."};
 function campoCambiarModo(m){
@@ -1500,7 +1504,7 @@ let _campoHtml = "";
 function campoAutoPintar(){
   const box = document.getElementById("campoAutoBox"); if(!box) return;
   const c = CA(), op = (v, tx) => `<option value="${v}" ${c.modo===v?"selected":""}>${tx}</option>`;
-  const h = `<select class="usr" data-a="campoAutoModo" title="Automático: el técnico responde solo. Preguntar: antes de cada respuesta te muestra lo que haría para que lo revises. Apagado: no hace nada.">${op("auto","Campo: automático")}${op("preguntar","Campo: preguntar")}${op("apagado","Campo: apagado")}</select>`
+  const h = `<select class="usr" data-a="campoAutoModo" title="Automático: el técnico responde solo, una fase cada ${CAMPO_PASO_SEG} s. Preguntar: antes de cada respuesta te muestra lo que haría para que lo revises. Apagado: no hace nada.">${op("auto","Campo: automático")}${op("preguntar","Campo: preguntar")}${op("apagado","Campo: apagado")}</select>`
     + `<select class="usr" data-a="campoAutoPerfil" title="Todo bien: sin problemas. Mixto: a veces hay datos que no coinciden, avances parciales u observaciones."><option value="todo-bien" ${c.perfil==="todo-bien"?"selected":""}>Todo bien</option><option value="mixto" ${c.perfil==="mixto"?"selected":""}>Mixto</option></select>`
     + `<button class="btn sm" data-a="campoLogVer" title="Lo que el campo automático hizo, omitió o dejó sin responder">Qué pasó${cLogArr().length?` (${cLogArr().length})`:""}</button>`;
   if(h !== _campoHtml){ _campoHtml = h; box.innerHTML = h; }
