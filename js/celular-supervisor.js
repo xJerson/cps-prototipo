@@ -278,7 +278,7 @@ function hojaDev(g){
     return `<div class="fscrim" data-a="gDevNo"><div class="fsheet" data-stop>
       <div class="grab"></div>
       <h4 style="color:var(--verde)">Verificar el return fix</h4>
-      <div class="sub">${esc(P(d.prop).nombre)} · ${U(d.unidad)?esc(U(d.unidad).num):""} — ${esc(devAreasTxt(d))}</div>
+      <div class="sub">${esc(P(d.prop).nombre)} · ${esc(devUniN(d))} — ${esc(devAreasTxt(d))}</div>
 
       <div class="dc" style="margin:9px 0 0;background:var(--ambar-cl);border-color:transparent">
         <div class="ds"><b>Lo que estaba mal:</b> ${esc(d.desc)}</div></div>
@@ -318,9 +318,7 @@ function hojaDev(g){
       `<option value="${x.id}" ${x.id===g.prop?"selected":""}>${esc(x.nombre)}</option>`).join("")}</select>
 
     <label>Unidad</label>
-    <select id="dvU" data-a="gDevUni">${us.length?us.map(u=>
-      `<option value="${u.id}" ${u.id===g.unidad?"selected":""}>${esc(u.num)}</option>`).join("")
-      :`<option value="">— sin unidades —</option>`}</select>
+    ${uniCampo("dvU", g.prop, g.unidadTexto!=null?g.unidadTexto:(U(g.unidad)&&g.unidad?U(g.unidad).num:""), "gDevUni", g.uniAdd)}
 
     ${(()=>{ const ult=S.wos.filter(w=>w.unidad===g.unidad&&w.estado!=="Canceled"&&!w.touchup).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""))[0];
       return ult?`<div class="dc" style="margin:6px 0 0"><div class="ds">Último trabajo de esta unidad: <b>${woN(ult.id)}</b> · ${esc(ult.serv)} · ${ult.tec?esc(tecN(ult.tec)):"sin técnico"} · ${esc(ult.fecha||"")}</div></div>`:`<div class="dc" style="margin:6px 0 0"><div class="ds">Esta unidad todavía no tiene trabajos registrados.</div></div>`; })()}
@@ -352,8 +350,6 @@ function hojaDev(g){
 
     <label>Fecha l\u00edmite para corregir</label>
     <input id="dvF" value="${esc(g.fechaLimite||"")}" placeholder="2026-08-14">
-    <label>Hora límite</label>
-    <input id="dvFH" value="${esc(g.horaLimite||"17:00")}" placeholder="17:00">
 
     <label style="margin-top:9px">Fotos de lo que est\u00e1 mal${total?` · ${total}`:""}</label>
     <div class="gchips">${activos("ubicaciones").map(u=>

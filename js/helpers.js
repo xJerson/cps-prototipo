@@ -110,6 +110,28 @@ const pillNoEnviada = w => w && w.porEnviar && w.tec ? ` <span class="pill w" ti
 const woSanas = () => (S.wos||[]).forEach(w => { if(w && !Array.isArray(w.hist)) w.hist = []; });
 woSanas();
 /* Número de WO para mostrar: no repite «WO-» si el ID ya lo trae (WO-P14-1). */
+/* REQ 19/11 punto 29: la unidad del return se ESCRIBE (con sugerencias). Si no existe,
+   se puede agregar a la propiedad o dejar escrita a mano (d.unidadTexto, d.unidad=null). */
+const uniPorTexto = (prop, txt) => { const t=String(txt||"").trim().toLowerCase(); if(!t) return null;
+  return S.unidades.find(u=>u.prop===prop && [u.num,u.unidadNum].some(x=>String(x||"").trim().toLowerCase()===t)) || null; };
+const uniCrearTexto = (prop, txt) => { const n=String(txt||"").trim();
+  const nu={id:"U"+nid("u"), prop, building:"", unidadNum:n, num:n, rooms:"", pisos:1, tipo:"Regular", vacia:false,
+    notas:"Agregada desde un return — completar Rooms y Pisos en Propiedades.", activa:true, detalle:[]};
+  S.unidades.push(nu); flash("uni:"+nu.id); return nu; };
+/* Número de unidad de un return: la registrada o la escrita a mano */
+const devUniN = d => (d && by(S.unidades,d.unidad)) ? U(d.unidad).num : ((d && d.unidadTexto) || "—");
+function uniHintHTML(id, prop, txt, chk){ const t=String(txt||"").trim(); if(!t || uniPorTexto(prop,t)) return "";
+  return `<div class="note w" style="margin:6px 0 0;font-size:11.5px">⚠ <b>${esc(t)}</b> no existe en ${esc(P(prop).nombre)}.
+    <label style="display:flex;gap:6px;align-items:center;margin:5px 0 0;font-weight:650;text-transform:none;letter-spacing:0;font-size:12px"><input type="checkbox" id="${id}Add" ${chk?"checked":""} style="width:15px;height:15px;flex:none"> Agregarla a la propiedad</label>
+    <div style="font-size:10.5px;color:var(--faint);margin-top:2px">Si no la agregas, el return se guarda igual con la unidad escrita.</div></div>`; }
+function uniCampo(id, prop, txt, dataA, chk){
+  const us=S.unidades.filter(u=>u.prop===prop && u.activa!==false);
+  return `<input id="${id}" class="uniTxt" data-prop="${esc(prop)}" ${dataA?`data-a="${dataA}"`:""} list="${id}L" value="${esc(txt||"")}" placeholder="Escribe la unidad (ej. 204, A-211…)" autocomplete="off">
+    <datalist id="${id}L">${us.map(u=>`<option value="${esc(u.num)}"></option>`).join("")}</datalist>
+    <div id="${id}H">${uniHintHTML(id, prop, txt, chk)}</div>`; }
+/* Mientras escribe: actualiza el aviso «no existe» sin re-render (conserva la casilla) */
+function uniTxtHint(el){ const h=document.getElementById(el.id+"H"); if(!h) return;
+  const c=document.getElementById(el.id+"Add"); h.innerHTML=uniHintHTML(el.id, el.dataset.prop, el.value, c&&c.checked); }
 const woN = v => { const s=String(v==null?"":v); return /^WO-/i.test(s)?s:"WO-"+s; };
 const W = id => by(S.wos,id) || (id==null || id==="" ? undefined : S.wos.find(w=>w.id!=null && String(w.id)===String(id)));
 /* Plazo de cobranza: días de crédito de la propiedad (30 si no tiene) y suma de días en UTC para que la zona horaria no mueva la fecha. */

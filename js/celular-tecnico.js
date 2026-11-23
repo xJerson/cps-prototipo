@@ -421,12 +421,12 @@ function leerDev(){
   const v = id => { const e=document.getElementById(id); return e? e.value : null; };
   const p=v("dvP"), u=v("dvU"), d=v("dvD"), r=v("dvR"), f=v("dvF"), fh=v("dvFH"), nv=v("dvV");
   if(p!==null) g.prop=p;
-  if(u!==null && u!=="") g.unidad=u;
+  if(u!==null){ g.unidadTexto=u; const m=uniPorTexto(g.prop,u); g.unidad=m?m.id:null; }   // unidad escrita (punto 29)
+  const ua=document.getElementById("dvUAdd"); g.uniAdd=!!(ua&&ua.checked);
   g.areas = leerCheckUbicacion("dvA");
   if(d!==null) g.desc=d;
   if(r!==null) g.responsable=r;
   if(f!==null) g.fechaLimite=f;
-  if(fh!==null) g.horaLimite=fh;
   if(nv!==null) g.nota=nv;
 }
 
@@ -662,7 +662,7 @@ const devVencida = d => {
   if(d.estado==="Cerrada") return false;
   if(d.fechaLimite < HOY_SUP) return true;
   if(d.fechaLimite > HOY_SUP) return false;
-  return horaAMin(d.horaLimite||"17:00") <= S.reloj;
+  return !!d.horaLimite && horaAMin(d.horaLimite) <= S.reloj;   // REQ 19/11 punto 29: sin hora, vence al terminar el día
 };
 const devDeTec   = t => S.devoluciones.filter(d=>d.responsable===t);
 
@@ -765,7 +765,7 @@ function aplicarDescuento(dv, w){
 
   const d = {id:"DS"+Date.now()+Math.floor(Math.random()*99), tec:dv.responsable,
     wo:w.id, dev:dv.id, monto:montoFinal, montoReal:monto, tope, semana:w.semana, fecha:HOY_SUP, estado:"Por decidir",
-    motivo:"Return fix de "+devAreasTxt(dv)+" en "+(U(dv.unidad)?U(dv.unidad).num:"la unidad")+" — lo corrigió "+tecN(w.tec)
+    motivo:"Return fix de "+devAreasTxt(dv)+" en "+(devUniN(dv))+" — lo corrigió "+tecN(w.tec)
            +(tope?" (limitado a lo que gan\u00f3 por WO-"+dv.wo+")":"")};
   S.descuentos.push(d);
   return d;
@@ -970,7 +970,7 @@ function gustavoScreenHTML(view){
               <div style="display:flex;justify-content:space-between;gap:6px;align-items:center">
                 <div class="dh" style="font-size:12px">Verificar return fix</div>
                 <span class="dtag" style="background:${devVencida(d)?"var(--rojo)":"var(--ambar)"};color:#fff;flex:none">${diasAbierta(d)} d\u00eda(s)</span></div>
-              <div class="ds" style="margin-top:3px">${esc(P(d.prop).nombre)} ${U(d.unidad)?esc(U(d.unidad).num):""} · ${esc(devAreasTxt(d))}</div>
+              <div class="ds" style="margin-top:3px">${esc(P(d.prop).nombre)} ${esc(devUniN(d))} · ${esc(devAreasTxt(d))}</div>
             </div>`).join("")
         : "");
   }
@@ -1086,7 +1086,7 @@ function gustavoScreenHTML(view){
       const col = d.estado==="Cerrada"?"#1e5c3a":venc?"#9b2226":"#8a5a00";
       return `<div class="dc" style="border-left:3px solid ${col};cursor:pointer" data-a="gDevVer" data-id="${d.id}">
         <div style="display:flex;justify-content:space-between;gap:6px;align-items:center">
-          <div class="dh" style="font-size:12px">${esc(P(d.prop).nombre)} · ${U(d.unidad)?esc(U(d.unidad).num):"—"}</div>
+          <div class="dh" style="font-size:12px">${esc(P(d.prop).nombre)} · ${esc(devUniN(d))}</div>
           <span class="dtag" style="background:${col};color:#fff;flex:none">${esc(d.estado)}</span></div>
         <div class="ds" style="margin-top:3px"><b>${esc(devAreasTxt(d))}</b> — ${esc(d.desc.slice(0,68))}${d.desc.length>68?"…":""}</div>
         <div style="display:flex;gap:5px;flex-wrap:wrap;margin-top:6px">
@@ -1114,7 +1114,7 @@ function gustavoScreenHTML(view){
     h = `<button class="db g" style="margin:5px 0 9px" data-a="fView" data-v="devs">‹ Todos los returns</button>
       <div class="dc" style="border-color:${d.estado==="Cerrada"?"var(--verde)":venc?"var(--rojo)":"var(--ambar)"}">
         <div style="display:flex;justify-content:space-between;gap:6px;align-items:center">
-          <div class="dh">${esc(P(d.prop).nombre)} · ${U(d.unidad)?esc(U(d.unidad).num):"—"}</div>
+          <div class="dh">${esc(P(d.prop).nombre)} · ${esc(devUniN(d))}</div>
           <span class="dtag" style="background:${d.estado==="Cerrada"?"var(--verde)":"var(--ambar)"};color:#fff;flex:none">${esc(d.estado)}</span></div>
         <div class="ds" style="margin-top:4px">Área: <b>${esc(devAreasTxt(d))}</b>${d.wo?` · ${woN(d.wo)}`:""}</div>
         <div class="ds" style="margin-top:5px;color:var(--tinta)">${esc(d.desc)}</div>

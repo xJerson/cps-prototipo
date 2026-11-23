@@ -691,7 +691,7 @@ VIEWS.nomina = () => {
       <tbody>${ds.map(x=>{ const dv=DV(x.dev);
         return `<tr class="${fl("desc:"+x.id)}"><td style="font-weight:650">${esc(tecN(x.tec))}</td>
           <td>${esc(x.motivo)}</td>
-          <td>${dv?`${esc(P(dv.prop).nombre)} ${U(dv.unidad)?esc(U(dv.unidad).num):""}
+          <td>${dv?`${esc(P(dv.prop).nombre)} ${esc(devUniN(dv))}
                 <div style="font-size:10.5px;color:var(--faint)">${esc(dv.desc.slice(0,60))}</div>`:"—"}</td>
           <td class="mono">${woN(x.wo)}</td>
           <td>${dv?`<span class="pill m">${(dv.lotesAntes||[]).reduce((t,l)=>t+(l.fotosArr||[]).length,0)} foto(s) del antes</span>`:"—"}</td>

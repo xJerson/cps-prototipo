@@ -1094,11 +1094,11 @@ const cTuActivo = dv => { const tu = touchupDe(dv.id); return !!tu && !["Complet
 const CAMPO_DEV_NOTAS = ["Se retocó la zona y quedó parejo con el resto; todo conforme.","Revisé el área corregida: sin marcas ni huecos. Queda bien.","Quedó corregido; se nota el trabajo y ya no se ve el problema.","Lo corrigieron como se pidió. Dejé fotos del después."];
 CAMPO_MANEJADORES.push({ id:"gdevverif",
   detect:() => !cGusOk() ? [] : devAbiertas().filter(dv=>dv.estado==="Abierta" && dv.fechaLimite<=HOY_SUP && !cTuActivo(dv))
-    .map(dv=>({k:"gdevverif:"+dv.id, h:"gdevverif", tec:GUSTAVO, dev:dv.id, que:`la verificación del return de ${P(dv.prop).nombre} ${U(dv.unidad).num}`, pasoLog:"verificar return", donde:` · return de ${P(dv.prop).nombre} ${U(dv.unidad).num}`})),
+    .map(dv=>({k:"gdevverif:"+dv.id, h:"gdevverif", tec:GUSTAVO, dev:dv.id, que:`la verificación del return de ${P(dv.prop).nombre} ${devUniN(dv)}`, pasoLog:"verificar return", donde:` · return de ${P(dv.prop).nombre} ${devUniN(dv)}`})),
   proponer:it => {
     const dv = DV(it.dev); if(!dv || dv.estado!=="Abierta") return null;
     const pl = cPlanG("d"+dv.id, ()=>({fotos:Math.min(4, Math.max(1, (dv.areas||[]).length) + cRnd(0,1)), nota:cPick(CAMPO_DEV_NOTAS)}));
-    return {paso:"verificar return", oblig:true, titulo:"Verificar el return fix", desc:`${P(dv.prop).nombre} ${U(dv.unidad).num} · ${devAreasTxt(dv)}. Estaba mal: ${dv.desc}`,
+    return {paso:"verificar return", oblig:true, titulo:"Verificar el return fix", desc:`${P(dv.prop).nombre} ${devUniN(dv)} · ${devAreasTxt(dv)}. Estaba mal: ${dv.desc}`,
       campos:[{id:"fotos", label:"Fotos del después (mínimo 1)", tipo:"numero", valor:pl.fotos, min:1, max:8}, {id:"nota", label:"¿Quedó bien?", tipo:"texto", largo:true, valor:pl.nota}]};
   },
   responder:(it, d) => {
@@ -1116,24 +1116,24 @@ CAMPO_MANEJADORES.push({ id:"gdevverif",
       ACC.gDevVerifOK();
     });
     cClampG();
-    return dv.estado==="Corregida" ? {texto:`${cNombre(GUSTAVO)} verificó el return de ${P(dv.prop).nombre} ${U(dv.unidad).num} (${devAreasTxt(dv)}) con ${total} foto(s) del después`, paso:"verificar return", oblig:true} : null;
+    return dv.estado==="Corregida" ? {texto:`${cNombre(GUSTAVO)} verificó el return de ${P(dv.prop).nombre} ${devUniN(dv)} (${devAreasTxt(dv)}) con ${total} foto(s) del después`, paso:"verificar return", oblig:true} : null;
   }});
 CAMPO_MANEJADORES.push({ id:"gdevcerrar",
   detect:() => !cGusOk() ? [] : S.devoluciones.filter(dv=>dv.estado==="Corregida" && (dv.hist||[]).some(h=>/Verificada en campo/.test(h[1])))
-    .map(dv=>({k:"gdevcerrar:"+dv.id, h:"gdevcerrar", tec:GUSTAVO, dev:dv.id, que:`cerrar el return de ${P(dv.prop).nombre} ${U(dv.unidad).num}`, pasoLog:"cerrar return", donde:` · return de ${P(dv.prop).nombre} ${U(dv.unidad).num}`})),
+    .map(dv=>({k:"gdevcerrar:"+dv.id, h:"gdevcerrar", tec:GUSTAVO, dev:dv.id, que:`cerrar el return de ${P(dv.prop).nombre} ${devUniN(dv)}`, pasoLog:"cerrar return", donde:` · return de ${P(dv.prop).nombre} ${devUniN(dv)}`})),
   proponer:it => {
     const dv = DV(it.dev); if(!dv || dv.estado!=="Corregida") return null;
     const s = cDecEstado(it);
-    return {paso:"cerrar return", oblig:false, titulo:"Cerrar el return", desc:`${P(dv.prop).nombre} ${U(dv.unidad).num} · ${devAreasTxt(dv)}. Si no lo cierra Gustavo, queda «Corregida» para que oficina lo cierre.`,
+    return {paso:"cerrar return", oblig:false, titulo:"Cerrar el return", desc:`${P(dv.prop).nombre} ${devUniN(dv)} · ${devAreasTxt(dv)}. Si no lo cierra Gustavo, queda «Corregida» para que oficina lo cierre.`,
       campos:[cHacer("¿Cierra el return?", !s.omite)]};
   },
   responder:(it, d) => {
     const dv = DV(it.dev); if(!dv || dv.estado!=="Corregida") return null;
     const n = cNombre(GUSTAVO);
-    if(!cSi(d.hacer)){ const s = cDecEstado(it); s.omite = true; s.decidido = true; return cOmitido(n, `cerrar el return de ${P(dv.prop).nombre} ${U(dv.unidad).num} (lo deja a oficina)`, "cerrar return"); }
+    if(!cSi(d.hacer)){ const s = cDecEstado(it); s.omite = true; s.decidido = true; return cOmitido(n, `cerrar el return de ${P(dv.prop).nombre} ${devUniN(dv)} (lo deja a oficina)`, "cerrar return"); }
     cConGustavo(()=>ACC.gDevCerrar({id:dv.id}));
     cClampG();
-    return dv.estado==="Cerrada" ? {texto:`${n} cerró el return de ${P(dv.prop).nombre} ${U(dv.unidad).num} (${devAreasTxt(dv)})`, paso:"cerrar return", oblig:false} : null;
+    return dv.estado==="Cerrada" ? {texto:`${n} cerró el return de ${P(dv.prop).nombre} ${devUniN(dv)} (${devAreasTxt(dv)})`, paso:"cerrar return", oblig:false} : null;
   }});
 
 /* ── Reporte del día ── */

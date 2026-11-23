@@ -37,7 +37,7 @@ function vDevoluciones(){
     const c = causaDe(d.causa), dias = diasAbierta(d), v = devVencida(d);
     return `<tr class="${fl("dv:"+d.id)}">
       <td style="font-weight:650">${esc(P(d.prop).nombre)}
-        <div style="font-size:10.5px;color:var(--faint)">${U(d.unidad)?esc(U(d.unidad).num):"—"}${d.wo?` · ${woN(d.wo)}`:""}</div></td>
+        <div style="font-size:10.5px;color:var(--faint)">${esc(devUniN(d))}${d.wo?` · ${woN(d.wo)}`:""}</div></td>
       <td>${esc(devAreasTxt(d))}
         <div style="font-size:10.5px;color:var(--soft);max-width:230px">${esc(d.desc)}</div>${d.origen?`<div style="font-size:10px;color:var(--faint)">viene de: ${esc(d.origen)}</div>`:""}</td>
       <td><span class="pill ${c.paga?"g":"b"}">${esc(d.causa)}</span>
@@ -268,7 +268,7 @@ function vPrevio(pid){
       <table><thead><tr><th>Unidad</th><th>Área y problema</th><th>Causa</th><th>Corrige</th>
         <th>Reportada</th><th>Estado</th></tr></thead>
       <tbody>${dv.map(d=>`<tr>
-        <td>${U(d.unidad)?esc(U(d.unidad).num):"—"}</td>
+        <td>${esc(devUniN(d))}</td>
         <td><b>${esc(devAreasTxt(d))}</b><div style="font-size:10.5px;color:var(--soft)">${esc(d.desc)}</div></td>
         <td><span class="pill ${causaDe(d.causa).paga?"g":"b"}">${esc(d.causa)}</span></td>
         <td>${esc(tecN(d.responsable))}</td>

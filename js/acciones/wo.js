@@ -745,8 +745,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
       <div class="note w" id="dvExp">${causaDe(Object.keys(CAUSAS_DEV)[0]).ex}</div>
       <div class="fg c2">
         <div class="fld"><label>Prioridad</label><select id="dvP">${PRIOR_DEV.map(p=>`<option ${p==="Alta"?"selected":""}>${esc(p)}</option>`).join("")}</select></div>
-        <div class="fld"><label>Fecha límite</label><input type="date" id="dvL" value="${sumarDias(HOY_SUP,3)}"></div>
-        <div class="fld"><label>Hora límite</label><input type="time" id="dvLH" value="17:00"></div></div>
+        <div class="fld"><label>Fecha límite</label><input type="date" id="dvL" value="${sumarDias(HOY_SUP,3)}"></div></div>
       <div class="fld"><label>Foto de la observación <span style="color:var(--faint);font-weight:500;text-transform:none;letter-spacing:0">— opcional</span></label>
         ${S._dvFoto?`<img src="${S._dvFoto}" style="width:100%;height:96px;object-fit:cover;border-radius:9px;margin:0 0 6px">`:""}
         <button type="button" class="btn" style="width:100%" data-a="devFoto" data-id="${w.id}">📷 ${S._dvFoto?"Cambiar foto":"Adjuntar foto"}</button></div>
@@ -782,7 +781,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     while(S.devoluciones.some(x=>x.id==="DV"+dvNum)) dvNum++;
     const dv = {id:"DV"+dvNum, prop:w.prop, unidad:w.unidad, wo:w.id, areas,
       desc:m, causa, responsable:w.tec, prioridad:val("dvP")||"Alta",
-      fechaRep:HOY_SUP, fechaLimite:val("dvL")||sumarDias(HOY_SUP,3), horaLimite:val("dvLH")||"17:00", estado:"Abierta",
+      fechaRep:HOY_SUP, fechaLimite:val("dvL")||sumarDias(HOY_SUP,3), horaLimite:null, estado:"Abierta",
       lotesAntes:areas.map((a,i)=>({amb:a, fotosArr: i===0 && fotoObs ? [fotoNueva(fotoObs, S.usuario)] : []})), lotesDespues:[], verifica:null, quien:S.usuario,
       hist:[[hora(),"Return creado desde revisión de supervisión",S.usuario]]};
     S.devoluciones.push(dv); flash("dv:"+dv.id);
@@ -933,7 +932,11 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     const base=d&&d.wo?W(d.wo):null;   // si viene de la ficha de una WO, ya se sabe propiedad, unidad y técnico
     S._rgWO=base?base.id:(d&&d.keep?S._rgWO:null);
     const props=S.propiedades.filter(p=>p.activa!==false), pid=keep("rgP")||(base?base.prop:props[0].id);
-    const unis=S.unidades.filter(u=>u.prop===pid), uid=unis.some(u=>u.id===keep("rgU"))?keep("rgU"):(base&&unis.some(u=>u.id===base.unidad)?base.unidad:(unis[0]&&unis[0].id)||"");
+    /* Punto 29: la unidad se escribe (con sugerencias); si cambia la propiedad se limpia */
+    const cambioP=d&&d.keep&&S._rgP!==pid; S._rgP=pid;
+    const utxt=cambioP?"":(d&&d.keep?keep("rgU"):(base&&base.prop===pid?U(base.unidad).num:""));
+    const um=uniPorTexto(pid,utxt), uid=um?um.id:"";
+    const uAdd=!!(d&&d.keep&&!cambioP&&document.getElementById("rgUAdd")&&document.getElementById("rgUAdd").checked);
     const ult=S.wos.filter(w=>w.unidad===uid&&w.estado!=="Canceled"&&w.tec&&!w.touchup).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""))[0];
     const cambioU=!(d&&d.keep)||S._rgU!==uid;   // al cambiar de unidad se vuelve a proponer quién hizo la última WO
     S._rgU=uid;
@@ -941,7 +944,7 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
     modal(`<div class="mh"><h3>Registrar return</h3><p>La solicitud queda abierta hasta que se corrija y se verifique.</p></div>
     <div class="mb"><div class="fg c2">
       <div class="fld"><label>Propiedad <span class="req">*</span></label><select id="rgP" data-a="devRegCambio">${props.map(p=>`<option value="${esc(p.id)}" ${p.id===pid?"selected":""}>${esc(p.nombre)}</option>`).join("")}</select></div>
-      <div class="fld"><label>Unidad <span class="req">*</span></label><select id="rgU" data-a="devRegCambio">${unis.length?unis.map(u=>`<option value="${esc(u.id)}" ${u.id===uid?"selected":""}>${esc(u.num)}</option>`).join(""):'<option value="">— sin unidades —</option>'}</select></div>
+      <div class="fld"><label>Unidad <span class="req">*</span></label>${uniCampo("rgU", pid, utxt, "devRegCambio", uAdd)}</div>
       <div class="fld"><label>¿Quién lo pidió? <span class="req">*</span></label><select id="rgO">${["Gustavo","La propiedad","Correo","Otro"].map(o=>`<option ${o===keep("rgO")?"selected":""}>${o}</option>`).join("")}</select></div>
       <div class="fld"><label>¿Quién hizo el trabajo? <span class="req">*</span></label><select id="rgT">${S.tecnicos.filter(t=>t.activo!==false&&t.id!==GUSTAVO).map(t=>`<option value="${t.id}" ${t.id===quien?"selected":""}>${esc(tecN(t.id))}</option>`).join("")}</select></div>
       <div class="fld"><label>¿Dónde? <span class="req">*</span></label><div style="display:flex;flex-wrap:wrap">${checkboxesUbicacion("rgA", d&&d.keep?leerCheckUbicacion("rgA"):[])}</div></div>
@@ -950,25 +953,28 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
       <div class="note w" id="rgEx">${causaDe(keep("rgC")||Object.keys(CAUSAS_DEV)[0]).ex}</div>
       <div class="fg c2">
         <div class="fld"><label>Prioridad</label><select id="rgR">${PRIOR_DEV.map(p=>`<option ${p===(keep("rgR")||"Alta")?"selected":""}>${esc(p)}</option>`).join("")}</select></div>
-        <div class="fld"><label>Fecha límite</label><input type="date" id="rgL" value="${esc(keep("rgL")||HOY_SUP)}"></div>
-        <div class="fld"><label>Hora límite</label><input type="time" id="rgLH" value="${esc(keep("rgLH")||"17:00")}"></div></div>
+        <div class="fld"><label>Fecha límite</label><input type="date" id="rgL" value="${esc(keep("rgL")||HOY_SUP)}"></div></div>
       <label style="display:flex;gap:8px;align-items:center;margin:4px 0 8px;font-weight:650"><input type="checkbox" id="rgUrg" ${(d&&d.keep&&document.getElementById("rgUrg")&&document.getElementById("rgUrg").checked)?"checked":""}> Entra un inquilino pronto (urgente)</label>
-      ${ult?`<div class="hint">Última WO de la unidad: ${woN(ult.id)} (${esc(ult.serv)}) de ${esc(tecN(ult.tec))}.</div>`:`<div class="hint">Esta unidad no tiene WO con técnico: elige quién hizo el trabajo.</div>`}</div>
+      ${ult?`<div class="hint">Última WO de la unidad: ${woN(ult.id)} (${esc(ult.serv)}) de ${esc(tecN(ult.tec))}.</div>`:utxt?`<div class="hint">Esta unidad no tiene WO con técnico: elige quién hizo el trabajo.</div>`:""}
+      ${notaProto("unidad escrita",["Escribe la unidad: te sugiere las de la propiedad.","Si no existe, puedes marcar «Agregarla a la propiedad» o dejarla escrita.","Ya no hay hora límite: el return vence al terminar la fecha límite."])}</div>
     <div class="mf"><button class="btn" data-a="cm">Cancelar</button><button class="btn p" data-a="devRegistrarOK">Registrar</button></div>`); },
   devRegCambio: () => { ACC.devRegistrar({keep:true}); },
   /* PRODUCCIÓN: igual que devolverOK, debe pasar la WO original a Returned. */
   devRegistrarOK: () => {
-    const pid=val("rgP"), uid=val("rgU"), m=val("rgM").trim(), areas=leerCheckUbicacion("rgA"), causa=val("rgC"), tec=val("rgT");
-    if(!uid||!m||!tec||!areas.length){ S.audOmitir=true; marcaFalta([!uid?"rgU":"",!m?"rgM":"",!tec?"rgT":""].filter(Boolean)); toast("Falta información",!areas.length?"Elige al menos un área a corregir.":"Elige la unidad, quién hizo el trabajo y escribe qué está mal.","r"); return; }
-    const ult=S.wos.filter(w=>w.unidad===uid&&w.estado!=="Canceled"&&!w.touchup).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""))[0];
-    const woDe=S._rgWO&&W(S._rgWO)&&W(S._rgWO).unidad===uid?S._rgWO:(ult?ult.id:null); S._rgWO=null;
+    const pid=val("rgP"), utxt=val("rgU"), m=val("rgM").trim(), areas=leerCheckUbicacion("rgA"), causa=val("rgC"), tec=val("rgT");
+    if(!utxt||!m||!tec||!areas.length){ S.audOmitir=true; marcaFalta([!utxt?"rgU":"",!m?"rgM":"",!tec?"rgT":""].filter(Boolean)); toast("Falta información",!areas.length?"Elige al menos un área a corregir.":"Escribe la unidad, quién hizo el trabajo y qué está mal.","r"); return; }
+    let um=uniPorTexto(pid,utxt);
+    if(!um && document.getElementById("rgUAdd") && document.getElementById("rgUAdd").checked) um=uniCrearTexto(pid,utxt);
+    const uid=um?um.id:null;
+    const ult=uid?S.wos.filter(w=>w.unidad===uid&&w.estado!=="Canceled"&&!w.touchup).sort((a,b)=>(b.fecha||"").localeCompare(a.fecha||""))[0]:null;
+    const woDe=uid&&S._rgWO&&W(S._rgWO)&&W(S._rgWO).unidad===uid?S._rgWO:(ult?ult.id:null); S._rgWO=null;
     let dvNum = Date.now();
     while(S.devoluciones.some(x=>x.id==="DV"+dvNum)) dvNum++;
-    const dv={id:"DV"+dvNum, prop:pid, unidad:uid, wo:woDe, areas, desc:m, causa, responsable:tec,
-      prioridad:val("rgR")||"Alta", fechaRep:HOY_SUP, fechaLimite:val("rgL")||HOY_SUP, horaLimite:val("rgLH")||"17:00", estado:"Abierta",
+    const dv={id:"DV"+dvNum, prop:pid, unidad:uid, unidadTexto:uid?"":utxt, wo:woDe, areas, desc:m, causa, responsable:tec,
+      prioridad:val("rgR")||"Alta", fechaRep:HOY_SUP, fechaLimite:val("rgL")||HOY_SUP, horaLimite:null, estado:"Abierta",
       lotesAntes:[], lotesDespues:[], verifica:null, quien:S.usuario, origen:val("rgO"), urgente:!!(document.getElementById("rgUrg")&&document.getElementById("rgUrg").checked),
       hist:[[hora(),`Return registrado por ${S.usuario} (pedida por: ${val("rgO")})`,S.usuario]]};
-    S.devoluciones.push(dv); S._audDev=P(pid).nombre+" · "+(U(uid)?U(uid).num:"")+" — "+areas.join(", "); flash("dv:"+dv.id);
+    S.devoluciones.push(dv); S._audDev=P(pid).nombre+" · "+devUniN(dv)+" — "+areas.join(", "); flash("dv:"+dv.id);
     devMarcarWO(woDe, m, S.usuario);
     cm(); toast("Return registrado",`<b>${esc(P(pid).nombre)} ${U(uid)?esc(U(uid).num):""}</b> · ${esc(areas.join(", "))}. Ahora puedes crear el return fix y ver quién está cerca.`,"w"); render(); },
 
@@ -980,10 +986,17 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
   devTouchup: d => {
     const dv = DV(d.id);
     if(touchupDe(dv.id)){ toast("Ya tiene return fix","Este return ya gener\u00f3 su Work Order de return fix.","w"); return; }
+    if(!by(S.unidades, dv.unidad)){   // punto 29: unidad escrita a mano → primero se agrega
+      modal(`<div class="mh"><h3>Crear return fix</h3><p>${esc(P(dv.prop).nombre)} · ${esc(devUniN(dv))} — ${esc(devAreasTxt(dv))}</p></div>
+        <div class="mb"><div class="note w" style="margin:0"><b>${esc(devUniN(dv))}</b> se escribió a mano y no existe en ${esc(P(dv.prop).nombre)}.
+          El return fix es una Work Order: necesita la unidad registrada.</div></div>
+        <div class="mf"><button class="btn" data-a="cm">Cancelar</button>
+          <button class="btn p" data-a="devUniAgregar" data-id="${dv.id}">Agregar ${esc(devUniN(dv))} a la propiedad</button></div>`);
+      return; }
     const orig = W(dv.wo);
     S._tuFecha = dv.urgente ? HOY_SUP : fechaMover(HOY_SUP,1);   // urgente: hoy; si no, el día siguiente
     modal(`<div class="mh"><h3>Crear return fix</h3>
-        <p>${esc(P(dv.prop).nombre)} · ${U(dv.unidad)?esc(U(dv.unidad).num):""} — ${esc(devAreasTxt(dv))}</p></div>
+        <p>${esc(P(dv.prop).nombre)} · ${esc(devUniN(dv))} — ${esc(devAreasTxt(dv))}</p></div>
       <div class="mb">
         <div class="note w" style="margin:0 0 12px"><b>Lo que hay que corregir:</b> ${esc(dv.desc)}</div>
         ${dv.urgente?`<div class="note r" style="margin:0 0 12px"><b>Entra un inquilino pronto.</b> Propongo la fecha de hoy.</div>`:""}
@@ -1020,6 +1033,11 @@ Tel: (469) 219-6869 | scheduling@cordovaps.com`, `${urls.length} foto(s) de evid
         <button class="btn p" data-a="devTouchupOK" data-id="${dv.id}">Crear return fix</button></div>`);
   },
 
+  devUniAgregar: d => { const dv=DV(d.id); if(!dv) return;
+    if(!by(S.unidades,dv.unidad)){ const u=uniPorTexto(dv.prop, dv.unidadTexto) || uniCrearTexto(dv.prop, dv.unidadTexto||"Sin número");
+      dv.unidad=u.id; dv.unidadTexto=""; dv.hist.push([hora(),`Unidad ${u.num} agregada a ${P(dv.prop).nombre}`,S.usuario]);
+      toast("Unidad agregada",`<b>${esc(u.num)}</b> quedó en ${esc(P(dv.prop).nombre)}. Completa Rooms y Pisos en Propiedades.`,"v"); }
+    cm(); ACC.devTouchup({id:dv.id}); },
   /* Cambiar la fecha recalcula quién está disponible y cerca ese día. */
   tuFecha: d => { const dv=DV(d.id), f=val("tuF"); if(!dv||!f) return; S._tuFecha=f;
     const c=document.getElementById("tuCand"); if(c){ c.innerHTML=tuCandidatos(dv,f); tuMarcar(); } },

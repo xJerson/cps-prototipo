@@ -31,6 +31,7 @@ document.addEventListener("input", e=>{
   else if(el.classList.contains("pfIn")) ACC.precLlenarCuenta();
   else if(el.id==="catBuscar") ACC.catBuscar();
   else if(el.id==="gBusqQ") ACC.gBusqCambia();
+  else if(el.classList.contains("uniTxt")) uniTxtHint(el);
 });
 document.addEventListener("change", e=>{
   const sel = e.target.closest("select[data-a], input[data-a], textarea[data-a]");
@@ -89,6 +90,7 @@ const AUD = {
   devolverOK:{a:"Hizo un return a un trabajo", m:"Work Orders"},
   agSupOK:{a:"Armó la ruta del supervisor", m:"Supervisión"},
   rsAgregar:{a:"Armó la ruta del supervisor (propiedades y unidades)", m:"Supervisión"},
+  devUniAgregar:{a:"Agregó una unidad desde un return", m:"Returns"},
   gUniVista:{a:"Marcó una unidad revisada (supervisor)", m:"Supervisión"},
   agSupQuita:{a:"Quitó una parada de la ruta del supervisor", m:"Supervisión"},
   supSolOK:{a:"Solicitó una visita de Gustavo", m:"Supervisión"},
