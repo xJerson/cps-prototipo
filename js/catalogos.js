@@ -139,7 +139,7 @@ const ROLES = {
   "Claudia":{i:"CV",r:"Administración / Estimados",m:"*"},
   "Lydia":  {i:"LC",r:"Administración / Calidad y agendamiento",m:"*"},   // REQ 19/11 punto 12: administradora, igual que Claudia
   "Thalia": {i:"TM",r:"Programación",  m:["tablero","wo","calendario","despacho","devoluciones","supervision","propiedades","tecnicos","catalogos","excepciones","reportes","alertas"]},
-  "Gustavo":{i:"GA",r:"Supervisión",   m:["tablero","wo","calendario","supervision","gustavoweb","inventario","tecnicos","excepciones","reportes","alertas"]},
+  "Gustavo":{i:"GA",r:"Supervisión",   m:["tablero","wo","calendario","supervision","gustavoweb","inventario","tecnicos","reportes","alertas"]},   // REQ 19/11 punto 27: sin Requests
   "Erika":  {i:"EM",r:"Administración",m:["tablero","wo","propiedades","catalogos","devoluciones","nomina","facturacion","cobranza","tarifario","inventario","finanzas","excepciones","reportes","buscar","alertas","bitacora"]}
   ,"Contador":{i:"CT",r:"Contabilidad · solo lectura",m:["tablero","finanzas","inventario","reportes"]}
   /* Ventas (CRM): solo su panel comercial. No ve precios, nómina, WO ni Requests; la oficina sigue operando igual. */

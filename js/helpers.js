@@ -136,7 +136,10 @@ const esGustavo = () => S.usuario==="Gustavo";
 const NAV_RO = ["propVer","tab","ingresoVer","catTipo","catVerSel","comFiltro","tarVerServ","woVer","ir","irEstimados"];
 const soloVerMod = () => (SOLO_VER[S.usuario]||[]).includes(S.mod);
 /* Quién puede tener o aprobar un Request: el Contador solo consulta, no resuelve nada. */
-const usuariosQueResuelven = () => Object.keys(ROLES).filter(u=>u!=="Contador");
+const usuariosQueResuelven = () => Object.keys(ROLES).filter(u=>puedeEn(u,"excepciones"));   // Contador, Gustavo y Ventas no resuelven Requests
+const puedeEn = (u,m) => { const r=ROLES[u]; return !!r && (r.m==="*" || r.m.includes(m)); };
+/* REQ 19/11 punto 27: Gustavo solo ve en Alertas las que son para él. */
+const alertasVer = () => esGustavo() ? alertas().filter(a=>a.q==="Gustavo") : alertas();
 /* Quién avisa a clientes por WO pendientes y envía recordatorios: programación y administración. */
 const puedeAvisarPend = () => esAdmin() || ["Thalia","Erika"].includes(S.usuario);
 /* Aprobar o rechazar un adicional desde la WO: programación y administración. Hoy todos ayudan (pedido de Erika);
@@ -822,7 +825,7 @@ function alertas(){
   tarAvisos().forEach(x=>A.push({t:"Cambio de precios por entrar",
     d:`${x.nombre}: la lista nueva rige el ${x.desde} (en ${x.dias} día${x.dias===1?"":"s"})`,q:"Claudia",n:"a"}));
   S.productos.filter(p=>stock(p.id)<p.min).forEach(p=>A.push({t:"Stock bajo",d:`${p.nombre}: ${stock(p.id)} ${p.um} (mínimo ${p.min})`,q:"Gustavo",n:"w"}));
-  S.disponibilidad.filter(d=>d.estado==="Pendiente").forEach(d=>A.push({t:"Permiso por aprobar",d:`${tecN(d.tec)} · ${d.motivo} ${d.desde} al ${d.hasta}`,q:"Gustavo",n:"a"}));
+  S.disponibilidad.filter(d=>d.estado==="Pendiente").forEach(d=>A.push({t:"Permiso por aprobar",d:`${tecN(d.tec)} · ${d.motivo} ${d.desde} al ${d.hasta}`,q:"Thalia",n:"a"}));   // se aprueba en Disponibilidad (oficina)
   S.facturas.filter(facVencida).forEach(f=>A.push({t:"Factura vencida",d:`${f.num} · ${P(f.prop).nombre}`,q:"Erika",n:"r"}));
   /* Llegó la fecha que la oficina puso al registrar la llamada de cobranza (p. ej. «ya lo mandamos a pago»):
      hay que revisar en el banco si llegó el pago o volver a llamar.

@@ -49,7 +49,7 @@ function vPendientes(){
     {n:"Requests pending", c:excPend().length, m:"excepciones",
      d:"Frenan el pago y la factura de la WO que tienen atada", k:"r"},
     {n:"Work Orders sin técnico",  c:S.wos.filter(w=>!w.tec&&esAgendada(w.estado)).length, m:"wo",
-     d:"Agendadas pero sin nadie asignado", k:"w"},
+     d:"Agendadas pero sin nadie asignado", k:"w", no:["Gustavo"]},
     {n:"Asignadas sin marcar llegada", c:S.wos.filter(w=>w.tec&&esAgendada(w.estado)&&!asisDe(w.id)).length, m:"tecnicos",
      d:"Ya pasó su hora y el técnico no ha reportado", k:"w", no:["Gustavo"]},
     {n:"Terminadas por supervisar", c:S.wos.filter(w=>w.estado==="Completed"&&!w.supervisada).length, m:"supervision",
@@ -169,9 +169,10 @@ function diasDeSemana(sem){
   });
 }
 VIEWS.alertas = () => {
-  const A=alertas(); const o={r:0,w:1,a:2,g:3}; A.sort((a,b)=>o[a.n]-o[b.n]);
+  const A=alertasVer(); const o={r:0,w:1,a:2,g:3}; A.sort((a,b)=>o[a.n]-o[b.n]);
   return `
   <div class="ph"><div><h2>Alertas</h2><p>Se recalculan solas. Ninguna es genérica: cada una sale de un problema real del archivo.</p></div></div>
+  ${esGustavo()?notaProto("alertas de Gustavo",["Solo ve las alertas «Para quién: Gustavo» (llegada tarde, stock bajo).","Las de oficina (facturas, COI, WO sin técnico…) no le aparecen.","Requests no está en su menú: no tiene pendientes de oficina."]):""}
   <div class="card">${A.length?`<table><thead><tr><th>Alerta</th><th>Detalle</th><th>Para quién</th></tr></thead>
     <tbody>${A.map(a=>`<tr><td><span class="pill ${a.n}"><span class="dot"></span>${esc(a.t)}</span></td>
       <td>${esc(a.d)}</td><td>${esc(a.q)}</td></tr>`).join("")}</tbody></table>`
