@@ -332,7 +332,7 @@ function renderFon(){
              <div class="ds">Oficina ya lo tiene.</div></div>` : "")
     + (asisDe(w.id)
         ? `<div class="dc" style="background:var(--verde-cl);border-color:transparent;margin-top:2px">
-             <div class="ds" style="color:var(--verde)"><b>Llegaste ${asisDe(w.id).horaReal}</b> · ${esc(asisDe(w.id).puntualidad)}</div></div>` : "");
+             <div class="ds" style="color:var(--verde)"><b>Llegada: ${esc(asisDe(w.id).horaReal)}</b></div></div>` : "");
 
     h = h.replace("<!--ACCIONES-->", acciones);
   }
@@ -355,7 +355,7 @@ function renderFon(){
             <div class="ds" style="font-size:10px">${w.fecha}${w.horaProg?` · ${esc(w.horaFin?`${w.horaProg}–${w.horaFin}`:w.horaProg)}`:""}</div></div>
           <span class="dtag" style="background:${col}22;color:${col};flex:none;height:fit-content">${esc(estadoTec(w))}</span></div>
         ${woEspera(w)?`<div class="ds" style="margin-top:5px;color:var(--ambar);font-weight:700">En espera — falta terminar ${woN(woEspera(w).id)} (${esc(woEspera(w).serv)})</div>`:""}
-        ${a?`<div class="ds" style="margin-top:5px;color:var(--verde)">Llegaste ${a.horaReal} · ${esc(a.puntualidad)}</div>`:""}
+        ${a?`<div class="ds" style="margin-top:5px;color:var(--verde)">Llegada: ${esc(a.horaReal)}</div>`:""}
         ${(w.fotosPrevias||[]).length?`<div class="ds" style="margin-top:5px;color:var(--azul);font-weight:700">📷 ${(w.fotosPrevias||[]).length} foto(s) para prepararte antes de ir</div>`:""}
         <div class="ds" style="margin-top:6px;color:var(--azul);font-weight:650">Abrir ›</div></div>`;
     }).join("")+subMias.map(a=>{
