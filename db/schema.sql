@@ -28,6 +28,8 @@ declare
     -- money
     'facturas','pagos','creditos_prop','creditos_serv','pinturas',
     'pagos_tecnico','nomina','descuentos','gastos_compartidos','movs',
+    -- sales
+    'crm_prospectos','crm_avances','crm_metas',
     -- traces and notices
     'bitacora','avisos','notis','revisiones_cliente'
   ];

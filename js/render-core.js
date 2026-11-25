@@ -2,9 +2,20 @@
 /* ══════════ RENDER ══════════ */
 const VIEWS = {};
 const ACC = {};
+/* Erika (REQ 19/11 punto 2): «Lead en cuanto se agende pasa a Active». Sin COI vigente la oficina no puede pasarla a programación. */
+function propActivarAgendadas(){
+  S.propiedades.forEach(p=>{
+    if(estadoProp(p)!=="Lead") return;
+    const w = S.wos.find(x=>x.prop===p.id && x.fecha && x.estado!=="Canceled"); if(!w) return;
+    p.estado = "Active";
+    S.bitacora.unshift({n:++S.audSeq, fecha:HOY_SUP, hora:hora(), usuario:"Sistema", rol:"Regla de Client Status",
+      accion:"Pasó de Lead a Active al agendar su primera WO", modulo:"Propiedades", ref:`${p.nombre} · ${woN(w.id)} · ${w.fecha}`});
+  });
+}
 function render(){
   if(typeof crmRoles==="function") crmRoles();   /* vendedores del catálogo → usuarios Ventas */
-  if(typeof crmSync==="function" && S.crm) crmSync();   /* estimado aprobado en la oficina → Alta en el CRM, aunque nadie abra el CRM */
+  propActivarAgendadas();   /* REQ 19/11 punto 2: Lead pasa a Active en cuanto se le agenda una WO con fecha */
+  if(typeof crmSync==="function") crmSync();   /* estimado aprobado en la oficina → Alta en el CRM, aunque nadie abra el CRM */
   const R = ROLES[S.usuario] || ROLES.Claudia;
   /* Un rol sin Tablero (Ventas) cae en su primer módulo permitido */
   if(!puede(S.mod)) S.mod = puede("tablero") ? "tablero" : ((MODS.find(m=>m.id && puede(m.id))||{}).id || "tablero");

@@ -6,14 +6,15 @@ VIEWS.propiedades = () => {
     <p>La pestaña <code>Propiedades</code>. Los tres contactos dejan de ser 9 columnas repetidas y las unidades dejan de vivir sueltas.</p></div>
     <div class="act"><button class="btn p" data-a="propNueva">+ Nueva propiedad</button></div></div>
   <div class="card"><table>
-    <thead><tr><th>Propiedad</th><th>City</th><th>Cliente (Management)</th><th class="num">Unidades</th><th class="num">Contactos</th><th>COI</th><th>Estado</th></tr></thead>
+    <thead><tr><th>Propiedad</th><th>City</th><th>Cliente (Management)</th><th class="num">Unidades</th><th class="num">Contactos</th><th>Crédito</th><th>COI</th><th>Estado</th></tr></thead>
     <tbody>${S.propiedades.map(p=>{
       const nu=S.unidades.filter(u=>u.prop===p.id).length, nc=contactosDe(p.id).length;
       const sMon=saldoCredito(p.id), sd=credServSaldos(p.id);
       return `<tr class="cl${fl("prop:"+p.id)}" data-a="propVer" data-id="${p.id}">
-        <td style="font-weight:650">${esc(p.nombre)}${sMon>0?` <span class="pill v" style="font-size:10px" title="Crédito a favor: ${money(sMon)}">💳 ${money(sMon)}</span>`:sd.length?` <span class="pill a" style="font-size:10px" title="Servicios a favor">💳 Servicios</span>`:""}<div style="font-size:10.5px;color:var(--faint)">${esc(p.dir)}</div></td>
+        <td style="font-weight:650">${esc(p.nombre)}<div style="font-size:10.5px;color:var(--faint)">${esc(p.dir)}</div></td>
         <td>${esc(ciudadProp(p))}</td><td>${p.cliente?esc(CLI(p.cliente).nombre):'<span style="color:var(--faint)">—</span>'}<div style="font-size:10.5px;color:var(--faint)">${esc(estadoProp(p))}</div></td>
         <td class="num mono">${nu}</td><td class="num mono">${nc}</td>
+        <td>${sMon>0||sd.length?`<span class="pill v" title="Tiene crédito a favor${sMon>0&&sd.length?": saldo y servicios":sMon>0?": saldo":": servicios"}. El detalle está dentro de la propiedad.">✓ ${sMon>0&&sd.length?"Saldo y servicios":sMon>0?"Saldo":"Servicios"}</span>`:'<span style="color:var(--faint)">—</span>'}</td>
         <td>${p.polizas&&p.polizas.length?`<span class="pill ${coiVigente(p.id)?(p.polizas.some(coiPorVencer)?"a":"v"):"r"}">${esc(p.polizas.reduce((a,x)=>!a||x.vence<a?x.vence:a,null))}</span>`:`<span class="pill r"><span class="dot"></span>falta</span>`}</td>
         <td>${p.activa?'<span class="pill v">Activa</span>':'<span class="pill g">Sin movimiento</span>'}</td></tr>`;
     }).join("")}</tbody></table></div>
@@ -667,8 +668,8 @@ const REFS = {
   especialidades:[{a:()=>S.tecnicos,   c:"esp",     n:"técnico(s)", lista:true}],
   tiendas:       [{a:()=>S.movs,       c:"tienda",  n:"movimiento(s) de inventario"}],
   vendedores:    [{a:()=>S.propiedades,c:"vendedor",n:"propiedad(es)"},
-                  {a:()=>(S.crm?S.crm.opps:[]),c:"owner",n:"trato(s) del CRM"},
-                  {a:()=>(S.crm?S.crm.acts:[]),c:"quien",n:"actividad(es) del CRM"}],
+                  {a:()=>(S.crmProspectos||[]),c:"owner",n:"trato(s) del CRM"},
+                  {a:()=>(S.crmAvances||[]),c:"quien",n:"actividad(es) del CRM"}],
   pisos:         [{a:()=>S.unidades,   c:"pisos",   n:"unidad(es)"},
                   {tar:true, a:()=>S.tarifas,    c:"pisos",   n:"tarifa(s)"}],
   folder:        [],
@@ -689,7 +690,7 @@ function renombrarCat(k, viejo, nuevo){
   /* La ciudad de la propiedad se guarda también en zona; al renombrar, las dos se mantienen iguales. */
   if(k==="zonas") S.propiedades.forEach(p=>{ if(p.ciudad===viejo) p.ciudad=nuevo; });
   /* Un vendedor renombrado conserva sus metas del CRM y su usuario de Ventas pasa al nombre nuevo. */
-  if(k==="vendedores" && S.crm && S.crm.metas[viejo]){ S.crm.metas[nuevo]=S.crm.metas[viejo]; delete S.crm.metas[viejo]; }
+  if(k==="vendedores"){ const m=by(S.crmMetas||[],viejo); if(m) m.id=nuevo; }
   if(k==="vendedores" && ROLES[viejo] && ROLES[viejo].r==="Ventas"){ delete ROLES[viejo]; if(S.usuario===viejo) S.usuario=nuevo; }
   if(S.bajas[k]) S.bajas[k]=S.bajas[k].map(x=>x===viejo?nuevo:x);
   const m=(CAT.meta||{})[k]; if(m && m[String(viejo)]){ m[String(nuevo)]=m[String(viejo)]; delete m[String(viejo)]; }

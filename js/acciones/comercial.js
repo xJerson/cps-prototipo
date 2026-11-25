@@ -383,9 +383,9 @@ Object.assign(ACC, {
       e.estado="Aprobado";
       e.aprob=sello();
       const p=P(e.prop); const era=estadoProp(p);
-      if(era==="Lead"){ p.estado="Active"; }
+      /* REQ 19/11 punto 2: aprobar no la activa; pasa a Active cuando se le agenda la primera WO con fecha. */
       toast("✓ El cliente aprobó",`<b>${esc(e.num)}</b> · ${esc(d.medio)}.`
-        + (era==="Lead"?` <b>${esc(p.nombre)}</b> dejó de ser prospecto y ya es cliente.`:"")
+        + (era==="Lead"?` <b>${esc(p.nombre)}</b> sigue en Lead: pasa a Active cuando se le agende la primera WO.`:"")
         + (e.prospecto?` Toca «Convertir en cliente» para poder transferirlo a programación.`:""),"v");
       /* Un prospecto todavía no tiene propiedad: el COI y el Expediente vienen
          después de convertirlo en cliente. */

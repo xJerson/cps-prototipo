@@ -57,8 +57,8 @@ function comunicacionProp(pid){
     return {fecha:m.fecha, origen:v?"CRM":"Office", medio:m.medio, contacto:m.contacto, quien:m.quien, nota:v?m.nota.slice(9):m.nota};
   });
   const ya = new Set(out.filter(m=>m.origen==="CRM").map(m=>m.fecha+"|"+m.nota));
-  const opps = (S.crm&&S.crm.opps)||[];
-  ((S.crm&&S.crm.acts)||[]).forEach(a=>{
+  const opps = S.crmProspectos||[];
+  (S.crmAvances||[]).forEach(a=>{
     const prop = a.prop || ((opps.find(o=>o.id===a.opp)||{}).prop);
     if(prop!==pid || ya.has(a.fecha+"|"+a.nota)) return;
     const o = opps.find(x=>x.id===a.opp);

@@ -19,6 +19,7 @@ const NUBE_KEY = "sb_publishable_CxulQ_He5iek46EGvwF0sw_-xGZS03v";
 
 /* lista de S -> tabla */
 const NUBE_TABLAS = {
+  crmProspectos:"crm_prospectos", crmAvances:"crm_avances", crmMetas:"crm_metas",
   clientes:"clientes", propiedades:"propiedades", unidades:"unidades", contactos:"contactos",
   tecnicos:"tecnicos", tarifas:"tarifas", productos:"productos", vehiculos:"vehiculos", impuestos:"impuestos",
   estimados:"estimados", wos:"wos", adicionales:"adicionales", visitas:"visitas", asistencias:"asistencias",
@@ -35,14 +36,12 @@ const NUBE_TABLAS = {
 const NUBE_CONFIG = ["cierreAgendamiento","cat","aprobadoresSol","bajas","excCreadas","excAsignaciones","audSeq",
   /* Estos cuatro no existen al arrancar: nacen con la primera acción (aprobar una nómina, enviar una
      disponibilidad, mandar una lista de precios) y desde ahí se comparten igual que los demás. */
-  "nomAprob","dispSemana","listasPrecio","correosPropiedad",
-  /* CRM de Ventas: oportunidades, actividades y metas en un solo valor compartido (ver js/vistas/crm.js). */
-  "crm"];
+  "nomAprob","dispSemana","listasPrecio","correosPropiedad"];
 
 /* Listas a las que el prototipo agrega registros AL PRINCIPIO (unshift). Su posición se guarda contando desde el final:
    así un registro nuevo no cambia la posición de los anteriores y solo se sube la fila nueva (antes, cada aviso nuevo
    re-subía los cientos que ya había). */
-const NUBE_PREPEND = new Set(["bitacora","avisos","notis","gastosCompartidos","solicitudesComerciales","comunicacionesWO","revisionesCliente","facturas","estimados","confirmacionesAgendamiento"]);
+const NUBE_PREPEND = new Set(["crmProspectos","bitacora","avisos","notis","gastosCompartidos","solicitudesComerciales","comunicacionesWO","revisionesCliente","facturas","estimados","confirmacionesAgendamiento"]);
 
 let _nubeActiva = false;      // true cuando la nube respondió al abrir
 let _nubeSnap = {};           // tabla -> {k: json} lo último que ya está en la nube

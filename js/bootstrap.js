@@ -46,6 +46,8 @@ document.addEventListener("change", e=>{
    Es lo que hoy no existe: «sin querer me borran una work order y ya no puedo
    saber si se pagó», y «no hay un manual, el manual es Claudia». */
 const AUD = {
+  crmAvOK:{a:"Registró un avance de Ventas", m:"CRM"},
+  crmGuardar:{a:"Registró o editó un prospecto", m:"CRM"},
   woGuardar:{a:"Creó una Work Order", m:"Work Orders"},
   asigSi:{a:"Asignó técnico", m:"Work Orders"},
   supervisar:{a:"Aprobó supervisión", m:"Supervisión"},
@@ -230,6 +232,8 @@ const AUD = {
 /* El descuento recién decidido (lo fija la acción en acciones/nomina-facturacion.js). */
 const descRef = () => { const x=by(S.descuentos,ultimoDescDecidido); return x ? tecN(x.tec)+(x.wo?" · WO-"+x.wo:"") : ""; };
 const AUD_POST = {
+  crmGuardar:  () => { const id=S.crmUlt, o=id&&by(S.crmProspectos,id); return o ? o.nombre : ""; },
+  crmAvOK:     () => { const x=S.crmAvances[S.crmAvances.length-1], o=x&&by(S.crmProspectos,x.opp); return o ? `${o.nombre} · ${x.nota}` : ""; },
   woGuardar:   () => S.wos.length     ? woN(S.wos[S.wos.length-1].id) : "",
   propGuardar: () => S.propiedades.length ? S.propiedades[S.propiedades.length-1].nombre : "",
   uniGuardar:  () => S.unidades.length    ? "Unidad "+S.unidades[S.unidades.length-1].num : "",

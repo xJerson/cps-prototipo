@@ -721,8 +721,7 @@ function estConvertirAplicar(eid, pid){
   const c={id:"C"+nid("c"), prop:pid, tipo:"Manager", nombre:pr.nombre, mail:pr.correo||"", tel:""};
   S.contactos.push(c);
   e.prop=pid; e.contactos=[c.id]; delete e.prospecto;
-  if(estadoProp(p)==="Lead") p.estado="Active";
-  cm(); flash("est:"+e.id);
+  cm(); flash("est:"+e.id);   /* sigue en Lead: pasa a Active al agendar su primera WO (REQ 19/11 punto 2) */
   toast("✓ Prospecto convertido en cliente",`<b>${esc(p.nombre)}</b> ya está registrada y <b>${esc(c.nombre)}</b> quedó como su contacto. Ahora corren el COI y el Expediente.`,"v");
   S.mod="estimados"; S.sub=null; S.tab=null; render();
 }
